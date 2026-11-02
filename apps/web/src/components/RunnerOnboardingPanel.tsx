@@ -1,5 +1,5 @@
+import { Snippet } from './ai-elements/snippet';
 import { Shimmer } from './ui/Shimmer';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError, getProject, listRunnerDeviceKeys } from '../lib/api-client';
@@ -180,18 +180,6 @@ export function RunnerOnboardingPanel({
   const maquinaReconhecida = maquinaJaPareada(reconhecimento);
   const jaPareada = maquinaReconhecida || projetoJaPareado(reconhecimentoDeProjeto);
 
-  const [copiado, setCopiado] = useState(false);
-
-  async function copiarComandoDoInstalador() {
-    try {
-      await navigator.clipboard.writeText(COMANDO_DO_INSTALADOR);
-      setCopiado(true);
-    } catch {
-      // Sem toast dedicado aqui — o bloco de código já é copiável à mão
-      // (`user-select: all`), então a falha do clipboard não bloqueia nada.
-    }
-  }
-
   const comandoManual = t('runnerOnboarding.command', {
     projectId: projectId ?? t('runnerOnboarding.placeholderProjectId'),
     caminho: caminhoDoProjeto?.trim() || t('runnerOnboarding.placeholderPath'),
@@ -229,10 +217,7 @@ export function RunnerOnboardingPanel({
       {!jaPareada && (
         <div className={styles.instrucao}>
           <p className={styles.avisoPassoHumano}>{t('runnerOnboarding.instaladorIntro')}</p>
-          <code className={styles.comando}>{COMANDO_DO_INSTALADOR}</code>
-          <Button type="button" variant="secondary" onClick={() => void copiarComandoDoInstalador()}>
-            {copiado ? t('runnerOnboarding.copiedButton') : t('runnerOnboarding.copyButton')}
-          </Button>
+          <Snippet texto={COMANDO_DO_INSTALADOR} rotulo={t('runnerOnboarding.copyButton')} rotuloCopiado={t('runnerOnboarding.copiedButton')} />
           <p className={styles.detalhe}>{t('runnerOnboarding.instaladorFaz')}</p>
           <p className={styles.detalhe}>{t('runnerOnboarding.instaladorOutraMaquina')}</p>
           <p className={styles.detalhe}>{t('runnerOnboarding.passoHumano')}</p>
@@ -251,7 +236,7 @@ export function RunnerOnboardingPanel({
             {t('runnerOnboarding.instructionPrefix')} <code>apps/runner/README.md</code>
             {t('runnerOnboarding.instructionSuffix')}
           </p>
-          <code className={styles.comando}>{comandoManual}</code>
+          <Snippet texto={comandoManual} rotulo={t('runnerOnboarding.copyButton')} rotuloCopiado={t('runnerOnboarding.copiedButton')} />
           <p className={styles.detalhe}>{t('runnerOnboarding.detail')}</p>
         </div>
       </details>
