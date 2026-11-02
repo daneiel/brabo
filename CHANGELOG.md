@@ -14,6 +14,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- Arquivo acima de 1 MiB em repositório local falhava na aba Código, no blame, no diff de PR e no índice do RAG (`maxBuffer` do Node); o `execGit` agora aceita 64 MiB por chamada (AT-667, parte A).
 - Correções visuais da onda 4 do shadcn, achadas nas capturas dos dois temas (AT-665/AT-666): formulário de orçamento da aba Gastos sobre o kit, em grade; card "Gasto por dia" sem o recuo do `<figure>`; "Definir orçamento" sem borda dupla e avatares sem corte no Início; seções de Configurações com espaçamento interno e o anel de foco da casa ao abrir por link; checkbox da comunidade em Providers no lugar; pendências do fio com margem e "Reabrir sessão" sem quebra; vazio de PRs em revisão igual ao de Pendentes; links inline com alvo de 24px.
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
