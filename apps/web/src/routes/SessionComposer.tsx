@@ -479,6 +479,7 @@ export function SessionComposer({
               <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
               <span>{t('ativacao.reabrirExplicacao')}</span>
               <Button
+                className={styles.reabrir}
                 onClick={handleReopen}
                 disabled={!podeReabrir}
                 loading={reabrindo}

@@ -123,6 +123,13 @@
   color: var(--text-secondary);
 }
 
+.card.semOrcamento {
+  /* O CTA já tem a borda tracejada: sem a caixa do medidor em volta (borda dupla). */
+  background: none;
+  border: none;
+  padding: 0;
+}
+
 .noBudgetCta {
   display: flex;
   align-items: center;

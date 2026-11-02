@@ -95,7 +95,7 @@ export function TokenMeter({
       // variante CHEIA dentro de um card do dashboard, mais alto que o próprio
       // medidor que ele substitui.
       <div
-        className={[styles.card, styles.compact].join(' ')}
+        className={[styles.card, styles.compact, styles.semOrcamento].join(' ')}
         data-testid="token-meter"
         data-threshold="ok"
       >
