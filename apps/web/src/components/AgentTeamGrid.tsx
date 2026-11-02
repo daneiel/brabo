@@ -17,6 +17,7 @@ import type {
 import { AGENT_AUTONOMY_ALL_ACTIONS } from '../lib/api-types';
 import type { AgentProgress } from '../lib/execution';
 import { AgentCard, type AutonomyMode } from './AgentCard';
+import { Button } from './ui/Button';
 import { ChevronDownIcon, ChevronRightIcon } from './ui/icons';
 import styles from '../routes/ProjectOverviewTab.module.css';
 
@@ -162,14 +163,14 @@ export function AgentTeamGrid({
             {renderLeadCard(roster.indexOf(group.lead), t('teamGrid.leadBadge'))}
             {group.members.length > 0 && (
               <div className={styles.areaMembers}>
-                <button
-                  type="button"
-                  className={styles.areaToggle}
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => onToggleArea(group.areaKey)}
                 >
                   {collapsed ? <ChevronRightIcon size={13} /> : <ChevronDownIcon size={13} />}
                   {area.label} · {t('teamGrid.subspecialty', { count: group.members.length })}
-                </button>
+                </Button>
                 {!collapsed && (
                   <div className={styles.areaMembersList}>
                     {group.members.map((m) => renderMemberCard(roster.indexOf(m)))}

@@ -50,6 +50,14 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from '../components/shadcn/item';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import type { AgentAutonomyActionType, Architecture, ProposedAction, SessionEvent } from '../lib/api-types';
@@ -614,47 +622,48 @@ function ExecutionSection({
                 {t('executionSection.blockedTasksLabel')}
                 <Badge tone="danger">{blockedTasks.length}</Badge>
               </div>
-              <ul className={styles.pendList}>
+              <ItemGroup className={styles.pendList}>
                 {blockedTasks.map((t2) => (
-                  <li key={t2.id} className={styles.pendItem}>
-                    <span className={styles.pendTitle}>
-                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
-                    </span>
-                    <span className={styles.pendReason}>
-                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
-                    </span>
-                    {desbloqueio[t2.id]?.estado === 'ok' ? (
-                      <span role="status" data-testid="desbloqueada">
-                        {t('executionSection.unblockedTitle')}
-                      </span>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleUnblock(t2.id)}
-                        disabled={!sessionId || desbloqueio[t2.id]?.estado === 'em_voo'}
-                        aria-busy={desbloqueio[t2.id]?.estado === 'em_voo'}
-                      >
-                        {desbloqueio[t2.id]?.estado === 'em_voo'
-                          ? t('executionSection.unblocking')
-                          : t('executionSection.unblock')}
-                      </Button>
-                    )}
-                    {!sessionId && (
-                      <span className={styles.pendReason}>
-                        {t('executionSection.unblockNeedsSession')}
-                      </span>
-                    )}
-                    {(() => {
-                      const d = desbloqueio[t2.id];
-                      return d?.estado === 'erro' ? (
+                  <Item key={t2.id} variant="outline" size="sm" className={styles.pendItem}>
+                    <ItemContent>
+                      <ItemTitle className={styles.pendTitle}>
+                        {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
+                      </ItemTitle>
+                      <ItemDescription className={styles.pendReason}>
+                        {t2.blockedReason ?? t('executionSection.noDiagnosis')}
+                      </ItemDescription>
+                      {!sessionId && (
+                        <ItemDescription className={styles.pendReason}>
+                          {t('executionSection.unblockNeedsSession')}
+                        </ItemDescription>
+                      )}
+                      {desbloqueio[t2.id]?.estado === 'erro' && (
                         <span role="alert" className={styles.pendReason}>
-                          {d.mensagem}
+                          {(desbloqueio[t2.id] as { mensagem: string }).mensagem}
                         </span>
-                      ) : null;
-                    })()}
-                  </li>
+                      )}
+                    </ItemContent>
+                    <ItemActions>
+                      {desbloqueio[t2.id]?.estado === 'ok' ? (
+                        <span role="status" data-testid="desbloqueada">
+                          {t('executionSection.unblockedTitle')}
+                        </span>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleUnblock(t2.id)}
+                          disabled={!sessionId || desbloqueio[t2.id]?.estado === 'em_voo'}
+                          aria-busy={desbloqueio[t2.id]?.estado === 'em_voo'}
+                        >
+                          {desbloqueio[t2.id]?.estado === 'em_voo'
+                            ? t('executionSection.unblocking')
+                            : t('executionSection.unblock')}
+                        </Button>
+                      )}
+                    </ItemActions>
+                  </Item>
                 ))}
-              </ul>
+              </ItemGroup>
             </>
           )}
 
@@ -692,25 +701,29 @@ function ExecutionSection({
           )}
 
           {suggestions.map((module) => (
-            <div key={module} className={styles.suggestion}>
-              <span>
-                {t('executionSection.suggestionBefore')}
-                <strong>{module}</strong>
-                {t('executionSection.suggestionAfter')}
-              </span>
-              <Button variant="secondary" onClick={() => handleAccept(module)}>
-                {t('executionSection.accept')}
-              </Button>
-            </div>
+            <Item key={module} variant="outline" size="sm" className={styles.suggestion}>
+              <ItemContent>
+                <span>
+                  {t('executionSection.suggestionBefore')}
+                  <strong>{module}</strong>
+                  {t('executionSection.suggestionAfter')}
+                </span>
+              </ItemContent>
+              <ItemActions>
+                <Button variant="secondary" onClick={() => handleAccept(module)}>
+                  {t('executionSection.accept')}
+                </Button>
+              </ItemActions>
+            </Item>
           ))}
 
           <div className={styles.archLabel}>{t('executionSection.pullRequestsLabel')}</div>
           {prs.length === 0 ? (
             <div className={styles.sectionSub}>{t('executionSection.noPullRequests')}</div>
           ) : (
-            <ul className={styles.adrList}>
+            <ItemGroup className={styles.adrList}>
               {prs.map((pr) => (
-                <li key={pr.id} className={styles.adrItem}>
+                <Item key={pr.id} size="xs" className={styles.adrItem}>
                   <Badge tone={pr.status === 'executed' ? 'success' : 'warning'}>{pr.status}</Badge>
                   {pr.url ? (
                     <a href={pr.url} target="_blank" rel="noreferrer" className={styles.adrLink}>
@@ -719,9 +732,9 @@ function ExecutionSection({
                   ) : (
                     <span>{t('executionSection.pullRequestFallback')}</span>
                   )}
-                </li>
+                </Item>
               ))}
-            </ul>
+            </ItemGroup>
           )}
         </>
       )}

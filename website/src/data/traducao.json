@@ -913,7 +913,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
@@ -997,7 +997,7 @@
       "data": "2026-10-15"
     },
     "intro.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "missions/colheita-esqueleto.md": {
@@ -1061,7 +1061,7 @@
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/scripts.md": {
@@ -1995,7 +1995,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
@@ -2079,7 +2079,7 @@
       "data": "2026-10-15"
     },
     "intro.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "missions/colheita-esqueleto.md": {
@@ -2143,7 +2143,7 @@
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/scripts.md": {
@@ -3077,7 +3077,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
@@ -3161,7 +3161,7 @@
       "data": "2026-10-15"
     },
     "intro.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "missions/colheita-esqueleto.md": {
@@ -3225,7 +3225,7 @@
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/scripts.md": {

@@ -59,6 +59,10 @@
     "older_one": "+ {{count}} mais antigo",
     "older_other": "+ {{count}} mais antigos"
   },
+  "contexto": {
+    "rotulo": "{{usados}} de {{janela}} tokens na última chamada · {{modelo}}",
+    "semJanela": "Janela do modelo {{modelo}} desconhecida: não sei quanto está ocupado."
+  },
   "tokenMeter": {
     "unitTokens": "tokens",
     "live": {

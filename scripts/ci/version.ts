@@ -22,11 +22,13 @@ import { ESCADA, type Permanente } from './pr-police.ts';
 /** O estágio de pré-lançamento de cada permanente. `main` não tem: é final. */
 export const ESTAGIO_POR_BRANCH = {
   dev: 'dev',
-  qa: 'qa',
   main: null,
 } as const satisfies Record<Permanente, string | null>;
 
 export type Estagio = 'dev' | 'qa';
+
+/** O estágio que precede `main` na escada (hoje `dev`; tags `-qa.N` históricas seguem legíveis). */
+export const ESTAGIO_ANTERIOR_A_MAIN = ESCADA[ESCADA.length - 2] as Estagio;
 
 export const IMPACTOS = ['major', 'minor', 'patch'] as const;
 export type Impacto = (typeof IMPACTOS)[number];
@@ -131,7 +133,8 @@ export function extrairNumerosDePr(assuntos: string[]): number[] {
  * ciclo novo: uma tag `-dev.N` sobre uma versão que não mudou nada.
  */
 export function semTrafegoDaEsteira(prs: PrDoCiclo[]): PrDoCiclo[] {
-  return prs.filter((pr) => !(ESCADA as readonly string[]).includes(pr.branch));
+  // `qa` é ex-permanente: PR antiga de esteira com esse head continua fora do ciclo.
+  return prs.filter((pr) => ![...ESCADA, 'qa'].includes(pr.branch as never));
 }
 
 export function classificar(prs: PrDoCiclo[]): PrClassificado[] {
@@ -244,15 +247,15 @@ export function verificarAncora(
 ): Ancora {
   const doEstagio = tags
     .map((t) => ({ tag: t, lida: lerTagDeEstagio(t) }))
-    .filter((x) => x.lida !== null && x.lida.versao === versao && x.lida.estagio === 'qa');
+    .filter((x) => x.lida !== null && x.lida.versao === versao && x.lida.estagio === ESTAGIO_ANTERIOR_A_MAIN);
 
   if (doEstagio.length === 0) {
     return {
       ok: false,
       tagEsperada: null,
       motivo:
-        `não existe nenhuma tag \`${versao}-qa.N\`.\n` +
-        `  A final só nasce do commit que passou por \`qa\` — promova por lá antes.`,
+        `não existe nenhuma tag \`${versao}-${ESTAGIO_ANTERIOR_A_MAIN}.N\`.\n` +
+        `  A final só nasce do commit que passou por \`${ESTAGIO_ANTERIOR_A_MAIN}\` — promova por lá antes.`,
     };
   }
 
@@ -319,7 +322,7 @@ export function verificarAncora(
         `a árvore de \`main\` (${contexto.treeDoCommit.slice(0, 8)}) difere da de ` +
         `\`${ultima.tag}\` (${treeDaUltima.slice(0, 8)}).\n` +
         `  O merge trouxe conteúdo do outro lado, então o que seria publicado\n` +
-        `  NÃO é o que passou por \`qa\`.`,
+        `  NÃO é o que passou por \`${ESTAGIO_ANTERIOR_A_MAIN}\`.`,
     };
   }
 
@@ -364,7 +367,7 @@ export function identificarCaminho(
   tags: string[],
   shaPorTag: Record<string, string>,
 ): CaminhoIdentificado {
-  const deQa = tags.filter((t) => lerTagDeEstagio(t)?.estagio === 'qa');
+  const deQa = tags.filter((t) => lerTagDeEstagio(t)?.estagio === ESTAGIO_ANTERIOR_A_MAIN);
 
   for (const t of deQa) {
     const sha = shaPorTag[t];
@@ -372,7 +375,7 @@ export function identificarCaminho(
       return {
         caminho: 'promocao',
         tagDeQa: t,
-        motivo: `\`${t}\` (${sha.slice(0, 8)}) é pai do merge — veio de \`qa\`.`,
+        motivo: `\`${t}\` (${sha.slice(0, 8)}) é pai do merge — veio de \`${ESTAGIO_ANTERIOR_A_MAIN}\`.`,
       };
     }
   }
@@ -381,7 +384,7 @@ export function identificarCaminho(
     caminho: 'hotfix',
     tagDeQa: null,
     motivo:
-      'nenhuma tag `-qa.N` é pai deste merge — o que entrou não passou por `qa`.\n' +
+      `nenhuma tag \`-${ESTAGIO_ANTERIOR_A_MAIN}.N\` é pai deste merge — o que entrou não passou por \`${ESTAGIO_ANTERIOR_A_MAIN}\`.\n` +
       '  Caminho de hotfix: a versão é a última final mais PATCH.',
   };
 }

@@ -141,31 +141,31 @@ describe('o N do estágio', () => {
 // ------------------------------------------------------------- 5. a âncora
 
 describe('âncora da tag final', () => {
-  const tags = ['v0.1.0', 'v0.2.0-dev.1', 'v0.2.0-qa.1', 'v0.2.0-qa.2'];
+  const tags = ['v0.1.0', 'v0.2.0-qa.1', 'v0.2.0-dev.1', 'v0.2.0-dev.2'];
   const shas = {
     'v0.1.0': 'aaaa1111',
-    'v0.2.0-dev.1': 'bbbb2222',
-    'v0.2.0-qa.1': 'cccc3333',
-    'v0.2.0-qa.2': 'dddd4444',
+    'v0.2.0-qa.1': 'bbbb2222',
+    'v0.2.0-dev.1': 'cccc3333',
+    'v0.2.0-dev.2': 'dddd4444',
   };
 
-  it('aprova quando o commit é o da ÚLTIMA -qa.N (fast-forward)', () => {
+  it('aprova quando o commit é o da ÚLTIMA -dev.N (fast-forward)', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'dddd4444');
     expect(r.ok).toBe(true);
-    expect(r.tagEsperada).toBe('v0.2.0-qa.2');
+    expect(r.tagEsperada).toBe('v0.2.0-dev.2');
   });
 
   // O caso NORMAL: promoção é `--no-ff`, então o sha de main nunca é o de qa.
   const contexto = {
     treeDoCommit: 'tree-igual',
-    treePorTag: { 'v0.2.0-qa.2': 'tree-igual', 'v0.2.0-qa.1': 'tree-antiga' },
+    treePorTag: { 'v0.2.0-dev.2': 'tree-igual', 'v0.2.0-dev.1': 'tree-antiga' },
     paisDoCommit: ['mainvelha', 'dddd4444'],
   };
 
-  it('aprova MERGE COMMIT: a -qa.N é pai e a árvore é idêntica', () => {
+  it('aprova MERGE COMMIT: a -dev.N é pai e a árvore é idêntica', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'merge999', contexto);
     expect(r.ok).toBe(true);
-    expect(r.tagEsperada).toBe('v0.2.0-qa.2');
+    expect(r.tagEsperada).toBe('v0.2.0-dev.2');
   });
 
   it('REPROVA merge cuja árvore difere — o outro lado trouxe conteúdo', () => {
@@ -178,7 +178,7 @@ describe('âncora da tag final', () => {
     expect(r.motivo).toContain('NÃO é o que passou');
   });
 
-  it('REPROVA merge em que a -qa.N não é pai — entrou algo no meio', () => {
+  it('REPROVA merge em que a -dev.N não é pai — entrou algo no meio', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'merge999', {
       ...contexto,
       paisDoCommit: ['mainvelha', 'outracoisa'],
@@ -203,17 +203,17 @@ describe('âncora da tag final', () => {
   it('REPROVA o commit de uma -qa ANTERIOR — vale a última, não qualquer uma', () => {
     const r = verificarAncora('v0.2.0', tags, shas, 'cccc3333');
     expect(r.ok).toBe(false);
-    expect(r.tagEsperada).toBe('v0.2.0-qa.2');
+    expect(r.tagEsperada).toBe('v0.2.0-dev.2');
   });
 
   it('REPROVA quando não há nenhuma -qa daquela versão', () => {
     const r = verificarAncora('v0.9.0', tags, shas, 'dddd4444');
     expect(r.ok).toBe(false);
-    expect(r.motivo).toContain('v0.9.0-qa.N');
+    expect(r.motivo).toContain('v0.9.0-dev.N');
   });
 
   it('REPROVA quando a tag não resolve — verificação impossível não é aprovação', () => {
-    const r = verificarAncora('v0.2.0', tags, { ...shas, 'v0.2.0-qa.2': undefined as never }, 'x');
+    const r = verificarAncora('v0.2.0', tags, { ...shas, 'v0.2.0-dev.2': undefined as never }, 'x');
     expect(r.ok).toBe(false);
     expect(r.motivo).toContain('impossível');
   });
@@ -278,28 +278,28 @@ describe('descobrir os PRs do ciclo', () => {
 // ------------------------------------------- 6. os dois caminhos da `main`
 
 describe('caminhos da main', () => {
-  const tags = ['v0.2.0', 'v0.2.0-qa.1', 'v0.2.0-qa.2', 'v0.2.0-dev.1'];
+  const tags = ['v0.2.0', 'v0.2.0-dev.1', 'v0.2.0-dev.2', 'v0.2.0-qa.1'];
   const shaPorTag = {
     'v0.2.0': 'f1f1f1f1',
-    'v0.2.0-qa.1': 'aaaa1111',
-    'v0.2.0-qa.2': 'bbbb2222',
-    'v0.2.0-dev.1': 'dddd0000',
+    'v0.2.0-dev.1': 'aaaa1111',
+    'v0.2.0-dev.2': 'bbbb2222',
+    'v0.2.0-qa.1': 'dddd0000',
   };
 
-  it('promoção: a `-qa.N` é pai do merge', () => {
+  it('promoção: a `-dev.N` é pai do merge', () => {
     const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, shaPorTag);
     expect(c.caminho).toBe('promocao');
-    expect(c.tagDeQa).toBe('v0.2.0-qa.2');
+    expect(c.tagDeQa).toBe('v0.2.0-dev.2');
   });
 
-  it('hotfix: nenhum pai é `-qa.N`', () => {
+  it('hotfix: nenhum pai é `-dev.N`', () => {
     const c = identificarCaminho(['f1f1f1f1', '99999999'], tags, shaPorTag);
     expect(c.caminho).toBe('hotfix');
     expect(c.tagDeQa).toBeNull();
-    expect(c.motivo).toContain('não passou por `qa`');
+    expect(c.motivo).toContain('não passou por `dev`');
   });
 
-  it('uma `-dev.N` de pai NÃO conta como promoção', () => {
+  it('uma `-qa.N` de pai NÃO conta como promoção', () => {
     // Um merge de `dev` direto em `main` pula `qa`. Se isso passasse por
     // promoção, a final sairia carimbando código que ninguém validou.
     expect(identificarCaminho(['f1f1f1f1', 'dddd0000'], tags, shaPorTag).caminho).toBe(
@@ -307,7 +307,7 @@ describe('caminhos da main', () => {
     );
   });
 
-  it('tag `-qa.N` que não resolve não vira promoção por descuido', () => {
+  it('tag `-dev.N` que não resolve não vira promoção por descuido', () => {
     const c = identificarCaminho(['f1f1f1f1', 'bbbb2222'], tags, {
       'v0.2.0': 'f1f1f1f1',
     });
@@ -335,28 +335,18 @@ describe('caminhos da main', () => {
 // ------------------------------------------------------------ 7. o par
 
 describe('par da esteira', () => {
-  it('aceita as duas promoções adjacentes', () => {
-    for (const entrada of ['dev->qa', 'dev → qa', 'dev:qa']) {
+  it('aceita a promoção dev→main e a retropropagação main→dev', () => {
+    for (const entrada of ['dev->main', 'dev → main', 'dev:main']) {
       const p = lerPar(entrada)!;
-      expect(p).toEqual({ de: 'dev', para: 'qa' });
+      expect(p).toEqual({ de: 'dev', para: 'main' });
       expect(parEhAdjacente(p)).toBe(true);
     }
-    expect(parEhAdjacente(lerPar('qa->main')!)).toBe(true);
+    expect(parEhAdjacente(lerPar('main->dev')!)).toBe(false); // descer é retropropagação
   });
 
-  it('REJEITA dev→main por pular qa, e ensina o caminho', () => {
-    const p = lerPar('dev->main')!;
-    expect(parEhAdjacente(p)).toBe(false);
-    const m = explicarParInvalido(p);
-    expect(m).toContain('pula');
-    expect(m).toContain('`qa`');
-    expect(m).toContain('etapas');
-  });
-
-  it('rejeita descida e diz que isso é retropropagação', () => {
-    const p = lerPar('main->qa')!;
-    expect(parEhAdjacente(p)).toBe(false);
-    expect(explicarParInvalido(p)).toContain('retropropagação');
+  it('a qa aposentada não é mais degrau', () => {
+    expect(lerPar('dev->qa')).toBeNull();
+    expect(lerPar('qa->main')).toBeNull();
   });
 
   it('rejeita par igual e branch que não é permanente', () => {
@@ -384,18 +374,13 @@ describe('a esteira, de ponta a ponta', () => {
     expect(devTag).toBe('v0.2.0-dev.1');
     tags = [...tags, devTag];
 
-    // Promoção dev→qa.
-    const qa1 = montarTag(versao, 'qa', proximoN(tags, versao, 'qa'));
-    expect(qa1).toBe('v0.2.0-qa.1');
-    tags = [...tags, qa1];
+    // REPROVAÇÃO: corrige, mergeia em dev de novo (segundo carimbo).
+    const dev2 = montarTag(versao, 'dev', proximoN(tags, versao, 'dev'));
+    expect(dev2).toBe('v0.2.0-dev.2');
+    tags = [...tags, dev2];
 
-    // REPROVAÇÃO: corrige, mergeia em dev de novo, repromove.
-    const qa2 = montarTag(versao, 'qa', proximoN(tags, versao, 'qa'));
-    expect(qa2).toBe('v0.2.0-qa.2');
-    tags = [...tags, qa2];
-
-    // Promoção qa→main: a final ancora em qa.2, não em qa.1.
-    const shas = { 'v0.2.0-qa.1': 'aaa', 'v0.2.0-qa.2': 'bbb' };
+    // Promoção dev→main: a final ancora em dev.2, não em dev.1.
+    const shas = { 'v0.2.0-dev.1': 'aaa', 'v0.2.0-dev.2': 'bbb' };
     expect(verificarAncora(versao, tags, shas, 'bbb').ok).toBe(true);
     expect(verificarAncora(versao, tags, shas, 'aaa').ok).toBe(false);
   });

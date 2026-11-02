@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
+import { Button } from '@/components/shadcn/button';
+import { Card } from '@/components/shadcn/card';
 import { Shimmer } from './ui/Shimmer';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './AgentCard.module.css';
@@ -89,7 +91,7 @@ export function AgentCard({
   const statusStyle = { ['--status-color' as string]: STATUS_COLOR[status] } as CSSProperties;
 
   return (
-    <div className={[styles.card, compact && styles.compact].filter(Boolean).join(' ')} style={style}>
+    <Card padding="none" className={[styles.card, compact && styles.compact].filter(Boolean).join(' ')} style={style}>
       <div className={styles.top}>
         <div className={styles.avatar}>
           <Icon size={compact ? 16 : 20} />
@@ -143,20 +145,24 @@ export function AgentCard({
 
       {autonomy && onAutonomyChange && (
         <div className={styles.autonomy}>
-          <button
+          <Button
             type="button"
-            className={[styles.autonomyOption, autonomy === 'manual' && styles.active].filter(Boolean).join(' ')}
+            size="sm"
+            variant={autonomy === 'manual' ? 'secondary' : 'ghost'}
+            aria-pressed={autonomy === 'manual'}
             onClick={() => onAutonomyChange('manual')}
           >
             {t('agentCard.autonomy.manual')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={[styles.autonomyOption, autonomy === 'auto' && styles.active].filter(Boolean).join(' ')}
+            size="sm"
+            variant={autonomy === 'auto' ? 'secondary' : 'ghost'}
+            aria-pressed={autonomy === 'auto'}
             onClick={() => onAutonomyChange('auto')}
           >
             {t('agentCard.autonomy.auto')}
-          </button>
+          </Button>
         </div>
       )}
       {autonomy && onAutonomyChange && autonomyHint && (
@@ -168,11 +174,11 @@ export function AgentCard({
 
       {status === 'travado' && onRearm && (
         <div className={styles.autonomy}>
-          <button type="button" className={styles.autonomyOption} onClick={onRearm}>
+          <Button type="button" size="sm" variant="secondary" onClick={onRearm}>
             {t('agentCard.rearm')}
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

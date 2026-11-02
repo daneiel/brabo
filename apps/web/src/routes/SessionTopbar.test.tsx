@@ -27,6 +27,7 @@ import { SessionTopbar, type SessionTopbarProps } from './SessionTopbar';
  */
 
 const getSessionResponseLanguage = vi.fn();
+const getSessionTokenUsage = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, className }: { children: ReactNode; className?: string }) => (
@@ -47,6 +48,7 @@ vi.mock('../lib/api-client', async () => {
   return {
     ...real,
     getSessionResponseLanguage: (...args: unknown[]) => getSessionResponseLanguage(...args),
+    getSessionTokenUsage: (...args: unknown[]) => getSessionTokenUsage(...args),
     setSessionResponseLanguage: vi.fn(),
     answerDetectedLanguage: vi.fn(),
     setSessionModelBinding: vi.fn(),
@@ -148,6 +150,8 @@ beforeEach(async () => {
   await i18n.changeLanguage('pt-BR');
   getSessionResponseLanguage.mockReset();
   getSessionResponseLanguage.mockResolvedValue(IDIOMA);
+  getSessionTokenUsage.mockReset();
+  getSessionTokenUsage.mockResolvedValue([]);
   observadores = [];
 });
 
@@ -296,5 +300,35 @@ describe('SessionTopbar pela largura (AT-317)', () => {
     expect(screen.queryByTestId('ajustes-da-sessao')).toBeNull();
     expect(await screen.findByTestId('idioma-da-sessao')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Encerrar/ }).textContent).toContain('Encerrar');
+  });
+});
+
+describe('janela do modelo do destinatário (AT-654, RN-969)', () => {
+  const uso = (lastCall: unknown) => [
+    { actorId: 'arquiteto', costMicros: 1, inputTokens: 1, outputTokens: 1, lastCall },
+  ];
+
+  it('mostra a porcentagem da última chamada do destinatário', async () => {
+    getSessionTokenUsage.mockResolvedValue(
+      uso({ inputTokens: 32000, modelName: 'm-x', contextWindow: 128000 }),
+    );
+    montar({ destinatario: 'arquiteto' });
+    expect((await screen.findByTestId('janela-do-agente')).textContent).toBe('25%');
+  });
+
+  it('janela desconhecida diz "—", nunca 0%', async () => {
+    getSessionTokenUsage.mockResolvedValue(
+      uso({ inputTokens: 32000, modelName: 'm-x', contextWindow: null }),
+    );
+    montar({ destinatario: 'arquiteto' });
+    expect((await screen.findByTestId('janela-do-agente')).textContent).toBe('—');
+  });
+
+  it('sem chamada, ou outro destinatário: nada aparece', async () => {
+    getSessionTokenUsage.mockResolvedValue(uso(null));
+    montar({ destinatario: 'arquiteto' });
+    await screen.findByTestId('ajustes-da-sessao').catch(() => null);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByTestId('janela-do-agente')).toBeNull();
   });
 });

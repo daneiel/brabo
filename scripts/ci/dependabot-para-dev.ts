@@ -4,7 +4,7 @@
  * seção "Dependabot enters through dev".
  *
  * Por que isto existe: dependência entra pela `dev`, como todo o resto, e
- * chega à `main` pela promoção `dev → qa → main`. O `target-branch: dev` do
+ * chega à `main` pela promoção `dev → main`. O `target-branch: dev` do
  * `.github/dependabot.yml` resolve isso para as atualizações de VERSÃO, mas os
  * SECURITY UPDATES são ligados na interface do repositório e o GitHub os abre
  * SEMPRE contra a branch default, ignorando `target-branch`. Com `main` como

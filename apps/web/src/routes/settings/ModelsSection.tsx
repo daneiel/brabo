@@ -46,6 +46,7 @@ import {
   useBindingsResolvidos,
 } from '../../lib/bindings-resolvidos';
 import { AvisoDeBindingsNaoLidos, MarcaDeBindingNaoLido } from './LeituraDosBindings';
+import { Checkbox } from '@/components/shadcn/checkbox';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -600,12 +601,11 @@ export function ModelsSection({ projectId }: { projectId: string }) {
           {areaLead && (
             <div className={styles.ajusteHint}>
               <label>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={segueArea}
                   disabled={!podeEditarArea || !resolved}
-                  onChange={(e) =>
-                    void (e.target.checked
+                  onCheckedChange={(marcado) =>
+                    void (marcado
                       ? handleMarcarArea(areaLead.key, agent.key)
                       : handleDesmarcarArea(areaLead.key))
                   }

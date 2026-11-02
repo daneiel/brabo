@@ -1,6 +1,7 @@
 import type { SessionEvent } from '../lib/api-types';
 import { classifyEvent } from '../lib/activity';
 import { formatRelativeTime } from '../lib/time';
+import { Item, ItemContent, ItemMedia } from '@/components/shadcn/item';
 import styles from './EventItem.module.css';
 
 interface EventItemProps {
@@ -14,17 +15,18 @@ export function EventItem({ event, highlighted }: EventItemProps) {
   const Icon = display.icon;
 
   return (
-    <div
+    <Item
+      size="xs"
       id={`event-${event.id}`}
       className={[styles.row, highlighted && styles.highlighted]
         .filter(Boolean)
         .join(' ')}
     >
-      <span className={styles.icon} style={{ ['--item-color' as string]: display.color }}>
+      <ItemMedia className={styles.icon} style={{ ['--item-color' as string]: display.color }}>
         <Icon size={14} />
-      </span>
-      <span className={styles.text}>{display.text}</span>
+      </ItemMedia>
+      <ItemContent className={styles.text}>{display.text}</ItemContent>
       <span className={styles.time}>{formatRelativeTime(event.createdAt)}</span>
-    </div>
+    </Item>
   );
 }

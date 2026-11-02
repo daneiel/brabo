@@ -483,7 +483,7 @@ jobs:
       # O CHANGELOG.md do repositório volta por PR para `dev`, não por push.
       #
       # `main` não aceita push (só tag pelo bot de release e
-      # `.release/gate.json` pelo bot do gate), e commitar em `qa`/`dev` antes
+      # `.release/gate.json` pelo bot do gate), e commitar em `dev` antes
       # de abrir a promoção quebraria o "range limpo" do check de promoção.
       # Sobra o caminho que a política já prevê para tudo: entrar por PR.
       #
@@ -546,6 +546,6 @@ jobs:
           por DIGEST das cinco imagens que esta tag publicou no GHCR (ADR 0119),
           que também está anexado à GitHub Release.
 
-          Entra por PR porque \`main\` não aceita push, e commitar em \`qa\`/\`dev\`
+          Entra por PR porque \`main\` não aceita push, e commitar em \`dev\`
           antes da promoção quebraria o \"range limpo\" do check de promoção.
-          Sobe para \`qa\` e \`main\` no próximo ciclo, como qualquer mudança." 
+          Sobe para \`main\` no próximo ciclo, como qualquer mudança." 

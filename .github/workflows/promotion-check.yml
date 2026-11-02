@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: read  # AT-663: perguntar se o tag-release do commit ainda está rodando
 
 concurrency:
   group: promotion-check-${{ github.event.pull_request.number }}
@@ -42,7 +43,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          for b in dev qa main; do
+          for b in dev main; do
             git fetch --no-tags --quiet origin "+refs/heads/$b:refs/remotes/origin/$b" || \
               echo "::notice::branch permanente '$b' não existe no remoto"
           done

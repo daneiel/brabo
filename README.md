@@ -240,7 +240,7 @@ a rolagem faz no log é aritmética pura, e assim ele é testável sem TTY.
 
 ## Documentação
 
-Versão atual: versão **v7.0.0** ([CHANGELOG](CHANGELOG.md)).
+Versão atual: versão **v7.1.0** ([CHANGELOG](CHANGELOG.md)).
 
 **📖 [daneiel.github.io/brabo](https://daneiel.github.io/brabo/)** — a mesma
 documentação abaixo, navegável e com busca. O site lê de `docs/`, publica no

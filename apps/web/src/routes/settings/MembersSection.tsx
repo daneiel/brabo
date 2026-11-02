@@ -15,6 +15,7 @@ import { Table, type TableColumn } from '../../components/ui/Table';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { Button as BotaoShadcn } from '@/components/shadcn/button';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -236,8 +237,10 @@ export function MembersSection({ projectId }: { projectId: string }) {
       label: '',
       width: '56px',
       render: (member) => (
-        <button
+        <BotaoShadcn
           type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label={t('members.table.removeAria', { name: member.name ?? member.email })}
           title={t('members.table.removeTitle')}
           className={styles.remove}
@@ -250,7 +253,7 @@ export function MembersSection({ projectId }: { projectId: string }) {
           onClick={() => handleRemove(member.userId)}
         >
           <TrashIcon size={14} />
-        </button>
+        </BotaoShadcn>
       ),
     },
   ];
