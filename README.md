@@ -17,6 +17,7 @@ A autoridade final continua sendo sua — por construção, não por convenção
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Versão](https://img.shields.io/github/v/release/daneiel/brabo?label=vers%C3%A3o&color=informational&style=flat-square)](CHANGELOG.md)
 [![Documentação](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg?style=flat-square)](https://daneiel.github.io/brabo/)
+[![Apoie no Ko-fi](https://img.shields.io/badge/Ko--fi-me%20pague%20um%20caf%C3%A9-FF5E5B?logo=ko-fi&logoColor=white&style=flat-square)](https://ko-fi.com/daneiel)
 
 [Documentação](https://daneiel.github.io/brabo/) · [Do zero ao entregável](https://daneiel.github.io/brabo/prd/tutorials/from-zero-to-deliverable) · [CHANGELOG](CHANGELOG.md) · [Segurança](SECURITY.md) · [Contribuir](CONTRIBUTING.md)
 

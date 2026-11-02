@@ -30,6 +30,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).
 - A topbar da Sessão mostra quanto da janela do modelo o agente com quem se conversa ocupa (a entrada da última chamada dele contra a janela do modelo; "não sei" quando a janela é desconhecida, nunca 0%), sem requisição nova (AT-654, RN-969).
 - A Visão geral, os cartões de Parar e Religar a execução, a página de Providers e as caixas de marcar da seção de modelos passam a ser montados sobre o shadcn; nenhuma regra muda (AT-655, onda 4, rodada B parcial).
 - A aba Executores e as abas Backlog, Sessões, Aprovações e PRs passam a ser montadas sobre o shadcn (AT-636, onda 4, rodada A): subagente delegado vira `Subagent` com o estado e a origem (RN-970), o modo automático do time vira `Checkbox`, a lista do piloto só monta quando aberta, linhas e avisos viram `Item`, e o parecer do gate na timeline da PR vira `Collapsible`; nenhuma regra muda (AT-655).

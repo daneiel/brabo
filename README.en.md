@@ -17,6 +17,7 @@ Final authority stays yours — by construction, not by convention.**
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/github/v/release/daneiel/brabo?label=version&color=informational&style=flat-square)](CHANGELOG.md)
 [![Documentation](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg?style=flat-square)](https://daneiel.github.io/brabo/)
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-FF5E5B?logo=ko-fi&logoColor=white&style=flat-square)](https://ko-fi.com/daneiel)
 
 [Documentation](https://daneiel.github.io/brabo/) · [From zero to a deliverable](https://daneiel.github.io/brabo/prd/en/tutorials/from-zero-to-deliverable) · [CHANGELOG](CHANGELOG.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
