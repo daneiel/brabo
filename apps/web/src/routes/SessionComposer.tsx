@@ -18,6 +18,11 @@ import { PromptInputToolbar } from '../components/ai-elements/prompt-input';
 import { CampoDoComposer } from '../components/CampoDoComposer';
 import { AnexosPendentes, BotaoDeAnexar } from '../components/ai-elements/anexos';
 import { adicionarAnexos } from '../lib/anexos';
+import { useMenuDoComposer } from '../lib/use-menu-do-composer';
+import { MenuDoComposer, idDoItemDoMenu } from '../components/ai-elements/menu-do-composer';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '../components/shadcn/dialog';
+import { fraseDaAcao, SEM_FRASE } from '../lib/aprovacoes';
+import { X } from 'lucide-react';
 import styles from './SessionPage.module.css';
 
 /**
@@ -137,6 +142,7 @@ export function SessionComposer({
 }: SessionComposerProps) {
   const { t } = useTranslation('sessionPage');
   const [handoffManualAberto, setHandoffManualAberto] = useState(false);
+  const [ancora, setAncora] = useState<HTMLDivElement | null>(null);
   const perguntas = usePerguntasEmAberto(session?.projectId).data?.total ?? 0;
   const motivoDePapel = t('composer.sugestaoExigeDeveloper');
   const proximoPasso = arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap;
@@ -187,6 +193,19 @@ export function SessionComposer({
       desabilitada: !podeDecidir,
       motivo: !podeDecidir ? motivoDePapel : undefined,
     });
+  const menu = useMenuDoComposer({
+    projectId: session?.projectId,
+    sessionId: session?.id,
+    agentesDaSessao: opcoesDeDestinatario,
+    acoes,
+    streaming,
+    draft,
+    setDraft,
+    escolherDestinatario,
+    handleCancel,
+    handleSend,
+    teclado: ignorarComposicaoIme(handleComposerKeyDown),
+  });
   return (
     <>
       {/*
@@ -408,6 +427,7 @@ export function SessionComposer({
                 value={destinatario ?? ''}
                 disabled={streaming}
                 onChange={(e) => {
+                  menu.limparChips();
                   if (e.target.value) escolherDestinatario(e.target.value, true);
                 }}
               >
@@ -433,25 +453,81 @@ export function SessionComposer({
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
         <InputGroup className={styles.textarea}>
           {session?.id && <AnexosPendentes sessionId={session.id} />}
-          {/* RN-882: o campo é dono do valor durante a digitação. */}
+          {menu.destinatarios.length > 0 && (
+            <div className="flex flex-wrap gap-1 px-3 pt-2" data-testid="destinatarios-do-chat">
+              {menu.destinatarios.map((a) => (
+                <span key={a} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs">
+                  @{nomeDoAgente(a)}
+                  <button
+                    type="button"
+                    aria-label={t('composer.menu.removerDestinatario', { agente: nomeDoAgente(a) })}
+                    onClick={() => menu.removerChip(a)}
+                  >
+                    <X aria-hidden="true" size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          {menu.ajuda && (
+            <div className="px-3 pt-2 text-xs" data-testid="ajuda-dos-comandos">
+              <ul>
+                {menu.ajuda.map((c) => (
+                  <li key={c.id}>
+                    <strong>/{c.rotulo}</strong> — {c.inerte ?? c.descricao}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={menu.fecharAjuda}>
+                {t('composer.menu.fecharAjuda')}
+              </button>
+            </div>
+          )}
+          {menu.aviso && (
+            <p className="px-3 pt-2 text-xs" role="status" data-testid="aviso-do-menu">
+              {menu.aviso}
+            </p>
+          )}
+          {/* RN-882: o campo é dono do valor durante a digitação. O menu só LÊ o nó. */}
+          <div
+            ref={setAncora}
+            onInput={(e) => menu.ler(e.target as HTMLTextAreaElement)}
+            onClick={(e) => e.target instanceof HTMLTextAreaElement && menu.ler(e.target)}
+            onKeyUp={(e) => e.target instanceof HTMLTextAreaElement && menu.ler(e.target)}
+          >
           <CampoDoComposer
+            aria-controls={menu.aberto ? menu.idDaLista : undefined}
+            aria-activedescendant={menu.aberto && menu.itens.length ? idDoItemDoMenu(menu.idDaLista, menu.ativo) : undefined}
             onPaste={(e) => {
               const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
               if (session?.id && imgs.length) void adicionarAnexos(session.id, imgs);
             }}
             valor={draft}
             aoMudar={setDraft}
-            onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
+            onKeyDown={menu.onKeyDown}
             {...SEM_AUTOFILL}
+            aria-autocomplete="list"
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />
+          </div>
+          <MenuDoComposer
+            aberto={menu.aberto}
+            ancora={ancora}
+            idDaLista={menu.idDaLista}
+            titulo={menu.titulo}
+            vazio={t('composer.menu.vazio')}
+            itens={menu.itens}
+            ativo={menu.ativo}
+            aoEscolher={menu.escolher}
+          />
           <PromptInputToolbar>
           <Button
-            onClick={handleSend}
+            onClick={menu.enviar}
             legenda={streaming ? t('composer.enfileirar') : t('composer.enviar')}
             disabled={
-              (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null
+              (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null ||
+              (streaming && menu.destinatarios.length > 1)
             }
           >
             {streaming ? <ListPlus aria-hidden="true" /> : <SendHorizontal aria-hidden="true" />}
@@ -468,6 +544,22 @@ export function SessionComposer({
           </PromptInputToolbar>
         </InputGroup>
         </div>
+        <Dialog open={menu.aprovando !== null} onOpenChange={(o) => !o && menu.cancelarAprovacao()}>
+          <DialogContent>
+            <DialogTitle>
+              {t('composer.comandos.aprovar.confirmar', {
+                acao: menu.aprovando ? (fraseDaAcao(menu.aprovando.actionType, menu.aprovando.payload) ?? SEM_FRASE) : '',
+              })}
+            </DialogTitle>
+            <DialogDescription>{t('composer.comandos.aprovar.descricao')}</DialogDescription>
+            <DialogFooter>
+              <Button variant="secondary" onClick={menu.cancelarAprovacao}>
+                {t('composer.comandos.aprovar.cancelar')}
+              </Button>
+              <Button onClick={menu.confirmarAprovacao}>{t('composer.comandos.aprovar.aprovar')}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </>
       ) : (
         <div className={styles.activatePrompt}>

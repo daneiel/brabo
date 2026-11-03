@@ -86,7 +86,62 @@
     "perguntasEmAberto_one": "{{count}} pergunta em aberto",
     "perguntasEmAberto_other": "{{count}} perguntas em aberto",
     "responderPerguntas": "Responder",
-    "sugestaoExigeDeveloper": "Esta ação exige o papel developer neste workspace."
+    "sugestaoExigeDeveloper": "Esta ação exige o papel developer neste workspace.",
+    "menu": {
+      "agentes": "Agentes da sessão",
+      "comandos": "Comandos",
+      "vazio": "Nada encontrado",
+      "removerDestinatario": "Remover {{agente}} dos destinatários",
+      "fecharAjuda": "Fechar a ajuda",
+      "erroEnviarVarios": "Não foi possível enviar a mensagem aos destinatários. O texto voltou ao campo."
+    },
+    "comandos": {
+      "indisponivel": "Indisponível agora",
+      "pronto": {
+        "nome": "pronto",
+        "descricao": "Confirma a prontidão e chama o PO"
+      },
+      "arquitetura": {
+        "nome": "arquitetura",
+        "descricao": "Confirma a arquitetura"
+      },
+      "handoff": {
+        "nome": "handoff",
+        "descricao": "Abre o handoff manual"
+      },
+      "perguntas": {
+        "nome": "perguntas",
+        "descricao": "Vai às perguntas em aberto"
+      },
+      "parar": {
+        "nome": "parar",
+        "descricao": "Interrompe o turno em curso"
+      },
+      "aprovar": {
+        "nome": "aprovar",
+        "descricao": "Você está decidindo por este comando. Os mesmos limites do cartão de aprovação valem.",
+        "confirmar": "Aprovar: {{acao}}",
+        "cancelar": "Cancelar",
+        "aprovar": "Aprovar",
+        "nenhuma": "Nenhuma ação espera sua decisão.",
+        "soNoCard": "Há mais de uma pendência, ou ela só pode ser decidida no cartão: decida por ele.",
+        "erro": "Não foi possível aprovar. Decida pelo cartão."
+      },
+      "ajuda": {
+        "nome": "ajuda",
+        "descricao": "Lista os comandos"
+      },
+      "resumo": {
+        "nome": "resumo",
+        "descricao": "Insere um pedido de resumo no campo",
+        "texto": "Resuma em tópicos o que decidimos até aqui e o que falta."
+      },
+      "plano": {
+        "nome": "plano",
+        "descricao": "Insere um pedido do plano atual no campo",
+        "texto": "Mostre o seu plano atual."
+      }
+    }
   },
   "ativacao": {
     "encerradaTitulo": "Sessão encerrada",
