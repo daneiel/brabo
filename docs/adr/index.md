@@ -263,7 +263,6 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0225](0225-teto-de-preco-do-upstream-no-openrouter.md) | O OpenRouter recebe um **teto de preço** por chamada: `provider.max_price` = preço de catálogo × 1,5, fixo no código e ligado por padrão (capability `priceCeiling`, provada por smoke), mesclado com o `sort`; o 404 por nenhum upstream no teto vira erro nomeado e a chamada repete UMA vez sem teto (fator nulo no metering). Referencia o 0166 e o 0221. |
 | [0227](0227-provider-opencode-zen-de-llm.md) | O **OpenCode Zen** entra como o 11º provider, só no dialeto OpenAI (`/chat/completions`): `listModels: false` (a rota de modelos é outra e pública), sem teste de conexão da credencial, seed só com os dois grátis de retenção zero (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) e capabilities `false` até o smoke. Referencia o 0043 e o 0222. |
 | [0233](0233-membro-ve-o-gasto-do-projeto-sem-credencial.md) | O **membro** vê o gasto do PROJETO (total e custo por agente/área, `GET /projects/:projectId/spend/team`) e o próprio consumo por projeto (`GET /workspaces/:workspaceId/spend/me`), nunca provider nem credencial. Revisa o [0063](0063-duas-audiencias-para-o-mesmo-gasto.md); o relatório do owner ganha `?projectId=` (404 entre workspaces) e a dimensão `session`, e a marca curada `billing` separa assinatura do US$ pago. |
-| [0240](0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.md) | O motivo de controle inerte pode morar num "?" ativo (botão `Ajuda`, abre no clique, teclado e hover) na página de Containers; revisa o ADR 0064 só ali, e o motivo de papel segue em texto no topo. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 
@@ -311,6 +310,7 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0237](0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.md) | O visual v3 (meio-termo, aprovado em 02/11) liga o preflight do Tailwind e sobe os raios para `--radius` 0,625rem, mantendo terracota, tipografia e superfícies do Brabo; revisa o ADR 0232 só no preflight.
 | [0238](0238-o-grafo-de-modulos-vira-canvas-xyflow.md) | O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`, AT-684): chunk próprio de ~42 KB gzip por `import()`, derivado do `module_map` (RN-149), cores por token. |
 | [0239](0239-csp-frame-src-local-para-o-web-preview.md) | CSP `frame-src http://localhost:* http://127.0.0.1:*` para o Web preview do entregável (AT-685), `sandbox` mínimo e só URL local (`urlLocalSegura`). |
+| [0240](0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.md) | O motivo de controle inerte pode morar num "?" ativo (botão `Ajuda`, abre no clique, teclado e hover) na página de Containers; revisa o ADR 0064 só ali, e o motivo de papel segue em texto no topo. |
 
 ## Operação, deploy e instalação {#tema-operacao}
 
