@@ -2683,9 +2683,8 @@ correção feita de um lado só.
 ### RN-195 — A sidebar recolhe para uma trilha de ícones, com a preferência persistida {#rn-195}
 
 `Shell.tsx` tinha largura fixa (248px) e nenhum jeito de encolher. Passa a
-alternar entre `--sidebar-w` (264px) e `--sidebar-w-collapsed` (62px) — os
-dois tokens que a Onda 1/frente A já tinha criado em `design/tokens.css` —
-com `transition: width .18s ease`. Recolhida, vira uma trilha vertical: um
+alternar entre 264px e 62px (tokens `--sidebar-w`/`--sidebar-w-collapsed`,
+removidos com o ADR 0241: hoje a largura é a do shadcn) com `transition: width .18s ease`. Recolhida, vira uma trilha vertical: um
 quadrado de iniciais por projeto (borda na cor de identidade,
 [RN-197](#rn-197)) mais um ícone de Atividades; clicar num projeto na
 trilha reexpande a barra, abre aquele projeto e navega para ele.
