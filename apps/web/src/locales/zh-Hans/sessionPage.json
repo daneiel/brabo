@@ -53,6 +53,18 @@
       "curto": "没有智能体会自行加入：请在下方字段选择由谁回答。"
     }
   },
+  "anexos": {
+    "anexar": "添加附件",
+    "remover": "移除 {{nome}}",
+    "baixar": "下载",
+    "erro": {
+      "tipo": "不支持的类型：请使用图片（png、jpeg、webp、gif）或文本/代码。",
+      "tamanho": "文件超过上限（图片 5 MB，文本 512 KB）。",
+      "maximo": "每条消息最多 4 个附件。",
+      "leitura": "无法读取该文件。",
+      "upload": "附件上传失败，消息未发送。"
+    }
+  },
   "composer": {
     "placeholder": "输入消息…（Enter 发送，Shift+Enter 换行）",
     "enviar": "发送",

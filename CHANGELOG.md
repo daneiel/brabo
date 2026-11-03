@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: o composer da Sessão anexa imagem (png/jpeg/webp/gif) e texto/código por clipe ou colando imagem, com chips, miniatura, validação no cliente e até 4 por mensagem; o fio mostra os anexos de `payload.anexos` (AT-715).
 - **api**: anexos no chat com agente (texto/código e png/jpeg/webp/gif; 5 MB por imagem, 512 KB por texto, 4 por mensagem) guardados em `chat_attachments`; `POST`/`GET /projects/:projectId/sessions/:sessionId/attachments` e `anexos` (ids) no envio de mensagem, com só a referência no `chat.message`; sem antivírus (AT-715, ADR 0246, RN-986..988).
 - **auth**: acesso rápido por papel na tela de login (`GET`/`POST /auth/dev-login`), só com `BRABO_AMBIENTE=local`; as contas passam a `<papel>@brabo.dev` e o `dev@brabo.dev` do seed vira `developer@brabo.dev` (AT-722, ADR 0245, RN-984).
 - **engine**: os sete agentes conversacionais passam a consultar o RAG do projeto (`rag_search`), e os trechos viram `fontes` do `agent.response` (AT-716, RN-982).

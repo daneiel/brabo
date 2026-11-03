@@ -716,6 +716,7 @@ export const sendAgentMessage = (
   sessionId: string,
   agent: string,
   text: string,
+  anexos?: string[],
 ) =>
   post<{
     ok: true;
@@ -724,7 +725,25 @@ export const sendAgentMessage = (
     // mensagem entrou na fila dele, para ser lida no fim (junto com as outras).
     entrega: 'lida' | 'enfileirada';
     posicao?: number;
-  }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, { text });
+  }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, anexos?.length ? { text, anexos } : { text });
+// AT-715: anexos do chat. Upload em JSON+base64; a leitura devolve os bytes, e o
+// token vai em Authorization (por isso `<img src>` direto não serve).
+export type AnexoDaMensagem = { id: string; nome: string; mime: string; tamanho: number };
+export const uploadAttachment = (projectId: string, sessionId: string, nome: string, base64: string) =>
+  post<AnexoDaMensagem>(`/projects/${projectId}/sessions/${sessionId}/attachments`, { nome, base64 });
+export async function lerAnexoComoDataUrl(projectId: string, sessionId: string, id: string): Promise<string> {
+  const path = `/projects/${projectId}/sessions/${sessionId}/attachments/${id}`;
+  let res = await tentar(path, newTraceContext().traceparent);
+  if (res.status === 401 && (await renovarSessao())) res = await tentar(path, newTraceContext().traceparent);
+  if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null), '');
+  const blob = await res.blob();
+  return new Promise((ok, falha) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result));
+    r.onerror = () => falha(r.error);
+    r.readAsDataURL(blob);
+  });
+}
 // RN-673: cancela UMA mensagem que espera na fila do agente — só quem a
 // enviou; já lida ou já cancelada volta 409 com a frase do engine.
 export const cancelQueuedAgentMessage = (

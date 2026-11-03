@@ -53,6 +53,18 @@
       "curto": "Nenhum agente entra sozinho: escolha quem responde no campo abaixo."
     }
   },
+  "anexos": {
+    "anexar": "Anexar arquivo",
+    "remover": "Remover {{nome}}",
+    "baixar": "Baixar",
+    "erro": {
+      "tipo": "Tipo não aceito: use imagem (png, jpeg, webp, gif) ou texto/código.",
+      "tamanho": "Arquivo acima do teto (imagem 5 MB, texto 512 KB).",
+      "maximo": "Máximo de 4 anexos por mensagem.",
+      "leitura": "Não consegui ler o arquivo.",
+      "upload": "Falha ao enviar o anexo; a mensagem não foi enviada."
+    }
+  },
   "composer": {
     "placeholder": "Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)",
     "enviar": "Enviar",

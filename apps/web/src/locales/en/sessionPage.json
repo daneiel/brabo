@@ -53,6 +53,18 @@
       "curto": "No agent joins on its own: pick who answers in the field below."
     }
   },
+  "anexos": {
+    "anexar": "Attach file",
+    "remover": "Remove {{nome}}",
+    "baixar": "Download",
+    "erro": {
+      "tipo": "Unsupported type: use an image (png, jpeg, webp, gif) or text/code.",
+      "tamanho": "File over the limit (image 5 MB, text 512 KB).",
+      "maximo": "At most 4 attachments per message.",
+      "leitura": "Could not read the file.",
+      "upload": "Attachment upload failed; the message was not sent."
+    }
+  },
   "composer": {
     "placeholder": "Write a message… (Enter sends, Shift+Enter for a new line)",
     "enviar": "Send",

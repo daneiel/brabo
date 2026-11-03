@@ -16,6 +16,8 @@ import { SugestoesDeAcao, type AcaoSugerida } from '../components/ai-elements/su
 import { InputGroup } from '../components/shadcn/input-group';
 import { PromptInputToolbar } from '../components/ai-elements/prompt-input';
 import { CampoDoComposer } from '../components/CampoDoComposer';
+import { AnexosPendentes, BotaoDeAnexar } from '../components/ai-elements/anexos';
+import { adicionarAnexos } from '../lib/anexos';
 import styles from './SessionPage.module.css';
 
 /**
@@ -430,8 +432,13 @@ export function SessionComposer({
         </div>
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
         <InputGroup className={styles.textarea}>
+          {session?.id && <AnexosPendentes sessionId={session.id} />}
           {/* RN-882: o campo é dono do valor durante a digitação. */}
           <CampoDoComposer
+            onPaste={(e) => {
+              const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
+              if (session?.id && imgs.length) void adicionarAnexos(session.id, imgs);
+            }}
             valor={draft}
             aoMudar={setDraft}
             onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
@@ -449,6 +456,8 @@ export function SessionComposer({
           >
             {streaming ? <ListPlus aria-hidden="true" /> : <SendHorizontal aria-hidden="true" />}
           </Button>
+          {/* O clipe vem DEPOIS do Enviar: o Enviar é o primeiro botão (contrato do E2E). */}
+          {session?.id && <BotaoDeAnexar sessionId={session.id} desabilitado={streaming && !podeEnfileirar} />}
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}
           {streaming && (
