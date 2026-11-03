@@ -39,6 +39,7 @@ import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { Badge } from '../components/ui/Badge';
+import { Users } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
@@ -363,7 +364,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
               <Skeleton width={220} height={18} />
             </div>
           ) : executorGroups.length === 0 ? (
-            <EmptyState>{t('tab.noExecutors')}</EmptyState>
+            <EmptyState titulo={t('tab.noExecutorsTitle')} icone={<Users size={18} />}>{t('tab.noExecutors')}</EmptyState>
           ) : (
             <AgentTeamGrid
               roster={roster}

@@ -21,7 +21,7 @@ import { idCurtoDaSessao } from '../lib/session-label';
 import { HypothesisCard } from '../components/HypothesisCard';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Badge } from '../components/ui/Badge';
-import { RefreshCw } from 'lucide-react';
+import { Lightbulb, Pause, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastProvider';
@@ -158,7 +158,10 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
       ) : hypothesesQuery.data === undefined ? (
         <div className={styles.sectionSub}><Shimmer>{t('projectInsightsTab.loading')}</Shimmer></div>
       ) : all.length === 0 ? (
-        <EmptyState>
+        <EmptyState
+          titulo={t('projectInsightsTab.emptyTitle')}
+          icone={pausadoConhecido ? <Pause size={18} /> : <Lightbulb size={18} />}
+        >
           {t(
             pausadoConhecido
               ? 'projectInsightsTab.emptyPaused'

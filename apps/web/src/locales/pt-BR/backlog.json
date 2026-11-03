@@ -12,7 +12,9 @@
   },
   "empty": {
     "epics": "Nenhum épico ainda. Aceite o handoff do Criativo numa sessão para o PO gerar o backlog.",
-    "rules": "Sem regras de negócio ainda."
+    "rules": "Sem regras de negócio ainda.",
+    "epicsTitle": "Backlog vazio",
+    "rulesTitle": "Sem regras"
   },
   "coverage": {
     "uncoveredBadge_zero": "{{count}} descobertas",

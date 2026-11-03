@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { Box } from 'lucide-react';
+import { EmptyState } from '../components/ui/EmptyState';
 import { getRunInstructions } from '../lib/api-client';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
@@ -50,7 +52,9 @@ export function ContainerDetalhePage() {
       )}
       {!query.isError && query.isPending && <p className={styles.loading}>{t('loading')}</p>}
       {!query.isError && !query.isPending && !item && (
-        <p className={styles.semRegistro}>{t('detail.notFound')}</p>
+        <EmptyState titulo={t('detail.notFoundTitle')} icone={<Box size={18} />}>
+          {t('detail.notFound')}
+        </EmptyState>
       )}
 
       {item && (

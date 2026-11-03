@@ -12,7 +12,9 @@
   },
   "empty": {
     "epics": "No epics yet. Accept the Creative agent's handoff in a session for the PO to generate the backlog.",
-    "rules": "No business rules yet."
+    "rules": "No business rules yet.",
+    "epicsTitle": "Empty backlog",
+    "rulesTitle": "No rules"
   },
   "coverage": {
     "uncoveredBadge_one": "{{count}} uncovered",

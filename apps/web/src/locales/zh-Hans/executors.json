@@ -20,7 +20,8 @@
       "autonomyError": "无法更改自主模式",
       "rearmed": "智能体已重新启用",
       "rearmError": "无法重新启用智能体"
-    }
+    },
+    "noExecutorsTitle": "暂无执行者"
   },
   "agentCard": {
     "status": {
