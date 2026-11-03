@@ -7650,6 +7650,57 @@ paths:
       summary: Aceita um handoff e ativa o agente de destino
       tags:
         - agents
+  /projects/{projectId}/sessions/{sessionId}/messages:
+    post:
+      description: >-
+        Records ONE `chat.message` with `destinatarios` and delivers it to each
+        agent the way the single-agent route does (turn, queue RN-673, named
+        refusal). An agent that cannot take it is `recusada` in `entregas` and
+        the others still go. A closed session is 409 `sessao_encerrada`.
+      operationId: AgentsController_messages
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageToAgentsDto'
+      responses:
+        '202':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensagemAosAgentesResponseDto'
+        '400':
+          description: >-
+            Corpo inválido. O `ValidationPipe` roda com `whitelist` e
+            `forbidNonWhitelisted`, então campo desconhecido também reprova.
+        '401':
+          description: Sem token, token expirado ou assinatura inválida.
+        '403':
+          description: Papel insuficiente no projeto.
+        '404':
+          description: Projeto, sessão ou handoff não encontrado.
+        '409':
+          description: The session is closed (`sessao_encerrada`, RN-581).
+        '429':
+          description: Rate limit por usuário ou por IP.
+      security:
+        - bearer: []
+      summary: Sends one message to several agents (AT-717, ADR 0247)
+      tags:
+        - agents
   /projects/{projectId}/sessions/{sessionId}/model-binding:
     get:
       description: >-
@@ -14244,6 +14295,28 @@ components:
       required:
         - kind
         - content
+    EntregaAoAgenteResponseDto:
+      type: object
+      properties:
+        agente:
+          type: string
+          example: po
+        entrega:
+          type: string
+          enum:
+            - turno
+            - enfileirada
+            - recusada
+          description: >-
+            `turno`: the agent started a turn with it. `enfileirada`: it joined
+            the agent queue (RN-673). `recusada`: the agent did not take it; see
+            `motivo`.
+        motivo:
+          type: string
+          example: Agent is not active in this session.
+      required:
+        - agente
+        - entrega
     EpicComHistoriasResponseDto:
       type: object
       properties:
@@ -16044,6 +16117,19 @@ components:
         - ok
         - mensagemId
         - entrega
+    MensagemAosAgentesResponseDto:
+      type: object
+      properties:
+        mensagemId:
+          type: string
+          example: 01JC4Z0000EVENTO000000000001
+        entregas:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntregaAoAgenteResponseDto'
+      required:
+        - mensagemId
+        - entregas
     MirrorSyncResultInternalDto:
       type: object
       properties:
@@ -20470,6 +20556,40 @@ components:
           description: A mensagem do usuário. A resposta volta como stream SSE.
       required:
         - text
+    SendMessageToAgentsDto:
+      type: object
+      properties:
+        text:
+          type: string
+          example: I want to allow discount coupons at checkout.
+          minLength: 1
+          maxLength: 10000
+          description: Mensagem do usuário ao agente ativo da sessão.
+        anexos:
+          maxItems: 4
+          description: >-
+            Ids of chat attachments (`POST .../attachments`): at most 4, all
+            from this session and uploaded by the sender (RN-987). The
+            `chat.message` records only the reference, never the bytes.
+          type: array
+          items:
+            type: string
+        destinatarios:
+          minItems: 1
+          maxItems: 7
+          example:
+            - po
+            - arquiteto
+          description: >-
+            Slugs of the conversational agents that read the message (1 to 7).
+            One that cannot take it comes back as `recusada` in `entregas`; the
+            others are not affected (RN-991).
+          type: array
+          items:
+            type: string
+      required:
+        - text
+        - destinatarios
     SessaoResponseDto:
       type: object
       properties:
