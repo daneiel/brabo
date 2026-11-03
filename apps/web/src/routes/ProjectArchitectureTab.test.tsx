@@ -64,6 +64,16 @@ function montar() {
   );
 }
 
+// O Canvas do grafo (`@xyflow/react`) usa `ResizeObserver`, que o jsdom não tem.
+vi.stubGlobal(
+  'ResizeObserver',
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
