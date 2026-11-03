@@ -58,6 +58,10 @@ defmodule Engine.Agents.FontesDoTurno do
 
   def anotar(_tool, _args, _resultado, _project_id), do: :ok
 
+  @doc "Lê as fontes acumuladas (até o teto) SEM esvaziar; é o que a citação numera."
+  @spec ver() :: [map()]
+  def ver, do: @chave |> Process.get([]) |> Enum.reverse() |> Enum.take(@teto)
+
   @doc "Devolve `%{fontes: [...], fontesTotal?: n}` (ou `%{}`) e esvazia."
   @spec descarregar() :: map()
   def descarregar do

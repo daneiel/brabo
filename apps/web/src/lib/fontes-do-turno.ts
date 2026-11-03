@@ -23,3 +23,10 @@ export function fontesDoTurno(payload: unknown): { fontes: FonteDoTurno[]; total
     typeof p.fontesTotal === 'number' && p.fontesTotal > fontes.length ? p.fontesTotal : fontes.length;
   return { fontes, total };
 }
+
+/** AT-716: `citacoes` = índices 1-based válidos contra `fontes`. Antigo/malformado => []. */
+export function citacoesDoTurno(payload: unknown, nFontes: number): number[] {
+  const c = ((payload ?? {}) as { citacoes?: unknown }).citacoes;
+  if (!Array.isArray(c)) return [];
+  return c.filter((n): n is number => Number.isInteger(n) && n >= 1 && n <= nFontes);
+}

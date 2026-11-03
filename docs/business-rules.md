@@ -18645,7 +18645,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:175` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:179` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -20346,7 +20346,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:136` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:140` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -21087,7 +21087,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
   `apps/web/src/lib/session-destinatario.ts:255` (`resolverDestinatario`),
-  `apps/web/src/components/ui/MarkdownMessage.tsx:83` (`CodeFence`)
+  `apps/web/src/components/ui/MarkdownMessage.tsx:99` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
   `apps/web/src/lib/session-destinatario.test.ts` ("RN-712"),
@@ -22447,7 +22447,7 @@ sem dizer qual.
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1128`
-  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:162`
+  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:178`
   (`TabelaMarkdown`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
   `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("agent.response
@@ -23622,7 +23622,7 @@ sem dizer qual.
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:264` (`BolhaDoStreaming`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:140` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:144` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -23824,7 +23824,7 @@ sem dizer qual.
   `apps/web/src/lib/markdown.ts:123` (`CITACAO_RE`),
   `apps/web/src/lib/markdown.ts:124` (`TAREFA_RE`),
   `apps/web/src/lib/markdown.ts:374` (`fecharMarcadoresAbertos`),
-  `apps/web/src/components/ui/MarkdownMessage.tsx:320` (`MarkdownMessage`)
+  `apps/web/src/components/ui/MarkdownMessage.tsx:336` (`MarkdownMessage`)
 - **Teste:** `apps/web/src/lib/markdown.blocos-e-stream.test.ts` ("checklist
   marca cada item…"; falha: "`---` logo depois de texto continua texto"),
   `apps/web/src/components/ui/MarkdownMessage.stream.test.tsx` ("nenhum
@@ -25503,7 +25503,7 @@ sem dizer qual.
 ### RN-979 — Decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio {#rn-979}
 
 - **Regra:** os eventos `artifact.decision_record`, `artifact.module_map`, `artifact.c4_diagram`, `artifact.project_image`, `artifact.qa_verdict` e `artifact.secops_verdict` aparecem no fio com o MESMO cartão do épico/história, com link para a aba (Arquitetura ou PRs). Título e descrição saem dos campos REAIS do payload: decisão (`choice`, `context`), mapa de módulos (sem título; descrição = `modules[].name`), C4 (`systemName`, `systemDescription`), imagem (`image`, `rationale`), pareceres (`veredito` traduzido, `resumo`). Campo ausente cai no rótulo do tipo; descrição passa de 200 caracteres é cortada. Leitura do payload, sem query nova.
-- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:127` (`ARTEFATOS_DO_FIO`).
+- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:131` (`ARTEFATOS_DO_FIO`).
 - **Teste:** `apps/web/src/lib/artefato-do-fio.test.ts` (um caso por tipo e payload sem campo opcional).
 - **Origem:** AT-683 (EP-031).
 
@@ -25535,3 +25535,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
 - **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-716 fatia 4 (EP-031).
+
+### RN-985 — A citação inline é marcada pelo modelo e validada contra as fontes do próprio turno; índice inventado não é mostrado {#rn-985}
+
+- **Regra:** quando o turno já tem fonte (RN-982), uma mensagem `system` EFÊMERA no fim da chamada (mesmo caminho da RN-622, nunca em `state.messages`, sem nomear idioma, RN-667) lista as fontes como `[n] rótulo` (até 10, na ordem de `fontes`) e pede "cite com [n]; não cite o que não está na lista" (teto de 250 tokens; 10 fontes medem ~55). No fecho, o servidor extrai os `[n]` do texto e grava `citacoes` no `agent.response` só com os que existem em `fontes` (`1 <= n <= fontes.length`), sem repetição e em ordem. O `content` NÃO é reescrito (RN-731): o marcador inválido fica no texto e a tela o descarta. Sem fontes, ou sem marcador válido, o campo não existe.
+- **Onde:** `apps/engine/lib/engine/harness/citacao_das_fontes.ex:22` (`anexar`) e `:43` (`marcar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:739` (`llm_turn`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:206` (`marcar`).
+- **Teste:** `apps/engine/test/engine/harness/citacao_das_fontes_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-985").
+- **Origem:** AT-716 fatia 3 (EP-031).
