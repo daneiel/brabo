@@ -235,6 +235,7 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialGrou
             escrito aqui: a Visão geral desenha as próprias regiões até a borda
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
+          <div className={styles.coluna}>
           <ContextoDeSecaoInicial.Provider value={initialSection}>
           <ContextoDeGrupoInicial.Provider value={grupo}>
           <ContextoDeTrocaDeGrupo.Provider value={trocarGrupo}>
@@ -249,6 +250,7 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialGrou
           </ContextoDeTrocaDeGrupo.Provider>
           </ContextoDeGrupoInicial.Provider>
           </ContextoDeSecaoInicial.Provider>
+          </div>
         </div>
       </div>
     </div>
