@@ -182,7 +182,9 @@ defmodule Engine.Agents.DevLeadServer do
          # RN-699 (AT-363): leitura do backlog e do module_map vigente.
          DevLeadTools.spec_read_backlog(),
          # AT-582: o plano do próprio agente, lido pelo diário na retomada.
-         Engine.Harness.Tools.RegistrarPlano.spec()
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -574,6 +576,8 @@ defmodule Engine.Agents.DevLeadServer do
 
   defp run_tool("declare_open_question", args, state),
     do: DeclareOpenQuestion.run(args, state)
+
+  defp run_tool("rag_search", args, state), do: Engine.Harness.Tools.RagSearch.run(args, state)
 
   defp run_tool("registrar_plano", args, state),
     do: Engine.Harness.Tools.RegistrarPlano.run(args, state)

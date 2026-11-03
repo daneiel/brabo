@@ -116,7 +116,9 @@ defmodule Engine.Agents.CriativoServer do
          EmitArtifact.spec(),
          AskStructuredQuestions.spec(),
          DeclareOpenQuestion.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec()
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
@@ -462,6 +464,10 @@ defmodule Engine.Agents.CriativoServer do
   # ADR 0214 (RN-862): a dúvida deixada para o usuário vira pendência.
   defp dispatch_tool(%{"name" => "declare_open_question", "arguments" => _} = call, state) do
     executar(call, state, "declare_open_question", fn a -> DeclareOpenQuestion.run(a, state) end)
+  end
+
+  defp dispatch_tool(%{"name" => "rag_search", "arguments" => _} = call, state) do
+    executar(call, state, "rag_search", fn a -> Engine.Harness.Tools.RagSearch.run(a, state) end)
   end
 
   defp dispatch_tool(%{"name" => "registrar_plano", "arguments" => _} = call, state) do

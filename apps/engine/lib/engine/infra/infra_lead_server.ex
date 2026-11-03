@@ -234,7 +234,9 @@ defmodule Engine.Infra.InfraLeadServer do
          ProposeInfraPr.spec(),
          ProposeContainerStart.spec(),
          ProposeContainerStartViaRunner.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec()
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec()
        ],
        # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
        # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
@@ -1143,6 +1145,8 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   defp run_tool("validate_infra_file", args, state), do: ValidateInfraFile.run(args, state)
+
+  defp run_tool("rag_search", args, state), do: Engine.Harness.Tools.RagSearch.run(args, state)
 
   defp run_tool("registrar_plano", args, state),
     do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
