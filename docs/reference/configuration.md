@@ -232,7 +232,7 @@ externo, é daqui que vem a credencial para entrar no web local e no smoke.
 
 | variável | default | o que faz |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `brabo12345678` | senha dos usuários semeados (`owner@brabo.dev`, `dev@brabo.dev`), criados com o email **já verificado** |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | senha dos usuários semeados (`owner@brabo.dev`, `maintainer@brabo.dev`, `developer@brabo.dev`, `viewer@brabo.dev`), criados com o email **já verificado** |
 | `BRABO_FORCE_SEED` | — | destrava o seed com `NODE_ENV=production`, onde por padrão ele **recusa rodar**. Não a defina num ambiente real: a conta nasce com senha conhecida e verificada |
 
 > O seed é idempotente e **não mexe na senha** de quem já existe. Rodá-lo de

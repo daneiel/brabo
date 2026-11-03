@@ -234,7 +234,7 @@ smoke test comes from.
 
 | variable | default | what it does |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `brabo12345678` | password of the seeded users (`owner@brabo.dev`, `dev@brabo.dev`), created with email **already verified** |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | password of the seeded users (`owner@brabo.dev`, `maintainer@brabo.dev`, `developer@brabo.dev`, `viewer@brabo.dev`), created with email **already verified** |
 | `BRABO_FORCE_SEED` | — | unlocks the seed with `NODE_ENV=production`, where it **refuses to run** by default. Do not set it in a real environment: the account is born with a known, verified password |
 
 > The seed is idempotent and **doesn't touch the password** of anyone who

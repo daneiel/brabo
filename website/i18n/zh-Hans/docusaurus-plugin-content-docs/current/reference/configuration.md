@@ -138,7 +138,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 | 变量 | 默认值 | 作用 |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `brabo12345678` | 种子用户（`owner@brabo.dev`、`dev@brabo.dev`）的密码，创建时邮箱**已验证** |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | 种子用户（`owner@brabo.dev`、`maintainer@brabo.dev`、`developer@brabo.dev`、`viewer@brabo.dev`）的密码，创建时邮箱**已验证** |
 | `BRABO_FORCE_SEED` | — | 在 `NODE_ENV=production` 下解锁种子，默认情况下种子在那里**拒绝运行**。不要在真实环境中定义它：账户会带着已知且已验证的密码被创建 |
 
 > 种子是幂等的，**不会改动**已存在用户的密码。在有人修改自己的密码后再次运行它，不会把密码改回去。
