@@ -19303,9 +19303,9 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:306` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
-  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
@@ -22395,7 +22395,7 @@ sem dizer qual.
   bloqueio). Sem sessão no projeto, o mesmo: o motivo vai em texto, nunca só
   no `title` do botão `disabled`, que não abre no Chromium. Se tarefa
   bloqueada deve ou não travar o merge é pergunta do dono, não decidida aqui.
-- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:276` (`avisoDaLinha`)
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:280` (`avisoDaLinha`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("AT-451: tarefa
   bloqueada com gate pendente NÃO diz que o merge segue disponível")
 - **Origem:** AT-451 (TP-01 de 09/10: "O merge segue disponível — a decisão é

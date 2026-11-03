@@ -1,5 +1,6 @@
 import { Item } from '../components/shadcn/item';
 import { useState } from 'react';
+import { GitPullRequest } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -209,7 +210,9 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   return (
     <div>
       <div className={styles.cabecalho}>
-        <h2 className={styles.titulo}>{t('prsTab.title')}</h2>
+        <h2 className={styles.titulo}>
+          <GitPullRequest size={18} aria-hidden="true" /> {t('prsTab.title')}
+        </h2>
         <p className={styles.subtitulo}>{t('prsTab.subtitle')}</p>
       </div>
 
