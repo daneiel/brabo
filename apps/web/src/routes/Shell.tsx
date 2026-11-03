@@ -37,6 +37,7 @@ import { agruparPorInstancia, montarArvore, type GrupoDeAgente, type RamoDeAgent
 import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/shadcn/dropdown-menu';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
 import { pedirAba, useAbaDaSessao, useAbaPublicada, useContagensDoProjeto } from '../lib/contagens-do-projeto';
 import { AbasDoProjeto, itensDasAbas } from './AbasDoProjeto';
@@ -171,20 +172,50 @@ function NavStatusDot({
   );
 }
 
-/** Botão de tema do rodapé (RN-199) — funcional recolhido ou expandido. */
-function BotaoDeTema({ colapsado }: { colapsado: boolean }) {
+/** Menu do usuário no rodapé (ADR 0241, sidebar-07): Conta, Tema e Sair. */
+function MenuDoUsuario({
+  colapsado,
+  email,
+  papel,
+  onSair,
+}: {
+  colapsado: boolean;
+  email: string | null | undefined;
+  papel: string | undefined;
+  onSair: () => void;
+}) {
   const { t } = useTranslation('shell');
+  const { t: tComum } = useTranslation('common');
   const [tema, setTema] = useState<Tema>(temaAtual);
   useEffect(() => observarTema(setTema), []);
-  const claro = tema === 'light';
-  const rotulo = claro ? t('sidebar.theme.light') : t('sidebar.theme.dark');
+  const rotuloTema = tema === 'light' ? t('sidebar.theme.light') : t('sidebar.theme.dark');
+  const nome = email ?? t('sidebar.footer.accountFallback');
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton onClick={() => setTema(alternarTema())} title={rotulo} aria-label={rotulo}>
-        <SunMoon size={15} aria-hidden="true" />
-        {!colapsado && <span>{rotulo}</span>}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <DropdownMenu>
+      <DropdownMenuTrigger className={styles.userCard} aria-label={nome} title={nome}>
+        <span className={styles.avatar}>{email ? iniciaisDoEmail(email) : '?'}</span>
+        {!colapsado && (
+          <div className={styles.userInfo}>
+            <span className={styles.userName}>{nome}</span>
+            {papel && <span className={styles.userRole}>{papel}</span>}
+          </div>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side={colapsado ? 'right' : 'top'} align="end" className="min-w-48">
+        <DropdownMenuItem render={<Link to="/account" />}>
+          <CircleUser aria-hidden="true" />
+          {tComum('sidebar.account')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTema(alternarTema())}>
+          <SunMoon aria-hidden="true" />
+          {rotuloTema}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSair}>
+          <LogOut aria-hidden="true" />
+          {t('sidebar.footer.logout')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -877,11 +908,9 @@ export function Shell() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <BotaoDeTema colapsado={colapsado} />
           <LinkDoRodape to="/containers" icone={<Container size={15} aria-hidden="true" />} rotulo={tComum('sidebar.containers')} colapsado={colapsado} />
           <LinkDoRodape to="/providers" icone={<KeyRound size={15} aria-hidden="true" />} rotulo={tComum('sidebar.providers')} colapsado={colapsado} />
           <LinkDoRodape to="/spend" icone={<Wallet size={15} aria-hidden="true" />} rotulo={tComum('sidebar.spend')} colapsado={colapsado} />
-          <LinkDoRodape to="/account" icone={<CircleUser size={15} aria-hidden="true" />} rotulo={tComum('sidebar.account')} colapsado={colapsado} />
           {/* Na gaveta não há o que recolher — ela já some inteira. */}
           {!movel && (
             <SidebarMenuItem>
@@ -898,29 +927,12 @@ export function Shell() {
           )}
         </SidebarMenu>
 
-        <div className={styles.userCard}>
-          <span className={styles.avatar}>{email ? iniciaisDoEmail(email) : '?'}</span>
-          {!colapsado && (
-            <div className={styles.userInfo}>
-              <span className={styles.userName}>{email ?? t('sidebar.footer.accountFallback')}</span>
-              {workspaceWithRole && (
-                <span className={styles.userRole}>{ROLE_LABEL[workspaceWithRole.role]}</span>
-              )}
-            </div>
-          )}
-        </div>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              title={t('sidebar.footer.logout')}
-              aria-label={t('sidebar.footer.logout')}
-              onClick={() => void sair().then(() => navigate({ to: '/login' }))}
-            >
-              <LogOut size={15} aria-hidden="true" />
-              {!colapsado && <span>{t('sidebar.footer.logout')}</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <MenuDoUsuario
+          colapsado={colapsado}
+          email={email}
+          papel={workspaceWithRole ? ROLE_LABEL[workspaceWithRole.role] : undefined}
+          onSair={() => void sair().then(() => navigate({ to: '/login' }))}
+        />
       </SidebarFooter>
     </>
   );

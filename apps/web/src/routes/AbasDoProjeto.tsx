@@ -141,7 +141,7 @@ export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChang
       >
         {(() => {
           const Icone = ICONES[item.key];
-          return Icone ? <Icone size={15} aria-hidden="true" className={styles.itemIcone} /> : null;
+          return Icone ? <Icone size={16} aria-hidden="true" className={styles.itemIcone} /> : null;
         })()}
         <span className={styles.itemLabel}>{item.label}</span>
         {item.count !== undefined && item.count > 0 && (

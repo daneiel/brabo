@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).
+
 ### Correções
 
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).

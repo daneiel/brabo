@@ -358,6 +358,12 @@
 
 
 .userCard {
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   gap: 11px;
@@ -554,5 +560,10 @@
 }
 
 .linkRodape[aria-current='page'] {
+  background: var(--accent-soft);
   color: var(--accent);
+}
+
+.userCard:hover {
+  background: var(--surface-2);
 }

@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:616` (`execucao`), `:608`
-  (`origemDaAtividade`), `:615` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:631` (`execucao`), `:639`
+  (`origemDaAtividade`), `:646` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18342,8 +18342,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:438`
-  (`movel`), `:458` (`prenderFoco`), `:477` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:448`
+  (`movel`), `:489` (`prenderFoco`), `:508` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:70` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:76` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:576` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:597` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:523` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:554` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),

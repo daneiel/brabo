@@ -27,6 +27,13 @@
   margin-top: 0;
 }
 
+/* Divisória entre grupos (R3, ADR 0241). */
+.grupo + .grupo {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
 /* Uma aba SOLTA logo depois de um grupo respira igual ao grupo seguinte —
    senão "Gastos" nasceria colado na última filha de "Documentação". */
 .grupo + .solta {
@@ -52,14 +59,14 @@
   justify-content: flex-start;
   gap: var(--space-2);
   width: 100%;
-  min-height: 28px;
+  min-height: 32px;
   padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   font-weight: 500;
   text-align: left;
   cursor: pointer;

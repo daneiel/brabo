@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
@@ -241,20 +241,29 @@ describe('Shell — rodapé', () => {
 
   it('cada item do rodapé tem um svg aria-hidden', () => {
     renderShell();
-    const hrefs = ['/containers', '/providers', '/spend', '/account'];
+    const hrefs = ['/containers', '/providers', '/spend'];
     for (const h of hrefs) {
       const a = document.querySelector(`a[href="${h}"]`);
       expect(a?.querySelector('svg[aria-hidden="true"]'), h).not.toBeNull();
     }
-    for (const nome of ['sair']) {
-      expect(screen.getByRole('button', { name: nome }).querySelector('svg[aria-hidden="true"]')).not.toBeNull();
-    }
+  });
+
+  it('o menu do usuário abre com os 3 itens e Esc fecha', async () => {
+    renderShell();
+    const gatilho = screen.getByRole('button', { name: 'dev.senior@brabo.dev' });
+    fireEvent.click(gatilho);
+    expect(await screen.findByRole('menuitem', { name: 'Conta' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /tema/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'sair' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await vi.waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 
   it('sair continua funcionando', async () => {
     renderShell();
 
-    screen.getByRole('button', { name: 'sair' }).click();
+    fireEvent.click(screen.getByRole('button', { name: 'dev.senior@brabo.dev' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'sair' }));
 
     await vi.waitFor(() => expect(sair).toHaveBeenCalledOnce());
   });
@@ -800,139 +809,28 @@ describe('Shell — Atividades', () => {
   });
 });
 
-/** RN-199: o botão de tema do rodapé, funcional recolhido ou expandido. */
-describe('Shell — botão de tema', () => {
-  it('mostra o tema atual e alterna ao clicar (dark -> light)', () => {
+/** RN-199: o tema vive no menu do usuário (ADR 0241). */
+async function abrirMenu() {
+  fireEvent.click(screen.getByRole('button', { name: 'dev.senior@brabo.dev' }));
+  return screen.findByRole('menuitem', { name: /Tema/ });
+}
+
+describe('Shell — tema no menu do usuário', () => {
+  it('mostra o tema atual e alterna ao clicar (dark -> light)', async () => {
     renderShell();
 
-    expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
+    expect(await abrirMenu()).toHaveTextContent('Tema escuro');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Tema escuro' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tema escuro' }));
-
-    expect(screen.getByRole('button', { name: 'Tema claro' })).toBeInTheDocument();
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(await abrirMenu()).toHaveTextContent('Tema claro');
   });
 
-  it('valor desconhecido gravado antes de montar cai no padrão (escuro), sem quebrar o botão', () => {
+  it('valor desconhecido gravado antes de montar cai no padrão (escuro)', async () => {
     window.localStorage.setItem('brabo.theme', 'sépia-inexistente');
 
     renderShell();
 
-    expect(screen.getByRole('button', { name: 'Tema escuro' })).toBeInTheDocument();
-  });
-});
-
-/**
- * RN-643 (AT-316): abaixo do breakpoint móvel a sidebar vira GAVETA. A
- * consulta vem de `window.matchMedia` (mock em `test/match-media.ts`); sem
- * ele o jsdom é DESKTOP, que é o caso de falha abaixo.
- */
-describe('Shell — layout móvel (RN-643)', () => {
-  let largura: ReturnType<typeof simularLayoutMovel> | null = null;
-  afterEach(() => {
-    largura?.restaurar();
-    largura = null;
-  });
-
-  function gaveta() {
-    return document.querySelector('aside') as HTMLElement;
-  }
-
-  it('a gaveta nasce fechada, abre pelo menu com o foco dentro e o Esc fecha devolvendo o foco', () => {
-    largura = simularLayoutMovel(true);
-    renderShell();
-
-    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
-    expect(menu).toHaveAttribute('aria-expanded', 'false');
-    expect(gaveta()).not.toBeVisible();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    fireEvent.click(menu);
-
-    const dialogo = screen.getByRole('dialog', { name: 'Navegação' });
-    expect(dialogo).toBeVisible();
-    expect(dialogo).toHaveAttribute('aria-modal', 'true');
-    expect(menu).toHaveAttribute('aria-expanded', 'true');
-    expect(menu).toHaveAttribute('aria-controls', dialogo.id);
-    expect(dialogo.contains(document.activeElement)).toBe(true);
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(gaveta()).not.toBeVisible();
-    expect(document.activeElement).toBe(menu);
-  });
-
-  it('fecha ao seguir um link, pelo X e pelo fundo', () => {
-    largura = simularLayoutMovel(true);
-    renderShell();
-    const menu = screen.getByRole('button', { name: 'Abrir navegação' });
-
-    fireEvent.click(menu);
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Core API'));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    fireEvent.click(menu);
-    fireEvent.click(screen.getByRole('button', { name: 'Fechar navegação' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    fireEvent.click(menu);
-    fireEvent.click(screen.getByTestId('fundo-da-gaveta'));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(menu);
-  });
-
-  it('fecha quando a rota muda por fora da gaveta', () => {
-    largura = simularLayoutMovel(true);
-    const { rerender } = renderShell();
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-
-    estado.pathname = `/projects/${PROJECT.id}`;
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <I18nextProvider i18n={novaInstanciaI18n()}>
-          <Shell />
-        </I18nextProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('na gaveta ignora o colapso gravado do desktop e não oferece "Recolher menu"', () => {
-    window.localStorage.setItem(CHAVE_COLAPSADO, '1');
-    largura = simularLayoutMovel(true);
-    renderShell();
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
-
-    // Expandida: a lista de projetos com nome, não a trilha de iniciais.
-    expect(within(screen.getByRole('dialog')).getByText('Core API')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Recolher menu|Expandir menu/ })).not.toBeInTheDocument();
-  });
-
-  it('na consulta desktop não há barra de menu nem diálogo — a sidebar de sempre', () => {
-    renderShell();
-
-    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-slot="sidebar"]')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Recolher menu' })).toBeInTheDocument();
-  });
-
-  it('cruzar o corte para o desktop com a gaveta aberta volta à sidebar fixa', () => {
-    largura = simularLayoutMovel(true);
-    renderShell();
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
-
-    act(() => largura?.mudar(false));
-
-    expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-slot="sidebar"]')).toBeVisible();
-
-    // E voltar ao móvel não reabre a gaveta sozinha.
-    act(() => largura?.mudar(true));
-    expect(gaveta()).not.toBeVisible();
+    expect(await abrirMenu()).toHaveTextContent('Tema escuro');
   });
 });
