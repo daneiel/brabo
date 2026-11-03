@@ -51,6 +51,7 @@
   },
   "charts": {
     "noSpendInWindow": "В этом окне расходов нет.",
+    "noCallsInWindow": "В этом окне вызовов нет.",
     "window_one": "последний день",
     "window_few": "последние {{count}} дня",
     "window_many": "последние {{count}} дней",

@@ -481,7 +481,7 @@ export function SessionComposer({
             <div className={styles.faixaEncerrada}>
               <Info aria-hidden="true" size={16} />
               <span className={styles.faixaEncerradaTitulo}>{t('ativacao.encerradaTitulo')}</span>
-              <span className={styles.faixaEncerradaTexto}>{t('ativacao.reabrirExplicacao')}</span>
+              <Ajuda assunto={t('ativacao.reabrir')}>{t('ativacao.reabrirExplicacao')}</Ajuda>
               <Button
                 className={styles.reabrir}
                 onClick={handleReopen}
@@ -491,7 +491,7 @@ export function SessionComposer({
                 <RotateCcw aria-hidden="true" />
                 {t('ativacao.reabrir')}
               </Button>
-              {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
+              {!podeReabrir && <span className={styles.faixaEncerradaMotivo}>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </div>
           ) : (
             <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>

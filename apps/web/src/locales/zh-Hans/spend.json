@@ -45,6 +45,7 @@
   },
   "charts": {
     "noSpendInWindow": "此时间窗口内没有花费。",
+    "noCallsInWindow": "此时间窗口内没有调用。",
     "window_other": "最近 {{count}} 天",
     "spend": "花费",
     "calls_other": "{{count}} 次调用",

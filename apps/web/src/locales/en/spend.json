@@ -47,6 +47,7 @@
   },
   "charts": {
     "noSpendInWindow": "No spend in this window.",
+    "noCallsInWindow": "No calls in this window.",
     "window_one": "last day",
     "window_other": "last {{count}} days",
     "spend": "Spend",

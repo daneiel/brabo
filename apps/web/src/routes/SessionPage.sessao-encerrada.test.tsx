@@ -163,6 +163,10 @@ describe('SessionPage — 409 de conversa em sessão encerrada (AT-154)', () => 
     // Desde o ADR 0183 (RN-650) reabrir EXISTE, mas só como o botão da faixa —
     // e inerte aqui, onde o papel não foi lido (`roleAtLeast` de `undefined`).
     expect(screen.getByRole('button', { name: 'Reabrir sessão' })).toBeDisabled();
+    // AT-721: a explicação vai para o "?"; o motivo do botão inerte fica visível.
+    expect(screen.getByRole('button', { name: 'Ajuda: Reabrir sessão' })).toBeInTheDocument();
+    expect(screen.queryByText(/Reabrir volta a sessão a ativa/)).not.toBeInTheDocument();
+    expect(screen.getByText(/exige o papel developer/)).toBeInTheDocument();
   });
 
   it('confirmar prontidão: mesma frase, e não o erro genérico', async () => {

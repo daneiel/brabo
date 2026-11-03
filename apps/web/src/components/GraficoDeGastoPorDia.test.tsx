@@ -39,6 +39,14 @@ describe('GraficoDeGastoPorDia', () => {
     expect(container.querySelector('[data-slot="chart"]')?.className).toContain('h-40');
   });
 
+  it('AT-721: série zerada mostra o texto de vazio em vez do gráfico em branco', () => {
+    const zerada = [{ dia: '2026-10-31', costMicros: 0, chamadas: 0 }];
+    render(<GraficoDeChamadasPorDia serie={zerada} />);
+    expect(screen.getByText('Sem chamadas na janela.')).toBeTruthy();
+    render(<GraficoDeGastoPorDia serie={zerada} titulo="Seu gasto por dia" />);
+    expect(screen.getByText('Nenhum gasto nesta janela.')).toBeTruthy();
+  });
+
   it('chamadas por dia e rosca de tokens nomeiam o que mostram', () => {
     render(<GraficoDeChamadasPorDia serie={serie} />);
     expect(screen.getByRole('img', { name: 'Chamadas por dia' })).toBeTruthy();

@@ -342,11 +342,6 @@ export function PendenciasDeOutrasSessoes({
         className={styles.disclosure}
         classNameCabecalho={styles.cabecalho}
       >
-        <p className={styles.nota}>
-          <Ajuda assunto={t('pendencias.abas')}>
-            {t('pendencias.nota')}
-          </Ajuda>
-        </p>
         {falhas > 0 && (
           <p className={styles.nota} data-testid="motivo-nao-lido">
             {t(
@@ -358,6 +353,7 @@ export function PendenciasDeOutrasSessoes({
           </p>
         )}
         <div className={styles.abas} role="group" aria-label={t('pendencias.abas')}>
+          <Ajuda assunto={t('pendencias.abas')}>{t('pendencias.nota')}</Ajuda>
           {(['perguntas', 'aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
             .filter((chave) => contagens[chave] > 0 || (chave === 'perguntas' && respondidas.length > 0))
             .map((chave) => (
