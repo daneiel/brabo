@@ -274,3 +274,34 @@ export async function verificarEmail(
   const res = await postAuth('verify-email', { token });
   return { ok: res.ok };
 }
+
+/**
+ * Acesso rápido por papel (AT-722) — só existe com `BRABO_AMBIENTE=local`; fora
+ * dele a api responde 404 e a tela não mostra nada. `null` = indisponível.
+ */
+export async function papeisDoAcessoRapido(): Promise<
+  { papel: string; email: string }[] | null
+> {
+  try {
+    const res = await fetch(`${API_URL}/auth/dev-login`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const dados = (await res.json()) as {
+      papeis: { papel: string; email: string }[];
+    };
+    return dados.papeis;
+  } catch {
+    return null;
+  }
+}
+
+export async function entrarRapido(
+  papel: string,
+): Promise<{ ok: true } | { ok: false; status: number }> {
+  const res = await postAuth('dev-login', { papel });
+  if (!res.ok) return { ok: false, status: res.status };
+  const dados = (await res.json()) as { accessToken: string; locale?: string };
+  guardar(dados.accessToken, dados.locale ?? null);
+  return { ok: true };
+}

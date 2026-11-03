@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -61,6 +61,12 @@ interface LoginPageProps {
  * uma api fora do ar muda uma linha de texto ali e não atrasa nem esconde o
  * campo de e-mail.
  */
+// Comparação literal para o Vite descartar o ramo (e o chunk) fora de `local`.
+const AcessoRapido =
+  import.meta.env.VITE_BRABO_AMBIENTE === 'local'
+    ? lazy(() => import('../components/AcessoRapido'))
+    : null;
+
 export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
   const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
@@ -182,6 +188,11 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
             {t('loginPage.form.gitlabButton')}
           </a>
         </div>
+        {AcessoRapido && (
+          <Suspense fallback={null}>
+            <AcessoRapido irPara={irPara} />
+          </Suspense>
+        )}
       </form>
     </AuthLayout>
   );
