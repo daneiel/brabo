@@ -954,6 +954,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               fontes={consultado.fontes}
               total={consultado.total}
               projectId={projectId}
+              sessionId={sessionId}
+              eventId={event.id}
             />
           ),
         });

@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Funcionalidades
 
 - **engine**: os sete agentes conversacionais passam a consultar o RAG do projeto (`rag_search`), e os trechos viram `fontes` do `agent.response` (AT-716, RN-982).
+- **api/web**: o clique numa fonte do bloco "Consultado neste turno" é gravado na tabela `source_clicks` (`POST /projects/:projectId/source-clicks`, `viewer`); não é voto e não alimenta o `rag_feedback` (AT-716, RN-983).
 - **engine**: o `agent.response` leva `fontes` (as leituras `ok` do turno, teto de 10 com `fontesTotal`), derivadas das ferramentas pelo servidor e fora do `content` (AT-716, RN-982).
 - **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
 - A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).

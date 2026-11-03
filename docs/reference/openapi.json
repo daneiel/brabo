@@ -11343,6 +11343,68 @@
         ]
       }
     },
+    "/projects/{projectId}/source-clicks": {
+      "post": {
+        "description": "A click is NOT a vote: it never feeds `rag_feedback` (RN-480). A failed write is logged with origin `infra` and answers an empty body — the click navigates anyway.",
+        "operationId": "SourceClicksController_registrar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceClickRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceClickResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Records a click on a source of \"Consulted this turn\" (RN-983)",
+        "tags": [
+          "rag"
+        ]
+      }
+    },
     "/projects/{projectId}/spend/me": {
       "get": {
         "description": "The MEMBER's audience. Only the caller's own rows — the actor comes from the authenticated token and there is no parameter to swap it. In tokens and ESTIMATED cost, without breaking down by provider or by credential: the key that ran is the owner's (RN-058) and its invoice is theirs (RN-060). The provider axis came to exist in the owner's report (ADR 0076) and remains unreachable from here — there is no dimension parameter on this route, and the repository type refuses the combination (RN-187). Agent doesn't count: `token_usage` records who spent, not who ordered the spend.",
@@ -26595,6 +26657,60 @@
         "required": [
           "ticket",
           "expiresAt"
+        ]
+      },
+      "SourceClickRequestDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `agent.response` event."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "rag",
+              "arquivo",
+              "historia",
+              "regra",
+              "adr",
+              "backlog",
+              "metricas",
+              "contratos"
+            ]
+          },
+          "ref": {
+            "type": "string"
+          },
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "eventId",
+          "tipo"
+        ]
+      },
+      "SourceClickResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
         ]
       },
       "SpendLinhaResponseDto": {

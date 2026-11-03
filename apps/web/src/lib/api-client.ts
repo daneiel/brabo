@@ -1419,6 +1419,20 @@ export const sendRagFeedback = (
     body,
   );
 
+// O clique numa fonte consultada (RN-983) — `viewer`. NÃO é voto (RN-480).
+// Quem chama dispara sem esperar: a gravação nunca bloqueia a navegação.
+export const sendSourceClick = (
+  projectId: string,
+  body: {
+    sessionId?: string;
+    eventId: string;
+    tipo: string;
+    ref?: string;
+    searchId?: string;
+    chunkId?: string;
+  },
+) => post<{ id: string } | null>(`/projects/${projectId}/source-clicks`, body);
+
 export const getRagCoverage = (projectId: string) =>
   get<import('./api-types').RagCoverage>(`/projects/${projectId}/rag/coverage`);
 
