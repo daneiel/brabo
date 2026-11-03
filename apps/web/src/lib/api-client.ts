@@ -727,7 +727,7 @@ export const sendAgentMessage = (
     posicao?: number;
   }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, anexos?.length ? { text, anexos } : { text });
 // AT-717: a mesma mensagem a VÁRIOS agentes (`@a @b`). Com um destinatário só, a rota por agente.
-export type EntregaParaVarios = { agente: string; entrega: 'lida' | 'enfileirada' | 'recusada'; motivo?: string };
+export type EntregaParaVarios = { agente: string; entrega: 'turno' | 'enfileirada' | 'recusada'; motivo?: string };
 export const sendMessageToMany = (
   projectId: string,
   sessionId: string,
