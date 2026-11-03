@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
+
 ### Funcionalidades
 
 - Configurações em páginas por grupo (AT-719, RN-980): Modelos, Projeto, Pessoas e Avançado viram sub-itens de Configurações na barra lateral do projeto (`?tab=settings&group=`); só o grupo aberto monta e busca, e todo `?section=` antigo abre a página do seu grupo.

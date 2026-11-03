@@ -36,3 +36,32 @@ describe('passos do turno encerrado (RN-974)', () => {
     expect(passosDoTurno(events, events[1]!)).toEqual([]);
   });
 });
+
+describe('passos do turno: formato do ToolLoop dos dev agents (AT-718)', () => {
+  it('tool.result com `result` mostra a saída', () => {
+    const events = [ev(1, 'tool.result', { tool: 'run_tests', ok: true, result: 'PASS 3' }, 'dev-x'), ev(2, 'agent.response', {}, 'dev-x')];
+    const passos = passosDoTurno(events, events[1]!);
+    expect(passos[0]!.resultado).toBe('PASS 3');
+    expect(passos[0]!.truncado).toBe(false);
+  });
+
+  it('result não-string vira JSON', () => {
+    const events = [ev(1, 'tool.result', { tool: 't', ok: true, result: { n: 2 } }, 'dev-x'), ev(2, 'agent.response', {}, 'dev-x')];
+    expect(passosDoTurno(events, events[1]!)[0]!.resultado).toBe('{"n":2}');
+  });
+
+  it('result longo é cortado no teto com o aviso', () => {
+    const longo = 'a'.repeat(2500);
+    const events = [ev(1, 'tool.result', { tool: 't', ok: true, result: longo }, 'dev-x'), ev(2, 'agent.response', {}, 'dev-x')];
+    const p = passosDoTurno(events, events[1]!)[0]!;
+    expect(p.resultado?.length).toBe(2000);
+    expect(p.truncado).toBe(true);
+  });
+
+  it('formato da RN-589 (resultado) continua igual', () => {
+    const events = [tr(1, 'a'), ev(2, 'agent.response')];
+    const p = passosDoTurno(events, events[1]!)[0]!;
+    expect(p.resultado).toBe('r-a');
+    expect(p.truncado).toBe(false);
+  });
+});
