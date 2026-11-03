@@ -33,8 +33,8 @@
       "travado": "travado"
     },
     "autonomy": {
-      "manual": "manual",
-      "auto": "auto",
+      "manual": "Manual",
+      "auto": "Modo automático",
       "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. git push e PR ficam liberados; deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
     },
     "rearm": "rearmar"

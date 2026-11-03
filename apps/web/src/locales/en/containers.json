@@ -79,7 +79,8 @@
       "runner_pode_estar_desconectado": "The local agent may be disconnected.",
       "registrado_rodando_observado_parado": "Recorded as running, observed stopped."
     },
-    "ajuda": "Container actions"
+    "ajuda": "Container actions",
+    "ajudaIndisponiveis": "Why the actions are unavailable"
   },
   "detail": {
     "title": "Container",

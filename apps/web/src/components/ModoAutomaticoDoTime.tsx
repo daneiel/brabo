@@ -5,6 +5,7 @@ import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
 import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-types';
 import { nomeDoAgente } from '../lib/agents';
 import { AREAS } from '../lib/agent-areas.generated';
+import { Plane } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Checkbox } from './shadcn/checkbox';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
@@ -177,11 +178,12 @@ export function ModoAutomaticoDoTime({
       {candidatos.length > 0 && (
         <Button
           variant="primary"
+          legenda={t('autoModeTeam.button', { count: escolhidos.length })}
           loading={ligando}
           disabled={!podeLigar || carregando || escolhidos.length === 0}
           onClick={() => void ligar()}
         >
-          {t('autoModeTeam.button', { count: escolhidos.length })}
+          <Plane aria-hidden="true" />
         </Button>
       )}
 

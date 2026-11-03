@@ -352,7 +352,7 @@ describe('ProjectOverviewTab — executionActivated vem do resumo, não da janel
     montar();
 
     await screen.findByText('Execução');
-    expect(screen.queryByText('Ativar execução')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ativar execução' })).not.toBeInTheDocument();
   });
 
   it('resumo com `executionActivated: false` mantém o convite para ativar a execução', async () => {
@@ -363,7 +363,7 @@ describe('ProjectOverviewTab — executionActivated vem do resumo, não da janel
 
     montar();
 
-    expect(await screen.findByText('Ativar execução')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Ativar execução' })).toBeInTheDocument();
   });
 });
 
@@ -388,7 +388,7 @@ describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () 
 
     montar();
 
-    await userEvent.click(await screen.findByText('Ativar execução'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativar execução' }));
 
     expect(
       await screen.findByText(/workspacePath inválido para projeto no modo runner/),
@@ -406,7 +406,7 @@ describe('ProjectOverviewTab — a causa da recusa de ativar chega à tela', () 
 
     montar();
 
-    await userEvent.click(await screen.findByText('Ativar execução'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativar execução' }));
 
     expect(
       await screen.findByText('Não foi possível ativar a execução'),
@@ -434,6 +434,7 @@ describe('ProjectOverviewTab — sem repositório, não se oferece ativar (RN-58
     expect(screen.getByText('Provisionar o repositório agora')).toBeInTheDocument();
     const botao = screen.getByRole('button', { name: 'Ativar execução' });
     expect(botao).toBeDisabled();
+    expect(botao).toHaveTextContent('');
     await userEvent.click(botao);
     expect(activateExecutionMock).not.toHaveBeenCalled();
   });

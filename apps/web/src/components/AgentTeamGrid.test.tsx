@@ -54,7 +54,7 @@ describe('AgentTeamGrid — frase do modo automático (RN-603)', () => {
 
   it('auto por regra ESPECÍFICA (sem curinga): nenhuma frase', () => {
     renderGrid([{ agentId: 'dev-api', actionType: 'terminal', mode: 'auto_approve' }]);
-    expect(screen.getByRole('button', { name: 'auto' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modo automático' })).toBeInTheDocument();
     expect(screen.queryByText(/inclusive fora da pasta do projeto/)).toBeNull();
   });
 });

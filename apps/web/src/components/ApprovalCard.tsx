@@ -31,7 +31,7 @@ import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
 import styles from './ApprovalCard.module.css';
-import { Check, X, ShieldCheck, Zap } from 'lucide-react';
+import { Check, X, ShieldCheck, Plane } from 'lucide-react';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
 
@@ -384,9 +384,13 @@ export function ApprovalCard({
                 desabilitar sem explicar (action.actor.kind === 'user' também
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && podeSemprePermitir && (
-              <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
-                <Zap aria-hidden="true" />
-                {t('approvalCard.actions.autoMode')}
+              <Button
+                variant="ghost"
+                legenda={t('approvalCard.actions.autoMode')}
+                disabled={inerte}
+                onClick={onActivateAutoMode}
+              >
+                <Plane aria-hidden="true" />
               </Button>
             )}
           </div>

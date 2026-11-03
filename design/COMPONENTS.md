@@ -500,6 +500,7 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 
 **NÃO pode, e fica visível em texto:**
 - o motivo de um controle inerte (RN-646, RN-102, ADR 0064): tooltip em `disabled` não abre;
+  - EXCEÇÃO, só na página de Containers (ADR 0240): os motivos por linha moram num `Ajuda` ATIVO, assunto "Por que as ações estão indisponíveis", ao lado dos botões; o "?" não é `disabled` e abre no clique, no teclado e no hover. O motivo de papel continua em texto, no topo. Em nenhuma outra tela.
 - a consequência irreversível ou o teto absoluto antes de agir (RN-939, RN-418);
 - o recorte declarado, como a janela de dias e o teto de leitura (RN-180);
 - a divergência de estado e a lacuna que uma RN manda dizer (RN-486, RN-468, RN-470).

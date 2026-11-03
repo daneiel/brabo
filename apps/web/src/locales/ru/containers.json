@@ -79,7 +79,8 @@
       "runner_pode_estar_desconectado": "Локальный агент может быть отключён.",
       "registrado_rodando_observado_parado": "По записи работает, фактически остановлен."
     },
-    "ajuda": "Действия с контейнером"
+    "ajuda": "Действия с контейнером",
+    "ajudaIndisponiveis": "Почему действия недоступны"
   },
   "detail": {
     "title": "Контейнер",

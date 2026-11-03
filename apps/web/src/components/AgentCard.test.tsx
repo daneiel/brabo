@@ -56,13 +56,23 @@ describe('AgentCard', () => {
 
   it('o toggle de autonomia só aparece com o handler, e chama de volta', () => {
     const semHandler = renderCard({ autonomy: 'manual' });
-    expect(screen.queryByRole('button', { name: 'auto' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Modo automático' })).not.toBeInTheDocument();
     semHandler.unmount();
 
     const onAutonomyChange = vi.fn();
     renderCard({ autonomy: 'manual', onAutonomyChange });
-    fireEvent.click(screen.getByRole('button', { name: 'auto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modo automático' }));
     expect(onAutonomyChange).toHaveBeenCalledWith('auto');
+  });
+
+  it('AT-682: o toggle é só ícone; nome acessível, texto visível vazio e aria-pressed distinguem os estados', () => {
+    renderCard({ autonomy: 'manual', onAutonomyChange: vi.fn() });
+    const manual = screen.getByRole('button', { name: 'Manual' });
+    const auto = screen.getByRole('button', { name: 'Modo automático' });
+    expect(manual).toHaveTextContent('');
+    expect(auto).toHaveTextContent('');
+    expect(manual).toHaveAttribute('aria-pressed', 'true');
+    expect(auto).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('mostra a frase de autonomia sob o toggle só quando o chamador a passa (RN-603)', () => {

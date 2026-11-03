@@ -268,16 +268,7 @@ export function AcoesDoContainer({
       ? subida.motivo
       : null;
   const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
-  // A falta de broker é UM fato, mesmo quando trava subir E parar/remover:
-  // uma linha curta só, com o detalhe (o nome da variável, para o operador)
-  // atrás de um `<details>` — o texto longo estourava a célula (AT-324).
-  const chaveCurtaDoBroker = semBrokerNaSubida
-    ? semBrokerParaParar
-      ? 'sem_broker_ambos'
-      : 'sem_broker_na_instalacao'
-    : semBrokerParaParar
-      ? 'sem_broker_para_parar'
-      : null;
+  // A falta de broker é UM fato, dito uma vez no "?" (ADR 0240).
   const detalhesDoBroker = [
     semBrokerNaSubida ? t('actions.bloqueio.sem_broker_na_instalacao') : null,
     semBrokerParaParar ? t('actions.bloqueio.sem_broker_para_parar') : null,
@@ -285,6 +276,13 @@ export function AcoesDoContainer({
   const motivo =
     motivoDaSubida && !semBrokerNaSubida ? t(`actions.bloqueio.${motivoDaSubida}`) : null;
   const ressalva = subida.pode && subida.ressalva ? t(`actions.ressalva.${subida.ressalva}`) : null;
+
+  // ADR 0240: nesta página o motivo de controle inerte mora num "?" ativo.
+  const motivosDeInercia = [
+    semContainer ? t(`actions.semContainer.${semContainer}`) : null,
+    ...detalhesDoBroker,
+    motivo,
+  ].filter((texto): texto is string => texto !== null);
 
   return (
     <div className={styles.blocoDeAcoes}>
@@ -318,6 +316,15 @@ export function AcoesDoContainer({
         >
           <Play aria-hidden="true" />
         </Button>
+        {motivosDeInercia.length > 0 && (
+          <Ajuda assunto={t('actions.ajudaIndisponiveis')}>
+            {motivosDeInercia.map((texto) => (
+              <span key={texto} className={styles.detalheDoMotivo}>
+                {texto}{' '}
+              </span>
+            ))}
+          </Ajuda>
+        )}
       </div>
       {aviso && (
         <p className={styles.motivo}>
@@ -325,22 +332,6 @@ export function AcoesDoContainer({
           <Ajuda assunto={t('actions.ajuda')}>{t('actions.desatualizada', aviso)}</Ajuda>
         </p>
       )}
-      {semContainer && (
-        <p className={styles.motivo}>{t(`actions.semContainer.${semContainer}`)}</p>
-      )}
-      {chaveCurtaDoBroker && (
-        <p className={styles.motivo}>
-          {t(`actions.bloqueioCurto.${chaveCurtaDoBroker}`)}{' '}
-          <Ajuda assunto={t('actions.ajuda')}>
-            {detalhesDoBroker.map((texto) => (
-              <span key={texto} className={styles.detalheDoMotivo}>
-                {texto}{' '}
-              </span>
-            ))}
-          </Ajuda>
-        </p>
-      )}
-      {motivo && <p className={styles.motivo}>{motivo}</p>}
       {ressalva && subida.pode && subida.ressalva && (
         <p className={styles.ressalva}>
           {t(`actions.ressalvaCurta.${subida.ressalva}`)}{' '}

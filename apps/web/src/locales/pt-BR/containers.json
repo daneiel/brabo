@@ -79,7 +79,8 @@
       "runner_pode_estar_desconectado": "Agente local pode estar desconectado.",
       "registrado_rodando_observado_parado": "Registrado rodando, observado parado."
     },
-    "ajuda": "Ações do container"
+    "ajuda": "Ações do container",
+    "ajudaIndisponiveis": "Por que as ações estão indisponíveis"
   },
   "detail": {
     "title": "Container",

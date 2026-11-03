@@ -1,4 +1,5 @@
 import { Ajuda } from '../components/ui/Ajuda';
+import { Play, ThumbsUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -608,8 +609,13 @@ function ExecutionSection({
               segue inerte ao lado do link que resolve. */}
           {hasModuleMap && (
             <ItemActions>
-              <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
-                {t('executionSection.activate')}
+              <Button
+                variant="primary"
+                legenda={t('executionSection.activate')}
+                onClick={handleActivate}
+                disabled={semRepositorio}
+              >
+                <Play aria-hidden="true" />
               </Button>
             </ItemActions>
           )}
@@ -715,8 +721,12 @@ function ExecutionSection({
                 </span>
               </ItemContent>
               <ItemActions>
-                <Button variant="secondary" onClick={() => handleAccept(module)}>
-                  {t('executionSection.accept')}
+                <Button
+                  variant="secondary"
+                  legenda={t('executionSection.accept')}
+                  onClick={() => handleAccept(module)}
+                >
+                  <ThumbsUp aria-hidden="true" />
                 </Button>
               </ItemActions>
             </Item>

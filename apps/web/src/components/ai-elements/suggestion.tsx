@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { Button } from '@/components/shadcn/button';
+import { Button as BotaoDeIcone } from '@/components/ui/Button';
 
 type Props = {
   sugestoes: string[];
@@ -37,6 +39,8 @@ export type AcaoSugerida = {
   /** Tooltip só de botão habilitado. */
   explica?: string;
   testId?: string;
+  /** Com ícone o botão fica só no ícone e o `rotulo` vira a legenda (nome acessível). */
+  icone?: ReactNode;
 };
 
 /**
@@ -50,7 +54,22 @@ export function SugestoesDeAcao({ acoes }: { acoes: AcaoSugerida[] }) {
   return (
     <div data-slot="suggestions" className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-2">
-        {acoes.map((a) => (
+        {acoes.map((a) =>
+          a.icone ? (
+            <BotaoDeIcone
+              key={a.chave}
+              type="button"
+              variant="secondary"
+              size="sm"
+              legenda={a.rotulo}
+              data-testid={a.testId}
+              disabled={a.desabilitada}
+              title={a.desabilitada ? undefined : a.explica}
+              onClick={a.aoClicar}
+            >
+              {a.icone}
+            </BotaoDeIcone>
+          ) : (
           <Button
             key={a.chave}
             type="button"
@@ -63,7 +82,8 @@ export function SugestoesDeAcao({ acoes }: { acoes: AcaoSugerida[] }) {
           >
             {a.rotulo}
           </Button>
-        ))}
+          ),
+        )}
       </div>
       {motivos.map((m) => (
         <span key={m} className="text-xs text-muted-foreground">
