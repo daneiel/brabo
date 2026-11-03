@@ -1,10 +1,9 @@
 import type { CSSProperties } from 'react';
-import { Hand, Plane } from 'lucide-react';
+import { Hand, Plane, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
-import { Button } from '@/components/shadcn/button';
 import { Button as BotaoDeIcone } from '@/components/ui/Button';
 import { Card } from '@/components/shadcn/card';
 import { Shimmer } from './ui/Shimmer';
@@ -178,9 +177,9 @@ export function AgentCard({
 
       {status === 'travado' && onRearm && (
         <div className={styles.autonomy}>
-          <Button type="button" size="sm" variant="secondary" onClick={onRearm}>
-            {t('agentCard.rearm')}
-          </Button>
+          <BotaoDeIcone type="button" variant="secondary" legenda={t('agentCard.rearm')} onClick={onRearm}>
+            <RotateCcw aria-hidden="true" />
+          </BotaoDeIcone>
         </div>
       )}
     </Card>

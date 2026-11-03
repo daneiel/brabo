@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Button as BotaoDeIcone } from '@/components/ui/Button';
+import { Ajuda } from '@/components/ui/Ajuda';
 
 type Props = {
   sugestoes: string[];
@@ -36,7 +37,7 @@ export type AcaoSugerida = {
   desabilitada?: boolean;
   /** Por que está inerte, em TEXTO visível (tooltip de botão desabilitado não abre). */
   motivo?: string;
-  /** Tooltip só de botão habilitado. */
+  /** Explicação: vai para um "?" ao lado das sugestões (AT-713). */
   explica?: string;
   testId?: string;
   /** Com ícone o botão fica só no ícone e o `rotulo` vira a legenda (nome acessível). */
@@ -51,6 +52,7 @@ export function SugestoesDeAcao({ acoes }: { acoes: AcaoSugerida[] }) {
   if (acoes.length === 0) return null;
   // Motivos iguais (ex.: o de papel) aparecem uma vez só.
   const motivos = [...new Set(acoes.flatMap((a) => (a.motivo ? [a.motivo] : [])))];
+  const explicas = acoes.filter((a) => a.explica);
   return (
     <div data-slot="suggestions" className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-2">
@@ -64,7 +66,6 @@ export function SugestoesDeAcao({ acoes }: { acoes: AcaoSugerida[] }) {
               legenda={a.rotulo}
               data-testid={a.testId}
               disabled={a.desabilitada}
-              title={a.desabilitada ? undefined : a.explica}
               onClick={a.aoClicar}
             >
               {a.icone}
@@ -77,12 +78,20 @@ export function SugestoesDeAcao({ acoes }: { acoes: AcaoSugerida[] }) {
             size="sm"
             data-testid={a.testId}
             disabled={a.desabilitada}
-            title={a.desabilitada ? undefined : a.explica}
             onClick={a.aoClicar}
           >
             {a.rotulo}
           </Button>
           ),
+        )}
+        {explicas.length > 0 && (
+          <Ajuda assunto={explicas[0].rotulo}>
+            {explicas.map((a) => (
+              <span key={a.chave} className="block">
+                {a.explica}
+              </span>
+            ))}
+          </Ajuda>
         )}
       </div>
       {motivos.map((m) => (

@@ -127,7 +127,7 @@ describe('RunnerOnboardingPanel — o caminho é o instalador (ADR 0203)', () =>
     expect(screen.queryByRole('button', { name: /baixar arquivos/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/chmod \+x/)).not.toBeInTheDocument();
     // Só os dois Copiar (instalador e comando manual): o painel não tem ação de rede.
-    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Copiar', 'Copiar']);
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label')).filter((n) => n !== 'ajuda.rotulo')).toEqual(['Copiar', 'Copiar']);
 
     cleanup();
   });

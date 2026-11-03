@@ -199,10 +199,6 @@ describe('SessionPage — achado A: pista no botão pelado da topbar', () => {
     expect(botao).toBeInTheDocument();
     // ...mas agora com uma pista textual explicando o que ele faz, mesmo sem
     // o texto do convite.
-    expect(botao).toHaveAttribute(
-      'title',
-      expect.stringContaining('Criativo'),
-    );
     expect(screen.getByText('traz o Criativo pra conversa')).toBeInTheDocument();
   });
 });

@@ -109,6 +109,12 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     expect(topo).not.toHaveTextContent(/outras sessões/);
   });
 
+  it('AT-713: a nota do atalho mora no "?" da seção', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    montar(true, undefined, false);
+    expect(await screen.findByRole('button', { name: 'Ajuda: Filas de pendências' })).toBeInTheDocument();
+  });
+
   it('RN-943 (falha): sem as filas do chat (Executores) o título antigo continua', async () => {
     getProjectPendingActions.mockResolvedValue([acao('a1')]);
     montar(true, undefined, false);

@@ -1,5 +1,5 @@
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from 'react';
-import { Play, ThumbsUp } from 'lucide-react';
+import { CheckCheck, Play, ThumbsUp } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
@@ -397,6 +397,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             disabled={promovendoStoryId !== null}
             onClick={() => handlePromoteAll(promocoesPendentes.map((p) => p.storyId))}
           >
+            <CheckCheck aria-hidden="true" />
             {t('historia.aprovarTodas')}
           </Button>
         }

@@ -135,7 +135,9 @@
       "autoMode": "自动模式：{{actor}} 无需询问即可运行任何命令，包括项目文件夹之外的命令，也包括 git push 和开启 PR。deploy、sudo/doas、受保护分支的合并、指令补丁、并行度以及移除容器仍需你决定；deny 中的规则仍会被拒绝。可在智能体卡片上关闭。",
       "autoModeTyped": "自动模式：{{actor}} 的后续操作将无需询问直接批准，包括 git push 和开启 PR。deploy、受保护分支的合并、指令补丁、并行度以及移除容器仍需你决定；deny 中的规则仍会被拒绝。可在智能体卡片上关闭。",
       "autoModeNotThis": "开启自动模式不会批准此操作：它仍在等待你点击“批准”。",
-      "obsolete": "该操作已通过其他途径决定；此卡片会自动更新。"
+      "obsolete": "该操作已通过其他途径决定；此卡片会自动更新。",
+      "alwaysAllowCurta": "“始终允许”会在 permissions.json 中为此类操作写入一条规则。",
+      "autoModeCurta": "自动模式：{{actor}} 的后续操作将无需询问直接批准。"
     },
     "decided": {
       "denied": "已拒绝",

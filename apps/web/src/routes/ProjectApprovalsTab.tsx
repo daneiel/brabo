@@ -452,9 +452,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                 <CheckIcon size={15} />
                 {t('approvalsTab.pending.approveSelected')}
               </Button>
-              <Button variant="secondary" onClick={() => setSelected(new Set())}>
+              <Button variant="secondary" legenda={t('approvalsTab.pending.clear')} onClick={() => setSelected(new Set())}>
                 <X aria-hidden="true" />
-                {t('approvalsTab.pending.clear')}
               </Button>
             </div>
           )}

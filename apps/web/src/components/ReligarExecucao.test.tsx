@@ -10,7 +10,7 @@ vi.mock('../lib/api-client', () => ({
 }));
 
 describe('ReligarExecucao (AT-682)', () => {
-  it('o ícone Play é decorativo (aria-hidden) e o nome do botão vem do texto', () => {
+  it('o ícone Play é decorativo (aria-hidden) e o nome do botão vem da legenda', () => {
     const { container } = render(
       <QueryClientProvider client={new QueryClient()}>
         <ReligarExecucao projectId="p" tarefasPendentes={2} />
@@ -18,6 +18,7 @@ describe('ReligarExecucao (AT-682)', () => {
     );
     const botao = container.querySelector('button')!;
     expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+    expect(botao.textContent?.trim()).toBe('');
+    expect(botao).toHaveAccessibleName('Restart execution');
   });
 });

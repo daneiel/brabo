@@ -434,7 +434,6 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     ).toBeInTheDocument();
     // O motivo nomeia a aba Código pelo MESMO rótulo do trilho, nunca "Code".
     expect(screen.getByText(/mesmo caminho da aba Código/)).toBeInTheDocument();
-    expect(screen.getByText(/as duas abas, Código e PRs/)).toBeInTheDocument();
     expect(screen.queryByText(/aba Code/)).not.toBeInTheDocument();
     expect(screen.queryByText('A aba Código ainda não está liberada')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -462,7 +461,7 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     montar();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
     expect(screen.queryByText('A lista de PRs ainda não está liberada')).not.toBeInTheDocument();
   });
 });

@@ -27,6 +27,7 @@
     "semRespostaRessalva": "没有及时收到响应。这并不能证明没有本地代理在运行：可能是机器或网络较慢。"
   },
   "runnerOnboarding": {
+    "instaladorAssunto": "安装程序的作用",
     "defaultMessage": "此项目没有已连接的 runner。",
     "noProjectMessage": "创建项目后，可以在这里配置 runner。",
     "instructionPrefix": "在你的机器上，于 Brabo 的检出目录中（参见",

@@ -199,10 +199,9 @@ describe('SessionPage — "Confirmar arquitetura pronta" exige história promovi
     });
 
     expect(botao).not.toBeDisabled();
-    expect(botao).toHaveAttribute(
-      'title',
-      'Declara a arquitetura pronta e oferece o handoff à Infra, que sobe o container do projeto.',
-    );
+    // AT-713: a explicação vai para o "?" ao lado das sugestões, não mais para o title.
+    expect(botao).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: 'Ajuda: Confirmar arquitetura pronta' })).toBeInTheDocument();
   });
 
   it('história em progresso ou concluída também conta como promovida', async () => {

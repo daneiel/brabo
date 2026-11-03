@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Shimmer } from '../components/ui/Shimmer';
+import { RotateCcw } from 'lucide-react';
+import { Button } from '../components/ui/Button';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { roleAtLeast } from '../lib/roles';
 import {
@@ -33,9 +35,9 @@ export function SpendPage() {
       {papel.isError && (
         <div className={styles.estadoErro} role="alert">
           <span>{t('role.error')}</span>
-          <button type="button" className={styles.botao} onClick={() => papel.refetch()}>
-            {t('shared.retry')}
-          </button>
+          <Button variant="ghost" legenda={t('shared.retry')} onClick={() => papel.refetch()}>
+            <RotateCcw aria-hidden="true" />
+          </Button>
         </div>
       )}
       {papel.data &&

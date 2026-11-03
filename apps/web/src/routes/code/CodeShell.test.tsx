@@ -86,7 +86,7 @@ describe('CodeShell', () => {
     montar();
     await screen.findByText('painel explorador');
 
-    await user.click(screen.getByTitle('Buscar'));
+    await user.click(screen.getByRole('tab', { name: 'Buscar' }));
 
     expect(await screen.findByText('painel busca')).toBeInTheDocument();
     expect(screen.queryByText('painel explorador')).not.toBeInTheDocument();

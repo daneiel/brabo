@@ -33,6 +33,7 @@
     "semRespostaRessalva": "Ninguém respondeu a tempo. Isso não prova que não há agente local rodando: pode ser lentidão da máquina ou da conexão."
   },
   "runnerOnboarding": {
+    "instaladorAssunto": "O que o instalador faz",
     "defaultMessage": "Nenhum runner conectado a este projeto.",
     "noProjectMessage": "Depois de criar o projeto, você pode configurar o runner aqui.",
     "instructionPrefix": "Na sua máquina, dentro do checkout do Brabo (ver",

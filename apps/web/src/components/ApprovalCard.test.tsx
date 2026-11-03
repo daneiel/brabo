@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApprovalCard } from './ApprovalCard';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import {
@@ -69,6 +69,16 @@ function makeAction(overrides: Partial<ProposedAction> = {}): ProposedAction {
     updatedAt: new Date().toISOString(),
     ...overrides,
   };
+}
+
+/** Abre o "?" (AT-713) e devolve o popover com o texto longo. */
+async function abrirAjuda(assunto: string) {
+  fireEvent.click(screen.getByRole('button', { name: `Ajuda: ${assunto}` }));
+  return waitFor(() => {
+    const el = document.querySelector<HTMLElement>('[data-slot="popover-content"]');
+    if (!el) throw new Error('"?" fechado');
+    return el;
+  });
 }
 
 describe('ApprovalCard', () => {
@@ -166,7 +176,7 @@ describe('ApprovalCard', () => {
     expect(screen.queryByTestId('nota-modo-automatico-nao-aprova')).toBeNull();
   });
 
-  it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', () => {
+  it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', async () => {
     render(
       <ApprovalCard
         action={makeAction()}
@@ -176,17 +186,18 @@ describe('ApprovalCard', () => {
         onActivateAutoMode={vi.fn()}
       />,
     );
-    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
+    const aj = await abrirAjuda('Modo automático');
+    expect(aj).toHaveTextContent(/inclusive fora da pasta do projeto/);
     // RN-713: o modo automático libera push e PR; deploy e sudo seguem com o usuário.
-    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(
+    expect(aj).toHaveTextContent(
       /inclui git push e abertura de PR/,
     );
-    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(
+    expect(aj).toHaveTextContent(
       /deploy, sudo\/doas/,
     );
     // Dentro da NOTA: a lista do piloto (RN-670), logo abaixo, também fala de
     // paralelismo, e o que este teste cobra é a frase da nota.
-    expect(screen.getByTestId('nota-modo-automatico')).toHaveTextContent(/paralelismo/);
+    expect(aj).toHaveTextContent(/paralelismo/);
   });
 
   it('com o botão do modo automático, traz a lista do piloto — a MESMA dos Executores (RN-670)', () => {
@@ -211,7 +222,7 @@ describe('ApprovalCard', () => {
     expect(screen.queryByTestId('piloto-detalhe')).toBeNull();
   });
 
-  it('mostra a nota do "Modo automático" também na variante queue (RN-603)', () => {
+  it('mostra a nota do "Modo automático" também na variante queue (RN-603)', async () => {
     render(
       <ApprovalCard
         action={makeAction()}
@@ -222,7 +233,7 @@ describe('ApprovalCard', () => {
         onActivateAutoMode={vi.fn()}
       />,
     );
-    expect(screen.getByText(/inclusive fora da pasta do projeto/)).toBeInTheDocument();
+    expect(await abrirAjuda('Modo automático')).toHaveTextContent(/inclusive fora da pasta do projeto/);
   });
 
   /*
@@ -245,7 +256,7 @@ describe('ApprovalCard', () => {
       const botoes = screen
         .getAllByRole('button')
         .map((b) => b.textContent)
-        .filter((texto) => !/Detalhes/.test(texto ?? ''));
+        .filter((texto) => !!texto && !/Detalhes/.test(texto));
       const nota = screen.getByTestId('nota-sempre-permitir').textContent;
       unmount();
       return { botoes, nota };
@@ -297,9 +308,9 @@ describe('ApprovalCard', () => {
     expect(screen.getByText(/permissions\.json/)).toBeInTheDocument();
   });
 
-  it('a nota de "sempre permitir" diz a unidade do padrão: verbo + subcomando, por segmento (RN-675)', () => {
+  it('a nota de "sempre permitir" diz a unidade do padrão: verbo + subcomando, por segmento (RN-675)', async () => {
     render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
-    expect(screen.getByTestId('nota-sempre-permitir')).toHaveTextContent(
+    expect(await abrirAjuda('Sempre permitir')).toHaveTextContent(
       'uma regra por segmento do comando, por verbo + subcomando',
     );
   });
@@ -436,7 +447,7 @@ describe('ApprovalCard', () => {
     expect(screen.queryByTestId('nota-modo-automatico')).toBeNull();
   });
 
-  it('assess_implementability: as notas não falam de comando de terminal', () => {
+  it('assess_implementability: as notas não falam de comando de terminal', async () => {
     render(
       <ApprovalCard
         action={makeAction({ actionType: 'assess_implementability', actor: { kind: 'agent', id: 'dev-lead' } })}
@@ -448,6 +459,7 @@ describe('ApprovalCard', () => {
     );
     expect(screen.getByTestId('nota-sempre-permitir').textContent).not.toMatch(/npm test|git status/);
     expect(screen.getByTestId('nota-modo-automatico').textContent).not.toMatch(/qualquer comando/);
+    expect((await abrirAjuda('Modo automático')).textContent).not.toMatch(/qualquer comando/);
   });
 
   describe('instruction_patch (Fase 4b)', () => {
@@ -985,4 +997,12 @@ it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto
   const botao = document.body.querySelector('button svg')!.closest('button')!;
   expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});
+
+describe('AT-713: texto longo no "?"', () => {
+  it('o "?" tem o nome "Ajuda: <assunto>" e o ícone é decorativo', () => {
+    render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+    const ajuda = screen.getByRole('button', { name: 'Ajuda: Sempre permitir' });
+    expect(ajuda.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
 });

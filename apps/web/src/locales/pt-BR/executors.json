@@ -148,7 +148,8 @@
       "none": "Nenhum agente teve o modo automático ligado: {{mensagem}}",
       "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
     },
-    "planSubtitle": "Ao aprovar o plano, a execução começa. Ligar o modo automático agora nos agentes escolhidos faz os comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto."
+    "planSubtitle": "Ao aprovar o plano, a execução começa. Ligar o modo automático agora nos agentes escolhidos faz os comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto.",
+    "subtitleCurto": "Oferta: liga o modo automático nos agentes escolhidos. Nada muda sem o clique."
   },
   "religar": {
     "descricao_zero": "Nenhuma execução está rodando, e nenhuma tarefa está pendente.",

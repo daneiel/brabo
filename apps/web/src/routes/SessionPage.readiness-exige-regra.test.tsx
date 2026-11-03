@@ -167,10 +167,9 @@ describe('SessionPage — "Estou pronto — a necessidade está validada" exige 
 
     expect(botao).not.toBeDisabled();
     // ADR 0185: habilitado, o título diz o que o clique fecha.
-    expect(botao).toHaveAttribute(
-      'title',
-      'Fecha a prontidão e a validação da necessidade, e chama o PO: ele entra sozinho quando o Criativo terminar o resumo do produto',
-    );
+    // AT-713: a explicação vai para o "?" ao lado das sugestões, não mais para o title.
+    expect(botao).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: /^Ajuda: / })).toBeInTheDocument();
 
     // O painel "Regras de negócio" (mesma fonte, sem busca própria) mostra a
     // regra registrada — prova de que não há uma segunda leitura divergente.

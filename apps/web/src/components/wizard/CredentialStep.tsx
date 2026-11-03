@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Ajuda } from '../ui/Ajuda';
 import type { UserCredentialMetadata } from '../../lib/api-types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -46,9 +47,9 @@ export function CredentialStep({
 
   return (
     <div className={styles.root} data-testid="credential-step">
-      <p className={styles.hint}>
+      <Ajuda assunto={t('credentialStep.assunto')}>
         {t('credentialStep.hint', { provider: PROVIDER_LABEL[provider] })}
-      </p>
+      </Ajuda>
 
       {credentials.length > 0 && (
         <div className={styles.credList}>

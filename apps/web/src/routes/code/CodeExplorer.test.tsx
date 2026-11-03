@@ -134,7 +134,9 @@ describe('CodeExplorer — os três estados (RN-088)', () => {
     getCodeTree.mockRejectedValue(new Error('boom'));
     montar();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+    // Só ícone (AT-713): o nome vem da legenda e o ícone é decorativo.
+    expect(screen.getByRole('button', { name: 'Tentar de novo' }).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('vazio — repositório sem entradas na raiz', async () => {

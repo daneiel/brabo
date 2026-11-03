@@ -185,7 +185,9 @@ describe('SessionPage — card acionável do handoff da Infra (RN-499)', () => {
     expect(
       screen.getByText(/já autoriza a subida do container/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/sobe o container sem outro clique/)).toBeInTheDocument();
+    // AT-713: a explicação inteira mora no "?" (nome "Ajuda: <assunto>").
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda: / }));
+    expect(await screen.findByText(/sobe o container sem outro clique/)).toBeInTheDocument();
     expect(
       screen.getByText(/Continuam pedindo sua decisão a subida num projeto Runner local e o merge da PR de infra/),
     ).toBeInTheDocument();

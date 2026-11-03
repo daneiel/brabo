@@ -30,6 +30,7 @@ import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
+import { Ajuda } from '../components/ui/Ajuda';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
 import {
@@ -726,9 +727,9 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   : t('details.adopt.hintRemote')}
               </div>
             </div>
-            <p className={styles.notaDaAdocao}>
+            <Ajuda assunto={t('details.adopt.assunto')}>
               <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
-            </p>
+            </Ajuda>
           </div>
           ) : (
           <div>
@@ -809,11 +810,14 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           {semBrokerConfirmado && (
             <div style={{ marginTop: 12 }} data-testid="aviso-sem-broker">
               <Alert tone="warning">
-                <Trans
-                  i18nKey="workspace.noBroker"
-                  ns="newProject"
-                  components={{ strong: <strong />, code: <code /> }}
-                />
+                {t('workspace.noBrokerCurto')}
+                <Ajuda assunto={t('workspace.noBrokerAssunto')}>
+                  <Trans
+                    i18nKey="workspace.noBroker"
+                    ns="newProject"
+                    components={{ strong: <strong />, code: <code /> }}
+                  />
+                </Ajuda>
               </Alert>
             </div>
           )}
@@ -906,12 +910,14 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   </Alert>
                 ) : (
                   <div className={styles.baseNote}>
-                    <Trans
-                      i18nKey="workspace.mountedUnderBase"
-                      ns="newProject"
-                      values={{ base: baseDeProjetos ?? '' }}
-                      components={{ strong: <strong />, code: <code /> }}
-                    />
+                    <Ajuda assunto={t('workspace.mountedUnderBaseAssunto')}>
+                      <Trans
+                        i18nKey="workspace.mountedUnderBase"
+                        ns="newProject"
+                        values={{ base: baseDeProjetos ?? '' }}
+                        components={{ strong: <strong />, code: <code /> }}
+                      />
+                    </Ajuda>
                   </div>
                 )
               ) : (

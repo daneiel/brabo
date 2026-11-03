@@ -42,12 +42,14 @@
       "iniciarIdeacaoNota": "It hasn't joined yet — this click is what brings it in.",
       "exemploIntro": "Start by telling us what you want to build and for whom. For example:",
       "exemplo": "I want an API that responds with a greeting to whoever calls it. It's for me to validate the end-to-end flow.",
-      "rodape": "When the rules are complete, use <b>I'm ready to build</b> — that's what generates the brief and hands the ball to the PO."
+      "rodape": "When the rules are complete, use <b>I'm ready to build</b> — that's what generates the brief and hands the ball to the PO.",
+      "curto": "Creative session: the Creative agent leads ideation and records the business rules."
     },
     "consultiva": {
       "titulo": "Advisory session",
       "texto": "Here you talk to an agent you choose: ask questions, get context, clear up doubts. <b>No agent joins on its own</b> — choose who answers in the field below the conversation. The Creative doesn't join, and this session won't go to execution.",
-      "rodape": "When it's time to <b>build</b>, open a <b>creative</b> session in the project's Sessions tab — the type is chosen at creation and doesn't change afterward."
+      "rodape": "When it's time to <b>build</b>, open a <b>creative</b> session in the project's Sessions tab — the type is chosen at creation and doesn't change afterward.",
+      "curto": "No agent joins on its own: pick who answers in the field below."
     }
   },
   "composer": {
@@ -129,7 +131,8 @@
     "manualBotao": "Address handoff",
     "manualOrigem": "Manual handoff",
     "foraDaJanelaTitulo": "{{de}} handed off to {{para}}",
-    "foraDaJanelaDetalhe": "This offer's event has already left the last 200 in the thread, so its button lives here."
+    "foraDaJanelaDetalhe": "This offer's event has already left the last 200 in the thread, so its button lives here.",
+    "infraDetalheCurto": "Accepting already authorizes starting the container, with no further click."
   },
   "backlog": {
     "criouEpico": "created the epic",
@@ -229,7 +232,21 @@
     "prsNaoLidas_other": "{{count}} PRs were left out of this list (past the read limit, or their diff could not be read) — the PRs tab shows them all."
   },
   "turno": {
-    "artefato": { "epico": "Epic created", "historia": "Story created", "decisao": "Decision recorded", "mapaDeModulos": "Module map", "c4": "C4 diagram", "imagem": "Project image", "parecerQa": "QA verdict", "parecerSecops": "SecOps verdict", "ver": "View in tab", "veredito": {"approved": "approved", "changes_requested": "changes requested"} },
+    "artefato": {
+      "epico": "Epic created",
+      "historia": "Story created",
+      "decisao": "Decision recorded",
+      "mapaDeModulos": "Module map",
+      "c4": "C4 diagram",
+      "imagem": "Project image",
+      "parecerQa": "QA verdict",
+      "parecerSecops": "SecOps verdict",
+      "ver": "View in tab",
+      "veredito": {
+        "approved": "approved",
+        "changes_requested": "changes requested"
+      }
+    },
     "pensando": "Thinking…",
     "ferramentaFalhou": "The tool failed.",
     "resultadoCortado": "Result cut at the 2,000-character limit.",

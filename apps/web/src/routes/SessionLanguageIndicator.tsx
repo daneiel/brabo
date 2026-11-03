@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Pin } from 'lucide-react';
 import {
   answerDetectedLanguage,
   getSessionResponseLanguage,
@@ -211,8 +212,9 @@ export function SessionLanguageIndicator({
               size="sm"
               variant="secondary"
               disabled={!codigo.trim() || fixar.isPending}
+              legenda={t('session.pin')}
             >
-              {t('session.pin')}
+              <Pin aria-hidden="true" />
             </Button>
           </form>
         ) : (

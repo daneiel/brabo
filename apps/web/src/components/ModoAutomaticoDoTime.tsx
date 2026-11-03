@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
@@ -142,7 +143,12 @@ export function ModoAutomaticoDoTime({
       <h3 id="modo-automatico-do-time-titulo" className={styles.titulo}>
         {t('autoModeTeam.title')}
       </h3>
-      <p className={styles.texto}>{t(noPlano ? 'autoModeTeam.planSubtitle' : 'autoModeTeam.subtitle')}</p>
+      <p className={styles.texto}>
+        {t('autoModeTeam.subtitleCurto')}
+        <Ajuda assunto={t('autoModeTeam.title')}>
+          {t(noPlano ? 'autoModeTeam.planSubtitle' : 'autoModeTeam.subtitle')}
+        </Ajuda>
+      </p>
 
       {candidatos.length > 0 && (
         <ul className={styles.lista}>

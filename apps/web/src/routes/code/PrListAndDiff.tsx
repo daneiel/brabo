@@ -1,4 +1,7 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { RotateCcw } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +17,7 @@ import {
 } from '../../components/ContainerImageGate';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
-import { ArrowLeftIcon, PrIcon } from '../../components/ui/icons';
+import { PrIcon } from '../../components/ui/icons';
 import type { CodeDiffFile, CodePullRequestState, CodePullRequestSummary } from '../../lib/api-types';
 import styles from './CodeDiffPanel.module.css';
 
@@ -122,10 +125,9 @@ export function PrListAndDiff({
     return (
       <div className={styles.painel}>
         <div className={styles.cabecalhoDiff}>
-          <button type="button" className={styles.botaoVoltar} onClick={voltarParaLista}>
-            <ArrowLeftIcon size={14} />
-            {t('diff.backToList')}
-          </button>
+          <Button type="button" variant="ghost" legenda={t('diff.backToList')} onClick={voltarParaLista}>
+            <ArrowLeft aria-hidden="true" />
+          </Button>
           {selecionada && (
             <span className={styles.tituloDiff}>
               <span className={styles.tituloDiffTexto}>
@@ -146,9 +148,9 @@ export function PrListAndDiff({
           ) : (
             <div className={styles.estadoErro} role="alert">
               <span>{mensagemDaApi(diffQuery.error, t('diff.diffErrorFallback'))}</span>
-              <button type="button" className={styles.botaoTentar} onClick={() => void diffQuery.refetch()}>
-                {t('shared.retry')}
-              </button>
+              <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void diffQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
             </div>
           ))}
 
@@ -206,9 +208,9 @@ export function PrListAndDiff({
         ) : (
           <div className={styles.estadoErro} role="alert">
             <span>{mensagemDaApi(listaQuery.error, t('diff.prListErrorFallback'))}</span>
-            <button type="button" className={styles.botaoTentar} onClick={() => void listaQuery.refetch()}>
-              {t('shared.retry')}
-            </button>
+            <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void listaQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
           </div>
         ))}
 

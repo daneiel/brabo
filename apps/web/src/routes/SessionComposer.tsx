@@ -1,11 +1,12 @@
 import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
-import { ThumbsUp } from 'lucide-react';
+import { ThumbsUp, SendHorizontal, ListPlus, Square, Play, RotateCcw, Forward } from 'lucide-react';
 import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
 import { addressableAgents, nomeDoAgente } from '../lib/agents';
 import type { Handoff } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
+import { Ajuda } from '../components/ui/Ajuda';
 import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
@@ -223,8 +224,11 @@ export function SessionComposer({
               })}
             </span>
             <span className={styles.infraHandoffDetalhe}>
-              {t('handoff.infraDetalhe')}
+              {t('handoff.infraDetalheCurto')}
             </span>
+            <Ajuda assunto={t('handoff.infraTitulo', { de: nomeDoAgente(handoffDaInfraOferecido.fromAgent) })}>
+              {t('handoff.infraDetalhe')}
+            </Ajuda>
           </div>
           <Button
             variant="success"
@@ -322,6 +326,7 @@ export function SessionComposer({
             disabled={!manualHandoffTarget}
             onClick={handleRequestManualHandoff}
           >
+            <Forward aria-hidden="true" />
             {t('handoff.manualBotao')}
           </Button>
         </div>
@@ -437,17 +442,18 @@ export function SessionComposer({
           <PromptInputToolbar>
           <Button
             onClick={handleSend}
+            legenda={streaming ? t('composer.enfileirar') : t('composer.enviar')}
             disabled={
               (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null
             }
           >
-            {streaming ? t('composer.enfileirar') : t('composer.enviar')}
+            {streaming ? <ListPlus aria-hidden="true" /> : <SendHorizontal aria-hidden="true" />}
           </Button>
           {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}
           {streaming && (
-            <Button variant="danger" onClick={handleCancel}>
-              {t('composer.parar')}
+            <Button variant="danger" legenda={t('composer.parar')} onClick={handleCancel}>
+              <Square aria-hidden="true" />
             </Button>
           )}
           </PromptInputToolbar>
@@ -467,18 +473,21 @@ export function SessionComposer({
           {session?.status === 'created' ? (
             <>
               {t('ativacao.naoAtivada')}
-              <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
+              <Button legenda={t('ativacao.ativarSessao')} onClick={handleActivate}>
+                <Play aria-hidden="true" />
+              </Button>
             </>
           ) : sessaoEhTerminal(session?.status) && handleReopen ? (
             <>
               <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
-              <span>{t('ativacao.reabrirExplicacao')}</span>
+              <Ajuda assunto={t('ativacao.reabrir')}>{t('ativacao.reabrirExplicacao')}</Ajuda>
               <Button
                 className={styles.reabrir}
                 onClick={handleReopen}
                 disabled={!podeReabrir}
                 loading={reabrindo}
               >
+                <RotateCcw aria-hidden="true" />
                 {t('ativacao.reabrir')}
               </Button>
               {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}

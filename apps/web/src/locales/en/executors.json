@@ -142,7 +142,8 @@
       "none": "No agent had auto mode turned on: {{mensagem}}",
       "some": "Turned on for {{ok}} of {{total}} agents. Still manual: {{falharam}}."
     },
-    "planSubtitle": "Execution starts when you approve the plan. Turning on auto mode now for the chosen agents makes their commands run without asking for approval — even outside the project folder. It is an offer: nothing changes without the click below, and each agent keeps its own manual/auto toggle."
+    "planSubtitle": "Execution starts when you approve the plan. Turning on auto mode now for the chosen agents makes their commands run without asking for approval — even outside the project folder. It is an offer: nothing changes without the click below, and each agent keeps its own manual/auto toggle.",
+    "subtitleCurto": "Offer: turns on auto mode for the chosen agents. Nothing changes without the click."
   },
   "religar": {
     "descricao_one": "No execution is running, and {{count}} task is still pending. It only runs again if you restart the execution.",
