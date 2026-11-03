@@ -9902,6 +9902,151 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/attachments": {
+      "post": {
+        "description": "Text/code (UTF-8) up to 512 KB or png/jpeg/webp/gif up to 5 MB; the type is checked against the bytes. Returns the reference to pass as `anexos` in the agent message. JSON+base64 instead of multipart: it fits the 10 MB body limit and adds no parser (RN-986).",
+        "operationId": "AttachmentsController_enviar",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadAnexoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnexoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the project."
+          },
+          "404": {
+            "description": "Project, session or attachment not found."
+          },
+          "409": {
+            "description": "The session is closed (`sessao_encerrada`, RN-581)."
+          },
+          "413": {
+            "description": "Over the size limit."
+          },
+          "415": {
+            "description": "Type not accepted."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Uploads a chat attachment (JSON with base64)",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/projects/{projectId}/sessions/{sessionId}/attachments/{attachmentId}": {
+      "get": {
+        "description": "Every `viewer` of the project reads it (RN-988). Served with the stored `Content-Type`, `nosniff`, and `attachment` disposition for anything that is not an image.",
+        "operationId": "AttachmentsController_ler",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The raw bytes.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role in the project."
+          },
+          "404": {
+            "description": "Project, session or attachment not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Downloads the attachment bytes",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/budget": {
       "get": {
         "description": "This is what feeds the session screen's live token meter.",
@@ -15090,6 +15235,34 @@
           "hipotese",
           "sugestao",
           "confiancaPercent"
+        ]
+      },
+      "AnexoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string",
+            "example": "erro.png"
+          },
+          "mime": {
+            "type": "string",
+            "example": "image/png"
+          },
+          "tamanho": {
+            "type": "number",
+            "example": 1024,
+            "description": "Size in bytes."
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "mime",
+          "tamanho"
         ]
       },
       "AnswerDetectedLanguageDto": {
@@ -25870,6 +26043,14 @@
             "minLength": 1,
             "maxLength": 10000,
             "description": "User's message to the session's active agent."
+          },
+          "anexos": {
+            "maxItems": 4,
+            "description": "Ids of chat attachments (`POST .../attachments`): at most 4, all from this session and uploaded by the sender (RN-987). The `chat.message` records only the reference, never the bytes.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -27783,6 +27964,24 @@
             "description": "kebab-case. Unique in the system and visible in the URL."
           }
         }
+      },
+      "UploadAnexoDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "erro.png",
+            "maxLength": 255
+          },
+          "base64": {
+            "type": "string",
+            "description": "File bytes in base64. The type is read from the BYTES (png, jpeg, webp, gif or UTF-8 text), never from the name. Limits: 5 MB per image, 512 KB per text file (RN-986)."
+          }
+        },
+        "required": [
+          "nome",
+          "base64"
+        ]
       },
       "UpsertBudgetDto": {
         "type": "object",

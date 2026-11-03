@@ -9700,7 +9700,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:421`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:426`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -16630,7 +16630,7 @@ daquele turno. A Conta deixou de dizer que o valor "ainda não chega".
   (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
   `apps/api/src/db/schema/iam.ts:104` (`responseLanguage`), `:111`
   (`detectedLanguage`), `:128` (`users_idioma_detectado_so_confirmado`);
-  `apps/api/src/db/schema/sessions.ts:120` (`sessionLanguageOverrides`);
+  `apps/api/src/db/schema/sessions.ts:124` (`sessionLanguageOverrides`);
   `apps/api/src/application/use-cases/iam/resolver-idioma-da-resposta.use-case.ts:44`
   (`ResolverIdiomaDaRespostaUseCase`);
   `apps/api/src/application/use-cases/iam/update-user-preferences.use-case.ts:25`
@@ -16860,8 +16860,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
-  (`resolverIdioma`), `:74` (`idiomaAlvo`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:183`
+  (`resolverIdioma`), `:90` (`idiomaAlvo`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:215`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
@@ -17111,7 +17111,7 @@ para aceitar os `export` de um módulo CommonJS.
   `apps/api/src/infrastructure/persistence/drizzle/deteccao-de-idioma.repository.ts:27`
   (`ultimasEvidencias`), `:75` (`confirmar`);
   `apps/api/src/db/schema/iam.ts:144` (`detectedLanguageDeclines`);
-  `apps/api/src/db/schema/sessions.ts:164`
+  `apps/api/src/db/schema/sessions.ts:168`
   (`session_events_evidencia_de_idioma_idx`);
   `apps/api/src/interfaces/http/iam/session-response-language.controller.ts:66`
   (`comPergunta`); `apps/api/src/interfaces/http/iam/user-preferences.controller.ts:94`
@@ -19893,7 +19893,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
   `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111` (`resolverPerfil`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:253` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
@@ -20380,7 +20380,7 @@ melhoria do produto, separado do perfil da pessoa.
 
 - **Onde:** `apps/api/src/domain/anamnese/proficiencia-do-autor.ts:22`
   (`textoDaProficienciaDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111`
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126`
   (`resolverPerfil`), `:134` (`resolverProficiencia`)
 - **Teste:** `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:254`
   (o nível vai, o rationale não), `:274` (leitura falha, a mensagem segue —
@@ -25535,3 +25535,24 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
 - **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-716 fatia 4 (EP-031).
+
+### RN-986 — O anexo do chat aceita texto/código e imagem, com tipo pelos bytes e tetos {#rn-986}
+
+- **Regra:** `POST /projects/:projectId/sessions/:sessionId/attachments` (`developer`, JSON `{nome, base64}`) guarda o arquivo em `chat_attachments`. O MIME sai dos BYTES, nunca do nome nem do cabeçalho: png, jpeg, gif e webp pela assinatura; texto/código se for UTF-8 válido e sem byte NUL (`text/plain`); o resto é 415. Tetos: 5 MB por imagem e 512 KB por texto, acima disso 413 (rejeita, nunca trunca). Sessão encerrada recusa com o 409 `sessao_encerrada` da RN-581. JSON com base64 em vez de multipart porque 5 MB viram ~6,7 MB e cabem no corpo de 10 MB (`main.ts`), sem parser novo. Sem antivírus, lacuna declarada em `docs/security-surface.md` e no ADR 0246.
+- **Onde:** `apps/api/src/domain/sessions/anexos.ts:32` (`classificarAnexo`), `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:37` (`enviar`), `apps/api/src/interfaces/http/sessions/attachments.controller.ts:54` (`enviar`), `apps/api/src/db/schema/sessions.ts:303` (`chatAttachments`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-986"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-987 — O `chat.message` guarda só a referência do anexo, nunca os bytes {#rn-987}
+
+- **Regra:** `POST .../agents/:agent/message` aceita `anexos?: string[]` (ids), no máximo 4, todos da MESMA sessão e do MESMO autor — senão 400. O evento grava `anexos: [{id, nome, mime, tamanho}]`; o log é append-only e não incha com bytes. A mesma lista de referências viaja ao engine em `anexos` (omitida quando vazia). Quem precisa dos bytes (L2, a api na chamada ao provider) os lê pelo `ChatAttachmentRepository`.
+- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:91` (`referencias`), `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:93` (`execute`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:210` (`sendAgentMessage`), `apps/api/src/interfaces/http/agents/dto/send-agent-message.dto.ts:34` (`anexos`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-987").
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-988 — Todo `viewer` do projeto lê o anexo, escopado a projeto e sessão {#rn-988}
+
+- **Regra:** `GET .../attachments/:attachmentId` (`viewer`) devolve os bytes com o `Content-Type` gravado, `X-Content-Type-Options: nosniff` e `Content-Disposition: attachment` para o que não é imagem. A consulta casa id, projeto E sessão: anexo de outra sessão ou projeto é 404, igual ao inexistente. Quem vê o evento vê o anexo (decisão do dono, 02/11). Os anexos morrem com a sessão (cascade).
+- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:80` (`ler`), `apps/api/src/interfaces/http/sessions/attachments.controller.ts:87` (`ler`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-988"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
