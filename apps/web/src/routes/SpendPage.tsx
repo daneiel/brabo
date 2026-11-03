@@ -7,6 +7,7 @@ import {
   MeuConsumoNoWorkspace,
   OrcamentosDosProjetos,
 } from '../components/SpendPaineis';
+import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import styles from './ProjectSpendTab.module.css';
 import pagina from './SpendPage.module.css';
 
@@ -22,9 +23,7 @@ export function SpendPage() {
 
   return (
     <div className={pagina.page}>
-      <header className={pagina.header}>
-        <h1 className={pagina.title}>{t('global.title')}</h1>
-      </header>
+      <CabecalhoDePagina titulo={t('global.title')} />
       {papel.isLoading && (
         <div className={styles.estado}>
           <Shimmer>{t('shared.loading')}</Shimmer>

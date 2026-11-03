@@ -18,7 +18,9 @@ import { JANELAS, comoRanking, rotuloDoProvider } from '../lib/spend-ranking';
 import { Select } from './ui/Select';
 import { Shimmer } from './ui/Shimmer';
 import { GastoPorDia } from './GastoPorDia';
-import { Destaque, Ranking } from './SpendCharts';
+import { Ranking } from './SpendCharts';
+import { CabecalhoDePagina } from './shadcn/cabecalho-de-pagina';
+import { SectionCards } from './shadcn/section-cards';
 import { CredentialSpendSection, formatarUsd } from './CredentialSpendSection';
 import styles from '../routes/ProjectSpendTab.module.css';
 
@@ -111,31 +113,32 @@ function DestaquesDoTotal({
 }) {
   const { t } = useTranslation('spend');
   return (
-    <div className={styles.destaques}>
-      <Destaque
-        rotulo={rotuloTotal}
-        valor={formatarUsd(total)}
-        detalhe={t('workspace.callsDetail', {
-          count: chamadas,
-          n: numberFmt.format(chamadas),
-        })}
-      />
-      <Destaque
-        rotulo={t('workspace.tokensLabel')}
-        valor={numberFmt.format(entrada + saida)}
-        detalhe={t('shared.tokensDetail', {
-          input: numberFmt.format(entrada),
-          output: numberFmt.format(saida),
-        })}
-      />
-      {(assinatura ?? 0) > 0 && (
-        <Destaque
-          rotulo={t('subscription.label')}
-          valor={formatarUsd(assinatura!)}
-          detalhe={t('subscription.detail')}
-        />
-      )}
-    </div>
+    <SectionCards
+      metricas={[
+        {
+          rotulo: rotuloTotal,
+          valor: formatarUsd(total),
+          nota: t('workspace.callsDetail', { count: chamadas, n: numberFmt.format(chamadas) }),
+        },
+        {
+          rotulo: t('workspace.tokensLabel'),
+          valor: numberFmt.format(entrada + saida),
+          nota: t('shared.tokensDetail', {
+            input: numberFmt.format(entrada),
+            output: numberFmt.format(saida),
+          }),
+        },
+        ...((assinatura ?? 0) > 0
+          ? [
+              {
+                rotulo: t('subscription.label'),
+                valor: formatarUsd(assinatura!),
+                nota: t('subscription.detail'),
+              },
+            ]
+          : []),
+      ]}
+    />
   );
 }
 
@@ -164,12 +167,9 @@ export function GastoDoWorkspace({
 
   return (
     <>
-      <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>
-          {projectId ? t('project.ownerTitle') : t('workspace.title')}
-        </h2>
-        <p className={styles.subtitulo}>
-          {projectId ? (
+      <CabecalhoDePagina
+        titulo={projectId ? t('project.ownerTitle') : t('workspace.title')}
+        descricao={projectId ? (
             t('project.ownerSubtitle', { dias })
           ) : (
             <Trans
@@ -179,9 +179,8 @@ export function GastoDoWorkspace({
               components={{ strong: <strong /> }}
             />
           )}
-        </p>
-        <SeletorDeJanela dias={dias} onChange={setDias} />
-      </header>
+        acoes={<SeletorDeJanela dias={dias} onChange={setDias} />}
+      />
 
       <Estado
         q={relatorio}
@@ -306,11 +305,11 @@ export function MeuConsumoNoWorkspace({ workspaceId }: { workspaceId: string }) 
 
   return (
     <>
-      <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>{t('global.memberTitle')}</h2>
-        <p className={styles.subtitulo}>{t('global.memberSubtitle')}</p>
-        <SeletorDeJanela dias={dias} onChange={setDias} />
-      </header>
+      <CabecalhoDePagina
+        titulo={t('global.memberTitle')}
+        descricao={t('global.memberSubtitle')}
+        acoes={<SeletorDeJanela dias={dias} onChange={setDias} />}
+      />
       <Estado q={meu} carregando={t('shared.summing')} erro={t('global.memberError')} />
       {d && (
         <>
@@ -352,11 +351,11 @@ export function GastoDoTimeNoProjeto({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>{t('team.title')}</h2>
-        <p className={styles.subtitulo}>{t('team.subtitle', { dias })}</p>
-        <SeletorDeJanela dias={dias} onChange={setDias} />
-      </header>
+      <CabecalhoDePagina
+        titulo={t('team.title')}
+        descricao={t('team.subtitle', { dias })}
+        acoes={<SeletorDeJanela dias={dias} onChange={setDias} />}
+      />
       <Estado q={time} carregando={t('shared.summing')} erro={t('team.error')} />
       {d && (
         <>
