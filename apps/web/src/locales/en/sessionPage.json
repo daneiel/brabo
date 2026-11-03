@@ -253,6 +253,8 @@
     "ferramentaFalhou": "The tool failed.",
     "resultadoCortado": "Result cut at the 2,000-character limit.",
     "passosDoTurno": "Turn steps",
+    "consultado": "Consulted this turn",
+    "consultadoCorte": "showing {{shown}} of {{total}}",
     "passosCount_one": "{{count}} step",
     "passosCount_other": "{{count}} steps"
   },
