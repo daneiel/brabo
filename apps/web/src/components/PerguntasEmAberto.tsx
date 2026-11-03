@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Reply, ThumbsUp, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { answerOpenQuestion, mensagemDaApi } from '../lib/api-client';
 import type { OpenQuestion, Story, Task } from '../lib/api-types';
@@ -187,8 +188,9 @@ function CartaoDaPergunta({
             disabled={!eAutor || enviando !== null}
             loading={enviando === 'sugestao'}
             onClick={() => void responder({ aceitarSugestao: true })}
+            legenda={t('pendencias.perguntas.aceitar')}
           >
-            {t('pendencias.perguntas.aceitar')}
+            <ThumbsUp aria-hidden="true" />
           </Button>
         )}
         <input
@@ -207,8 +209,9 @@ function CartaoDaPergunta({
           disabled={!eAutor || enviando !== null || texto.trim() === ''}
           loading={enviando === 'resposta'}
           onClick={() => void responder({ resposta: texto.trim() })}
+          legenda={t('pendencias.perguntas.responder')}
         >
-          {t('pendencias.perguntas.responder')}
+          <Reply aria-hidden="true" />
         </Button>
       </div>
       {!eAutor && <p className={styles.nota}>{t('pendencias.perguntas.soOAutor')}</p>}
@@ -275,8 +278,10 @@ export function CartaoRespondido({
       })}
       {aoDispensar && (
         <div className={styles.acoesDaLinha}>
-          <Button variant="ghost" onClick={() => aoDispensar(pergunta.questionId)}>
-            {t('pendencias.perguntas.dispensar')}
+          <Button variant="ghost" onClick={() => aoDispensar(pergunta.questionId)}
+            legenda={t('pendencias.perguntas.dispensar')}
+          >
+            <X aria-hidden="true" />
           </Button>
         </div>
       )}
@@ -304,8 +309,12 @@ export function AvisoDePerguntasEmAberto({
   return (
     <div className={classeDaLinha} data-testid="aviso-perguntas-em-aberto">
       <span className={classeDoTexto}>{t('composer.perguntasEmAberto', { count: n })}</span>
-      <Button variant="secondary" onClick={rolarAteAsPerguntas}>
-        {t('composer.responderPerguntas')}
+      <Button
+        variant="secondary"
+        onClick={rolarAteAsPerguntas}
+        legenda={t('composer.responderPerguntas')}
+      >
+        <Reply aria-hidden="true" />
       </Button>
     </div>
   );

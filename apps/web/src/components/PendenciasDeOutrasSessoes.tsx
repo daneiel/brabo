@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveAction,
@@ -341,7 +342,11 @@ export function PendenciasDeOutrasSessoes({
         className={styles.disclosure}
         classNameCabecalho={styles.cabecalho}
       >
-        <p className={styles.nota}>{t('pendencias.nota')}</p>
+        <p className={styles.nota}>
+          <Ajuda assunto={t('pendencias.abas')}>
+            {t('pendencias.nota')}
+          </Ajuda>
+        </p>
         {falhas > 0 && (
           <p className={styles.nota} data-testid="motivo-nao-lido">
             {t(

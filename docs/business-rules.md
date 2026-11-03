@@ -16754,7 +16754,7 @@ turno com autor humano — a divergência que esta regra declarava fechou.
 
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
   (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
-  (`origemPorExtenso`), `:219` (`podeTrocar`);
+  (`origemPorExtenso`), `:224` (`podeTrocar`);
   `apps/web/src/routes/SessionTopbar.tsx:260` (`SessionLanguageIndicator`),
   `:128` (`modoDaBarra`), `:377` (`AjustesAgrupados`);
   `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
@@ -23591,7 +23591,7 @@ sem dizer qual.
   já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:112` (`prontas`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:116` (`prontas`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
   mostra o cartão ali")
@@ -23947,7 +23947,7 @@ sem dizer qual.
   MONTADO: com o bloco recolhido (o `Disclosure` desmonta o conteúdo), o fio
   mostra o cartão. Nenhum endpoint nem teto muda.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:503` (`useRegistrarAcoesNoBloco`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:508` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
   `apps/web/src/routes/session-timeline-montagem.tsx:1231` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
@@ -24014,7 +24014,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/git/local-git-provider.ts:374`
   (`mergedBaseSha`), `apps/api/src/infrastructure/git/local-git-provider.ts:862`
   (`rangeDoDiff`), `apps/web/src/lib/canal-vivo.ts:221` (`prs`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:101` (`invalidateQueries`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:105` (`invalidateQueries`)
 - **Teste:** `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
   ("PR mergeada por fast-forward devolve os arquivos que mudou"; "PR mergeada
   por commit de merge devolve só os arquivos dela"; "PR mergeada antes de os
@@ -24387,7 +24387,7 @@ sem dizer qual.
   aberto" com atalho até a fila, lendo a MESMA query — só avisa, os botões
   seguem habilitados (ADR 0214).
 - **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:47`
-  (`PerguntasEmAberto`), `:127` (`eAutor`), `:292`
+  (`PerguntasEmAberto`), `:127` (`eAutor`), `:297`
   (`AvisoDePerguntasEmAberto`), `apps/web/src/lib/canal-vivo.ts:135`
   (`alvosDoEvento`)
 - **Teste:** `apps/web/src/components/PerguntasEmAberto.test.tsx` ("fila
