@@ -110,12 +110,13 @@ describe('ProficiencySection', () => {
     ).toBeTruthy();
   });
 
-  it('o subtítulo mora no "?" e abre sob demanda', async () => {
+  it('a garantia de privacidade fica visível e o resto mora no "?"', async () => {
     renderTab();
 
-    expect(screen.queryByText(/nunca características pessoais/)).toBeNull();
+    expect(screen.getByText(/nunca características pessoais/)).toBeTruthy();
+    expect(screen.queryByText(/Derivado pela Anamnese/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /^Ajuda: Perfil de proficiência/ }));
-    expect(await screen.findByText(/nunca características pessoais/)).toBeTruthy();
+    expect(await screen.findByText(/Derivado pela Anamnese/)).toBeTruthy();
   });
 
   it('identifica a pessoa por e-mail, não pelo UUID', () => {

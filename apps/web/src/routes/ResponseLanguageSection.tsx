@@ -17,6 +17,7 @@ import {
 import type { UserPreferences } from '../lib/api-types';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
+import { Ajuda } from '../components/ui/Ajuda';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './AccountPage.module.css';
@@ -97,9 +98,9 @@ export function ResponseLanguageSection() {
     <div className={styles.section}>
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle}>{t('account.title')}</h2>
+        <Ajuda assunto={t('account.title')}>{t('account.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('account.eyebrow')}</span>
       </div>
-      <p className={styles.sectionSubtitle}>{t('account.subtitle')}</p>
 
       <div className={styles.card}>
         <div className={styles.cardInfo}>

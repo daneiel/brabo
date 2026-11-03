@@ -124,6 +124,18 @@ describe('MachineDeviceKeysSection (RN-611)', () => {
     expect(screen.queryByText(/connected/i)).not.toBeInTheDocument();
   });
 
+  it('o texto longo mora no "?", e o alcance da revogação e o "não é batimento" ficam visíveis', async () => {
+    listMachineDeviceKeys.mockResolvedValue([ATIVA]);
+    montar();
+
+    expect(await screen.findByText('thinkpad-do-dani')).toBeInTheDocument();
+    expect(screen.getByText(/drops the local agent in all of them/)).toBeInTheDocument();
+    expect(screen.getByText(/is not a running agent/)).toBeInTheDocument();
+    expect(screen.queryByText(/Project keys are not here/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Help: / }));
+    expect(await screen.findByText(/Project keys are not here/)).toBeInTheDocument();
+  });
+
   it('vazio é dito como vazio, e falhar é dito como "não sei" — nunca um pelo outro', async () => {
     listMachineDeviceKeys.mockResolvedValueOnce([]);
     montar();

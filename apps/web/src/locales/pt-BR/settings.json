@@ -403,7 +403,8 @@
   "proficiency": {
     "title": "Perfil de proficiência",
     "eyebrow": "anamnese · derivado",
-    "subtitle": "Derivado pela Anamnese a partir das suas interações. Só competências técnicas e de processo — nunca características pessoais.",
+    "subtitle": "Derivado pela Anamnese a partir das suas interações.",
+    "privacidade": "Só competências técnicas e de processo — nunca características pessoais.",
     "emptyMessage": "Nada ainda — a Anamnese roda periodicamente sobre o log do projeto.",
     "deleteButton": "Apagar meu perfil",
     "reactivateButton": "Voltar a ser perfilado",

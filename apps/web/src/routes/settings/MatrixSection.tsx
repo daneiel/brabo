@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { ROLE_ORDER } from '../../lib/roles';
 import type { Role } from '../../lib/api-types';
 import styles from '../ProjectSettingsTab.module.css';
@@ -19,9 +20,9 @@ export function MatrixSection() {
     <section className={styles.section}>
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('matrix.title')}</h2>
+        <Ajuda assunto={t('matrix.title')}>{t('matrix.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
       </div>
-      <p className={styles.subtitle}>{t('matrix.subtitle')}</p>
       <div className={styles.matrixWrap}>
         <table className={styles.matrixTable}>
           <thead>
