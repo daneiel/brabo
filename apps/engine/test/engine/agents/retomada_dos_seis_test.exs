@@ -79,6 +79,7 @@ defmodule Engine.Agents.RetomadaDosSeisTest do
 
         assert state.retomada_agendada
         assert "registrar_plano" in Enum.map(state.tool_specs, & &1.name)
+        assert "rag_search" in Enum.map(state.tool_specs, & &1.name)
         assert_received :retomar_turno_interrompido
 
         antes = Enum.count(state.messages, &(&1["role"] == "user"))

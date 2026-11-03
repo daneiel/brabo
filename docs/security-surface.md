@@ -1416,6 +1416,7 @@ detalhar o motivo na URL.
 | POST | `/projects/:projectId/rag/reindex` | role:maintainer |
 | POST | `/projects/:projectId/rag/local` | role:maintainer |
 | POST | `/projects/:projectId/rag/feedback` | role:viewer |
+| POST | `/projects/:projectId/source-clicks` | role:viewer |
 | GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/container/lifecycle` | role:viewer |

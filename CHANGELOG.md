@@ -7,6 +7,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Funcionalidades
 
 - **auth**: acesso rápido por papel na tela de login (`GET`/`POST /auth/dev-login`), só com `BRABO_AMBIENTE=local`; as contas passam a `<papel>@brabo.dev` e o `dev@brabo.dev` do seed vira `developer@brabo.dev` (AT-722, ADR 0245, RN-984).
+- **engine**: os sete agentes conversacionais passam a consultar o RAG do projeto (`rag_search`), e os trechos viram `fontes` do `agent.response` (AT-716, RN-982).
+- **api/web**: o clique numa fonte do bloco "Consultado neste turno" é gravado na tabela `source_clicks` (`POST /projects/:projectId/source-clicks`, `viewer`); não é voto e não alimenta o `rag_feedback` (AT-716, RN-983).
 - **engine**: o `agent.response` leva `fontes` (as leituras `ok` do turno, teto de 10 com `fontesTotal`), derivadas das ferramentas pelo servidor e fora do `content` (AT-716, RN-982).
 - **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
 - A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).
@@ -14,6 +16,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
 - **web**: ajustes das telas da R3 (AT-721): o "?" das pendências fica na linha das abas, a explicação de "Reabrir" vai para um "?", o rótulo da falha não cola no nome do agente e os gráficos de gasto sem consumo mostram texto de vazio.
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
 

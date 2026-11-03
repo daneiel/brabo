@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 // A instância REAL (não uma isolada): `ErroDeCarregamento` (namespace `ui`)
@@ -167,5 +169,26 @@ describe('ProjectPage — falha de carga não vira tela branca', () => {
     // O painel é um chunk sob demanda (AT-300): chega depois do cabeçalho.
     expect(await screen.findByText('aba visão geral')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  // jsdom não mede layout: prova-se a ESTRUTURA. Quem rola (`.body`) contém o
+  // elemento de largura máxima (`.coluna`), que contém o painel.
+  it('a coluna de leitura é filha do contêiner que rola, que não leva a largura máxima', async () => {
+    getProject.mockResolvedValue(PROJETO);
+    montar();
+    const painel = await screen.findByText('aba visão geral');
+    const coluna = painel.closest('[class*="coluna"]') as HTMLElement;
+    expect(coluna).not.toBeNull();
+    const body = coluna.parentElement as HTMLElement;
+    expect(body.className).toMatch(/body/);
+    expect(body.className).not.toMatch(/coluna/);
+    const css = readFileSync(resolve(__dirname, 'ProjectPage.module.css'), 'utf8');
+    expect(css).toMatch(/\.coluna\s*\{[^}]*max-width:\s*1040px/);
+    expect(css).not.toMatch(/\.body\s*\{[^}]*max-width/);
+  });
+
+  it('a utilidade no-scrollbar existe no CSS do shadcn', () => {
+    const css = readFileSync(resolve(__dirname, '../shadcn.css'), 'utf8');
+    expect(css).toMatch(/@utility no-scrollbar[\s\S]*scrollbar-width:\s*none/);
   });
 });

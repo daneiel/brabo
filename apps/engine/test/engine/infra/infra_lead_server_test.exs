@@ -49,6 +49,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
     %{state: state, session_id: session_id}
   end
 
+  test "AT-716: o Infra Lead oferece rag_search", %{state: state} do
+    assert "rag_search" in Enum.map(state.tool_specs, & &1.name)
+  end
+
   defp insert_repo!(project_id) do
     Repo.query!(
       """

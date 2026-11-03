@@ -121,6 +121,8 @@ defmodule Engine.Agents.ArquitetoServer do
          EmitArtifact.spec(),
          DeclareOpenQuestion.spec(),
          Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec(),
          # RN-772/773 (AT-454): leituras do estado que muda FORA da conversa
          # (a aprovação das ADRs, as tarefas do PO) — sem elas o Arquiteto
          # afirmava o retrato da hora em que propôs.
@@ -396,6 +398,8 @@ defmodule Engine.Agents.ArquitetoServer do
     do: ListarAdrsPropostas.run(args, state)
 
   defp run_tool("listar_backlog", args, state), do: ListarBacklog.run(args, state)
+
+  defp run_tool("rag_search", args, state), do: Engine.Harness.Tools.RagSearch.run(args, state)
 
   defp run_tool("registrar_plano", args, state),
     do: Engine.Harness.Tools.RegistrarPlano.run(args, state)

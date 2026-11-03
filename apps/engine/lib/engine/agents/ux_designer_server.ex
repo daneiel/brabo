@@ -116,7 +116,9 @@ defmodule Engine.Agents.UxDesignerServer do
        tool_specs: [
          UxDesignerTools.spec(),
          EmitArtifact.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec()
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -344,6 +346,8 @@ defmodule Engine.Agents.UxDesignerServer do
 
   defp run_tool("propose_prototype", args, state), do: UxDesignerTools.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("rag_search", args, state), do: Engine.Harness.Tools.RagSearch.run(args, state)
 
   defp run_tool("registrar_plano", args, state),
     do: Engine.Harness.Tools.RegistrarPlano.run(args, state)

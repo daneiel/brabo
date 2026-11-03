@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { LibraryIcon } from 'lucide-react';
 import type { FonteDoTurno } from '../../lib/fontes-do-turno';
 import { ChainOfThought } from './chain-of-thought';
+import { sendSourceClick } from '../../lib/api-client';
 
 /* AT-716: rodapé "Consultado neste turno" (RN-180/468: nunca "Fontes"). Sem args (RN-096). */
 export function hrefDaFonte(f: FonteDoTurno, projectId: string): string | undefined {
@@ -15,10 +16,14 @@ export function ConsultadoNesteTurno({
   fontes,
   total,
   projectId,
+  sessionId,
+  eventId,
 }: {
   fontes: FonteDoTurno[];
   total: number;
   projectId: string;
+  sessionId?: string;
+  eventId?: string;
 }) {
   const { t } = useTranslation('sessionPage');
   if (fontes.length === 0) return null;
@@ -38,7 +43,17 @@ export function ConsultadoNesteTurno({
             return (
               <li key={`${f.tipo}-${f.ref ?? f.rotulo}-${i}`} data-tipo={f.tipo} className="flex items-center gap-2">
                 <LibraryIcon aria-hidden className="size-3.5 shrink-0" />
-                {href ? <a href={href}>{f.rotulo}</a> : <span>{f.rotulo}</span>}
+                {href ? (
+                  <a
+                    href={href}
+                    onClick={() => {
+                      // RN-983: dispara sem esperar; falha nunca bloqueia a navegação.
+                      if (eventId) void sendSourceClick(projectId, { sessionId, eventId, tipo: f.tipo, ref: f.ref, searchId: f.searchId, chunkId: f.chunkId }).catch(() => undefined);
+                    }}
+                  >
+                    {f.rotulo}
+                  </a>
+                ) : <span>{f.rotulo}</span>}
               </li>
             );
           })}
