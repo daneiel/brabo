@@ -871,6 +871,15 @@ detalhar o motivo na URL.
   documento que a
   [referência gerada](/reference/api/) publica. Registrado aqui em vez de
   deixado de fora: o que o teste não alcança precisa estar na prosa.
+- **`GET`/`POST /auth/dev-login` (acesso rápido por papel, AT-722) NÃO estão
+  na tabela, de propósito.** O módulo só é registrado com
+  `BRABO_AMBIENTE=local` e a imagem sem marca ou marcada `local`
+  (`infrastructure/security/ambiente.ts`); o `route-surface.spec.ts` sobe o
+  `AppModule` sem a variável, então a rota não existe para ele e fora de `local`
+  responde 404. Quando existe é pública como o `/auth/login` (sem CSRF, sem
+  rate limit) e emite a sessão de uma conta `<papel>@brabo.dev` do
+  `ROLE_ORDER`, nunca de e-mail livre; sem usuário na instalação responde 409.
+  Registrado aqui porque o teste não a vê.
 - **`GET /projects/:projectId/agent-areas` passou a devolver dados reais, e a
   classificação não mudou** — continua `role:developer`, enquanto o `PATCH`
   do teto segue `role:maintainer`. Até a FASE 18 a tabela `agent_areas` nunca
