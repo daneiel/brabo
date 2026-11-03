@@ -69,7 +69,7 @@ defmodule Engine.Agents.TurnoAssincrono do
   require Logger
 
   alias Engine.Agents.{Diario, FalhaDeTurno, FilaDeMensagens}
-  alias Engine.Harness.{IdiomaDaResposta, RetomadaDoTurno}
+  alias Engine.Harness.{AnexosDoTurno, IdiomaDaResposta, RetomadaDoTurno}
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @typedoc "O que fica guardado no state do agente enquanto o turno roda."
@@ -325,11 +325,23 @@ defmodule Engine.Agents.TurnoAssincrono do
     state = Map.put(state, :montar_turno_de_mensagem, montar)
     fila = Map.get(state, :fila_de_mensagens, [])
     mensagem = Map.merge(%{id: nil, idioma: nil}, mensagem)
+    # AT-715: os anexos viajam dentro do "autor" (map `%{idioma, perfil, anexos}`),
+    # como o perfil, para nenhum servidor mudar; aqui eles saem do idioma.
+    mensagem =
+      case mensagem.idioma do
+        %{anexos: a} = autor ->
+          %{mensagem | idioma: Map.delete(autor, :anexos)} |> Map.put(:anexos, a)
+
+        _ ->
+          Map.put_new(mensagem, :anexos, [])
+      end
 
     cond do
       is_nil(Map.get(state, :turno_assincrono)) and fila == [] ->
         IdiomaDaResposta.com_idioma_do_autor(mensagem.idioma, fn ->
-          iniciar(state, from, montar.(state, mensagem.texto))
+          AnexosDoTurno.com_anexos(mensagem.anexos, fn ->
+            iniciar(state, from, montar.(state, FilaDeMensagens.texto_do_turno([mensagem])))
+          end)
         end)
 
       is_nil(Map.get(state, :turno_assincrono)) ->
@@ -347,6 +359,7 @@ defmodule Engine.Agents.TurnoAssincrono do
           mensagemId: mensagem.id,
           texto: mensagem.texto,
           idioma: mensagem.idioma,
+          anexos: mensagem.anexos,
           posicao: posicao
         })
 
@@ -528,9 +541,13 @@ defmodule Engine.Agents.TurnoAssincrono do
     # última fala que pediu resposta.
     idioma = fila |> List.last() |> Map.get(:idioma)
 
+    anexos = Enum.flat_map(fila, &Map.get(&1, :anexos, []))
+
     {:noreply, novo_state} =
       IdiomaDaResposta.com_idioma_do_autor(idioma, fn ->
-        iniciar(limpo, nil, montar.(limpo, FilaDeMensagens.texto_do_turno(fila)))
+        AnexosDoTurno.com_anexos(anexos, fn ->
+          iniciar(limpo, nil, montar.(limpo, FilaDeMensagens.texto_do_turno(fila)))
+        end)
       end)
 
     novo_state

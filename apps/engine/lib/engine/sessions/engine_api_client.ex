@@ -730,6 +730,7 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn(project_id, session_id, agent, messages, tools) do
     enviadas =
       messages
+      |> Engine.Harness.AnexosDoTurno.anexar()
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
       |> DecisoesDoProjeto.anexar(project_id, agent)
@@ -814,6 +815,7 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
     enviadas =
       messages
+      |> Engine.Harness.AnexosDoTurno.anexar()
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
       |> DecisoesDoProjeto.anexar(project_id, agent)

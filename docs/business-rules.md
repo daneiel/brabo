@@ -14825,7 +14825,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:459` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:471` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -15204,7 +15204,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:482` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:495` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15324,8 +15324,8 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:559`
-  (`recusar_mensagem/5`) e `:560` (`registrar_recusa_de_mensagem/3`)
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:573`
+  (`recusar_mensagem/5`) e `:574` (`registrar_recusa_de_mensagem/3`)
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:207`
   (`qa`, o agente do roster que segue sem conversa — até a RN-617 o caso era o
   `infra`, que passou a conversar: o `agent.error` com a frase e o motivo), `:178` (nome desconhecido
@@ -16495,7 +16495,7 @@ deu e com as quatro ferramentas.
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:604`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:618`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
@@ -19668,11 +19668,11 @@ A recusa `turno_em_andamento` continua para o que não é fala: revisão de
 história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:322`
-  (`receber_mensagem`), `:245` (`tratar_resultado`), `:506` (`entregar_fila`),
-  `:367` (`cancelar_mensagem`), `:412` (`fila_ao_subir`), `:542`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:519` (`entregar_fila`),
+  `:380` (`cancelar_mensagem`), `:425` (`fila_ao_subir`), `:559`
   (`emitir_recusa_por_fila_cheia`);
-  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
-  (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
+  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:106`
+  (`fora_do_historico`), `:152` (`texto_do_turno`), `:176`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
@@ -25168,14 +25168,14 @@ sem dizer qual.
 ### RN-920 — O turno conversacional que o reinício matou é retomado UMA vez no boot, se recente {#rn-920}
 
 - **Regra:** revisa a [RN-586](#rn-586). A varredura de boot (`TurnoOrfao.varrer/2`) retoma o turno órfão cujo agente teve atividade há no máximo 900 s (`:retomada_automatica_janela_segundos`, a mesma régua da [RN-823](#rn-823), medida pela última atividade do agente e não pelo `working`) e que ainda não foi retomado: grava `agent.error` (`turno_interrompido_por_reinicio`, `retomada: "automatica"`), `agent.status: idle` e `agent.turn_resumed` (`automatica: true`) e acorda o agente, cujo `init/1` agenda `:retomar_turno_interrompido` ANTES da entrega da fila (RN-673). O teto é durável no log: um `agent.turn_resumed` do agente entre o último status não-`working` e o `working` órfão. Turno velho ou já retomado é só fechado, com a frase apontando o botão (RN-921). O `fechar_ao_subir/3` do `init/1` continua só fechando, e nó mudo conta como vivo (na dúvida nem fecha nem retoma). Resíduo declarado: dois nós subindo juntos, sem se enxergarem, podem retomar o mesmo turno duas vezes.
-- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:418` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
+- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:430` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
 - **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`TurnoOrfao.varrer/2: retomada automática 1× no boot`, `TurnoAssincrono: retomada no init`); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs`
 - **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
 ### RN-921 — O botão "Retomar" do fio é gesto humano, sem teto, e só vale para o turno interrompido {#rn-921}
 
 - **Regra:** o `agent.error` com `reason: turno_interrompido_por_reinicio` ganha no fio o cartão `RetomarTurnoInterrompido` (objetivo e passos do último plano, "Parou em", botão). O clique chama `POST /projects/:projectId/sessions/:sessionId/agents/:agent/resume` (`developer`; 200 `{ok:true}`; 404 sessão alheia; 409 `turno_nao_interrompido` quando o último desfecho do agente não é a interrupção ou há turno em curso; 409 `agente_sem_retomada`), que pede ao engine `POST /internal/sessions/:sessionId/agent/resume`: ele grava `agent.turn_resumed` com `automatica: false` e manda `:retomar_turno_interrompido` à MESMA `TurnoAssincrono`. Sem teto: cada clique é uma retomada. O cartão some quando algo segue o erro, e a retomada automática vira uma linha discreta. O "sem desfecho" do diário NÃO aparece na tela (o evento não o traz).
-- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:624` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
+- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:638` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
 - **Teste:** `apps/api/test/interfaces/http/sessions/agent-resume.controller.spec.ts` (feliz, duas recusas 409, 404, papel); `apps/web/src/routes/RetomarTurnoInterrompido.test.tsx`; ExUnit do `agent_command_controller`
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25563,3 +25563,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:160` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:171` (`resolverAnexos`).
 - **Teste:** `apps/api/test/domain/llm/anexos-no-turno.spec.ts`, `apps/api/test/infrastructure/llm/openai-compatible-provider.visao.spec.ts`; prova da capability: `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (manual, com credencial).
 - **Origem:** AT-715 fatia 1, lane L2 (EP-031), ADR 0246.
+
+### RN-990 — A imagem anexada vai ao LLM só no turno em que a mensagem chegou {#rn-990}
+
+- **Regra:** o `anexos` do `agent/message` (`[{id, nome, mime, tamanho}]`, até 4 por mensagem) entra no turno e na fila de mensagens (RN-673) JUNTO com o texto: o `chat.message_queued` guarda os anexos, e as pendentes que viram UM turno juntam os anexos na ordem. Na PRIMEIRA chamada de LLM do turno, o `content` da última mensagem `user` vira a lista de partes (`text` + uma `{type:'anexo',id}` por anexo); a chamada CONSOME os anexos, então as iterações seguintes do laço de ferramentas e os turnos seguintes mandam só o texto com o rótulo `[anexos: a.png, b.txt]` (teto de 300 caracteres), que é também o que a reidratação devolve a partir do `payload.anexos` do `chat.message`. A imagem nunca é reenviada (custo × iterações × turnos; decisão do dono, 02/11). O caminho é UM só para os sete conversacionais (`TurnoAssincrono` + `Reidratacao`), sem código por servidor; mensagem sem anexos continua `string`.
+- **Onde:** `apps/engine/lib/engine/harness/anexos_do_turno.ex:56` (`anexar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:324` (`receber_mensagem`), `apps/engine/lib/engine/agents/reidratacao.ex:443` (`usuario`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:545` (`autor_do_turno`).
+- **Teste:** `apps/engine/test/engine/agents/anexos_do_turno_test.exs`.
+- **Origem:** AT-715 fatia 1, lane L3 (EP-031), ADR 0246.

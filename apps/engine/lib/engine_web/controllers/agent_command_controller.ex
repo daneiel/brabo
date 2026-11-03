@@ -34,6 +34,7 @@ defmodule EngineWeb.AgentCommandController do
   }
 
   alias Engine.Agents.{Diario, FilaDeMensagens, Reidratacao, TurnoAssincrono}
+  alias Engine.Harness.AnexosDoTurno
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
   alias Engine.Sessions.EngineApiClient
 
@@ -541,11 +542,24 @@ defmodule EngineWeb.AgentCommandController do
   # valor que o servidor repassa a `IdiomaDaResposta.com_idioma_do_autor/2` é
   # `%{idioma: _, perfil: _}`; sem eles, é só o idioma, como sempre — nenhum
   # servidor de agente muda por causa disso.
-  defp autor_do_turno(%{"perfilDoAutor" => perfil} = params)
-       when is_binary(perfil) and perfil != "",
-       do: %{idioma: idioma_da_resposta(params), perfil: perfil}
+  defp autor_do_turno(params) do
+    base =
+      case params do
+        %{"perfilDoAutor" => perfil} when is_binary(perfil) and perfil != "" ->
+          %{idioma: idioma_da_resposta(params), perfil: perfil}
 
-  defp autor_do_turno(params), do: idioma_da_resposta(params)
+        _ ->
+          idioma_da_resposta(params)
+      end
+
+    # AT-715 (RN-990): os anexos da mensagem (até 4) viajam dentro do "autor",
+    # como o perfil, e `TurnoAssincrono.receber_mensagem/4` os separa.
+    case params |> Map.get("anexos") |> AnexosDoTurno.lista() |> Enum.take(4) do
+      [] -> base
+      anexos when is_map(base) -> Map.put(base, :anexos, anexos)
+      anexos -> %{idioma: base, perfil: nil, anexos: anexos}
+    end
+  end
 
   # Recusa de MENSAGEM de chat que não chega a agente nenhum (AT-132, RN-587).
   # A api grava o `chat.message` ANTES de falar com o engine (o engine lê o

@@ -50,7 +50,12 @@ defmodule Engine.Agents.FilaDeMensagens do
   @cancelada "chat.message_cancelled"
 
   @typedoc "Uma mensagem na fila do agente."
-  @type mensagem :: %{id: String.t() | nil, texto: String.t(), idioma: String.t() | nil}
+  @type mensagem :: %{
+          required(:id) => String.t() | nil,
+          required(:texto) => String.t(),
+          required(:idioma) => String.t() | nil,
+          optional(:anexos) => [map()]
+        }
 
   @doc "Quantas mensagens podem esperar, por agente e sessão (decisão do dono, 01/10)."
   def teto, do: @teto
@@ -84,7 +89,12 @@ defmodule Engine.Agents.FilaDeMensagens do
         ator(e) == agent,
         is_binary(id),
         not MapSet.member?(fechadas, id),
-        do: %{id: id, texto: texto(p["texto"]), idioma: idioma(p["idioma"])}
+        do: %{
+          id: id,
+          texto: texto(p["texto"]),
+          idioma: idioma(p["idioma"]),
+          anexos: Engine.Harness.AnexosDoTurno.lista(p["anexos"])
+        }
   end
 
   @doc """
@@ -140,17 +150,20 @@ defmodule Engine.Agents.FilaDeMensagens do
   que devem ser respondidas juntas (N mensagens = 1 turno).
   """
   @spec texto_do_turno([mensagem()]) :: String.t()
-  def texto_do_turno([%{texto: texto}]), do: texto
+  def texto_do_turno([m]), do: com_rotulo(m)
 
   def texto_do_turno(fila) when is_list(fila) and length(fila) > 1 do
     corpo =
       fila
       |> Enum.with_index(1)
-      |> Enum.map_join("\n\n", fn {%{texto: texto}, i} -> "[#{i}] #{texto}" end)
+      |> Enum.map_join("\n\n", fn {m, i} -> "[#{i}] #{com_rotulo(m)}" end)
 
     "(Enquanto você trabalhava no turno anterior chegaram #{length(fila)} mensagens. " <>
       "Leia todas, na ordem, e responda a elas juntas.)\n\n" <> corpo
   end
+
+  defp com_rotulo(%{texto: texto} = m),
+    do: texto <> Engine.Harness.AnexosDoTurno.rotulo(m[:anexos])
 
   @doc """
   Na varredura de BOOT (`Engine.Sessions.Rehydrator`): acorda o agente que tem
