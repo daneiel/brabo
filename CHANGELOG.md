@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **api**: capability `vision` ligada só no OpenRouter, provada por smoke real em 2026-11-03 com `google/gemini-2.5-flash` (AT-715, RN-989); os outros providers seguem `false`.
 - **web**: selos de citação `[n]` inline no texto da resposta do agente (AT-716): só os índices de `citacoes` viram selo com HoverCard da fonte; os demais `[n]` somem e código fica literal.
 
 - **web**: o composer da Sessão anexa imagem (png/jpeg/webp/gif) e texto/código por clipe ou colando imagem, com chips, miniatura, validação no cliente e até 4 por mensagem; o fio mostra os anexos de `payload.anexos` (AT-715).

@@ -449,6 +449,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   rodou com credencial real e, com `session_id`, 6 de 6 chamadas caíram no mesmo
   upstream (sem ele, 4 upstreams em 6). Os outros oito seguem `false`; ligá-los
   exige o smoke equivalente. `provider.order`/`allow_fallbacks` seguem fora
+- A capability `vision` (RN-989, AT-715, ADR 0246) é `true` SÓ no OpenRouter
+  desde 2026-11-03, PROVADA: `openrouter-provider.visao.smoke.spec.ts` rodou
+  com credencial real, com `google/gemini-2.5-flash` lendo um PNG 8x8 vermelho,
+  e o modelo respondeu "red". Os outros dez seguem `false`; ligá-los exige o
+  smoke equivalente
 - A capability `promptCaching` (RN-892, AT-543) é `true` SÓ no OpenRouter
   desde 2026-10-15, PROVADA: `openrouter-provider.cache.smoke.spec.ts` rodou
   com credencial real e a segunda chamada a `anthropic/claude-haiku-5.5`

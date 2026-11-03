@@ -74,7 +74,7 @@ que o provider, nunca mais rico.
 | `stickySession` | só provider | mandar `session_id` e prender a conversa ao upstream que a atendeu ([RN-907](../business-rules/custo.md#rn-907)); `true` só no OpenRouter, provado por smoke em 2026-10-21 |
 | `priceCeiling` | só provider | mandar `provider.max_price` = catálogo × 1,5 e repetir uma vez sem teto no 404 ([RN-917](../business-rules/custo.md#rn-917)); `true` só no OpenRouter, provado por smoke em 2026-10-28 |
 | `context_length` | `models.context_window` | orçamento de contexto |
-| `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules/custo.md#rn-056)) |
+| `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules/custo.md#rn-056)); `true` só no OpenRouter (provider), provado por smoke em 2026-11-03 ([RN-989](../business-rules.md#rn-989)) |
 | `reasoning` | `models.supports_reasoning` | idem |
 | `image output` | `models.generates_image` | idem |
 
