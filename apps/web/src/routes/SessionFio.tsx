@@ -2,6 +2,8 @@ import { useEffect, type CSSProperties, type Dispatch, type SetStateAction } fro
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
+import { Ajuda } from '../components/ui/Ajuda';
+import { Play, RotateCcw } from 'lucide-react';
 import { Disclosure } from '../components/ui/Disclosure';
 import { MensagemDeConversa } from '../components/ai-elements/message';
 import { Sugestoes } from '../components/ai-elements/suggestion';
@@ -90,11 +92,12 @@ export function SessionFio({
           <ConversationEmptyState className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
             <p className={styles.conviteTexto}>
-              <Trans
-                i18nKey="convite.criativa.texto"
-                ns="sessionPage"
-                components={{ b: <strong /> }}
-              />
+              {t('convite.criativa.curto')}
+              <Ajuda assunto={t('convite.criativa.titulo')}>
+                <Trans i18nKey="convite.criativa.texto" ns="sessionPage" components={{ b: <strong /> }} />
+                <br />
+                <Trans i18nKey="convite.criativa.rodape" ns="sessionPage" components={{ b: <strong /> }} />
+              </Ajuda>
             </p>
             {/* A AÇÃO, e não uma seta apontando para ela (FASE 24).
                 Ativar o Criativo continua sendo um clique explícito:
@@ -102,8 +105,8 @@ export function SessionFio({
                 gasta (RN-058), e ninguém entra na sessão sozinho. */}
             {!criativoActive && (
               <div className={styles.conviteAcao}>
-                <Button onClick={handleStartIdeation} disabled={!isActive}>
-                  {t('convite.criativa.iniciarIdeacao')}
+                <Button legenda={t('convite.criativa.iniciarIdeacao')} onClick={handleStartIdeation} disabled={!isActive}>
+                  <Play aria-hidden="true" />
                 </Button>
                 <span className={styles.conviteAcaoNota}>
                   {t('convite.criativa.iniciarIdeacaoNota')}
@@ -117,30 +120,17 @@ export function SessionFio({
               sugestoes={[t('convite.criativa.exemplo')]}
               onEscolher={setDraft}
             />
-            <p className={styles.conviteRodape}>
-              <Trans
-                i18nKey="convite.criativa.rodape"
-                ns="sessionPage"
-                components={{ b: <strong /> }}
-              />
-            </p>
           </ConversationEmptyState>
         ) : (
           <ConversationEmptyState className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
             <p className={styles.conviteTexto}>
-              <Trans
-                i18nKey="convite.consultiva.texto"
-                ns="sessionPage"
-                components={{ b: <strong /> }}
-              />
-            </p>
-            <p className={styles.conviteRodape}>
-              <Trans
-                i18nKey="convite.consultiva.rodape"
-                ns="sessionPage"
-                components={{ b: <strong /> }}
-              />
+              {t('convite.consultiva.curto')}
+              <Ajuda assunto={t('convite.consultiva.titulo')}>
+                <Trans i18nKey="convite.consultiva.texto" ns="sessionPage" components={{ b: <strong /> }} />
+                <br />
+                <Trans i18nKey="convite.consultiva.rodape" ns="sessionPage" components={{ b: <strong /> }} />
+              </Ajuda>
             </p>
           </ConversationEmptyState>
         )
@@ -216,13 +206,14 @@ export function SessionFio({
               <Button
                 variant="ghost"
                 size="sm"
+                legenda={t('mensagens.tentarDeNovo')}
                 onClick={() => {
                   const { reenviar } = naoEnviada;
                   limparMensagemNaoEnviada();
                   reenviar();
                 }}
               >
-                {t('mensagens.tentarDeNovo')}
+                <RotateCcw aria-hidden="true" />
               </Button>
             </div>
           }

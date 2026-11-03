@@ -157,7 +157,10 @@ describe('SessionPage — ações de passo são sugestões acima do destinatári
       pronto.compareDocumentPosition(para) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     const composer = para.nextElementSibling as HTMLElement;
-    expect(within(composer).getAllByRole('button')[0]).toHaveTextContent('Enviar');
+    const enviar = within(composer).getAllByRole('button')[0];
+    // AT-713: Enviar é só ícone; o nome vem da legenda e o ícone é aria-hidden.
+    expect(enviar).toHaveAccessibleName('Enviar');
+    expect(enviar.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(composer).not.toContainElement(pronto);
   });
 

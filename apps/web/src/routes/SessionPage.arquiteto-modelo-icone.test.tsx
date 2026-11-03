@@ -163,7 +163,7 @@ describe('SessionPage — problema 1: confirmar arquitetura pronta', () => {
     eventos.mockReturnValue({ items: [] });
     montar();
 
-    await screen.findByText(/Sessão/);
+    await screen.findAllByText(/Sessão/);
     expect(
       screen.queryByRole('button', { name: 'Confirmar arquitetura pronta' }),
     ).not.toBeInTheDocument();
@@ -216,7 +216,7 @@ describe('SessionPage — problema 1: confirmar arquitetura pronta', () => {
     ]);
     montar();
 
-    await screen.findByText(/Sessão/);
+    await screen.findAllByText(/Sessão/);
     expect(
       screen.queryByRole('button', { name: 'Confirmar arquitetura pronta' }),
     ).not.toBeInTheDocument();
