@@ -12,6 +12,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Play } from 'lucide-react';
 import {
   getSession,
   getSessionBudget,
@@ -319,9 +320,9 @@ export function SessionTopbar({
           <Button
             className={styles.acaoDaBarra}
             onClick={handleStartIdeation}
-            title={t('topbar.iniciarIdeacaoTitulo')}
+            legenda={t('convite.criativa.iniciarIdeacao')}
           >
-            {t('topbar.iniciarIdeacao')}
+            <Play aria-hidden="true" />
           </Button>
         </span>
       )}

@@ -217,9 +217,9 @@ describe('SessionTopbar pela largura (AT-317)', () => {
     expect(origem.textContent).toMatch(/idioma da interface/);
     // O seletor de modelo de sempre, dentro do painel.
     expect(within(painel).getByText('Qwen2.5 Coder 7B (local)')).toBeTruthy();
-    // O botão da ideação continua com o texto inteiro e o `title` da pista.
+    // AT-713: o botão da ideação é só ícone, com a legenda por nome acessível.
     const iniciar = screen.getByRole('button', { name: 'Iniciar ideação' });
-    expect(iniciar.getAttribute('title')).toMatch(/Criativo/);
+    expect(iniciar.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
 
     // Esc fecha e devolve o foco ao gatilho.
     fireEvent.keyDown(document, { key: 'Escape' });

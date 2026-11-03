@@ -106,6 +106,17 @@ describe('Perguntas em aberto no chat (RN-861)', () => {
     );
   });
 
+  it('AT-713: Aceitar, Responder e Dispensar são só ícone, com nome e ícone aria-hidden', async () => {
+    montar(pendencias());
+    await abrir();
+    const [primeira, segunda] = await screen.findAllByTestId('pergunta-em-aberto');
+    for (const [linha, nome] of [[primeira!, 'Responder'], [segunda!, 'Aceitar sugestão']] as const) {
+      const b = within(linha).getByRole('button', { name: nome });
+      expect(b.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      expect(b.textContent).toBe('');
+    }
+  });
+
   it('quem não é o autor da sessão vê o cartão com o controle inerte e o motivo em texto', async () => {
     usuario = 'outra-pessoa';
     montar(pendencias());
