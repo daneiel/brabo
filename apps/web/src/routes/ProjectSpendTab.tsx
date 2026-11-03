@@ -4,8 +4,9 @@ import { Save } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
+import { SectionCards } from '../components/shadcn/section-cards';
 import { Alert, AlertTexto } from '../components/shadcn/alert';
-import { Card } from '../components/shadcn/card';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -23,7 +24,7 @@ import { numberFmt } from '../lib/currency';
 import type { BudgetPolicy } from '../lib/api-types';
 import { alertaDeOrcamento } from '../lib/spend';
 import { GastoPorDia } from '../components/GastoPorDia';
-import { Destaque, Ranking } from '../components/SpendCharts';
+import { Ranking } from '../components/SpendCharts';
 import { TokenMeter } from '../components/TokenMeter';
 import { formatarUsd } from '../components/CredentialSpendSection';
 import { GastoDoTimeNoProjeto, GastoDoWorkspace } from '../components/SpendPaineis';
@@ -71,6 +72,16 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
         </Alert>
       )}
 
+      {papel.data &&
+        (papel.data.role === 'owner' ? (
+          <GastoDoProjetoDoOwner projectId={projectId} />
+        ) : (
+          <>
+            <GastoDoTimeNoProjeto projectId={projectId} />
+            <MeuConsumo projectId={projectId} />
+          </>
+        ))}
+
       {/* O orçamento é do PROJETO, não da audiência — mostra para as duas
           quando o papel alcança (`maintainer`+). Fica silencioso em erro
           (403 de quem não é maintainer no projeto): pedir 403 de propósito
@@ -82,16 +93,6 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
           podeEditar={roleAtLeast(papel.data.role, 'maintainer')}
         />
       )}
-
-      {papel.data &&
-        (papel.data.role === 'owner' ? (
-          <GastoDoProjetoDoOwner projectId={projectId} />
-        ) : (
-          <>
-            <GastoDoTimeNoProjeto projectId={projectId} />
-            <MeuConsumo projectId={projectId} />
-          </>
-        ))}
     </div>
   );
 }
@@ -259,23 +260,25 @@ function MeuConsumo({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>
-          {t('member.title')}
-          <Ajuda assunto={t('member.title')}>
-            <Trans i18nKey="member.subtitle" ns="spend" values={{ dias: DIAS }} components={{ strong: <strong /> }} />
-            {' '}{t('member.note')}
-          </Ajuda>
-        </h2>
-        <p className={styles.subtitulo}>
+      <CabecalhoDePagina
+        titulo={
+          <>
+            {t('member.title')}
+            <Ajuda assunto={t('member.title')}>
+              <Trans i18nKey="member.subtitle" ns="spend" values={{ dias: DIAS }} components={{ strong: <strong /> }} />
+              {' '}{t('member.note')}
+            </Ajuda>
+          </>
+        }
+        descricao={
           <Trans
             i18nKey="member.subtitleCurto"
             ns="spend"
             values={{ dias: DIAS }}
             components={{ strong: <strong /> }}
           />
-        </p>
-      </header>
+        }
+      />
 
       {meu.isLoading && (
         <div className={styles.estado}><Shimmer>{t('shared.summing')}</Shimmer></div>
@@ -292,33 +295,31 @@ function MeuConsumo({ projectId }: { projectId: string }) {
 
       {meu.data && (
         <>
-          <div className={styles.destaques}>
-            <Destaque
-              rotulo={t('member.estimatedLabel', { dias: DIAS })}
-              valor={formatarUsd(meu.data.totalMicros)}
-              detalhe={t('member.callsDetail', {
-                count: meu.data.chamadas,
-                n: numberFmt.format(meu.data.chamadas),
-              })}
-            />
-            <Destaque
-              rotulo={t('member.tokensLabel')}
-              valor={numberFmt.format(
-                meu.data.inputTokens + meu.data.outputTokens,
-              )}
-              detalhe={t('shared.tokensDetail', {
-                input: numberFmt.format(meu.data.inputTokens),
-                output: numberFmt.format(meu.data.outputTokens),
-              })}
-            />
-          </div>
+          <SectionCards
+            metricas={[
+              {
+                rotulo: t('member.estimatedLabel', { dias: DIAS }),
+                valor: formatarUsd(meu.data.totalMicros),
+                nota: t('member.callsDetail', {
+                  count: meu.data.chamadas,
+                  n: numberFmt.format(meu.data.chamadas),
+                }),
+              },
+              {
+                rotulo: t('member.tokensLabel'),
+                valor: numberFmt.format(meu.data.inputTokens + meu.data.outputTokens),
+                nota: t('shared.tokensDetail', {
+                  input: numberFmt.format(meu.data.inputTokens),
+                  output: numberFmt.format(meu.data.outputTokens),
+                }),
+              },
+            ]}
+          />
 
-          <Card className={styles.grafico}>
-            <GastoPorDia
-              serie={meu.data.porDia}
-              titulo={t('member.dailySpendTitle')}
-            />
-          </Card>
+          <GastoPorDia
+            serie={meu.data.porDia}
+            titulo={t('member.dailySpendTitle')}
+          />
 
           <Ranking
             titulo={t('member.bySessionTitle')}

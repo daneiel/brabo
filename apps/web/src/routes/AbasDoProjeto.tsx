@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GRUPOS_DO_PROJETO, type AbaDoProjeto, type ContagensDeAba } from './project-tabs';
+import {
+  Bot, Code2, GitPullRequest, Lightbulb, LayoutDashboard, ListTodo,
+  MessagesSquare, Network, Settings, ShieldCheck, Sparkles, Wallet, type LucideIcon,
+} from 'lucide-react';
 import styles from './AbasDoProjeto.module.css';
+
+const ICONES: Record<string, LucideIcon> = {
+  overview: LayoutDashboard, executores: Bot, criativo: Lightbulb, backlog: ListTodo,
+  chat: MessagesSquare, approvals: ShieldCheck, prs: GitPullRequest, arquitetura: Network,
+  insights: Sparkles, code: Code2, spend: Wallet, settings: Settings,
+};
 
 /** Uma folha da lista — sempre uma ABA de verdade, nunca um grupo, e já com
  * o `count` RESOLVIDO (número, não função). */
@@ -129,6 +139,10 @@ export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChang
           onChange(item.key);
         }}
       >
+        {(() => {
+          const Icone = ICONES[item.key];
+          return Icone ? <Icone size={15} aria-hidden="true" className={styles.itemIcone} /> : null;
+        })()}
         <span className={styles.itemLabel}>{item.label}</span>
         {item.count !== undefined && item.count > 0 && (
           <span className={styles.contador}>{item.count}</span>

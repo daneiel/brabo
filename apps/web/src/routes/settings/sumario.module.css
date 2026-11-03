@@ -39,6 +39,30 @@
   gap: 20px;
 }
 
+/* v7 L4: a partir de 768px o sumário vira coluna lateral de 200px (revisa a
+   RN-645); abaixo disso fica no topo, deitado e com quebra de linha. */
+@media (min-width: 768px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-items: start;
+    gap: 32px;
+  }
+  .sumario {
+    position: sticky;
+    top: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+  }
+  .grupo {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 /* `min-width: 0` pelo mesmo motivo do `.body`: tabela larga (Modelos por
    agente, Catálogo) empurraria a coluna para fora em vez de rolar por dentro. */
 .secoes {
@@ -52,9 +76,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 10px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 /* "Nesta página" — o título do sumário, na mesma gramática mono/caixa alta dos

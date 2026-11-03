@@ -45,10 +45,14 @@
 
 .rankingTitulo {
   margin: 0;
-  font-family: var(--font-heading);
-  font-size: 12px;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .rankingVazio {

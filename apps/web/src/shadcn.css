@@ -38,6 +38,21 @@
   --color-input: var(--border-strong);
   --color-ring: var(--accent);
 
+  /* Nomes que os blocks do shadcn usam (sidebar, charts), apontados para tokens do Brabo. */
+  --color-sidebar: var(--surface-1);
+  --color-sidebar-foreground: var(--text-primary);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--on-accent);
+  --color-sidebar-accent: var(--surface-2);
+  --color-sidebar-accent-foreground: var(--text-primary);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--accent);
+  --color-chart-1: var(--accent);
+  --color-chart-2: var(--agent-frontend);
+  --color-chart-3: var(--agent-leve);
+  --color-chart-4: var(--warning);
+  --color-chart-5: var(--success);
+
   /* Só nomes que o Brabo NÃO declara; `--radius-*` e `--font-mono` já são dele
      e o `:root` sem layer do tokens.css vence o default do Tailwind. */
   --font-sans: var(--font-body);

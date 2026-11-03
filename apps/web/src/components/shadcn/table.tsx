@@ -111,7 +111,7 @@ function Grade({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="grade"
       className={cn(
-        `w-full overflow-hidden rounded-[var(--radius-lg)] border ${BORDA}`,
+        `w-full overflow-hidden border-y ${BORDA}`,
         className
       )}
       {...props}
@@ -161,7 +161,7 @@ function GradeCelula({
     <div
       data-slot="grade-celula"
       className={cn(
-        `min-w-0 border-l px-3.5 py-[11px] font-sans text-[13px] text-[color:var(--text-primary)] first:border-l-0 ${BORDA}`,
+        `min-h-9 min-w-0 px-3.5 py-2 font-sans text-[13px] text-[color:var(--text-primary)]`,
         cabecalho && CELULA_MONO,
         className
       )}
