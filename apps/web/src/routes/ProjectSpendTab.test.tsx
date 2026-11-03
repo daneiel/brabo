@@ -380,6 +380,7 @@ describe('ProjectSpendTab — o orçamento do projeto', () => {
       await screen.findByText(/Nenhum orçamento definido para este projeto/i),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('token-meter')).not.toBeInTheDocument();
+    expect(screen.getByText("Não configurado")).toBeInTheDocument();
   });
 
   it('com orçamento abaixo de 70%, mostra o medidor sem alerta', async () => {

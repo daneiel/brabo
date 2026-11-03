@@ -10,7 +10,8 @@
     "error": "I couldn't find out your role in this workspace, and that's what decides which report to show."
   },
   "budget": {
-    "notSet": "No budget set for this project yet — with no cap, this block has nothing to show."
+    "notSet": "No budget set for this project yet — with no cap, this block has nothing to show.",
+    "notConfigured": "Not configured"
   },
   "workspace": {
     "title": "Workspace spend",
@@ -54,7 +55,11 @@
     "viewAsTable": "View as table",
     "colDay": "Day",
     "colSpend": "Spend",
-    "colCalls": "Calls"
+    "colCalls": "Calls",
+    "callsTitle": "Calls per day",
+    "tokensTitle": "Input and output",
+    "tokensIn": "Input",
+    "tokensOut": "Output"
   },
   "libSpend": {
     "callTitle_one": "{{dia}} · {{custo}} · {{count}} call",
