@@ -3,7 +3,7 @@
 ## Status
 
 **Accepted.** 2026-11-02 (AT-714; v7 aprovada pelo dono). Revisa o
-[ADR 0211](0211-uma-navegacao-so-a-sidebar-absorve-o-trilho-do-projeto.md) — que
+[ADR 0211](0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md) — que
 continua aceito e não é editado — apenas nas larguras e no mecanismo de recolher.
 
 ## Context
