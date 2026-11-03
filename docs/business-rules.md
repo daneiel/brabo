@@ -14929,7 +14929,7 @@ motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vi
 toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
-- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:214`
   (`reopen`); `apps/web/src/lib/api-client.ts:634` (`reopenSession`);
   `apps/web/src/routes/SessionPage.tsx:158` (`podeReabrir`);
   `apps/web/src/lib/session-acoes-da-sessao.ts:77` (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
@@ -17209,8 +17209,8 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:272` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:177`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:197`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:190`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:212`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`);
@@ -18739,7 +18739,7 @@ do bloco. O painel "precisa de você" NÃO usa este caminho: ele não lê log
 nenhum e abrir não dispara consulta, então o cartão ali segue calado, como a
 [RN-614](#rn-614) já dizia — decisão, não lacuna. Nenhum teto muda.
 
-- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:256`
+- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:260`
   (`listEvents`);
   `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:61`
   (o filtro);
@@ -21618,9 +21618,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:86` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:256`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:270`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:288`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:305`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
@@ -21838,10 +21838,10 @@ sem dizer qual.
   escopo, declarado).
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:314`
   (`cortadaPeloTeto`),
-  `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:248`
+  `apps/api/src/infrastructure/llm/anthropic-provider.ts:223` (`finalMessage`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:234`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:280`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:301`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -21895,7 +21895,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:618` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:634` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21965,7 +21965,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:624` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:640` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22664,8 +22664,8 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:187`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:640`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:200`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22775,9 +22775,9 @@ sem dizer qual.
   turno fechar.
 - **Onde:** `apps/api/src/domain/llm/chamada-em-texto.ts:10`
   (`marcacaoDeChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:329`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:347`
   (`semChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:365`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:386`
   (`semChamadaEmTexto`)
 - **Teste:** `apps/api/test/domain/llm/chamada-em-texto.spec.ts`,
   `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` e
@@ -25147,7 +25147,7 @@ sem dizer qual.
 ### RN-914 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-914}
 
 - **Regra:** revisa a [RN-782](#rn-782) ([ADR 0223](adr/0223-orcamento-de-raciocinio-por-modelo.md)). Modelo com `models.reasoning_budget` preenchido (curado à mão, nunca pelo sync) e `supportsReasoning` manda `reasoning: { max_tokens: N }` e `max_tokens` = saída visível + N ([RN-741](#rn-741)); só no provider que sabe controlar o raciocínio (hoje o OpenRouter) e nunca no agente com raciocínio desligado ([RN-783](#rn-783)). Hoje só `qwen/qwen3.7-flash` (N = 2048), provado em 22/10: 1024 pedidos, 1024 gastos. Modelo sem orçamento segue a RN-782, corpo byte a byte. `deepseek/deepseek-v4.1-flash` fica sem orçamento: `reasoning.max_tokens`, `effort` e `reasoning_effort` foram ignorados (8192 de raciocínio). `effort` nunca é enviado. O limite contém o raciocínio mas não garante a tool call.
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:640` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-914)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
 - **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)
 
@@ -25364,7 +25364,7 @@ sem dizer qual.
 ### RN-950 — O 9Router recebe as ferramentas, o vínculo confere a capability do provider e ferramenta sem capability lança {#rn-950}
 
 - **Regra:** revisa a [RN-909](#rn-909) e completa a [RN-040](business-rules/custo.md#rn-040) com a SEGUNDA camada do ADR 0041. (1) `nineRouterConfig` declara `toolCalling: true`, provado por smoke com chave real em 31/10: 3/3 chamadas em `cc/claude-haiku-5-5` voltaram com `tool_calls` estruturado, 10/10 consistente a temperatura 0 e laço de 3 voltas íntegro. Antes, a capability `false` fazia o `buildBody` descartar `tools` em silêncio e o Criativo escrevia a chamada como XML no fio (AT-637). (2) `assertModelFitsBindingScope` confere também o PROVIDER nos escopos `agent` e `area`: vínculo cujo provider declara `toolCalling: false` é recusado com 422 (`ModelNotFitForAgentScopeError`, causa `provider`), com frase própria. `workspace`, `project` e `session` seguem livres. (3) `buildBody` com ferramentas pedidas e capability `false` LANÇA erro nomeado em vez de descartar. Providers afetados: só o `opencode-zen` tem `toolCalling: false` além do 9Router de antes; vínculos novos de agente/área a ele passam a ser 422 e o chat sem ferramenta segue igual. Vínculo antigo a ele continua gravado e o turno do agente falha nomeado.
-- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:171` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:617` (`buildBody`)
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:171` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:633` (`buildBody`)
 - **Teste:** `apps/api/test/domain/llm/model-capabilities.spec.ts` (recusa por provider em `agent`/`area`; escopos livres), `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (capability `true`), `apps/api/test/contract/llm-provider.contract.ts` (provider sem capability lança nomeado); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-637 (EP-026), TP-01 de 31/10 e medição da AT-631.
 
@@ -25567,7 +25567,7 @@ sem dizer qual.
 ### RN-989 — Imagem só vai a modelo com visão provada; sem ela, o agente é avisado {#rn-989}
 
 - **Regra:** o `llm-turn` aceita no `content` de uma mensagem uma lista de partes `{type:'text',text}` e `{type:'anexo',id}` (o engine manda o id, nunca bytes). A api troca o id pelo anexo da MESMA sessão (`ChatAttachmentRepository.find`): imagem vira parte `image` (data URL no formato OpenAI) SÓ quando o provider declara `capabilities.vision` E o modelo tem `supports_vision` — as duas camadas do ADR 0041; `vision` nasce `false` em todos e só vira `true` com smoke real: hoje é `true` SÓ no OpenRouter, PROVADO em 2026-11-03 por `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (AT-715) com `google/gemini-2.5-flash` e um PNG 8x8 vermelho — o modelo respondeu "red". Os outros dez seguem `false`. Sem as duas, a imagem não sai da api e entra no lugar o texto `[imagem <nome> não enviada: o modelo atual não lê imagem]`, que é o aviso ao agente. Anexo de texto vai delimitado (`[anexo: <nome>]` … `[fim do anexo: <nome>]`) com ou sem visão; id que não resolve vira `[anexo <id> indisponível]`. Texto puro continua `string`. Os tokens da imagem entram no metering pelo `usage` do provider (ADR 0188), sem código novo.
-- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:160` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:171` (`resolverAnexos`).
+- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:173` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:186` (`resolverAnexos`).
 - **Teste:** `apps/api/test/domain/llm/anexos-no-turno.spec.ts`, `apps/api/test/infrastructure/llm/openai-compatible-provider.visao.spec.ts`; prova da capability: `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (manual, com credencial).
 - **Origem:** AT-715 fatia 1, lane L2 (EP-031), ADR 0246.
 
@@ -25591,3 +25591,11 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/comandos-do-composer.ts:110` (`gatilhoNoCursor`), `apps/web/src/lib/comandos-do-composer.ts:127` (`destinoDoAprovar`), `apps/web/src/lib/use-menu-do-composer.ts:24` (`useMenuDoComposer`), `apps/web/src/components/ai-elements/menu-do-composer.tsx:15` (`MenuDoComposer`).
 - **Teste:** `apps/web/src/routes/SessionComposer.menu.test.tsx` (menu, filtro, Enter sem enviar, Esc, `/aprovar` comum e de teto, `/resumo`, `@` da sessão, chips e rota nova), `apps/web/src/lib/comandos-do-composer.test.ts`.
 - **Origem:** AT-717 (EP-031), lane web.
+
+
+### RN-993 — O raciocínio do modelo é gravado inteiro fora do `content`, aparece ao vivo e só `developer` ou mais o lê; nunca volta ao modelo {#rn-993}
+
+- **Regra:** o provider devolve o TEXTO do raciocínio como chunk `reasoning` (`delta.reasoning` do OpenRouter, `delta.reasoning_content` do dialeto DeepSeek/vLLM, `thinking_delta` da Anthropic) e nunca no `content`. O `stream-llm-turn` repassa cada pedaço como frame `raciocinio` e o frame `final` leva `raciocinio` com o texto INTEIRO do passo, sem corte; o `llm-turn` sem stream devolve o mesmo campo. A Anthropic recebe `thinking` quando o modelo raciocina e o raciocínio não foi desligado, e os blocos `thinking` assinados voltam em `message.thinkingBlocks` para o engine devolvê-los intactos no turno `assistant` que pediu ferramentas. O engine grava o texto em `agent.response.payload.raciocinio` (lane do engine) e ele não entra na reidratação, no RAG nem no grafo. As leituras de evento da sessão (`GET .../events`, `GET .../events/:eventId` e o evento por id da Anamnese) tiram `payload.raciocinio` de `agent.response` para papel efetivo abaixo de `developer` (`projectRole ?? workspaceRole`, RN-471), por UM filtro de saída. A capability `reasoningText` é `false` em todos os providers até haver smoke com credencial (ADR 0041).
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:381` (`textoDoRaciocinio`), `apps/api/src/infrastructure/llm/anthropic-provider.ts:386` (`toThinkingBlocks`), `apps/api/src/domain/sessions/raciocinio-do-evento.ts:16` (`filtrarRaciocinio`), `apps/api/src/interfaces/http/sessions/sessions.controller.ts:260` (`listEvents`), `:333` (`getEvent`).
+- **Teste:** `apps/api/test/infrastructure/llm/raciocinio-texto.spec.ts` (os dois campos, `thinking_delta`, blocos devolvidos no corpo seguinte, `reasoningText` falso), `apps/api/test/domain/sessions/raciocinio-do-evento.spec.ts` (`viewer` não recebe, `developer`+ recebe), `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` e `run-llm-turn.use-case.spec.ts` (frame `raciocinio`, `final` com o texto inteiro, `content` intacto); smoke manual `openrouter-provider.raciocinio.smoke.spec.ts`.
+- **Origem:** AT-676 (EP-031), lane api; ADR 0248.

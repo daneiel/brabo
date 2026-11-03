@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 242 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 243 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -65,6 +65,7 @@ Como um agente roda — contexto, o laço de ferramentas, o turno conversacional
 | [0226](0226-diario-vivo-e-retomada-dos-agentes.md) | O agente escreve o plano (`registrar_plano`, `agent.plan`) e o diário o projeta do log; o turno que o reinício matou é retomado UMA vez, no boot, se recente (900 s), e depois só pelo botão "Retomar". Revisa o "nunca refeito" da RN-586/RN-778; dev retoma do commit, gate tem teto 1× no boot e no tick, correção do Infra Lead é durável. Referencia 0163, 0191, 0207 e 0221. |
 | [0246](0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.md) | Anexos do chat (AT-715): os BYTES moram no Postgres (`chat_attachments`, `bytea`, cascade com a sessão), o `chat.message` guarda só a referência `{id, nome, mime, tamanho}` e a visão do modelo é capability de provider, `false` sem prova (ADR 0041). Tipo pelos bytes, 5 MB por imagem, 512 KB por texto, 4 por mensagem, upload JSON com base64, todo `viewer` lê e SEM antivírus, lacuna declarada. |
 | [0247](0247-uma-mensagem-varios-destinatarios.md) | Uma mensagem, vários destinatários (AT-717): `POST .../sessions/:sessionId/messages` grava UM `chat.message` com `destinatarios` e entrega a cada agente pelo caminho de sempre (turno, fila RN-673, recusa nomeada), com o mesmo `mensagemId`; revisa a RN-584/631. |
+| [0248](0248-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.md) | O raciocínio do agente é gravado e mostrado só a developer ou mais (AT-676): chunk `reasoning` no contrato de LLM (OpenRouter, `reasoning_content`, `thinking` da Anthropic com os blocos assinados devolvidos no laço), frame `raciocinio` ao vivo e `final` com o texto inteiro; a api tira `payload.raciocinio` de quem está abaixo de `developer`; `reasoningText` `false` até haver smoke. Complementa o 0224. |
 
 ## O time de agentes — papéis, áreas e handoffs {#tema-time}
 
@@ -383,7 +384,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0248**.
+  é substituído — o próximo é **0249**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
