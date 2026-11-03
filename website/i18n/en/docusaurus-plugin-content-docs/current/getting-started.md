@@ -164,8 +164,8 @@ ready-made user:
 pnpm --filter api seed
 ```
 
-It creates `owner@brabo.dev` (owner) and `dev@brabo.dev` (developer), both
-already with a verified email and the password `brabo12345678` —
+It creates one account per role: `owner@brabo.dev` (owner), `maintainer@brabo.dev` (maintainer),
+`developer@brabo.dev` (developer) and `viewer@brabo.dev` (viewer), all already with a verified email and the password `brabo12345678` —
 overridable via `BRABO_SEED_PASSWORD`. Along with it comes the **Acme
 Corp** workspace, ready to create a project.
 

@@ -128,7 +128,7 @@ GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
 pnpm --filter api seed
 ```
 
-它会创建 `owner@brabo.dev`（owner）和 `dev@brabo.dev`（developer），两者的邮箱都已验证，
+它会为每个角色创建一个账号：`owner@brabo.dev`（owner）、`maintainer@brabo.dev`（maintainer）、`developer@brabo.dev`（developer）和 `viewer@brabo.dev`（viewer），邮箱均已验证，
 密码为 `brabo12345678`——可通过 `BRABO_SEED_PASSWORD` 覆盖。同时还会创建工作区
 **Acme Corp**，可直接创建项目。
 
