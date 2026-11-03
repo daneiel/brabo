@@ -735,7 +735,7 @@ erDiagram
   users ||--o{ detected_language_declines : "idioma detectado que a pessoa recusou (RN-624)"
 ```
 
-57 tabelas no total. A mais recente é `detected_language_declines`
+58 tabelas no total. A mais recente é `source_clicks` ([RN-983](business-rules.md#rn-983): o clique numa fonte consultada, que não é voto); antes dela veio `detected_language_declines`
 ([RN-624](business-rules.md#rn-624)): uma linha por pessoa e idioma que a
 pessoa RECUSOU quando perguntada "notamos que você escreve em X — usar X nas
 respostas?", com a data. A presença dela é o que impede a mesma pergunta de

@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import '../../lib/i18n';
 import { fontesDoTurno } from '../../lib/fontes-do-turno';
 import { ConsultadoNesteTurno } from './sources';
+
+const enviar = vi.hoisted(() => vi.fn());
+vi.mock('../../lib/api-client', () => ({ sendSourceClick: enviar }));
 
 const vista = (payload: unknown) => {
   const { fontes, total } = fontesDoTurno(payload);
@@ -37,5 +40,20 @@ describe('Consultado neste turno (AT-716)', () => {
       const { container } = vista(p);
       expect(container.innerHTML).toBe('');
     }
+  });
+  it('RN-983: clique em link dispara o POST sem bloquear; texto não grava', () => {
+    enviar.mockReset().mockRejectedValue(new Error('x'));
+    const { fontes, total } = fontesDoTurno({
+      fontes: [
+        { tipo: 'historia', rotulo: 'Login', ref: 'st-1' },
+        { tipo: 'adr', rotulo: 'ADR 0001' },
+      ],
+    });
+    render(<ConsultadoNesteTurno fontes={fontes} total={total} projectId="p1" sessionId="s1" eventId="e1" />);
+    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByText('ADR 0001'));
+    expect(enviar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Login'));
+    expect(enviar).toHaveBeenCalledWith('p1', expect.objectContaining({ eventId: 'e1', sessionId: 's1', tipo: 'historia', ref: 'st-1' }));
   });
 });

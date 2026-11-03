@@ -25527,3 +25527,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/agents/fontes_do_turno.ex:37` (`anotar`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:387` (`anotar`).
 - **Teste:** `apps/engine/test/engine/agents/fontes_do_turno_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-982").
 - **Origem:** AT-716 fatia 1 (EP-031).
+
+### RN-983 — O clique numa fonte consultada é gravado em tabela própria e nunca é voto {#rn-983}
+
+- **Regra:** o clique num link do bloco "Consultado neste turno" (RN-982) vira uma linha em `source_clicks`, de escopo de PROJETO como `rag_searches` (RN-479): `projectId`, `sessionId` (anulável), `eventId` (o `agent.response`), `tipo`, `ref`/`searchId`/`chunkId` e o usuário que clicou, congelados sem FK de sessão/evento. NÃO é voto: o único sinal de verdade do RAG segue sendo o `rag_feedback` (RN-480), que esta tabela nunca alimenta, porque clique mede curiosidade. `POST /projects/:projectId/source-clicks` é `viewer` (quem lê pode clicar). Gravar a medição nunca derruba o que ela mede: a falha vira log de origem `infra` e `null` explícito, e o clique navega do mesmo jeito. No web, o clique dispara o POST sem esperar a resposta (um POST por clique, sem poll nem query nova, RN-579); fonte que é só texto não grava.
+- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
+- **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-716 fatia 4 (EP-031).
