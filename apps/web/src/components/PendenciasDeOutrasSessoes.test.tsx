@@ -115,6 +115,13 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     expect(await screen.findByRole('button', { name: 'Ajuda: Filas de pendências' })).toBeInTheDocument();
   });
 
+  it('AT-721: o "?" fica na linha das abas, não numa linha sozinha', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    montar(true, undefined, false);
+    const ajuda = await screen.findByRole('button', { name: 'Ajuda: Filas de pendências' });
+    expect(ajuda.closest('[role="group"]')).not.toBeNull();
+  });
+
   it('RN-943 (falha): sem as filas do chat (Executores) o título antigo continua', async () => {
     getProjectPendingActions.mockResolvedValue([acao('a1')]);
     montar(true, undefined, false);

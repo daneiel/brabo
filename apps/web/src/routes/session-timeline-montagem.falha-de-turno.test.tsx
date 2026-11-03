@@ -73,6 +73,12 @@ describe('montarTimeline — a bolha de falha de turno (AT-338)', () => {
     expect(bolhas[0]?.getAttribute('data-origem')).toBe('politica');
   });
 
+  it('AT-721: o rótulo da falha tem classe de afastamento do nome do agente', () => {
+    const container = montar([falha({ origem: 'modelo', mensagem: 'x' })]);
+    const rotulo = container.querySelector('[data-testid="falha-de-turno"] [class*="messageMetaFalha"]');
+    expect(rotulo?.textContent).toContain('origem modelo');
+  });
+
   it('payload sem origem: a marca existe, e a origem NÃO é uma das quatro por chute', () => {
     const container = montar([falha({})]);
     const bolha = container.querySelector('[data-testid="falha-de-turno"]');

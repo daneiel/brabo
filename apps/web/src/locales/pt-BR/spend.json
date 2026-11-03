@@ -49,6 +49,7 @@
   },
   "charts": {
     "noSpendInWindow": "Nenhum gasto nesta janela.",
+    "noCallsInWindow": "Sem chamadas na janela.",
     "window_zero": "sem dias",
     "window_one": "último dia",
     "window_other": "últimos {{count}} dias",

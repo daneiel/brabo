@@ -28,6 +28,9 @@ export default function GraficoDeGastoPorDia({
   return (
     <figure className="m-0 grid gap-2">
       <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">{completo}</figcaption>
+      {serie.length > 0 && serie.every((p) => p.costMicros === 0) ? (
+        <p className="m-0 text-xs text-[var(--text-muted)]">{t('charts.noSpendInWindow')}</p>
+      ) : (
       <div role="img" aria-label={completo}>
         <ChartContainer config={config} className="aspect-auto h-40 w-full">
           <BarChart data={dados} accessibilityLayer>
@@ -53,6 +56,7 @@ export default function GraficoDeGastoPorDia({
           </BarChart>
         </ChartContainer>
       </div>
+      )}
       <details>
         <summary className="cursor-pointer text-xs text-[var(--text-muted)]">
           {t('charts.viewAsTable')}
@@ -90,6 +94,9 @@ export function GraficoDeChamadasPorDia({ serie }: { serie: SpendPorDia[] }) {
       <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">
         {t('charts.callsTitle')}
       </figcaption>
+      {serie.length > 0 && serie.every((p) => p.chamadas === 0) ? (
+        <p className="m-0 text-xs text-[var(--text-muted)]">{t('charts.noCallsInWindow')}</p>
+      ) : (
       <div role="img" aria-label={t('charts.callsTitle')}>
         <ChartContainer config={config} className="aspect-auto h-40 w-full">
           <BarChart data={dados} accessibilityLayer>
@@ -101,6 +108,7 @@ export function GraficoDeChamadasPorDia({ serie }: { serie: SpendPorDia[] }) {
           </BarChart>
         </ChartContainer>
       </div>
+      )}
     </figure>
   );
 }

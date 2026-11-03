@@ -994,7 +994,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                 {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                     trocar a chave, esperar o provider ou abrir um bug. */}
-                <span className={styles.messageMeta}>{t('mensagens.falhaOrigem', { origem })}</span>
+                <span className={`${styles.messageMeta} ${styles.messageMetaFalha}`}>{t('mensagens.falhaOrigem', { origem })}</span>
               </>
             }
             rodape={
@@ -1058,7 +1058,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             autor={
               <>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                <span className={styles.messageMeta}>
+                <span className={`${styles.messageMeta} ${styles.messageMetaFalha}`}>
                   {t('mensagens.falhaOrigem', { origem: 'modelo' })}
                 </span>
               </>

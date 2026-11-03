@@ -373,6 +373,11 @@
   composes: messageMeta from '../components/ui/ChatBubble.module.css';
 }
 
+/* AT-721: o rótulo da falha não cola no nome do agente. */
+.messageMetaFalha {
+  margin-left: var(--space-2);
+}
+
 /* O modelo que gerou a resposta, ao lado do nome do agente (RN-175). Era
    `.messageMeta` cru — mono 10px em `--text-muted`, que reprova contraste de
    leitura sobre `--surface-0` (a mesma razão documentada em
@@ -580,11 +585,9 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-.faixaEncerradaTexto {
+.faixaEncerradaMotivo {
   flex: 1;
   min-width: 0;
-  padding-left: 10px;
-  border-left: 1px solid var(--border);
 }
 
 /* Carregando o fio (R3): linhas de esqueleto sob o indicador. */
