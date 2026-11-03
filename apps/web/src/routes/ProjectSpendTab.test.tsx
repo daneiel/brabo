@@ -323,15 +323,14 @@ describe('ProjectSpendTab — a audiência do membro', () => {
     expect(getMySpend).toHaveBeenCalledWith('p-1', 30);
   });
 
-  it('diz que o custo é estimado e por que não há provider', async () => {
+  it('mantém a janela e o estimado visíveis; o porquê abre no "?"', async () => {
     montar();
 
-    expect(
-      await screen.findByText(/quem paga a chamada é a chave do dono/i),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText(/não há quebra por provider nem por credencial/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/consumiu neste projeto, em custo/i)).toBeInTheDocument();
+    expect(screen.queryByText(/quem paga a chamada é a chave do dono/i)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /Ajuda: O meu consumo/i }));
+    expect(await screen.findByText(/quem paga a chamada é a chave do dono/i)).toBeInTheDocument();
+    expect(await screen.findByText(/não há quebra por provider nem por credencial/i)).toBeInTheDocument();
   });
 
   /** RN-088: carregando, erro e vazio são três estados, e o erro vem antes. */

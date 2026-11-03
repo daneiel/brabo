@@ -31,6 +31,7 @@
   },
   "member": {
     "title": "我的消耗",
+    "subtitleCurto": "最近 {{dias}} 天，仅限<strong>您</strong>在此项目中的消耗，成本为<strong>估算</strong>值。",
     "subtitle": "最近 {{dias}} 天，仅<strong>你</strong>在此项目中的消耗。费用为<strong>估算</strong>：调用由工作区所有者的密钥支付，账单归他所有。",
     "error": "暂时无法加载你的消耗。记录仍在——这只是读取失败。",
     "estimatedLabel": "{{dias}} 天估算",
