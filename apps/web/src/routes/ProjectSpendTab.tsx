@@ -261,6 +261,7 @@ function MeuConsumo({ projectId }: { projectId: string }) {
   return (
     <>
       <CabecalhoDePagina
+        nivel="h2"
         titulo={
           <>
             {t('member.title')}

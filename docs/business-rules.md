@@ -14186,7 +14186,7 @@ instalação sem broker continua possível pelo agente.
   `mounted` recusam antes da imagem), `:75` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:562` (botão inerte e o motivo
-  em texto, nunca propõe), `:704` (`runner` segue subindo)
+  em texto, nunca propõe), `:726` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:616` (`execucao`), `:624`
-  (`origemDaAtividade`), `:631` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:616` (`execucao`), `:608`
+  (`origemDaAtividade`), `:615` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18343,8 +18343,8 @@ barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
   `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:438`
-  (`movel`), `:479` (`prenderFoco`), `:498` (`fecharAoSeguirLink`);
-  `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
+  (`movel`), `:458` (`prenderFoco`), `:477` (`fecharAoSeguirLink`);
+  `apps/web/src/routes/ProjectPage.tsx:53` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:76` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
   (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:582` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:576` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:547` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:523` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),

@@ -170,6 +170,7 @@ export function GastoDoWorkspace({
   return (
     <>
       <CabecalhoDePagina
+        nivel="h2"
         titulo={projectId ? t('project.ownerTitle') : t('workspace.title')}
         descricao={projectId ? (
             t('project.ownerSubtitle', { dias })
@@ -308,6 +309,7 @@ export function MeuConsumoNoWorkspace({ workspaceId }: { workspaceId: string }) 
   return (
     <>
       <CabecalhoDePagina
+        nivel="h2"
         titulo={t('global.memberTitle')}
         descricao={t('global.memberSubtitle')}
         acoes={<SeletorDeJanela dias={dias} onChange={setDias} />}
@@ -354,6 +356,7 @@ export function GastoDoTimeNoProjeto({ projectId }: { projectId: string }) {
   return (
     <>
       <CabecalhoDePagina
+        nivel="h2"
         titulo={t('team.title')}
         descricao={t('team.subtitle', { dias })}
         acoes={<SeletorDeJanela dias={dias} onChange={setDias} />}

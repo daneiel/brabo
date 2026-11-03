@@ -504,3 +504,14 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 - a consequência irreversível ou o teto absoluto antes de agir (RN-939, RN-418);
 - o recorte declarado, como a janela de dias e o teto de leitura (RN-180);
 - a divergência de estado e a lacuna que uma RN manda dizer (RN-486, RN-468, RN-470).
+
+## Desenho linear da v7 (AT-714, ADR 0241/0242)
+
+- **Sidebar**: block `sidebar-07` do shadcn, 256px abertos e 48 recolhidos,
+  Ctrl/Cmd+B, ícones Lucide.
+- **Tabela linear** (`components/ui/Table`, Containers com
+  `@tanstack/react-table`): uma linha por item, ações só ícone com `legenda`.
+- **`CabecalhoDePagina`** (`components/shadcn/cabecalho-de-pagina.tsx`): título,
+  descrição e ações; `nivel="h2"` quando a página já tem `h1` (painéis de Gastos).
+- **`SectionCards`** (`components/shadcn/section-cards.tsx`): destaques de total
+  em linha, sem cartões aninhados.

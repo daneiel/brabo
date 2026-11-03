@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 235 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 237 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -311,6 +311,8 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0238](0238-o-grafo-de-modulos-vira-canvas-xyflow.md) | O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`, AT-684): chunk próprio de ~42 KB gzip por `import()`, derivado do `module_map` (RN-149), cores por token. |
 | [0239](0239-csp-frame-src-local-para-o-web-preview.md) | CSP `frame-src http://localhost:* http://127.0.0.1:*` para o Web preview do entregável (AT-685), `sandbox` mínimo e só URL local (`urlLocalSegura`). |
 | [0240](0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.md) | O motivo de controle inerte pode morar num "?" ativo (botão `Ajuda`, abre no clique, teclado e hover) na página de Containers; revisa o ADR 0064 só ali, e o motivo de papel segue em texto no topo. |
+| [0241](0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.md) | A sidebar adota o block `sidebar-07` do shadcn (256/48px; aba Código 304/96px; Ctrl/Cmd+B; cookie `sidebar_state` sem leitor), revisando o ADR 0211 (AT-714). |
+| [0242](0242-containers-em-tabela-linear-com-tanstack-react-table.md) | Containers em tabela linear com `@tanstack/react-table` (ordem e página no cliente, sem query nova; audit limpo); Providers em tabela linear sem a biblioteca (AT-714). |
 
 ## Operação, deploy e instalação {#tema-operacao}
 
@@ -376,7 +378,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0241**.
+  é substituído — o próximo é **0243**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
