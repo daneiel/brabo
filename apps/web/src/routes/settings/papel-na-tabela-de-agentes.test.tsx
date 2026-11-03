@@ -6,6 +6,7 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
 import modelsPtBR from '../../locales/pt-BR/models.json';
+import uiPtBR from '../../locales/pt-BR/ui.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { roleAtLeast } from '../../lib/roles';
@@ -171,11 +172,11 @@ function montar(secao: ReactNode) {
   });
   const i18n = i18next.createInstance();
   void i18n.use(initReactI18next).init({
-    resources: { 'pt-BR': { settings: settingsPtBR, models: modelsPtBR } },
+    resources: { 'pt-BR': { settings: settingsPtBR, models: modelsPtBR, ui: uiPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'settings',
-    ns: ['settings', 'models'],
+    ns: ['settings', 'models', 'ui'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -396,4 +397,14 @@ describe('a régua é do ENDPOINT, não da linha', () => {
     expect(agentes.getByRole('checkbox', { name: /área QA inteira/ })).toBeEnabled();
     expect(agentes.queryByText(/Exige papel maintainer para marcar/)).toBeNull();
   });
+});
+
+it('a legenda da cascata mora no "?"; o motivo do controle inerte segue visível', async () => {
+  comPapel('viewer');
+  await tabelaDeAgentes();
+  const ajuda = screen.getByRole('button', { name: /Ajuda: Modelos por agente/ });
+  expect(screen.queryByText(settingsPtBR.modelsSection.subtitle.areaExplain.slice(0, 20), { exact: false })).toBeNull();
+  fireEvent.click(ajuda);
+  expect(await screen.findByText(settingsPtBR.modelsSection.subtitle.areaExplain.slice(0, 20), { exact: false })).toBeTruthy();
+  expect(screen.getByText(/developer/)).toBeTruthy();
 });

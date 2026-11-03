@@ -2677,7 +2677,7 @@ só numa seção seria pior que a lacuna.
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` e `:301`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
-  `apps/web/src/routes/settings/ModelsSection.tsx:89` (`podeEditar`, e por que
+  `apps/web/src/routes/settings/ModelsSection.tsx:93` (`podeEditar`, e por que
   `developer` e não `maintainer`), `:379` (o picker desabilitado), `:446` (o
   botão desabilitado, e por que o motivo não vai em `title`), `:546` (a legenda
   que diz o motivo)

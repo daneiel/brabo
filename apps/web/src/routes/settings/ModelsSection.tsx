@@ -26,6 +26,7 @@ import type {
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { ModelPicker } from '../../components/ModelPicker';
 import { Button } from '../../components/ui/Button';
+import { Ajuda } from '../../components/ui/Ajuda';
 import { ClockIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import { formatarCustoMicros } from './shared';
@@ -756,9 +757,8 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="models">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('modelsSection.title')}</h2>
-        <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
-      </div>
-      <p className={styles.subtitle}>
+        <Ajuda assunto={t('modelsSection.title')}>
+        <span>
         {/* A legenda é a MESMA fonte de rótulos da cadeia da coluna Origem
             (`cascata.niveis.*`): a frase que explica a descida e os nós que a
             mostram linha a linha não podem chamar os níveis de nomes
@@ -783,6 +783,12 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         {t('modelsSection.subtitle.mostSpecificWins')}{' '}
         <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
         {t('modelsSection.subtitle.areaExplain')}
+        </span>
+        </Ajuda>
+        <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
+      </div>
+      {(!podeEditar || !podeEditarArea) && (
+      <p className={styles.subtitle}>
         {/* O motivo dos controles apagados, dito uma vez e em TEXTO — mesma
             forma de a caixa da área, e pelo mesmo motivo lá e aqui: o fato
             é sobre quem está lendo, não sobre uma linha da tabela, e tooltip em
@@ -791,6 +797,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         {!podeEditar && t('modelsSection.subtitle.needsDeveloper')}
         {!podeEditarArea && t('modelsSection.subtitle.needsMaintainerArea')}
       </p>
+      )}
 
       <div className={styles.custoCard}>
         <ClockIcon size={15} className={styles.custoIcone} />
