@@ -482,4 +482,12 @@ describe('ProjectSpendTab — o editor do orçamento', () => {
     expect(screen.getByLabelText(/Teto em US\$/)).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Salvar orçamento' })).toBeDisabled();
   });
+
+  it('o Salvar do teto é irmão do select no mesmo grupo', async () => {
+    montar();
+    const salvar = await screen.findByRole('button', { name: 'Salvar orçamento' });
+    const select = screen.getByRole('combobox', { name: /Ao atingir/i });
+    expect(salvar.closest('form')).not.toBeNull();
+    expect(salvar.parentElement?.parentElement).toBe(select.closest('label')?.parentElement);
+  });
 });

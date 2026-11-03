@@ -47,3 +47,10 @@ describe('Ajuda (AT-712)', () => {
     expect(abrir()).toHaveFocus();
   });
 });
+
+describe('Ajuda alinhamento (R154)', () => {
+  it('renderiza dentro do mesmo contêiner do texto', () => {
+    render(<h2>Título<Ajuda assunto="Capacidades">x</Ajuda></h2>);
+    expect(abrir().closest('h2')).not.toBeNull();
+  });
+});

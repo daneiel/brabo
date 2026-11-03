@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleQuestionMark } from 'lucide-react';
+import styles from './Ajuda.module.css';
 import { Button } from '@/components/ui/Button';
 import {
   Popover,
@@ -25,6 +26,7 @@ interface AjudaProps {
 export function Ajuda({ assunto, children }: AjudaProps) {
   const { t } = useTranslation('ui');
   return (
+    <span className={styles.ajuda}>
     <Popover>
       <PopoverTrigger
         openOnHover
@@ -36,5 +38,6 @@ export function Ajuda({ assunto, children }: AjudaProps) {
         <PopoverDescription>{children}</PopoverDescription>
       </PopoverContent>
     </Popover>
+    </span>
   );
 }

@@ -210,6 +210,7 @@ function EditorDoOrcamento({
         disabled={!podeEditar}
         onChange={(e) => setLimite(e.target.value)}
       />
+      <div className={styles.grupoTeto}>
       <label className={styles.campo}>
         {t('budgetEditor.policyLabel')}
         <Select
@@ -229,6 +230,7 @@ function EditorDoOrcamento({
         >
           <Save aria-hidden="true" />
         </Button>
+      </div>
       </div>
       {!podeEditar && <p className={styles.nota}>{t('budgetEditor.noRole')}</p>}
       {invalido && <Alert variant="danger" role="alert"><AlertTexto>{t('budgetEditor.invalid')}</AlertTexto></Alert>}

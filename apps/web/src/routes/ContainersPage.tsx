@@ -150,7 +150,7 @@ export function ContainersPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>
-          {t('title')} <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
+          {t('title')}<Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
         </h1>
         {papel && !podeDecidirCicloDeVida(papel) && (
           <p className={styles.motivo}>{t('actions.bloqueio.sem_papel')}</p>

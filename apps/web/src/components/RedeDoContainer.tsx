@@ -118,7 +118,7 @@ export function RedeDoContainer({
   return (
     <section aria-label={t('rede.titulo')} data-testid="rede-do-container">
       <h2 className={styles.subtitle}>
-        {t('rede.titulo')} <Ajuda assunto={t('rede.ajuda')}>{t('rede.loopback')}</Ajuda>
+        {t('rede.titulo')}<Ajuda assunto={t('rede.ajuda')}>{t('rede.loopback')}</Ajuda>
       </h2>
       {rede.isPending && <p className={styles.loading}>{t('loading')}</p>}
       {rede.isError && <p className={styles.motivo}>{mensagemDaApi(rede.error)}</p>}

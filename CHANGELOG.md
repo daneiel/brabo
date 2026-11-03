@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O "?" de ajuda fica logo após o texto do título, centralizado na vertical, e o Salvar do teto de orçamento fica na mesma linha de "Ao atingir o teto".
+
 - Ajustes da prévia v6 (AT-682, AT-712, ADR 0240): em Containers os motivos de inércia por linha vão para um "?" ativo ao lado dos botões ("Por que as ações estão indisponíveis"); Ativar vira `Play`, Aceitar e Estou pronto viram `ThumbsUp` e Modo automático vira `Plane` (card de aprovação, toggle do agente e time), todos só ícone com legenda e nome acessível.
 - Componente `Ajuda` (botão "?" sobre o Popover do kit, abre no clique, teclado e hover) para os textos explicativos longos; `ui:ajuda.rotulo` nos quatro idiomas e a régua do que pode e não pode ir para o "?" em `design/COMPONENTS.md`. Ainda sem uso em tela (AT-712).
 - Containers: o subtítulo, os detalhes do broker, a imagem desatualizada (RN-902), a ressalva registrado/observado (RN-486) e a nota de loopback da rede vão para o "?"; ficam uma linha curta e o motivo de inerte. O motivo de papel aparece uma vez no topo; Salvar rede e Aplicar e subir de novo viram só ícone com legenda; a consequência de recriar (RN-939) continua visível (AT-712, AT-682).
