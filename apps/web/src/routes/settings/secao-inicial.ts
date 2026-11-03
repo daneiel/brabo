@@ -27,3 +27,10 @@ export const ContextoDeGrupoInicial = createContext<GrupoDoSumario | undefined>(
 export function useGrupoInicial(): GrupoDoSumario | undefined {
   return useContext(ContextoDeGrupoInicial);
 }
+
+/** RN-980: troca a página (grupo) de Configurações; sem provedor (teste), é inerte. */
+export const ContextoDeTrocaDeGrupo = createContext<(g: GrupoDoSumario) => void>(() => {});
+
+export function useTrocaDeGrupo(): (g: GrupoDoSumario) => void {
+  return useContext(ContextoDeTrocaDeGrupo);
+}

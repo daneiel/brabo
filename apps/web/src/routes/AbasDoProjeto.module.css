@@ -132,8 +132,3 @@
   flex: none;
   color: var(--text-muted);
 }
-
-/* RN-980: sub-itens de Configurações, recuados sob o item. */
-.subitem {
-  margin-left: 22px;
-}

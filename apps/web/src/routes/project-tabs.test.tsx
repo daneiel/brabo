@@ -229,7 +229,7 @@ describe('abas do projeto derivam de um registro só', () => {
   // deixar os TRÊS grupos abertos ao mesmo tempo. A asserção continua sendo
   // sobre a ORDEM DECLARADA que sai do registro — só que agora achatada, com
   // os cabeçalhos de grupo pontuando a lista sem serem selecionáveis.
-  it('a sidebar mostra as 12 abas e os 4 sub-itens de Configurações (RN-980), na ordem declarada, com os três grupos abertos', async () => {
+  it('a sidebar mostra as 12 abas juntas, na ordem declarada, com os três grupos abertos', async () => {
     montar();
 
     const botoes = await screen.findAllByRole('tab');
@@ -246,10 +246,6 @@ describe('abas do projeto derivam de um registro só', () => {
       'Arquitetura',
       'Gastos',
       'Configurações',
-      'Modelos',
-      'Projeto e execução',
-      'Pessoas e acesso',
-      'Avançado',
     ]);
     // Os cabeçalhos existem e nomeiam a seção — mas não são abas.
     for (const grupo of ['Agentes', 'Dev', 'Documentação']) {

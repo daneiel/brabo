@@ -21,10 +21,11 @@ e blocks do shadcn) foi aprovada e a sidebar passa a ser o block `sidebar-07`.
   atalho Ctrl/Cmd+B, agora do kit.
 - O kit grava o cookie `sidebar_state`; fica gravado **sem leitor** (a fonte do
   estado continua a de `lib/sidebar-state`).
-- Decisão do dono (02/11): na sidebar do projeto, a aba "Configurações" passa a
-  ter SUB-ITENS, um por grupo — Modelos, Projeto, Pessoas e Avançado —, cada um
-  levando a `?tab=settings&group=<grupo>`. A implementação é da AT-719, não
-  desta mudança.
+- Decisão do dono (03/11, revisa a de 02/11): "Configurações" é UM item da barra
+  lateral, como as outras abas — a sidebar não ganha sub-itens nem cresce. Os
+  grupos — Modelos, Projeto, Pessoas e Avançado — são ABAS dentro da página,
+  numa faixa no topo, e cada um vive em `?tab=settings&group=<grupo>`. A
+  implementação é da AT-719.
 - Ícones Lucide. O que o ADR 0211 decidiu sobre conteúdo (grupos, aba ativa,
   teclado, contadores nunca somados) continua valendo.
 

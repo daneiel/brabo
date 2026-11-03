@@ -2752,9 +2752,9 @@ projeto aberto abre um flyout com as mesmas abas.
   `:518` (`useContagensDoProjeto`), `:533` (`irParaAba`), `:560`
   (`flyoutAberto`), `:217` (`contagensDoResumo`);
   `apps/web/src/routes/AbasDoProjeto.tsx:88` (`AbasDoProjeto`), `:44`
-  (`itensDasAbas`), `:119` (`aoTeclar`);
+  (`itensDasAbas`), `:105` (`aoTeclar`);
   `apps/web/src/lib/contagens-do-projeto.ts:22` (`useContagensDoProjeto`),
-  `:70` (`publicarAbaAtiva`), `:91` (`pedirAba`);
+  `:70` (`publicarAbaAtiva`), `:86` (`pedirAba`);
   `apps/web/src/lib/sidebar-state.ts` (`lerProjetosAbertos`/`gravarProjetosAbertos`)
 - **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "conjuntos"),
   `apps/web/src/routes/Shell.test.tsx` (describe "Shell — abas do projeto

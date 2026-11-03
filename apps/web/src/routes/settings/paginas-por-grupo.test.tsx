@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectSettingsTab } from '../ProjectSettingsTab';
 import { ToastProvider } from '../../components/ui/ToastProvider';
-import { ContextoDeGrupoInicial, ContextoDeSecaoInicial } from './secao-inicial';
+import { ContextoDeGrupoInicial, ContextoDeSecaoInicial, ContextoDeTrocaDeGrupo } from './secao-inicial';
 import {
   GRUPOS_DO_SUMARIO,
   SECOES_DE_CONFIGURACOES,
@@ -205,5 +206,49 @@ describe('Configurações em páginas por grupo (RN-980)', () => {
     await waitFor(() => expect(noDom('models')).toBeTruthy());
     for (const saiu of ['key-spend', 'approval-matrix', 'credentials', 'model-catalog'])
       expect(document.getElementById(`secao-${saiu}`)).toBeNull();
+  });
+});
+
+describe('Faixa de abas dos grupos (RN-980)', () => {
+  function montarComTroca(inicial: GrupoDoSumario) {
+    const trocar = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ContextoDeTrocaDeGrupo.Provider value={trocar}>
+            <ContextoDeGrupoInicial.Provider value={inicial}>
+              <ProjectSettingsTab projectId="proj-1" />
+            </ContextoDeGrupoInicial.Provider>
+          </ContextoDeTrocaDeGrupo.Provider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    return trocar;
+  }
+
+  it('mostra as 4 abas, marca a do grupo e o clique pede a troca', async () => {
+    const trocar = montarComTroca('pessoas');
+    const abas = screen.getAllByRole('tab');
+    expect(abas.map((a) => a.textContent)).toEqual([
+      'Modelos',
+      'Projeto e execução',
+      'Pessoas e acesso',
+      'Avançado',
+    ]);
+    expect(screen.getByRole('tab', { name: 'Pessoas e acesso' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Pessoas e acesso' })).toHaveAttribute('aria-controls');
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Avançado' }));
+    expect(trocar).toHaveBeenCalledWith('avancado');
+  });
+
+  it('o teclado anda pelas abas: seta e End', async () => {
+    montarComTroca("modelos");
+    const u = userEvent.setup();
+    screen.getByRole('tab', { name: 'Modelos' }).focus();
+    await u.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Projeto e execução' }));
+    await u.keyboard('{End}');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Avançado' }));
   });
 });

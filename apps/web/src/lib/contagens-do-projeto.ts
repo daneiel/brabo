@@ -63,17 +63,12 @@ export function useContagensDoProjeto(projectId: string | undefined) {
  * você" troca de aba sem passar pelo router. Estado de módulo, e não
  * contexto, porque a sidebar mora ACIMA do `Outlet` onde a moldura monta.
  */
-export type AbaPublicada = { projectId: string; tab: string; group?: string } | null;
+export type AbaPublicada = { projectId: string; tab: string } | null;
 let abaPublicada: AbaPublicada = null;
 const ouvintes = new Set<() => void>();
 
 export function publicarAbaAtiva(valor: AbaPublicada) {
-  if (
-    abaPublicada?.projectId === valor?.projectId &&
-    abaPublicada?.tab === valor?.tab &&
-    abaPublicada?.group === valor?.group
-  )
-    return;
+  if (abaPublicada?.projectId === valor?.projectId && abaPublicada?.tab === valor?.tab) return;
   abaPublicada = valor;
   for (const ouvinte of ouvintes) ouvinte();
 }
