@@ -9,6 +9,7 @@ import type { Architecture } from '../lib/api-types';
 // precisa continuar IDÊNTICA visualmente. Duplicar as classes só para ter
 // arquivo de CSS próprio abriria a porta para as duas versões divergirem.
 import { Card } from '../components/ui/Card';
+import { Network } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import styles from './ProjectOverviewTab.module.css';
 
@@ -53,7 +54,9 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
     <div>
       <div className={styles.sectionHeader}>{t('architectureTab.title')}</div>
       {isEmpty ? (
-        <EmptyState>{t('architectureTab.emptyState')}</EmptyState>
+        <EmptyState icone={<Network />} titulo={t('architectureTab.emptyTitle')}>
+          {t('architectureTab.emptyState')}
+        </EmptyState>
       ) : (
         <>
           <div className={styles.archLabel}>

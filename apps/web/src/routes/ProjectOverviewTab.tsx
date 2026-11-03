@@ -1,5 +1,5 @@
 import { Ajuda } from '../components/ui/Ajuda';
-import { Play, ThumbsUp } from 'lucide-react';
+import { Info, Play, ThumbsUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -57,6 +57,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+ItemMedia,
   ItemGroup,
   ItemTitle,
 } from '../components/shadcn/item';
@@ -585,6 +586,7 @@ function ExecutionSection({
         </div>
       ) : !activated ? (
         <Item variant="outline" className={styles.execIntro}>
+          <ItemMedia variant="icon"><Info aria-hidden="true" /></ItemMedia>
           <ItemContent>
           <ItemDescription>
             {!hasModuleMap
@@ -780,6 +782,7 @@ function ArchitectureSummary({
     <div className={styles.arch}>
       <h2 className={styles.sectionHeader}>{t('architectureSummary.title')}</h2>
       <Item variant="outline" size="sm">
+       <ItemMedia variant="icon"><Info aria-hidden="true" /></ItemMedia>
        <ItemContent>
         <ItemDescription>
         {moduleCount > 0

@@ -1,6 +1,7 @@
 {
   "architectureTab": {
     "title": "Архитектура",
+    "emptyTitle": "Архитектуры пока нет",
     "emptyState": "Архитектуры пока нет — Arquiteto создаёт module_map и ADR.",
     "modulesLabel": "Модули",
     "modulesLabelVersioned": "Модули · v{{version}}",

@@ -1,6 +1,7 @@
 {
   "architectureTab": {
     "title": "Architecture",
+    "emptyTitle": "No architecture yet",
     "emptyState": "No architecture yet — the Architect generates the module_map and ADRs.",
     "modulesLabel": "Modules",
     "modulesLabelVersioned": "Modules · v{{version}}",

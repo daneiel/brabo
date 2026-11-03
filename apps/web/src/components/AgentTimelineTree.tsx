@@ -20,7 +20,6 @@ import i18n from '../lib/i18n';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
 import { Subagent } from './ai-elements/subagent';
-import { TraceDescription, TraceIcon, TraceLine, TraceTitle } from './shadcn/trace';
 import styles from './AgentTimelineTree.module.css';
 
 /**
@@ -220,14 +219,12 @@ export function AgentTimelineTree({
                             </div>
                           </Disclosure>
                         ) : (
-                          <TraceLine>
-                            <TraceIcon>
-                              <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
-                            </TraceIcon>
-                            <TraceTitle>{m.rotulo}</TraceTitle>
-                            {m.detalhe && <TraceDescription>{m.detalhe}</TraceDescription>}
-                            <TraceDescription>{hora(m)}</TraceDescription>
-                          </TraceLine>
+                          <div className={styles.marcoLinhaEstatica}>
+                            <span className={[styles.bolinha, styles[m.tipo]].join(' ')} />
+                            <span className={styles.rotulo}>{m.rotulo}</span>
+                            {m.detalhe && <span className={styles.detalhe}>{m.detalhe}</span>}
+                            <span className={styles.hora}>{hora(m)}</span>
+                          </div>
                         )}
                       </li>
                     </Fragment>
