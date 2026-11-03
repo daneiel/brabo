@@ -726,12 +726,11 @@ describe('CredentialsSection (ADR 0050)', () => {
     );
   });
 
-  it('testar: botão só de ícone tem nome e title, e o ícone é aria-hidden (AT-682)', async () => {
+  it('testar: botão só de ícone tem nome (legenda), e o ícone é aria-hidden (AT-682)', async () => {
     listCredentials.mockResolvedValue([credencial()]);
     montarSecao(<CredentialsSection />);
 
     const botao = await screen.findByRole('button', { name: /^Testar chave de / });
-    expect(botao).toHaveAttribute('title');
     expect(botao.textContent).toBe('');
     expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ProvidersPage } from './ProvidersPage';
 import '../lib/i18n';
 
@@ -76,7 +76,9 @@ describe('ProvidersPage', () => {
     ]);
     montar();
     expect(await screen.findByText('priceCeiling')).toBeInTheDocument();
-    expect(screen.getByText(/teto de preço|price ceiling/)).toBeInTheDocument();
+    expect(screen.queryByText(/teto de preço|price ceiling/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda: |^Help: / }));
+    expect(await screen.findByText(/teto de preço|price ceiling/)).toBeInTheDocument();
   });
 
   it('capabilities falhando mostram erro nomeado', async () => {
