@@ -27,7 +27,8 @@
     "iniciarIdeacao": "Iniciar ideação",
     "iniciarIdeacaoTitulo": "Traz o Criativo para conduzir a ideação desta sessão — ele ainda não entrou",
     "encerrar": "Encerrar",
-    "alternarPainel": "Alternar painel de contexto",
+    "recolherPainel": "Recolher contexto",
+    "abrirPainel": "Abrir contexto",
     "fecharPainel": "Fechar painel de contexto",
     "ajustes": "Modelo e idioma",
     "ajustesAria": "Modelo, idioma das respostas e orçamento desta sessão",
@@ -76,6 +77,7 @@
     "sugestaoExigeDeveloper": "Esta ação exige o papel developer neste workspace."
   },
   "ativacao": {
+    "encerradaTitulo": "Sessão encerrada",
     "mensagemNaoEnviada": "Sua mensagem não enviada",
     "naoAtivada": "Sessão ainda não ativada.",
     "ativarSessao": "Ativar sessão",
@@ -335,6 +337,7 @@
     "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
   },
   "fio": {
+    "carregando": "Carregando sessão…",
     "historico": {
       "titulo_zero": "Antes das últimas {{count}} mensagens",
       "titulo_one": "Antes da última mensagem",

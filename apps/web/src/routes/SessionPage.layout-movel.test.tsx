@@ -153,7 +153,8 @@ afterAll(() => {
 });
 
 const TITULO_DO_PAINEL = 'Contexto da sessão';
-const ALTERNAR = 'Alternar painel de contexto';
+const ALTERNAR = 'Abrir contexto';
+const RECOLHER = 'Recolher contexto';
 
 describe('SessionPage — layout móvel (AT-328)', () => {
   let largura: ReturnType<typeof simularLayoutMovel> | null = null;
@@ -168,7 +169,7 @@ describe('SessionPage — layout móvel (AT-328)', () => {
 
     const alternar = await screen.findByRole('button', { name: ALTERNAR });
     expect(screen.queryByText(TITULO_DO_PAINEL)).toBeNull();
-    expect(alternar).toHaveAttribute('aria-pressed', 'false');
+    expect(alternar).toHaveAttribute('aria-expanded', 'false');
 
     alternar.focus();
     fireEvent.click(alternar);
@@ -222,7 +223,7 @@ describe('SessionPage — layout móvel (AT-328)', () => {
     expect(await screen.findByText(TITULO_DO_PAINEL)).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByTestId('quebra-da-barra')).toBeNull();
-    expect(screen.getByRole('button', { name: ALTERNAR })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: RECOLHER })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('cruzar para o móvel com o painel aberto o fecha — ele não reaparece espremendo o fio', async () => {

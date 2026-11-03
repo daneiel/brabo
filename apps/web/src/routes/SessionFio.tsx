@@ -17,6 +17,7 @@ import {
 } from '../lib/mensagem-nao-enviada';
 import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
+import { Skeleton } from '../components/ui/Skeleton';
 import styles from './SessionPage.module.css';
 
 /**
@@ -32,6 +33,8 @@ import styles from './SessionPage.module.css';
  */
 export interface SessionFioProps {
   conviteVisivel: boolean;
+  /** Eventos ainda chegando: o MESMO `isPending` que adia o convite (RN-131). */
+  carregando?: boolean;
   sessaoCriativa: boolean;
   criativoActive: boolean;
   isActive: boolean;
@@ -55,6 +58,7 @@ export interface SessionFioProps {
 
 export function SessionFio({
   conviteVisivel,
+  carregando = false,
   sessaoCriativa,
   criativoActive,
   isActive,
@@ -80,6 +84,20 @@ export function SessionFio({
   useEffect(() => limparMensagemNaoEnviada, []);
   return (
     <>
+      {carregando && (
+        <div className={styles.fioCarregando} role="status" aria-label={t('fio.carregando')}>
+          <span className={styles.asideEmpty}>{t('fio.carregando')}</span>
+          {[0, 1].map((n) => (
+            <div key={n} className={styles.fioCarregandoLinha}>
+              <Skeleton width={32} height={32} radius="50%" />
+              <div className={styles.fioCarregandoBarras}>
+                <Skeleton width="40%" />
+                <Skeleton width="85%" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
           mensagem. Sem isto a tela ficava em branco depois de "Iniciar
           ideação", e quem chega não tem como saber que a vez é dele.

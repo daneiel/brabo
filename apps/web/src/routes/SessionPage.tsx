@@ -785,6 +785,7 @@ export function SessionPage({
             <div className={styles.messagesInner} ref={messagesInnerRef}>
               <SessionFio
                 conviteVisivel={conviteVisivel}
+                carregando={!!session && eventsQuery.isPending}
                 sessaoCriativa={sessaoCriativa}
                 criativoActive={criativoActive}
                 isActive={isActive}

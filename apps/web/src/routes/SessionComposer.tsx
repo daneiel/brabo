@@ -1,5 +1,5 @@
 import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
-import { ThumbsUp, SendHorizontal, ListPlus, Square, Play, RotateCcw, Forward } from 'lucide-react';
+import { ThumbsUp, SendHorizontal, ListPlus, Square, Play, RotateCcw, Info, Forward } from 'lucide-react';
 import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
@@ -478,9 +478,10 @@ export function SessionComposer({
               </Button>
             </>
           ) : sessaoEhTerminal(session?.status) && handleReopen ? (
-            <>
-              <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
-              <Ajuda assunto={t('ativacao.reabrir')}>{t('ativacao.reabrirExplicacao')}</Ajuda>
+            <div className={styles.faixaEncerrada}>
+              <Info aria-hidden="true" size={16} />
+              <span className={styles.faixaEncerradaTitulo}>{t('ativacao.encerradaTitulo')}</span>
+              <span className={styles.faixaEncerradaTexto}>{t('ativacao.reabrirExplicacao')}</span>
               <Button
                 className={styles.reabrir}
                 onClick={handleReopen}
@@ -491,7 +492,7 @@ export function SessionComposer({
                 {t('ativacao.reabrir')}
               </Button>
               {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
-            </>
+            </div>
           ) : (
             <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
           )}

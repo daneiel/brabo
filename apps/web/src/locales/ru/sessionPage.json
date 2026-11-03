@@ -27,7 +27,8 @@
     "iniciarIdeacao": "Начать генерацию идей",
     "iniciarIdeacaoTitulo": "Приглашает Criativo провести генерацию идей в этой сессии — он ещё не подключился",
     "encerrar": "Завершить",
-    "alternarPainel": "Переключить панель контекста",
+    "recolherPainel": "Свернуть контекст",
+    "abrirPainel": "Открыть контекст",
     "fecharPainel": "Закрыть панель контекста",
     "ajustes": "Модель и язык",
     "ajustesAria": "Модель, язык ответов и бюджет этой сессии",
@@ -77,6 +78,7 @@
     "sugestaoExigeDeveloper": "Это действие требует роли developer в этом рабочем пространстве."
   },
   "ativacao": {
+    "encerradaTitulo": "Сессия завершена",
     "mensagemNaoEnviada": "Ваше сообщение не отправлено",
     "naoAtivada": "Сессия ещё не активирована.",
     "ativarSessao": "Активировать сессию",
@@ -350,6 +352,7 @@
     "gatePendente": "Gate {{gate}} для этого PR ещё не пройден. Merge всё равно доступен — решение за вами."
   },
   "fio": {
+    "carregando": "Загрузка сессии…",
     "historico": {
       "titulo_one": "До последнего {{count}} сообщения",
       "titulo_few": "До последних {{count}} сообщений",
