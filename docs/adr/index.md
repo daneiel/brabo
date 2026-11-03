@@ -314,6 +314,7 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0241](0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.md) | A sidebar adota o block `sidebar-07` do shadcn (256/48px; aba Código 304/96px; Ctrl/Cmd+B; cookie `sidebar_state` sem leitor), revisando o ADR 0211 (AT-714). |
 | [0242](0242-containers-em-tabela-linear-com-tanstack-react-table.md) | Containers em tabela linear com `@tanstack/react-table` (ordem e página no cliente, sem query nova; audit limpo); Providers em tabela linear sem a biblioteca (AT-714). |
 | [0243](0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.md) | Consequência irreversível pode morar num botão de perigo (`Perigo`, ícone `TriangleAlert`, popover como o "?"): só o aviso de conversão de modo (RN-560); revisa a régua do "?" e estende o 0240 (AT-719). |
+| [0244](0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.md) | A coluna de conteúdo das abas do projeto fica alinhada à esquerda, junto do cabeçalho, com largura máxima de leitura; revisa o 0078 (AT-720). |
 
 ## Operação, deploy e instalação {#tema-operacao}
 

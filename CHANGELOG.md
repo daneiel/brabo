@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- A coluna das abas do projeto fica alinhada à esquerda, o rótulo das sessões usa a fonte de corpo e o vazio de PR de infra ganha respiro lateral (AT-720, ADR 0244).
+
 ### Correções
 
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
