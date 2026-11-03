@@ -262,6 +262,7 @@
     "resultadoCortado": "Resultado cortado pelo limite de 2.000 caracteres.",
     "passosDoTurno": "Passos do turno",
     "consultado": "Consultado neste turno",
+    "fonteN": "Fonte {{n}}: {{rotulo}}",
     "consultadoCorte": "mostrando {{shown}} de {{total}}",
     "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",

@@ -254,6 +254,7 @@
     "resultadoCortado": "Result cut at the 2,000-character limit.",
     "passosDoTurno": "Turn steps",
     "consultado": "Consulted this turn",
+    "fonteN": "Source {{n}}: {{rotulo}}",
     "consultadoCorte": "showing {{shown}} of {{total}}",
     "passosCount_one": "{{count}} step",
     "passosCount_other": "{{count}} steps"

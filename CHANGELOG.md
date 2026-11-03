@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: selos de citação `[n]` inline no texto da resposta do agente (AT-716): só os índices de `citacoes` viram selo com HoverCard da fonte; os demais `[n]` somem e código fica literal.
+
 - **auth**: acesso rápido por papel na tela de login (`GET`/`POST /auth/dev-login`), só com `BRABO_AMBIENTE=local`; as contas passam a `<papel>@brabo.dev` e o `dev@brabo.dev` do seed vira `developer@brabo.dev` (AT-722, ADR 0245, RN-984).
 - **engine**: os sete agentes conversacionais passam a consultar o RAG do projeto (`rag_search`), e os trechos viram `fontes` do `agent.response` (AT-716, RN-982).
 - **api/web**: o clique numa fonte do bloco "Consultado neste turno" é gravado na tabela `source_clicks` (`POST /projects/:projectId/source-clicks`, `viewer`); não é voto e não alimenta o `rag_feedback` (AT-716, RN-983).

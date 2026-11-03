@@ -26,8 +26,9 @@ import { MensagemDeConversa } from '../components/ai-elements/message';
 import { ArtifactCard } from '../components/ai-elements/artifact';
 import { PassosEncerrados } from '../components/ai-elements/passos-encerrados';
 import { passosDoTurno } from '../lib/passos-do-turno';
-import { fontesDoTurno } from '../lib/fontes-do-turno';
+import { citacoesDoTurno, fontesDoTurno } from '../lib/fontes-do-turno';
 import { ConsultadoNesteTurno } from '../components/ai-elements/sources';
+import { SeloDeCitacao } from '../components/ai-elements/inline-citation';
 import { AcaoCopiar } from '../components/ai-elements/copiar';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
@@ -937,7 +938,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             {/* Resposta vazia é evento ANTIGO (até a RN-059): a tela o NOMEIA.
                 RN-158: Markdown leve só em `agent.response`; `chat.message` é
                 texto DIGITADO. */}
-            {text === '' ? t('mensagens.respostaVazia') : <MarkdownMessage text={text} />}
+            {text === '' ? t('mensagens.respostaVazia') : <MarkdownMessage text={text} selo={seloDoTurno(event, projectId, sessionId)} />}
           </MensagemDeConversa>
       );
       // RN-974: sem `mensagem: true`, o bloco não conta no corte (RN-644).
@@ -1311,4 +1312,15 @@ function tarefaDaAcao(acao: ProposedAction, epics: Epic[] | undefined): Task | u
     }
   }
   return undefined;
+}
+
+/** AT-716: sem `citacoes` => null (texto intacto). `[n]` fora da lista some. */
+function seloDoTurno(event: { id: string; payload?: unknown }, projectId: string, sessionId?: string) {
+  if (!Array.isArray((event.payload as { citacoes?: unknown } | null)?.citacoes)) return null;
+  const { fontes } = fontesDoTurno(event.payload);
+  const validas = new Set(citacoesDoTurno(event.payload, fontes.length));
+  return (n: number) =>
+    validas.has(n) ? (
+      <SeloDeCitacao n={n} fonte={fontes[n - 1]!} projectId={projectId} sessionId={sessionId} eventId={event.id} />
+    ) : null;
 }

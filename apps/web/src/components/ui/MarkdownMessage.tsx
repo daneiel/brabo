@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   parseInline,
@@ -42,13 +42,29 @@ const LIMITE_DE_LINHAS_DO_BLOCO = 20;
 /** Quantas linhas o bloco recolhido ainda mostra. */
 const LINHAS_DO_BLOCO_RECOLHIDO = 8;
 
+/** AT-716: quando presente, `[n]` no TEXTO (nunca em código) vira o que o contexto devolve; null remove. */
+const CitacaoCtx = createContext<((n: number) => ReactNode) | null>(null);
+
+function TextoComCitacoes({ text }: { text: string }) {
+  const selo = useContext(CitacaoCtx);
+  if (!selo || !/\[\d+\]/.test(text)) return <>{text}</>;
+  return (
+    <>
+      {text.split(/(\[\d+\])/).map((parte, i) => {
+        const m = /^\[(\d+)\]$/.exec(parte);
+        return m ? <Fragment key={i}>{selo(Number(m[1]))}</Fragment> : parte;
+      })}
+    </>
+  );
+}
+
 function renderInline(nodes: MdInline[]): ReactNode {
   return nodes.map((n, i) => {
     switch (n.kind) {
       case 'text':
         // Texto puro sem wrapper: string solta num array de children é
         // válida em React e não precisa de `key`.
-        return n.text;
+        return <TextoComCitacoes key={i} text={n.text} />;
       case 'bold':
         return <strong key={i}>{n.text}</strong>;
       case 'italic':
@@ -317,7 +333,19 @@ export function MarkdownInline({ text }: { text: string }) {
 
 /** `emCurso` (RN-837): o texto é um prefixo de stream — fecha os marcadores
  *  abertos antes de parsear. O texto final passa sem isso. */
-export function MarkdownMessage({ text, emCurso = false }: { text: string; emCurso?: boolean }) {
+export function MarkdownMessage({
+  text,
+  emCurso = false,
+  selo = null,
+}: {
+  text: string;
+  emCurso?: boolean;
+  selo?: ((n: number) => ReactNode) | null;
+}) {
   const blocos = parseMarkdown(emCurso ? fecharMarcadoresAbertos(text) : text);
-  return <div className={styles.markdown}>{blocos.map((b, i) => renderBlock(b, i))}</div>;
+  return (
+    <CitacaoCtx.Provider value={selo}>
+      <div className={styles.markdown}>{blocos.map((b, i) => renderBlock(b, i))}</div>
+    </CitacaoCtx.Provider>
+  );
 }
