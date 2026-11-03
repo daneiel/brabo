@@ -1128,6 +1128,9 @@ jobs:
           files: docker-bake.hcl
           targets: default
           load: true
+        env:
+          # AT-722: dev na dev, prd na main; nunca `local` (ambiente-nas-actions.spec.ts).
+          AMBIENTE: ${{ github.base_ref == 'main' && 'prd' || 'dev' }}
 
       # Critério de aceite explícito da sessão. Checado aqui além do smoke.sh
       # porque é barato e falha com mensagem direta.
