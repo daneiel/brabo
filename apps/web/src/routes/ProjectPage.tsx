@@ -22,6 +22,7 @@ import { ContextoDeSecaoInicial } from './settings/secao-inicial';
 import { ContextoDeHistoriaInicial } from '../lib/historia-inicial';
 import type { ChaveDeSecao } from './settings/sumario';
 import { Badge } from '../components/ui/Badge';
+import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import styles from './ProjectPage.module.css';
 
 const PROVIDER_ICON = { github: GitHubIcon, gitlab: GitLabIcon, local: LocalRepoIcon } as const;
@@ -148,56 +149,45 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
       {/* O cabeçalho é uma faixa `surface-1` com uma única divisória embaixo
           (handoff, seção 4), e agora atravessa a largura inteira: a navegação
           saiu de dentro dele (ADR 0126) e mora na sidebar (ADR 0211). */}
-      <header className={styles.header}>
-        <div className={styles.headerTop}>
-          <div className={styles.headerLeft}>
-            <span className={styles.providerIcon}>
-              <ProviderIcon size={19} />
-            </span>
-            <div className={styles.identity}>
-              <div className={styles.titleRow}>
-                <h1 className={styles.name}>{project.name}</h1>
-                {repository && (
-                  <Badge square size="md" className={styles.repoChip}>
-                    {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
-                  </Badge>
-                )}
-              </div>
-              <div className={styles.meta}>
-                {repository ? (
+      <CabecalhoDePagina
+        className={styles.header}
+        titulo={project.name}
+        descricao={
+          <span className={styles.meta}>
+            <ProviderIcon size={14} />
+            {repository && (
+              <Badge square size="md" className={styles.repoChip}>
+                {repository.provider} · {t(VISIBILIDADE_KEY[repository.visibility])}
+              </Badge>
+            )}
+            {repository ? (
+              <>
+                <BranchIcon size={13} />
+                <span className={styles.metaStrong}>{repository.defaultBranch}</span>
+                {/* Fase 12a: adotado é fato permanente do projeto. */}
+                {repository.origin === 'adopted' && (
                   <>
-                    <BranchIcon size={13} />
-                    <span className={styles.metaStrong}>{repository.defaultBranch}</span>
-                    {/* Fase 12a: adotado é fato permanente do projeto, e
-                        saber que o repo veio de fora muda como se lê tudo
-                        o mais (a política de branches é dele, não nossa). */}
-                    {repository.origin === 'adopted' && (
-                      <>
-                        <span className={styles.metaSep} />
-                        <span>{t('adopted')}</span>
-                      </>
-                    )}
+                    <span className={styles.metaSep} />
+                    <span>{t('adopted')}</span>
                   </>
-                ) : (
-                  t('repositoryNotProvisioned')
                 )}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.headerRight}>
+              </>
+            ) : (
+              t('repositoryNotProvisioned')
+            )}
+          </span>
+        }
+        acoes={
+          <>
             <PainelPrecisaDeVoce
               projectId={projectId}
               filas={filasPrecisaDeVoce}
               open={painelAberto}
               onOpenChange={setPainelAberto}
-              // O painel não conhece `ChaveDeAba` de propósito (ver
-              // `lib/precisa-de-voce.ts`); é aqui, onde o tipo já está em mãos,
-              // que o destino vira aba de verdade.
+              // O painel não conhece `ChaveDeAba` de propósito; é aqui que o destino vira aba.
               onIrParaAba={(destino) => {
                 setTab(destino satisfies ChaveDeAba);
-                // O endereço acompanha a aba (AT-394), para recarregar abrir
-                // onde se estava.
+                // O endereço acompanha a aba (AT-394).
                 try {
                   const url = new URL(window.location.href);
                   url.searchParams.set('tab', destino);
@@ -208,7 +198,6 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
                 }
               }}
             />
-
             {budget && (
               <TokenMeter
                 variant="compact"
@@ -219,10 +208,9 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
                 costUSD={budget.spentMicros / 1_000_000}
               />
             )}
-          </div>
-        </div>
-
-      </header>
+          </>
+        }
+      />
 
       <div className={styles.corpo}>
         {/* Quem manda no respiro é o REGISTRO, não um `tab === 'overview'`

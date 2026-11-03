@@ -6,13 +6,16 @@ function CabecalhoDePagina({
   titulo,
   descricao,
   acoes,
+  nivel = "h1",
   className,
   ...props
 }: Omit<React.ComponentProps<"header">, "title"> & {
   titulo: React.ReactNode
   descricao?: React.ReactNode
   acoes?: React.ReactNode
+  nivel?: "h1" | "h2"
 }) {
+  const Titulo = nivel
   return (
     <header
       data-slot="cabecalho-de-pagina"
@@ -23,7 +26,7 @@ function CabecalhoDePagina({
       {...props}
     >
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold text-foreground">{titulo}</h1>
+        <Titulo className="text-xl font-semibold text-foreground">{titulo}</Titulo>
         {descricao && (
           <p className="mt-1 text-sm text-muted-foreground">{descricao}</p>
         )}
