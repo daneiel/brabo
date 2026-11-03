@@ -14426,7 +14426,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1185`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1189`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14635,7 +14635,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1073` (`avisar_canal`);
+  `:607`, `:630`, `:1077` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14818,11 +14818,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1151`
-  (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1155`
+  (`narrar_recusa_de_sessao_encerrada`), `:1507` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1151`
-  (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1155`
+  (`narrar_recusa_de_sessao_encerrada`), `:1507` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:471` (`abandonar`);
@@ -15813,9 +15813,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:241` (`TETO_DE_MUTACAO_MS`), `:253` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:306` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:96` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:2034` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2038` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:2034` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2038` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15899,9 +15899,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:241` (`TETO_DE_MUTACAO_MS`),
   `:205` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:264` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1915` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1915` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -17926,7 +17926,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1250`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1254`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -18645,8 +18645,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:179` (`rotuloDoAutor`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:185` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:186` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -20347,8 +20346,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:140` (`ehDaAnamnese`)
-  `apps/web/src/routes/session-timeline-montagem.tsx:146` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:147` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -22015,7 +22013,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2137`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2141`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22272,7 +22270,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1911`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1915`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:85`
   (`resultado_de_teto_do_terminal`)
@@ -23624,8 +23622,7 @@ sem dizer qual.
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:264` (`BolhaDoStreaming`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:144` (`montarTimeline`)
-  `apps/web/src/routes/session-timeline-montagem.tsx:150` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:151` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -25506,7 +25503,7 @@ sem dizer qual.
 ### RN-979 — Decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio {#rn-979}
 
 - **Regra:** os eventos `artifact.decision_record`, `artifact.module_map`, `artifact.c4_diagram`, `artifact.project_image`, `artifact.qa_verdict` e `artifact.secops_verdict` aparecem no fio com o MESMO cartão do épico/história, com link para a aba (Arquitetura ou PRs). Título e descrição saem dos campos REAIS do payload: decisão (`choice`, `context`), mapa de módulos (sem título; descrição = `modules[].name`), C4 (`systemName`, `systemDescription`), imagem (`image`, `rationale`), pareceres (`veredito` traduzido, `resumo`). Campo ausente cai no rótulo do tipo; descrição passa de 200 caracteres é cortada. Leitura do payload, sem query nova.
-- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:131` (`ARTEFATOS_DO_FIO`).
+- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:138` (`ARTEFATOS_DO_FIO`).
 - **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:137` (`ARTEFATOS_DO_FIO`).
 - **Teste:** `apps/web/src/lib/artefato-do-fio.test.ts` (um caso por tipo e payload sem campo opcional).
 - **Origem:** AT-683 (EP-031).
