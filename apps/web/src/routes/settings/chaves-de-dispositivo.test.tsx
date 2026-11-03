@@ -238,9 +238,11 @@ describe('chaves de dispositivo — a listagem', () => {
     cenario();
 
     await screen.findByText('Chrome do laptop');
-    expect(
-      screen.getByText(/Chave registrada não é agente rodando/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Registrada não quer dizer rodando agora/)).toBeInTheDocument();
+    expect(screen.getByText(/derruba o agente em todos os seus projetos runner/)).toBeInTheDocument();
+    // O texto longo mora no "?" (AT-719).
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda:/ }));
+    expect(await screen.findByText(/Chave registrada não é agente rodando/)).toBeInTheDocument();
   });
 });
 

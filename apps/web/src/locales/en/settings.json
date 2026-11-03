@@ -150,7 +150,8 @@
         "alreadyInherits": "The {{area}} area already inherited",
         "partial": "The area default was saved, but {{agent}}'s own model was not removed ({{reason}})"
       }
-    }
+    },
+    "ajudaRoteamento": "Routing: the preference (lowest price, highest throughput, lowest latency) is only declared for a provider after it is proven against the real API. Without proof, the row says it is not proven."
   },
   "members": {
     "title": "Members and roles",
@@ -176,7 +177,8 @@
       "roleErrorTitle": "Could not change the role",
       "removeErrorTitle": "Could not remove the member"
     },
-    "emptyMessage": "No member besides the project owner."
+    "emptyMessage": "No member besides the project owner.",
+    "avisoCurto": "Lists only people with a role in this project, and that role overrides the workspace one, downwards too."
   },
   "repository": {
     "title": "Repository",
@@ -219,7 +221,8 @@
       "mirrorCleared": "The mirror destination ({{destino}}) is cleared: every conversion resets it, and it has to be declared again afterwards if the new mode takes a mirror.",
       "containerRemoved": "This project's registered container is stopped and removed: leaving Container mode tears it down, and nothing brings it back on its own.",
       "containerUnknown": "Could not read whether this project has a registered container. If it has one, leaving Container mode stops and removes it.",
-      "verifiedLost": "The folder confirmed on {{data}} stops counting as confirmed: every conversion resets that record, and a Runner project needs its runner to confirm the folder again on connect."
+      "verifiedLost": "The folder confirmed on {{data}} stops counting as confirmed: every conversion resets that record, and a Runner project needs its runner to confirm the folder again on connect.",
+      "assunto": "what the conversion does"
     },
     "card": {
       "title": "Execution mode"
@@ -232,7 +235,8 @@
       "noBase": "This installation declared no mounted-projects base: there is nothing to browse, and the Mounted folder mode has nowhere to exist here.",
       "baseUnknown": "Could not query this installation's projects base — there is no way to tell whether it exists, so the folder browser stays unavailable. Reload the page to try again.",
       "baseLoading": "Querying this installation's projects base…",
-      "runnerTyped": "The path typed here is provisional: for a Runner project, the folder is decided by the runner when it connects, and its confirmation overwrites this value (a machine agent uses <base>/<project folder>). That is also why there is no folder browser here: browsing would need a runner already connected to THIS project, and a connected runner has already confirmed its own folder. Convert; the next step — connecting the runner — shows up right below."
+      "runnerTyped": "The path typed here is provisional: for a Runner project, the folder is decided by the runner when it connects, and its confirmation overwrites this value (a machine agent uses <base>/<project folder>). That is also why there is no folder browser here: browsing would need a runner already connected to THIS project, and a connected runner has already confirmed its own folder. Convert; the next step — connecting the runner — shows up right below.",
+      "runnerTypedCurto": "Provisional: the runner confirms the folder when it connects."
     },
     "save": "Convert",
     "saving": "Converting…",
@@ -245,8 +249,11 @@
       "intro": "The project is now in Runner mode and its folder is not confirmed yet. The conversion is saved; what is missing is a runner connecting to this project — it is the runner that confirms the folder.",
       "machineAgent": "If a machine agent is already running on your machine: when it is serving no Runner project, it picks this one up on its own within 60 s. When it already serves another Runner project, it does NOT — the project list is read once, when the agent starts — so restart its service:",
       "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
-      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
-    }
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS",
+      "machineAgentCurto": "Machine agent already up and serving another project? Restart its service:"
+    },
+    "noBrokerCurto": "No broker in this installation: you can only convert to Runner.",
+    "noBrokerAssunto": "why converting is disabled"
   },
   "parallelism": {
     "title": "Parallelism by area",
@@ -340,7 +347,7 @@
     "otherLabel": "Language code (BCP-47)",
     "otherHint": "E.g. pt-PT, es-MX, fr-CA. The API refuses a code that is not a language.",
     "save": "Save",
-    "readOnly": "Only a project maintainer or owner changes its language. You see the value, and the control stays inert.",
+    "readOnly": "Only a maintainer or owner can change the language.",
     "toast": {
       "saved": "Project language saved",
       "error": "Could not save the project language"
@@ -520,7 +527,9 @@
       "precisao": "Only what connected with THIS key falls: another runner of yours in the same project, authenticated with another key or with a token, stays connected. A connection request made with it and not yet used stops being valid too.",
       "cancel": "Cancel",
       "confirm": "Revoke"
-    }
+    },
+    "subtitleAlcanceCurto": "Revoking a MACHINE key takes the agent down in all of your runner projects.",
+    "subtitleNaoEBatimentoCurto": "Registered does not mean running right now."
   },
   "instructionVersions": {
     "title": "Instruction history",
@@ -550,12 +559,13 @@
       "latency": "lowest latency"
     },
     "notSupported": "No routing preference: the {{provider}} provider does not declare that capability — it is only declared after being proven against the real API.",
-    "inherited": "Routing: {{valor}} — comes with the model of the {{nivel}} level.",
+    "inherited": "Routing: {{valor}} (from the {{nivel}} level)",
     "inheritedHint": "To set it here, pick a model of its own for this row.",
     "toast": {
       "saveError": "Could not save the routing preference"
     },
-    "teto": "On OpenRouter, each call also carries a price ceiling (1.5 × the catalog price): only an upstream within it serves; if none does, the call is retried once without a ceiling."
+    "teto": "On OpenRouter, each call also carries a price ceiling (1.5 × the catalog price): only an upstream within it serves; if none does, the call is retried once without a ceiling.",
+    "notSupportedCurto": "Routing: not proven on {{provider}}"
   },
   "resolvedBindings": {
     "readError": "Could not read the current models: {{reason}}",

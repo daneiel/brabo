@@ -11,6 +11,7 @@ import { userIdDaSessao } from '../../lib/auth';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { ROLE_LABEL, ROLE_ORDER, roleAtLeast } from '../../lib/roles';
 import type { Role } from '../../lib/api-types';
+import { Ajuda } from '../../components/ui/Ajuda';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
@@ -262,10 +263,12 @@ export function MembersSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="members">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('members.title')}</h2>
+        <Ajuda assunto={t('members.title')}>
+          {t('members.subtitle')} {t('members.subtitleCascata')}
+        </Ajuda>
         <span className={styles.eyebrow}>{t('members.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        {t('members.subtitle')}
         {/*
           O que a coluna PAPEL NO PROJETO significa, dito onde ela é lida.
           `member.role` é a linha de `project_members`, e essa linha é o papel
@@ -282,7 +285,7 @@ export function MembersSection({ projectId }: { projectId: string }) {
           papel —, então a tela DIZ que é recorte em vez de deixar a lista ser
           lida como "todo mundo que tem acesso" (RN-180).
         */}
-        {t('members.subtitleCascata')}
+        {t('members.avisoCurto')}{' '}
         {/*
           E o motivo dos controles apagados, dito uma vez e em texto: o fato é
           sobre quem está lendo, não sobre uma linha da tabela.

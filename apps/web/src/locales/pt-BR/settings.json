@@ -157,7 +157,8 @@
         "alreadyInherits": "Área {{area}} já herdava",
         "partial": "O padrão da área foi gravado, mas o modelo próprio de {{agent}} não foi removido ({{reason}})"
       }
-    }
+    },
+    "ajudaRoteamento": "Roteamento: a preferência (menor preço, maior vazão, menor latência) só é declarada para um provider depois de provada contra a API real. Sem prova, a linha diz que não está provado."
   },
   "members": {
     "title": "Membros e papéis",
@@ -183,7 +184,8 @@
       "roleErrorTitle": "Não foi possível trocar o papel",
       "removeErrorTitle": "Não foi possível remover o membro"
     },
-    "emptyMessage": "Nenhum membro além do dono do projeto."
+    "emptyMessage": "Nenhum membro além do dono do projeto.",
+    "avisoCurto": "Lista só quem tem papel neste projeto, e esse papel vence o do workspace, também para baixo."
   },
   "repository": {
     "title": "Repositório",
@@ -226,7 +228,8 @@
       "mirrorCleared": "O destino de espelho ({{destino}}) é zerado: toda conversão o limpa, e ele precisa ser declarado de novo depois, se o modo novo aceitar espelho.",
       "containerRemoved": "O container registrado deste projeto é parado e removido: sair do modo Container o desmonta, e nada o sobe de volta sozinho.",
       "containerUnknown": "Não consegui ler se este projeto tem container registrado. Se tiver, sair do modo Container o para e o remove.",
-      "verifiedLost": "A pasta confirmada em {{data}} deixa de valer como confirmada: toda conversão zera esse registro, e um projeto Runner precisa que o runner confirme a pasta de novo ao conectar."
+      "verifiedLost": "A pasta confirmada em {{data}} deixa de valer como confirmada: toda conversão zera esse registro, e um projeto Runner precisa que o runner confirme a pasta de novo ao conectar.",
+      "assunto": "o que a conversão faz"
     },
     "card": {
       "title": "Modo de execução"
@@ -239,7 +242,8 @@
       "noBase": "Esta instalação não declarou base de projetos montados: não há de onde navegar, e o modo Pasta montada não tem onde existir aqui.",
       "baseUnknown": "Não foi possível consultar a base de projetos desta instalação — não dá para saber se ela existe, então o navegador de pastas fica indisponível. Recarregue a página para tentar de novo.",
       "baseLoading": "Consultando a base de projetos desta instalação…",
-      "runnerTyped": "O caminho digitado aqui é provisório: num projeto Runner, quem decide a pasta é o runner ao conectar, e a confirmação dele sobrescreve este valor (o agente de máquina usa <base>/<pasta do projeto>). É também por isso que não há navegador de pastas aqui: navegar exigiria um runner já conectado a ESTE projeto, e um runner conectado já confirmou a própria pasta. Converta; o próximo passo — conectar o runner — aparece logo abaixo."
+      "runnerTyped": "O caminho digitado aqui é provisório: num projeto Runner, quem decide a pasta é o runner ao conectar, e a confirmação dele sobrescreve este valor (o agente de máquina usa <base>/<pasta do projeto>). É também por isso que não há navegador de pastas aqui: navegar exigiria um runner já conectado a ESTE projeto, e um runner conectado já confirmou a própria pasta. Converta; o próximo passo — conectar o runner — aparece logo abaixo.",
+      "runnerTypedCurto": "Provisório: o runner confirma a pasta ao conectar."
     },
     "save": "Converter",
     "saving": "Convertendo…",
@@ -252,8 +256,11 @@
       "intro": "O projeto agora está no modo Runner e a pasta ainda não foi confirmada. A conversão está salva; o que falta é um runner se conectar a este projeto — é ele que confirma a pasta.",
       "machineAgent": "Se a sua máquina já tem um agente de máquina de pé: quando ele não atende projeto Runner nenhum, pega este sozinho em até 60 s. Quando já atende outro projeto Runner, NÃO pega — a lista de projetos é lida uma vez, quando o agente sobe —, então reinicie o serviço dele:",
       "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
-      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
-    }
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS",
+      "machineAgentCurto": "Agente de máquina já de pé e atendendo outro projeto? Reinicie o serviço:"
+    },
+    "noBrokerCurto": "Sem broker nesta instalação: só dá para converter para Runner.",
+    "noBrokerAssunto": "por que converter está inerte"
   },
   "parallelism": {
     "title": "Paralelismo por área",
@@ -348,7 +355,7 @@
     "otherLabel": "Código de idioma (BCP-47)",
     "otherHint": "Ex.: pt-PT, es-MX, fr-CA. A api recusa código que não seja um idioma.",
     "save": "Salvar",
-    "readOnly": "Só quem é maintainer ou owner do projeto troca o idioma dele. Você vê o valor, e o controle fica inerte.",
+    "readOnly": "Só maintainer ou owner troca o idioma.",
     "toast": {
       "saved": "Idioma do projeto salvo",
       "error": "Não foi possível salvar o idioma do projeto"
@@ -528,7 +535,9 @@
       "precisao": "Só cai o que se conectou com ESTA chave: outro runner seu no mesmo projeto, autenticado por outra chave ou por um token, continua conectado. Um pedido de conexão feito com ela e ainda não usado também deixa de valer.",
       "cancel": "Cancelar",
       "confirm": "Revogar"
-    }
+    },
+    "subtitleAlcanceCurto": "Revogar uma chave de MÁQUINA derruba o agente em todos os seus projetos runner.",
+    "subtitleNaoEBatimentoCurto": "Registrada não quer dizer rodando agora."
   },
   "instructionVersions": {
     "title": "Histórico de instruções",
@@ -558,12 +567,13 @@
       "latency": "menor latência"
     },
     "notSupported": "Sem preferência de roteamento: o provider {{provider}} não declara essa capacidade — ela só é declarada depois de provada contra a API real.",
-    "inherited": "Roteamento: {{valor}} — vem com o modelo do nível {{nivel}}.",
+    "inherited": "Roteamento: {{valor}} (do nível {{nivel}})",
     "inheritedHint": "Para defini-lo aqui, escolha um modelo próprio para esta linha.",
     "toast": {
       "saveError": "Não foi possível salvar a preferência de roteamento"
     },
-    "teto": "No OpenRouter, cada chamada também leva um teto de preço (1,5 × o preço do catálogo): só um upstream dentro dele atende; se nenhum atende, a chamada repete uma vez sem teto."
+    "teto": "No OpenRouter, cada chamada também leva um teto de preço (1,5 × o preço do catálogo): só um upstream dentro dele atende; se nenhum atende, a chamada repete uma vez sem teto.",
+    "notSupportedCurto": "Roteamento: não provado em {{provider}}"
   },
   "resolvedBindings": {
     "readError": "Não foi possível ler os modelos vigentes: {{reason}}",

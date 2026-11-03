@@ -71,7 +71,7 @@ export function PreferenciaDeRoteamento({
   if (!doProvider.capabilities.routingPreference) {
     return (
       <span className={styles.vazioComTexto} data-roteamento="sem-capability">
-        {t('roteamento.notSupported', { provider: modelo.provider })}
+        {t('roteamento.notSupportedCurto', { provider: modelo.provider })}
       </span>
     );
   }
@@ -80,22 +80,15 @@ export function PreferenciaDeRoteamento({
   const rotuloDoValor = valor
     ? t(`roteamento.options.${valor}`)
     : t('roteamento.options.hub');
-  // O teto de preço (priceCeiling) é do mesmo provider: dito junto do critério.
-  const teto = doProvider.capabilities.priceCeiling ? (
-    <span className={styles.vazioComTexto} data-roteamento="teto">
-      {t('roteamento.teto')}
-    </span>
-  ) : null;
+  // O teto de preço e a dica de herança moram no "?" da seção (ModelsSection).
 
   if (!proprio) {
     const nivel = t(`cascata.niveis.${resolvido.origin as ModelBindingScope}`);
     return (
       <>
         <span className={styles.vazioComTexto} data-roteamento="herdado">
-          {t('roteamento.inherited', { valor: rotuloDoValor, nivel })}{' '}
-          {t('roteamento.inheritedHint')}
+          {t('roteamento.inherited', { valor: rotuloDoValor, nivel })}
         </span>
-        {teto}
       </>
     );
   }
@@ -120,7 +113,6 @@ export function PreferenciaDeRoteamento({
           </option>
         ))}
       </Select>
-      {teto}
     </>
   );
 }
