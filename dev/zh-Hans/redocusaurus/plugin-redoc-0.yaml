@@ -7520,6 +7520,49 @@ paths:
       summary: 将会话移动到另一个状态
       tags:
         - sessions
+  /projects/{projectId}/source-clicks:
+    post:
+      description: >-
+        A click is NOT a vote: it never feeds `rag_feedback` (RN-480). A failed
+        write is logged with origin `infra` and answers an empty body — the
+        click navigates anyway.
+      operationId: SourceClicksController_registrar
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceClickRequestDto'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceClickResponseDto'
+        '400':
+          description: >-
+            请求体无效。`ValidationPipe` 以 `whitelist` 和 `forbidNonWhitelisted`
+            运行，因此未知字段也会失败。
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 在项目上的角色不足。
+        '404':
+          description: 项目不存在。
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: Records a click on a source of "Consulted this turn" (RN-983)
+      tags:
+        - rag
   /projects/{projectId}/spend/me:
     get:
       description: >-
@@ -19508,6 +19551,46 @@ components:
       required:
         - ticket
         - expiresAt
+    SourceClickRequestDto:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+          description: The `agent.response` event.
+        tipo:
+          type: string
+          enum:
+            - rag
+            - arquivo
+            - historia
+            - regra
+            - adr
+            - backlog
+            - metricas
+            - contratos
+        ref:
+          type: string
+        searchId:
+          type: string
+          format: uuid
+        chunkId:
+          type: string
+          format: uuid
+      required:
+        - eventId
+        - tipo
+    SourceClickResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      required:
+        - id
     SpendLinhaResponseDto:
       type: object
       properties:

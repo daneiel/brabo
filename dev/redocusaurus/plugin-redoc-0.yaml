@@ -8053,6 +8053,49 @@ paths:
       summary: Move a sessão para outro estado
       tags:
         - sessions
+  /projects/{projectId}/source-clicks:
+    post:
+      description: >-
+        A click is NOT a vote: it never feeds `rag_feedback` (RN-480). A failed
+        write is logged with origin `infra` and answers an empty body — the
+        click navigates anyway.
+      operationId: SourceClicksController_registrar
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceClickRequestDto'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceClickResponseDto'
+        '400':
+          description: >-
+            Corpo inválido. O `ValidationPipe` roda com `whitelist` e
+            `forbidNonWhitelisted`, então campo desconhecido também reprova.
+        '401':
+          description: Sem token, token expirado ou assinatura inválida.
+        '403':
+          description: Papel insuficiente no projeto.
+        '404':
+          description: Projeto não existe.
+        '429':
+          description: Rate limit por usuário ou por IP.
+      security:
+        - bearer: []
+      summary: Records a click on a source of "Consulted this turn" (RN-983)
+      tags:
+        - rag
   /projects/{projectId}/spend/me:
     get:
       description: >-
@@ -21014,6 +21057,46 @@ components:
       required:
         - ticket
         - expiresAt
+    SourceClickRequestDto:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+          description: The `agent.response` event.
+        tipo:
+          type: string
+          enum:
+            - rag
+            - arquivo
+            - historia
+            - regra
+            - adr
+            - backlog
+            - metricas
+            - contratos
+        ref:
+          type: string
+        searchId:
+          type: string
+          format: uuid
+        chunkId:
+          type: string
+          format: uuid
+      required:
+        - eventId
+        - tipo
+    SourceClickResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      required:
+        - id
     SpendLinhaResponseDto:
       type: object
       properties:
