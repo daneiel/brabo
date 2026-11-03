@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Server, Cog } from 'lucide-react';
 import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
 import { pollQueParaNoErro } from '../lib/query-policy';
@@ -20,9 +21,11 @@ function formatarInstanteDoStatus(iso: string | undefined, idioma: string): stri
 }
 
 function StatusRow({
+  icone,
   label,
   query,
 }: {
+  icone: ReactNode;
   label: string;
   query: ReturnType<typeof useHealthQuery>;
 }) {
@@ -42,7 +45,10 @@ function StatusRow({
 
   return (
     <tr style={{ borderTop: '1px solid var(--border)' }}>
-      <td style={{ padding: 'var(--space-2) var(--space-3)' }}>{label}</td>
+      <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
+        <span aria-hidden="true" style={{ marginRight: 8, verticalAlign: -2, display: 'inline-flex' }}>{icone}</span>
+        {label}
+      </td>
       <td
         style={{
           padding: 'var(--space-2) var(--space-3)',
@@ -155,8 +161,8 @@ export function StatusPage({
             </tr>
           </thead>
           <tbody>
-            <StatusRow label={t('status.services.api')} query={apiHealth} />
-            <StatusRow label={t('status.services.engine')} query={engineHealth} />
+            <StatusRow icone={<Server size={16} />} label={t('status.services.api')} query={apiHealth} />
+            <StatusRow icone={<Cog size={16} />} label={t('status.services.engine')} query={engineHealth} />
           </tbody>
         </table>
       </div>

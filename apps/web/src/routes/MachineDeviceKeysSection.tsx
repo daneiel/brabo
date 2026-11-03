@@ -1,4 +1,6 @@
 import { Shimmer } from '../components/ui/Shimmer';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Laptop } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -168,7 +170,7 @@ export function MachineDeviceKeysSection() {
   return (
     <div className={styles.section} data-secao="machine-keys">
       <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>{t('title')}</h2>
+        <h2 className={styles.sectionTitle}><Laptop aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('title')}</h2>
         <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('eyebrow')}</span>
       </div>
@@ -179,7 +181,10 @@ export function MachineDeviceKeysSection() {
 
       {isPending && <p className={styles.sectionSubtitle}><Shimmer>{t('verificando')}</Shimmer></p>}
       {isError && <p className={styles.sectionSubtitle}>{t('naoSei')}</p>}
-      {isSuccess && (
+      {isSuccess && (chaves ?? []).length === 0 && (
+        <EmptyState icone={<Laptop />} titulo={t('title')}>{t('emptyMessage')}</EmptyState>
+      )}
+      {isSuccess && (chaves ?? []).length > 0 && (
         <Table
           columns={colunas}
           rows={chaves ?? []}

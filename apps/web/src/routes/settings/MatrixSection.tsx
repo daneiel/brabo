@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Grid3x3 } from 'lucide-react';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { ROLE_ORDER } from '../../lib/roles';
 import type { Role } from '../../lib/api-types';
@@ -19,7 +20,7 @@ export function MatrixSection() {
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('matrix.title')}</h2>
+        <h2 className={styles.title}><Grid3x3 aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('matrix.title')}</h2>
         <Ajuda assunto={t('matrix.title')}>{t('matrix.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
       </div>

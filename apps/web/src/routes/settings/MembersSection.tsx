@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { Users } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -262,7 +263,7 @@ export function MembersSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="members">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('members.title')}</h2>
+        <h2 className={styles.title}><Users aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('members.title')}</h2>
         <Ajuda assunto={t('members.title')}>
           {t('members.subtitle')} {t('members.subtitleCascata')}
         </Ajuda>

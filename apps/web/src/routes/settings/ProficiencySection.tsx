@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GraduationCap } from 'lucide-react';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -156,7 +157,7 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="proficiency">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('proficiency.title')}</h2>
+        <h2 className={styles.title}><GraduationCap aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('proficiency.title')}</h2>
         <Ajuda assunto={t('proficiency.title')}>{t('proficiency.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('proficiency.eyebrow')}</span>
       </div>

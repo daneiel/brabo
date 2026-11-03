@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 
 // Cabeçalho de página linear (AT-714): título, descrição e ações à direita.
 function CabecalhoDePagina({
+  icone,
   titulo,
   descricao,
   acoes,
@@ -10,6 +11,7 @@ function CabecalhoDePagina({
   className,
   ...props
 }: Omit<React.ComponentProps<"header">, "title"> & {
+  icone?: React.ReactNode
   titulo: React.ReactNode
   descricao?: React.ReactNode
   acoes?: React.ReactNode
@@ -26,7 +28,10 @@ function CabecalhoDePagina({
       {...props}
     >
       <div className="min-w-0">
-        <Titulo className="text-xl font-semibold text-foreground">{titulo}</Titulo>
+        <Titulo className="text-xl font-semibold text-foreground">
+          {icone && <span aria-hidden="true" className="mr-2 inline-flex align-[-3px] text-muted-foreground">{icone}</span>}
+          {titulo}
+        </Titulo>
         {descricao && (
           <p className="mt-1 text-sm text-muted-foreground">{descricao}</p>
         )}

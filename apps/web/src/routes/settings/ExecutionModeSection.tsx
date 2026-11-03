@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Server } from 'lucide-react';
 import { Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -367,7 +368,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="execution-mode">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('executionMode.title')}</h2>
+        <h2 className={styles.title}><Server aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('executionMode.title')}</h2>
         <Ajuda assunto={t('executionMode.title')}>
           {t('executionMode.subtitle')}
           {descricaoDoModo ? ` ${t(descricaoDoModo)}` : null}

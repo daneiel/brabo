@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getBootstrapPlan, getRepository } from '../../lib/api-client';
 import { divergencias } from '../../lib/adoption';
@@ -38,7 +39,7 @@ export function RepositorySection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="repository">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('repository.title')}</h2>
+        <h2 className={styles.title}><GitBranch aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('repository.title')}</h2>
         <span className={styles.eyebrow}>{t('repository.eyebrow')}</span>
       </div>
       <div className={styles.subtitle}>

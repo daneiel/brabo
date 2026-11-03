@@ -16165,7 +16165,7 @@ projeto aberto, e as outras listas seguiam anunciando a revogada.
   (`RevokeMachineDeviceKeyUseCase`);
   `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:97`
   (`listarDeMaquinaDoUsuario`);
-  `apps/web/src/routes/MachineDeviceKeysSection.tsx:69`
+  `apps/web/src/routes/MachineDeviceKeysSection.tsx:73`
   (`MachineDeviceKeysSection`);
   `apps/web/src/lib/chaves-de-dispositivo-queries.ts:31`
   (`invalidarChavesDeDispositivo`);
@@ -18279,7 +18279,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:78` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:85` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
@@ -20462,7 +20462,7 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
   `apps/web/src/lib/models.ts:491` (`providersSemCatalogo`),
   `apps/web/src/lib/models.ts:507` (`algumModeloAtivo`),
-  `apps/web/src/routes/settings/CredentialsSection.tsx:119` (`handleSync`)
+  `apps/web/src/routes/settings/CredentialsSection.tsx:123` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
   (busca por id e sem resultado; sem atalho "ativar e aplicar"; sync no card,
   com e sem catálogo, e a falha)

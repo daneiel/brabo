@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
+
 ### Correções
 
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
