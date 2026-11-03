@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18next from 'i18next';
+import uiPtBR from '../locales/pt-BR/ui.json';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { ProjectBacklogTab } from './ProjectBacklogTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -74,12 +75,12 @@ function novaInstanciaI18n() {
   void instancia.use(initReactI18next).init({
     resources: {
       en: { backlog: backlogEn },
-      'pt-BR': { backlog: backlogPtBR },
+      'pt-BR': { backlog: backlogPtBR, ui: uiPtBR },
     },
     lng: 'pt-BR',
     fallbackLng: 'en',
     defaultNS: 'backlog',
-    ns: ['backlog'],
+    ns: ['backlog', 'ui'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -130,8 +131,9 @@ describe('ProjectBacklogTab — aguardando sua promoção (Fase 12c, RN-048)', (
     montar();
 
     expect(await screen.findByText('Aguardando sua promoção')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ajuda: Aguardando sua promoção' }));
     expect(
-      screen.getByText(/nenhuma tarefa delas é pegável por um dev agent/),
+      await screen.findByText(/nenhuma tarefa delas é pegável por um dev agent/),
     ).toBeTruthy();
   });
 
@@ -275,10 +277,13 @@ describe('ProjectBacklogTab — corrigir história (RN-727)', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText('Editar título').closest('button')?.disabled,
+        (screen.getByRole('button', { name: 'Editar título' }) as HTMLButtonElement).disabled,
       ).toBe(false),
     );
-    fireEvent.click(screen.getByText('Editar título'));
+    expect(
+      screen.getByRole('button', { name: 'Editar título' }).querySelector('svg')?.getAttribute('aria-hidden'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Editar título' }));
     fireEvent.change(screen.getByLabelText('Título'), {
       target: { value: 'Cadastrar usuário novo' },
     });
@@ -330,7 +335,7 @@ describe('ProjectBacklogTab — corrigir história (RN-727)', () => {
       await screen.findByText('Editar e arquivar pedem o papel developer ou acima.'),
     ).toBeTruthy();
     expect(
-      screen.getByText('Editar título').closest('button')?.disabled,
+      (screen.getByRole('button', { name: 'Editar título' }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
 });

@@ -10,6 +10,8 @@ import { RagCitationCard } from '../components/rag/RagCitationCard';
 import { RagCoveragePanel } from '../components/rag/RagCoveragePanel';
 import { AttachLocalFolderModal } from '../components/rag/AttachLocalFolderModal';
 import { Button } from '../components/ui/Button';
+import { Ajuda } from '../components/ui/Ajuda';
+import { RefreshCw } from 'lucide-react';
 import { Chip } from '../components/ui/Chip';
 import { useToast } from '../components/ui/ToastProvider';
 import { AlertIcon, FolderIcon, SearchIcon } from '../components/ui/icons';
@@ -119,20 +121,27 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
     <div className={styles.pagina}>
       <div className={styles.cabecalho}>
         <div>
-          <h2 className={styles.titulo}>{t('rag.title')}</h2>
-          <p className={styles.subtitulo}>{t('rag.subtitle')}</p>
+          <h2 className={styles.titulo}>
+            {t('rag.title')}
+            <Ajuda assunto={t('rag.title')}>{t('rag.subtitle')}</Ajuda>
+          </h2>
         </div>
         {podeReindexar && (
           <div className={styles.acoesCabecalho}>
-            <Button variant="secondary" onClick={() => setAnexandoPasta(true)}>
-              <FolderIcon size={14} /> {t('rag.attachLocalFolder.button')}
+            <Button
+              variant="secondary"
+              legenda={t('rag.attachLocalFolder.button')}
+              onClick={() => setAnexandoPasta(true)}
+            >
+              <FolderIcon size={14} aria-hidden="true" />
             </Button>
             <Button
               variant="secondary"
+              legenda={reindexMutation.isPending ? t('rag.reindexButton.loading') : t('rag.reindexButton.idle')}
               onClick={() => reindexMutation.mutate()}
               loading={reindexMutation.isPending}
             >
-              {reindexMutation.isPending ? t('rag.reindexButton.loading') : t('rag.reindexButton.idle')}
+              <RefreshCw aria-hidden="true" />
             </Button>
           </div>
         )}
@@ -169,8 +178,8 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
             placeholder={t('rag.searchPlaceholder')}
             aria-label={t('rag.searchAriaLabel')}
           />
-          <Button type="submit" disabled={termo.trim().length < 2}>
-            <SearchIcon size={14} /> {t('rag.searchButton')}
+          <Button type="submit" legenda={t('rag.searchButton')} disabled={termo.trim().length < 2}>
+            <SearchIcon size={14} aria-hidden="true" />
           </Button>
         </div>
         <div className={styles.escoposFiltro} role="group" aria-label={t('rag.scopeFilterAriaLabel')}>
