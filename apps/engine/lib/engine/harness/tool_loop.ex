@@ -203,6 +203,7 @@ defmodule Engine.Harness.ToolLoop.Default do
               },
               Engine.Agents.FontesDoTurno.descarregar()
             )
+            |> Engine.Harness.CitacaoDasFontes.marcar()
           )
         end
 

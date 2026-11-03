@@ -319,6 +319,26 @@ defmodule Engine.Harness.ToolLoopTest do
                      }}
   end
 
+  test "RN-985: o ToolLoop grava citacoes validas", %{ctx: ctx} do
+    dir = Path.join(System.tmp_dir!(), "brabo-cit-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    File.write!(Path.join(dir, "a.txt"), "oi")
+    on_exit(fn -> File.rm_rf!(dir) end)
+
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("read_file", %{"path" => "a.txt"}),
+      FakeEngineApiClient.final_response("pronto [1][2]")
+    ])
+
+    assert {:ok, _} = ToolLoop.run(Map.put(ctx, :workspace_root, dir))
+
+    assert_received {:event_appended, _, _,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "pronto [1][2]", citacoes: [1]}
+                     }}
+  end
+
   # RN-175 — "todos os agentes devem apresentar o seu modelo ao lado do nome".
   # Os quatro conversacionais gravam `modelName` desde a RN-146; o `ToolLoop`,
   # que é o caminho de TODO agente de execução e de gate, nunca gravou — e a

@@ -25535,3 +25535,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
 - **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-716 fatia 4 (EP-031).
+
+### RN-985 — A citação inline é marcada pelo modelo e validada contra as fontes do próprio turno; índice inventado não é mostrado {#rn-985}
+
+- **Regra:** quando o turno já tem fonte (RN-982), uma mensagem `system` EFÊMERA no fim da chamada (mesmo caminho da RN-622, nunca em `state.messages`, sem nomear idioma, RN-667) lista as fontes como `[n] rótulo` (até 10, na ordem de `fontes`) e pede "cite com [n]; não cite o que não está na lista" (teto de 250 tokens; 10 fontes medem ~55). No fecho, o servidor extrai os `[n]` do texto e grava `citacoes` no `agent.response` só com os que existem em `fontes` (`1 <= n <= fontes.length`), sem repetição e em ordem. O `content` NÃO é reescrito (RN-731): o marcador inválido fica no texto e a tela o descarta. Sem fontes, ou sem marcador válido, o campo não existe.
+- **Onde:** `apps/engine/lib/engine/harness/citacao_das_fontes.ex:22` (`anexar`) e `:43` (`marcar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:739` (`llm_turn`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:206` (`marcar`).
+- **Teste:** `apps/engine/test/engine/harness/citacao_das_fontes_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-985").
+- **Origem:** AT-716 fatia 3 (EP-031).

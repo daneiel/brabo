@@ -100,10 +100,9 @@ defmodule Engine.Agents.TextoDoTurno do
 
         # RN-982: as fontes são as leituras `ok` do turno, FORA do `content`.
         base =
-          Map.merge(
-            %{content: fecho, modelName: modelo || visto},
-            Engine.Agents.FontesDoTurno.descarregar()
-          )
+          %{content: fecho, modelName: modelo || visto}
+          |> Map.merge(Engine.Agents.FontesDoTurno.descarregar())
+          |> Engine.Harness.CitacaoDasFontes.marcar()
 
         if passos == [], do: base, else: Map.put(base, :passos, passos)
     end

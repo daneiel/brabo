@@ -736,6 +736,7 @@ defmodule Engine.Sessions.EngineApiClient do
       |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
+      |> Engine.Harness.CitacaoDasFontes.anexar()
 
     impl().llm_turn(project_id, session_id, agent, enviadas, tools, [])
     |> repetir_com_catalogo_inteiro(tools, fn ->
@@ -820,6 +821,7 @@ defmodule Engine.Sessions.EngineApiClient do
       |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
+      |> Engine.Harness.CitacaoDasFontes.anexar()
 
     impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta, [])
     |> repetir_stream_sem_texto(tools, fn ->
