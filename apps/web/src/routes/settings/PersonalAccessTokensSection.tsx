@@ -1,4 +1,5 @@
 import { Snippet } from '../../components/ai-elements/snippet';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -210,13 +211,11 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
     <SecaoDeConfiguracoes chave="access-tokens">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('personalAccessTokens.title')}</h2>
+        <Ajuda assunto={t('personalAccessTokens.title')}>{t('personalAccessTokens.subtitle.before')}
+        <code>brabo-runner</code>
+        {t('personalAccessTokens.subtitle.after')}</Ajuda>
         <span className={styles.eyebrow}>{t('personalAccessTokens.eyebrow')}</span>
       </div>
-      <p className={styles.subtitle}>
-        {t('personalAccessTokens.subtitle.before')}
-        <code>brabo-runner</code>
-        {t('personalAccessTokens.subtitle.after')}
-      </p>
 
       <div className={styles.inviteBar}>
         <div className={styles.inviteInput}>

@@ -387,7 +387,8 @@
   "proficiency": {
     "title": "熟练度画像",
     "eyebrow": "Anamnese · 推导",
-    "subtitle": "由 Anamnese 根据你的交互推导。仅包含技术与流程能力——绝不包含个人特征。",
+    "subtitle": "由 Anamnese 根据你的交互推导。",
+    "privacidade": "仅包含技术与流程能力——绝不包含个人特征。",
     "emptyMessage": "暂无内容——Anamnese 会定期基于项目日志运行。",
     "deleteButton": "删除我的画像",
     "reactivateButton": "重新启用画像",

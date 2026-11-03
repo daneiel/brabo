@@ -18,9 +18,9 @@ import {
 import type { RunnerDeviceKeyListItem } from '../../lib/api-types';
 import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
+import { Ajuda } from '../../components/ui/Ajuda';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Button as BotaoShadcn } from '@/components/shadcn/button';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -248,17 +248,14 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
       // oferecer o gesto sugeriria que sobrou efeito a produzir.
       render: (chave) =>
         chave.revokedAt ? null : (
-          <BotaoShadcn
-            type="button"
+          <Button
             variant="ghost"
-            size="icon-sm"
-            aria-label={t('runnerDeviceKeys.table.revokeAria', { name: chave.name })}
-            title={t('runnerDeviceKeys.table.revokeTitle')}
-            className={styles.remove}
+            icon
+            legenda={t('runnerDeviceKeys.table.revokeAria', { name: chave.name })}
             onClick={() => setARevogar(chave)}
           >
             <TrashIcon size={14} />
-          </BotaoShadcn>
+          </Button>
         ),
     },
   ];
@@ -276,17 +273,16 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="device-keys">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('runnerDeviceKeys.title')}</h2>
+        <Ajuda assunto={t('runnerDeviceKeys.title')}>{t('runnerDeviceKeys.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('runnerDeviceKeys.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
-        {t('runnerDeviceKeys.subtitle')}
         {/*
           O ALCANCE da espécie de máquina, dito onde a coluna que a marca é
           lida — sem esta frase a marca seria decoração, e é ela que separa
           "derruba o agente aqui" de "derruba o agente em todos os seus
           projetos".
         */}
-        {' '}
         {t('runnerDeviceKeys.subtitleAlcance')}
         {/*
           E a ressalva de sempre: registro de uma confirmação, não batimento.

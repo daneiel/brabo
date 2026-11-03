@@ -395,7 +395,8 @@
   "proficiency": {
     "title": "Proficiency profile",
     "eyebrow": "anamnesis · derived",
-    "subtitle": "Derived by the Anamnesis from your interactions. Only technical and process competencies — never personal traits.",
+    "subtitle": "Derived by the Anamnesis from your interactions.",
+    "privacidade": "Only technical and process competencies — never personal traits.",
     "emptyMessage": "Nothing yet — the Anamnesis runs periodically over the project's log.",
     "deleteButton": "Delete my profile",
     "reactivateButton": "Go back to being profiled",

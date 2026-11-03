@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +15,7 @@ import { useProficiency } from '../../lib/hooks';
 import type { ProficiencyLevel, ProficiencyProfile } from '../../lib/api-types';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Play, Trash2 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -155,11 +157,11 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="proficiency">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('proficiency.title')}</h2>
+        <Ajuda assunto={t('proficiency.title')}>{t('proficiency.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('proficiency.eyebrow')}</span>
       </div>
-      <div className={styles.subtitle} style={{ marginBottom: 12 }}>
-        {t('proficiency.subtitle')}
-      </div>
+      {/* Garantia de privacidade: fica visível, não vai para o "?" (AT-712). */}
+      <p className={styles.subtitle}>{t('proficiency.privacidade')}</p>
 
       {all.length === 0 ? (
         <div className={styles.subtitle}>{t('proficiency.emptyMessage')}</div>
@@ -199,21 +201,25 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
         <Button
           variant="danger"
+          icon
+          legenda={t('proficiency.deleteButton')}
           disabled={emVoo}
           onClick={() => setConfirmandoDelete(true)}
         >
-          {t('proficiency.deleteButton')}
+          <Trash2 aria-hidden="true" />
         </Button>
         <Button variant="ghost" disabled={emVoo} onClick={handleOptIn}>
           {t('proficiency.reactivateButton')}
         </Button>
         <Button
           variant="secondary"
+          icon
+          legenda={t('proficiency.runNowButton')}
           disabled={emVoo || anamneseDesativada}
           onClick={handleRunNow}
           title={anamneseDesativada ? t('proficiency.runNowDisabledTitle') : undefined}
         >
-          {t('proficiency.runNowButton')}
+          <Play aria-hidden="true" />
         </Button>
       </div>
 

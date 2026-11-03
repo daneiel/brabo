@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject, updateProject } from '../../lib/api-client';
@@ -53,12 +54,10 @@ export function PromotionSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="promotion">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('promotion.title')}</h2>
-        <span className={styles.eyebrow}>{t('promotion.eyebrow')}</span>
-      </div>
-      <div className={styles.subtitle}>
-        {t('promotion.subtitle.before')}
+        <Ajuda assunto={t('promotion.title')}>{t('promotion.subtitle.before')}
         <em>{t('promotion.subtitle.em')}</em>
-        {t('promotion.subtitle.after')}
+        {t('promotion.subtitle.after')}</Ajuda>
+        <span className={styles.eyebrow}>{t('promotion.eyebrow')}</span>
       </div>
 
       <div className={styles.ajusteCard}>
