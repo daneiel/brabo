@@ -94,9 +94,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2532 de 2532 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2746 de 2746 (100.0%) | 0 |
-| `zh-Hans` | other | 2425 de 2425 (100.0%) | 0 |
+| `en` | one, other | 2540 de 2540 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2754 de 2754 (100.0%) | 0 |
+| `zh-Hans` | other | 2433 de 2433 (100.0%) | 0 |
 
 ## API (Redoc)
 
