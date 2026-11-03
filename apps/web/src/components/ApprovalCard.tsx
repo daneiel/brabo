@@ -1,4 +1,5 @@
 import { useContext, useRef, useState, type CSSProperties } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { Terminal } from './ai-elements/terminal';
 import { Commit } from './ai-elements/commit';
 import { QueryClientContext } from '@tanstack/react-query';
@@ -457,10 +458,15 @@ export function ApprovalCard({
               <span>
                 {ehAgenteDeModulo
                   ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
-                  : action.actionType === 'terminal'
+                  : t('approvalCard.notes.alwaysAllowCurta')}
+              </span>
+              {!ehAgenteDeModulo && (
+                <Ajuda assunto={t('approvalCard.actions.alwaysAllow')}>
+                  {action.actionType === 'terminal'
                     ? t('approvalCard.notes.alwaysAllow')
                     : t('approvalCard.notes.alwaysAllowTyped')}
-              </span>
+                </Ajuda>
+              )}
             </p>
           )}
           {/* A nota do modo automático sai onde o botão sai (RN-603): é a
@@ -472,11 +478,12 @@ export function ApprovalCard({
             <>
               <p className={styles.note} data-testid="nota-modo-automatico">
                 <AlertIcon size={14} className={styles.noteIcon} />
-                <span>
+                <span>{t('approvalCard.notes.autoModeCurta', { actor: actorLabel })}</span>
+                <Ajuda assunto={t('approvalCard.actions.autoMode')}>
                   {action.actionType === 'terminal'
                     ? t('approvalCard.notes.autoMode', { actor: actorLabel })
                     : t('approvalCard.notes.autoModeTyped', { actor: actorLabel })}
-                </span>
+                </Ajuda>
               </p>
               {/* AT-443: ligar o modo NÃO decide este card — ele segue
                   pendente, com "Aprovar" como a ação principal. Aprovar junto

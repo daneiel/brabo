@@ -17310,7 +17310,7 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:232` (`decidir`, a
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:236` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
@@ -22248,7 +22248,7 @@ sem dizer qual.
   modo automático não aprova esta ação: ela continua esperando o seu
   Aprovar."). Aprovar o cartão junto com a ligação do modo seria decisão do
   dono e NÃO foi feito.
-- **Onde:** `apps/web/src/components/ApprovalCard.tsx:207` (`ApprovalCard`)
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:211` (`ApprovalCard`)
 - **Teste:** `apps/web/src/components/ApprovalCard.test.tsx` (`ligar o
   "Modo automático" não aprova o card, e o card diz isso`; sem o botão, a nota
   não sai)
@@ -23116,7 +23116,7 @@ sem dizer qual.
   ([RN-755](#rn-755)). Só aparece onde quem chama passou o callback do modo
   automático (papel `maintainer`) e há `QueryClient`. O cartão segue único
   (AT-322): é um bloco a mais do tipo, não variante de aparência.
-- **Onde:** `apps/web/src/components/ApprovalCard.tsx:359`
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:363`
   (`ModoAutomaticoDoPlano`), `apps/web/src/components/ModoAutomaticoDoPlano.tsx:17`
   (`agentesDoPlano`)
 - **Teste:** `apps/web/src/components/ApprovalCard.modo-automatico-do-plano.test.tsx`

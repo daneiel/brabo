@@ -50,9 +50,8 @@ export function ReligarExecucao({ projectId, tarefasPendentes }: ReligarExecucao
         {erro && <ItemDescription role="alert">{erro}</ItemDescription>}
       </ItemContent>
       <ItemActions>
-        <Button variant="primary" onClick={() => void religar()} disabled={enviando}>
+        <Button variant="primary" legenda={t('religar.botao')} onClick={() => void religar()} disabled={enviando}>
           <Play aria-hidden="true" />
-          {t('religar.botao')}
         </Button>
       </ItemActions>
     </Item>
