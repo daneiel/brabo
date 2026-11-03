@@ -357,6 +357,7 @@ defmodule Engine.Agents.ArquitetoServer do
     resultado = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
     Engine.Agents.GravadoNoTurno.anotar(name, args, resultado, state.project_id)
+    Engine.Agents.FontesDoTurno.anotar(name, args, resultado, state.project_id)
     {_, text} = resultado
 
     append(state, %{

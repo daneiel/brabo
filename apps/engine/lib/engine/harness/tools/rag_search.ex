@@ -90,6 +90,8 @@ defmodule Engine.Harness.Tools.RagSearch do
 
     case EngineApiClient.rag_search(ctx.project_id, query, top_k, opts) do
       {:ok, %{"hits" => hits} = resp} when is_list(hits) ->
+        Engine.Agents.FontesDoTurno.guardar_hits_rag(Map.get(resp, "searchId"), hits)
+
         {:ok,
          montar_resposta(
            query,

@@ -1108,7 +1108,9 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    registrar_resultado(state, id, name, executar_ferramenta(name, args, state))
+    resultado = executar_ferramenta(name, args, state)
+    Engine.Agents.FontesDoTurno.anotar(name, args, resultado, state.project_id)
+    registrar_resultado(state, id, name, resultado)
   end
 
   # O desfecho de uma ferramenta despachada inline, nos DOIS lugares de
