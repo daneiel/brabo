@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O "?" e os botões só de ícone chegam às telas restantes (AT-713): Sessão (Enviar, Pôr na fila, Parar, Ativar, Iniciar ideação, Tentar de novo, Responder, Aceitar sugestão, Dispensar, Fixar idioma; convite, handoff da Infra e reabertura com linha curta e o resto no "?"), Executores e Aprovações (modo automático do time e notas de Sempre permitir/Modo automático curtas, Religar, rearmar, Limpar seleção), Histórias, Percepções e Chat RAG (fila de promoção no "?", Editar título, Reanalisar, Anexar pasta, Reindexar, Buscar, útil/irrelevante), Código e o assistente de projeto. Motivo de inerte, recorte declarado, consequência irreversível e as decisões (Aprovar, Negar, Mergear, Promover, Devolver, Arquivar) seguem com texto visível.
+
 - O "?" de ajuda fica logo após o texto do título, centralizado na vertical, e o Salvar do teto de orçamento fica na mesma linha de "Ao atingir o teto".
 
 - Ajustes da prévia v6 (AT-682, AT-712, ADR 0240): em Containers os motivos de inércia por linha vão para um "?" ativo ao lado dos botões ("Por que as ações estão indisponíveis"); Ativar vira `Play`, Aceitar e Estou pronto viram `ThumbsUp` e Modo automático vira `Plane` (card de aprovação, toggle do agente e time), todos só ícone com legenda e nome acessível.
