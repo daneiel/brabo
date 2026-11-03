@@ -502,5 +502,17 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 - o motivo de um controle inerte (RN-646, RN-102, ADR 0064): tooltip em `disabled` não abre;
   - EXCEÇÃO, só na página de Containers (ADR 0240): os motivos por linha moram num `Ajuda` ATIVO, assunto "Por que as ações estão indisponíveis", ao lado dos botões; o "?" não é `disabled` e abre no clique, no teclado e no hover. O motivo de papel continua em texto, no topo. Em nenhuma outra tela.
 - a consequência irreversível ou o teto absoluto antes de agir (RN-939, RN-418);
+  - EXCEÇÃO, só no aviso de conversão de modo de execução (ADR 0243): ele mora no `Perigo` (`components/ui/Perigo.tsx`, ícone `TriangleAlert` na cor `--danger`, Popover como o `Ajuda`, nome acessível "Atenção: {assunto}", `ui:perigo.rotulo`), sempre visível ao lado do seletor nas mesmas condições do aviso antigo, com o aviso inteiro no popover. Outro uso exige outro ADR.
 - o recorte declarado, como a janela de dias e o teto de leitura (RN-180);
 - a divergência de estado e a lacuna que uma RN manda dizer (RN-486, RN-468, RN-470).
+
+## Desenho linear da v7 (AT-714, ADR 0241/0242)
+
+- **Sidebar**: block `sidebar-07` do shadcn, 256px abertos e 48 recolhidos,
+  Ctrl/Cmd+B, ícones Lucide.
+- **Tabela linear** (`components/ui/Table`, Containers com
+  `@tanstack/react-table`): uma linha por item, ações só ícone com `legenda`.
+- **`CabecalhoDePagina`** (`components/shadcn/cabecalho-de-pagina.tsx`): título,
+  descrição e ações; `nivel="h2"` quando a página já tem `h1` (painéis de Gastos).
+- **`SectionCards`** (`components/shadcn/section-cards.tsx`): destaques de total
+  em linha, sem cartões aninhados.

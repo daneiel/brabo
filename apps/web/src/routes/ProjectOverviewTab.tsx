@@ -568,7 +568,7 @@ function ExecutionSection({
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>{t('executionSection.title')}</div>
+      <h2 className={styles.sectionHeader}>{t('executionSection.title')}</h2>
       {/* Os três estados da RN-088: sem eles, "resumo ainda não chegou"
           (`executionActivatedPending`) ficava indistinguível de "nunca
           ativou" e oferecia "Ativar execução" de novo para uma execução que
@@ -778,7 +778,7 @@ function ArchitectureSummary({
 
   return (
     <div className={styles.arch}>
-      <div className={styles.sectionHeader}>{t('architectureSummary.title')}</div>
+      <h2 className={styles.sectionHeader}>{t('architectureSummary.title')}</h2>
       <Item variant="outline" size="sm">
        <ItemContent>
         <ItemDescription>

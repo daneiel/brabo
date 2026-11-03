@@ -10,7 +10,13 @@ import type { JSX } from 'react';
 import type { GitProviderName } from './lib/api-types';
 import { Shell } from './routes/Shell';
 import { resolverChaveDeAba, type ChaveDeAba } from './routes/project-tabs';
-import { resolverChaveDeSecao, type ChaveDeSecao } from './routes/settings/sumario';
+import {
+  ehGrupoDoSumario,
+  resolverChaveDeSecao,
+  resolverGrupo,
+  type ChaveDeSecao,
+  type GrupoDoSumario,
+} from './routes/settings/sumario';
 import { CarregandoRota } from './components/CarregandoRota';
 import {
   definirSenha,
@@ -299,6 +305,8 @@ interface ProjectSearch {
    * duas decisões independentes.
    */
   section?: ChaveDeSecao;
+  /** RN-980: a página (grupo) de Configurações. */
+  group?: GrupoDoSumario;
   /** RN-884: a história que a aba Histórias abre (o "Corrigir a história"). */
   historia?: string;
 }
@@ -317,11 +325,12 @@ const projectRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
     tab: resolverChaveDeAba(search.tab),
     section: resolverChaveDeSecao(search.section),
+    group: ehGrupoDoSumario(search.group) ? search.group : undefined,
     historia: typeof search.historia === 'string' ? search.historia : undefined,
   }),
   component: comCarga(ProjectPageLazy, () => {
     const { projectId } = projectRoute.useParams();
-    const { tab, section, historia } = projectRoute.useSearch();
+    const { tab, section, group, historia } = projectRoute.useSearch();
     // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
     // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
     // registro de abas existe para não repetir: um link que a URL aceita e a
@@ -329,8 +338,9 @@ const projectRoute = createRoute({
     return (
       <ProjectPageLazy
         projectId={projectId}
-        initialTab={tab ?? (section ? 'settings' : undefined)}
+        initialTab={tab ?? (section || group ? 'settings' : undefined)}
         initialSection={section}
+        initialGroup={resolverGrupo(section, group)}
         initialStory={historia}
       />
     );

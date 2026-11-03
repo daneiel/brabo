@@ -5,14 +5,10 @@
   min-height: 0;
 }
 
-/* Faixa `surface-1` agrupando o cabeçalho e a régua — eram dois blocos
-   separados aqui, cada um com sua própria linha de 1px 40px distantes um do
-   outro; agora ficam ADJACENTES, cada um com a SUA divisória (`.headerTop`
-   aqui, `.list` em `Tabs.module.css`), como o handoff literalmente desenha
-   (cada `<div>` do handoff declara o próprio `border-bottom`). */
+/* Cabeçalho linear: título, meta e ações, com uma única divisória embaixo. */
 .header {
   flex-shrink: 0;
-  background: var(--surface-1);
+  padding: 16px 24px 14px;
 }
 
 /*
@@ -31,70 +27,15 @@
  * altura fixa para transbordar — só protege contra um filho posicionado que
  * escape da caixa.
  */
-.headerTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  min-height: var(--header-h, 60px);
-  padding: 16px 24px 14px;
-  border-bottom: 1px solid var(--border);
-  overflow: hidden;
-}
 
 /* A ponta direita da faixa: o chip que abre o painel "precisa de você" e o
    medidor de orçamento, nessa ordem. O chip vem ANTES porque é ele que diz se
    alguma coisa espera decisão — o medidor informa, o chip convoca. */
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
 
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
 
-.providerIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
-.identity {
-  min-width: 0;
-}
 
-.titleRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
 
-.name {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* `github · privado` — o que o repositório É, ao lado do nome. */
 /* `ui/Badge square size="md"` (AT-287); aqui só o comportamento na linha do
@@ -104,10 +45,10 @@
 }
 
 .meta {
-  display: flex;
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 3px;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);

@@ -4,6 +4,7 @@
   "loadError": "Não foi possível carregar os containers.",
   "loading": "Carregando…",
   "empty": "Este workspace ainda não tem projeto nenhum.",
+  "pagination": { "label": "Paginação", "previous": "Anterior", "next": "Próxima", "status": "{{page}} / {{total}}" },
   "table": {
     "project": "Projeto",
     "image": "Imagem",

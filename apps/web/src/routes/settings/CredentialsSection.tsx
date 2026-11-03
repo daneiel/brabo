@@ -21,6 +21,7 @@ import { Input } from '../../components/ui/Input';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from '@/components/shadcn/item';
 import styles from '../ProjectSettingsTab.module.css';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 import { listProviderCapabilities } from '../../lib/api-client';
@@ -231,87 +232,83 @@ export function CredentialsSection() {
         </Ajuda>
       </div>
 
-      {/* Grid de conectores do handoff (seção 7, item 4): um card por
-          provider, borda esquerda na cor dele, sigla de duas letras, tipo em
-          mono e ponto de status pulsante. Era uma pilha de nove faixas de
-          largura total, e o desenho pede
-          `repeat(auto-fill, minmax(300px, 1fr))`. */}
-      <div className={styles.conectorGrid}>
+      {/* Lista linear (AT-714, prévia v7): uma linha `Item` por provider —
+          sigla, nome, estado da chave e ações só com ícone. A credencial é
+          write-only e nunca volta do servidor (ADR 0050): a linha mostra a
+          data, nunca uma chave mascarada inventada. */}
+      <ItemGroup className={styles.conectorLista}>
         {CREDENCIAIS_DE_LLM.map(({ id, label, kind }) => {
           const existing = credentials?.find((c) => c.provider === id);
           const rascunho = drafts[id]?.trim() ?? '';
           const ocupado = emVoo === id;
           const cor = COR_DO_PROVIDER[id];
           return (
-            <div
+            <Item
               key={id}
-              className={styles.conectorCard}
+              variant="outline"
+              size="sm"
+              className="flex-wrap"
               style={{ ['--conector-cor' as string]: cor } as CSSProperties}
             >
-              <div className={styles.conectorTopo}>
+              <ItemMedia>
                 <span className={styles.conectorSigla}>{siglaDoConector(label)}</span>
-                <div className={styles.conectorIdent}>
-                  <div className={styles.conectorNome}>{label}</div>
-                  <div className={styles.conectorTipo}>
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>
+                  {label}
+                  <span className={styles.conectorTipo}>
                     {/* Um hub roteia para provedores de terceiros: o custo e a
                         disponibilidade dependem de quem serve por baixo. */}
                     {kind === 'hub'
                       ? t('credentials.connector.hub')
                       : t('credentials.connector.provider')}
-                  </div>
-                </div>
-                <span
-                  className={[styles.conectorStatus, existing && styles.conectorAtivo]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className={styles.conectorPonto} />
+                  </span>
+                </ItemTitle>
+                <ItemDescription>
                   {existing
-                    ? t('credentials.connector.configured')
-                    : t('credentials.connector.missing')}
-                </span>
-              </div>
-
-              {/* O desenho mostra a chave mascarada. Aqui ela NÃO existe: a
-                  credencial é write-only e nunca volta do servidor (ADR 0050).
-                  Mostrar `sk-••••` seria inventar um prefixo que ninguém leu. */}
-              <div className={styles.conectorNota}>
+                    ? t('credentials.connector.configuredNote', {
+                        date: new Date(existing.updatedAt).toLocaleDateString(i18n.language),
+                      })
+                    : t('credentials.connector.noneSaved')}
+                  {existing && semCatalogo.has(id) && (
+                    <>
+                      {' '}
+                      {semListModels(id)
+                        ? t('credentials.connector.noCatalogSource')
+                        : t('credentials.connector.noModels')}
+                    </>
+                  )}
+                </ItemDescription>
+              </ItemContent>
+              <span
+                className={[styles.conectorStatus, existing && styles.conectorAtivo]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <span className={styles.conectorPonto} />
                 {existing
-                  ? t('credentials.connector.configuredNote', {
-                      date: new Date(existing.updatedAt).toLocaleDateString(i18n.language),
-                    })
-                  : t('credentials.connector.noneSaved')}
-              </div>
-              {existing && semCatalogo.has(id) && (
-                <div className={styles.conectorNota}>
-                  {semListModels(id)
-                    ? t('credentials.connector.noCatalogSource')
-                    : t('credentials.connector.noModels')}
-                </div>
-              )}
-
-              {/* O input fica SEMPRE visível: com credencial salva ele é o
-                  caminho da troca, que antes só existia removendo primeiro. */}
-              <Input
-                mono
-                type="password"
-                aria-label={
-                  existing
-                    ? t('credentials.connector.newKeyAria', { label })
-                    : t('credentials.connector.apiKeyAria', { label })
-                }
-                placeholder={
-                  existing
-                    ? t('credentials.connector.swapPlaceholder')
-                    : t('credentials.connector.apiKeyPlaceholder')
-                }
-                value={drafts[id] ?? ''}
-                onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
-              />
-
-              <div className={styles.conectorAcoes}>
-                {/* Nome acessível com o provider: são oito cards com botões de
-                    texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
+                  ? t('credentials.connector.configured')
+                  : t('credentials.connector.missing')}
+              </span>
+              <ItemActions>
+                {/* O input fica SEMPRE visível: com credencial salva ele é o
+                    caminho da troca, que antes só existia removendo primeiro. */}
+                <Input
+                  mono
+                  type="password"
+                  aria-label={
+                    existing
+                      ? t('credentials.connector.newKeyAria', { label })
+                      : t('credentials.connector.apiKeyAria', { label })
+                  }
+                  placeholder={
+                    existing
+                      ? t('credentials.connector.swapPlaceholder')
+                      : t('credentials.connector.apiKeyPlaceholder')
+                  }
+                  value={drafts[id] ?? ''}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
+                />
                 <Button
                   legenda={
                     existing
@@ -353,11 +350,11 @@ export function CredentialsSection() {
                     )}
                   </>
                 )}
-              </div>
-            </div>
+              </ItemActions>
+            </Item>
           );
         })}
-      </div>
+      </ItemGroup>
     </section>
   );
 }

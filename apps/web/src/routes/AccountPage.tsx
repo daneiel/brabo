@@ -5,6 +5,7 @@ import { mensagemDaApi } from '../lib/api-client';
 import { definirIdioma, ehIdioma, IDIOMA_PADRAO, IDIOMAS, ROTULO_NATIVO, type Idioma } from '../lib/idioma';
 import { temCatalogo } from '../lib/i18n';
 import { useToast } from '../components/ui/ToastProvider';
+import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import { Select } from '../components/ui/Select';
 import styles from './AccountPage.module.css';
 import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
@@ -60,22 +61,27 @@ export function AccountPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>{t('account.title')}</h1>
-        <p className={styles.subtitle}>{t('account.subtitle')}</p>
-        {email && (
-          <span className={styles.identity}>
-            {t('account.emailLabel')}: {email}
-          </span>
-        )}
-      </div>
+      <CabecalhoDePagina
+        titulo={t('account.title')}
+        descricao={
+          <>
+            {t('account.subtitle')}
+            {email && (
+              <span className={styles.identity}>
+                {' '}· {t('account.emailLabel')}: {email}
+              </span>
+            )}
+          </>
+        }
+      />
 
       <div className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>{t('account.language.title')}</h2>
-          <span className={styles.eyebrow}>{t('account.language.eyebrow')}</span>
-        </div>
-        <p className={styles.sectionSubtitle}>{t('account.language.subtitle')}</p>
+        <CabecalhoDePagina
+          nivel="h2"
+          titulo={t('account.language.title')}
+          descricao={t('account.language.subtitle')}
+          acoes={<span className={styles.eyebrow}>{t('account.language.eyebrow')}</span>}
+        />
 
         <div className={styles.card}>
           <div className={styles.cardInfo}>

@@ -38,7 +38,11 @@ import { RunnerDeviceKeysSection } from './settings/RunnerDeviceKeysSection';
 import { ProficiencySection } from './settings/ProficiencySection';
 import { InstructionVersionsSection } from './settings/InstructionVersionsSection';
 import { ProvedorDoSumario } from './settings/SecaoDeConfiguracoes';
-import { SumarioDeConfiguracoes } from './settings/SumarioDeConfiguracoes';
+import { useGrupoInicial, useTrocaDeGrupo } from './settings/secao-inicial';
+import { GRUPOS_DO_SUMARIO, ehGrupoDoSumario, type GrupoDoSumario } from './settings/sumario';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/shadcn/tabs';
+import { useTranslation } from 'react-i18next';
+import type { ReactNode } from 'react';
 import styles from './settings/sumario.module.css';
 
 // Os 11 nomes que a aba já exportava antes da divisão — a superfície pública
@@ -59,28 +63,56 @@ interface ProjectSettingsTabProps {
 }
 
 export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
+  // RN-980: uma PÁGINA por grupo; só as seções do grupo aberto montam.
+  const grupo = useGrupoInicial() ?? 'modelos';
+  const trocar = useTrocaDeGrupo();
+  const { t } = useTranslation('settings');
+  const p = { projectId };
+  const paginas: Record<GrupoDoSumario, ReactNode> = {
+    modelos: (
+      <>
+        <ModelsSection {...p} />
+        <MelhoresModelosPorCapacidadeSection {...p} />
+      </>
+    ),
+    projeto: (
+      <>
+        <RepositorySection {...p} />
+        <ExecutionSection {...p} />
+        <ExecutionModeSection {...p} />
+        <ParallelismSection {...p} />
+        <BudgetSection {...p} />
+        <PromotionSection {...p} />
+        <ProjectLanguageSection {...p} />
+      </>
+    ),
+    pessoas: (
+      <>
+        <MembersSection {...p} />
+        <PersonalAccessTokensSection {...p} />
+        <RunnerDeviceKeysSection {...p} />
+        <ProficiencySection {...p} />
+      </>
+    ),
+    avancado: <InstructionVersionsSection {...p} />,
+  };
   return (
     <ProvedorDoSumario>
-      <div className={styles.layout}>
-        <SumarioDeConfiguracoes />
-
-        <div className={styles.secoes}>
-          <ModelsSection projectId={projectId} />
-          <MelhoresModelosPorCapacidadeSection projectId={projectId} />
-          <RepositorySection projectId={projectId} />
-          <ExecutionSection projectId={projectId} />
-          <ExecutionModeSection projectId={projectId} />
-          <ParallelismSection projectId={projectId} />
-          <BudgetSection projectId={projectId} />
-          <PromotionSection projectId={projectId} />
-          <ProjectLanguageSection projectId={projectId} />
-          <MembersSection projectId={projectId} />
-          <PersonalAccessTokensSection projectId={projectId} />
-          <RunnerDeviceKeysSection projectId={projectId} />
-          <ProficiencySection projectId={projectId} />
-          <InstructionVersionsSection projectId={projectId} />
-        </div>
-      </div>
+      {/* RN-980: os grupos são ABAS dentro da página; Configurações é um item só da sidebar. */}
+      <Tabs value={grupo} onValueChange={(v) => ehGrupoDoSumario(v) && trocar(v)}>
+        <TabsList variant="casa" aria-label={t('title')}>
+          {GRUPOS_DO_SUMARIO.map((g) => (
+            <TabsTrigger key={g} value={g} variant="casa">
+              {t(`summary.groups.${g}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {GRUPOS_DO_SUMARIO.map((g) => (
+          <TabsContent key={g} value={g}>
+            <div className={styles.secoes}>{paginas[g]}</div>
+          </TabsContent>
+        ))}
+      </Tabs>
     </ProvedorDoSumario>
   );
 }

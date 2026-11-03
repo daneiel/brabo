@@ -201,6 +201,9 @@ function renderShell() {
   );
 }
 
+// O `useIsMobile` do kit (shadcn) chama `matchMedia` ao montar, e o jsdom não o tem.
+simularLayoutMovel(false);
+
 beforeEach(() => {
   // `Shell.tsx` lê/grava `brabo.sidebar.*` (`sidebar-state.ts`) — sem
   // limpar, um teste que colapsa a sidebar vazaria o estado para o
@@ -234,6 +237,18 @@ describe('Shell — rodapé', () => {
     // (item 4 pede só o papel RBAC, a proficiência da Anamnese fica de fora).
     expect(screen.getByText('maintainer')).toBeInTheDocument();
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
+  });
+
+  it('cada item do rodapé tem um svg aria-hidden', () => {
+    renderShell();
+    const hrefs = ['/containers', '/providers', '/spend', '/account'];
+    for (const h of hrefs) {
+      const a = document.querySelector(`a[href="${h}"]`);
+      expect(a?.querySelector('svg[aria-hidden="true"]'), h).not.toBeNull();
+    }
+    for (const nome of ['sair']) {
+      expect(screen.getByRole('button', { name: nome }).querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    }
   });
 
   it('sair continua funcionando', async () => {
@@ -355,10 +370,10 @@ describe('Shell — marca', () => {
   it('o cabeçalho usa o monograma B, e não outro desenho', () => {
     const { container } = renderShell();
 
-    expect(container.querySelector('aside svg path[stroke-width="3.4"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="sidebar"] svg path[stroke-width="3.4"]')).not.toBeNull();
     // O cubo isométrico do `BrandIcon`: se ele voltar, este path reaparece.
     expect(
-      container.querySelector('aside svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
+      container.querySelector('[data-slot="sidebar"] svg path[d="M12 3l7 4v10l-7 4-7-4V7z"]'),
     ).toBeNull();
   });
 
@@ -449,7 +464,7 @@ describe('Shell — badge de aprovações pendentes', () => {
   });
 });
 
-/** RN-195: 264px ↔ 62px, com a preferência persistida em `brabo.sidebar.collapsed`. */
+/** RN-195: 16rem (256px) ↔ 3rem (48px) do block do shadcn, com a preferência persistida em `brabo.sidebar.collapsed`. */
 describe('Shell — colapso da sidebar', () => {
   it('clicar em "Recolher menu" grava a preferência e troca a lista por uma trilha de ícones', () => {
     renderShell();
@@ -467,6 +482,19 @@ describe('Shell — colapso da sidebar', () => {
     expect(screen.queryByText('Projetos')).toBeNull();
     expect(screen.getByRole('button', { name: 'Core API' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expandir menu' })).toBeInTheDocument();
+  });
+
+  it('usa a largura do kit (16rem / 3rem) e Ctrl+B alterna o MESMO estado gravado', () => {
+    renderShell();
+    const raiz = document.querySelector('[data-slot="sidebar-wrapper"]') as HTMLElement;
+    expect(raiz.style.getPropertyValue('--sidebar-width')).toBe('16rem');
+    expect(raiz.style.getPropertyValue('--sidebar-width-icon')).toBe('3rem');
+    expect(document.querySelector('[data-slot="sidebar"]')).toHaveAttribute('data-state', 'expanded');
+
+    fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+
+    expect(window.localStorage.getItem(CHAVE_COLAPSADO)).toBe('1');
+    expect(document.querySelector('[data-slot="sidebar"]')).toHaveAttribute('data-state', 'collapsed');
   });
 
   it('preferência corrompida/desconhecida no localStorage degrada para expandida, não quebra', () => {
@@ -883,12 +911,12 @@ describe('Shell — layout móvel (RN-643)', () => {
     expect(screen.queryByRole('button', { name: /Recolher menu|Expandir menu/ })).not.toBeInTheDocument();
   });
 
-  it('sem matchMedia (desktop) não há barra de menu nem diálogo — a sidebar de sempre', () => {
+  it('na consulta desktop não há barra de menu nem diálogo — a sidebar de sempre', () => {
     renderShell();
 
     expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(gaveta()).toBeVisible();
+    expect(document.querySelector('[data-slot="sidebar"]')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Recolher menu' })).toBeInTheDocument();
   });
 
@@ -901,7 +929,7 @@ describe('Shell — layout móvel (RN-643)', () => {
 
     expect(screen.queryByRole('button', { name: 'Abrir navegação' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(gaveta()).toBeVisible();
+    expect(document.querySelector('[data-slot="sidebar"]')).toBeVisible();
 
     // E voltar ao móvel não reabre a gaveta sozinha.
     act(() => largura?.mudar(true));

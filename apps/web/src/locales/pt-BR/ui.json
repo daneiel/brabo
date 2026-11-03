@@ -47,5 +47,8 @@
   },
   "ajuda": {
     "rotulo": "Ajuda: {{assunto}}"
+  },
+  "perigo": {
+    "rotulo": "Atenção: {{assunto}}"
   }
 }

@@ -783,6 +783,8 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         {t('modelsSection.subtitle.mostSpecificWins')}{' '}
         <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
         {t('modelsSection.subtitle.areaExplain')}
+        <br />
+        {t('modelsSection.ajudaRoteamento')} {t('roteamento.inheritedHint')} {t('roteamento.teto')}
         </span>
         </Ajuda>
         <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>
@@ -860,12 +862,17 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         />
       )}
 
-      <Table
-        columns={columns}
-        rows={AGENT_LIST}
-        rowKey={(a) => a.key}
-        emptyMessage={t('modelsSection.emptyMessage')}
-      />
+      {/* Rolagem horizontal DENTRO da tabela: com a navegação lateral a coluna do modelo ficava estreita. */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[56rem]">
+          <Table
+            columns={columns}
+            rows={AGENT_LIST}
+            rowKey={(a) => a.key}
+            emptyMessage={t('modelsSection.emptyMessage')}
+          />
+        </div>
+      </div>
       {allModels.length === 0 && (
         <div className={styles.subtitle}>
           {t('modelsSection.noModelsAvailable')}{' '}

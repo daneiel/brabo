@@ -148,6 +148,9 @@ export function ProvedorDoSumario({ children }: { children: ReactNode }) {
   // rolagem é o leitor, e uma segunda rolagem automática seria a tela puxando
   // a página de volta debaixo dele.
   useEffect(() => {
+    jaRolouParaOInicial.current = false; // RN-980: link novo com a aba montada rola de novo
+  }, [secaoInicial]);
+  useEffect(() => {
     if (!secaoInicial || jaRolouParaOInicial.current) return;
     if (!elementos.current.has(secaoInicial)) return;
     jaRolouParaOInicial.current = true;

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
+import { ContextoDeGrupoInicial } from './settings/secao-inicial';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectSettingsTab } from './ProjectSettingsTab';
@@ -78,7 +79,9 @@ function renderTab() {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <ProjectSettingsTab projectId="project-1" />
+        <ContextoDeGrupoInicial.Provider value="pessoas">
+          <ProjectSettingsTab projectId="project-1" />
+        </ContextoDeGrupoInicial.Provider>
       </ToastProvider>
     </QueryClientProvider>,
   );

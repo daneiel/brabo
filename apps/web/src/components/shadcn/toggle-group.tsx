@@ -40,7 +40,7 @@ function ToggleGroup({
       data-orientation={orientation}
       style={{ "--gap": spacing } as React.CSSProperties}
       className={cn(
-        "group/toggle-group flex flex-row flex-wrap gap-2 data-vertical:flex-col data-vertical:items-stretch",
+        "group/toggle-group flex flex-row flex-wrap gap-2 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
         className
       )}
       {...props}

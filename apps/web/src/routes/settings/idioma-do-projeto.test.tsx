@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
+import uiPtBR from '../../locales/pt-BR/ui.json';
 import settingsEn from '../../locales/en/settings.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ApiError } from '../../lib/api-client';
@@ -55,11 +56,11 @@ function montar(papel: string | undefined = 'maintainer') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const i18n = i18next.createInstance();
   void i18n.use(initReactI18next).init({
-    resources: { 'pt-BR': { settings: settingsPtBR }, en: { settings: settingsEn } },
+    resources: { 'pt-BR': { settings: settingsPtBR, ui: uiPtBR }, en: { settings: settingsEn } },
     lng: 'pt-BR',
     fallbackLng: 'en',
     defaultNS: 'settings',
-    ns: ['settings'],
+    ns: ['settings', 'ui'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -90,7 +91,9 @@ describe('ProjectLanguageSection (RN-619)', () => {
     // dizer o contrário.
     expect(screen.queryByText(/Ainda não chega aos agentes/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ainda saem no idioma das respostas/)).not.toBeInTheDocument();
-    expect(screen.getByText(/a resposta sai no idioma dela, o artefato neste/)).toBeInTheDocument();
+    // O recorte sobre o artefato mora no "?" (AT-719).
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda:/ }));
+    expect(await screen.findByText(/a resposta sai no idioma dela, o artefato neste/)).toBeInTheDocument();
   });
 
   it('escolher um idioma NOMEADO salva no onChange, pela rota do projeto', async () => {
@@ -130,7 +133,7 @@ describe('ProjectLanguageSection (RN-619)', () => {
     expect(await screen.findByText(/Hoje: .*\(pt-BR\)/)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Idioma do projeto' })).toBeDisabled();
     expect(
-      screen.getByText(/Só quem é maintainer ou owner do projeto/),
+      screen.getByText(/Só maintainer ou owner troca o idioma/),
     ).toBeInTheDocument();
   });
 });

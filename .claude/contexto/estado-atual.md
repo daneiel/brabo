@@ -200,8 +200,8 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   próprio reinício matou não espera os 15 min: o boot o retoma quando nenhum
   nó do cluster o tem em voo (`:erpc`, nó mudo = vivo) e grava
   `gate.interrupted`, que o fio mostra (RN-823); o tick segue com o limiar
-- Desde o ADR 0211 a aba de Código abre com 312px de moldura (sidebar 264
-  + trilho do `CodeShell` 48), ou 110px com a sidebar recolhida (62 + 48) —
+- Desde o ADR 0211 a aba de Código abre com 304px de moldura (sidebar 256
+  + trilho do `CodeShell` 48; ADR 0241), ou 96px com a sidebar recolhida (48 + 48) —
   soma das larguras, não medida no navegador. O trilho do projeto (ADR 0126)
   saiu e a sidebar (`AbasDoProjeto`) é a ÚNICA navegação do projeto, com os
   grupos, a aba ativa, o teclado e os cinco contadores (nunca somados); com

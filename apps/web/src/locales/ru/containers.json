@@ -4,6 +4,7 @@
   "loadError": "Не удалось загрузить контейнеры.",
   "loading": "Загрузка…",
   "empty": "В этом workspace пока нет ни одного проекта.",
+  "pagination": { "label": "Страницы", "previous": "Назад", "next": "Далее", "status": "{{page}} / {{total}}" },
   "table": {
     "project": "Проект",
     "image": "Образ",

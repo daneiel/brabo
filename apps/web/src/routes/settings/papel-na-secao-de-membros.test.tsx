@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
+import uiPtBR from '../../locales/pt-BR/ui.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ApiError } from '../../lib/api-client';
 import type { Role } from '../../lib/api-types';
@@ -100,11 +101,11 @@ function montar(secao: ReactNode) {
   });
   const i18n = i18next.createInstance();
   void i18n.use(initReactI18next).init({
-    resources: { 'pt-BR': { settings: settingsPtBR } },
+    resources: { 'pt-BR': { settings: settingsPtBR, ui: uiPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'settings',
-    ns: ['settings'],
+    ns: ['settings', 'ui'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -385,11 +386,12 @@ describe('membros — a legenda diz o que a coluna significa e o que a lista omi
   it('declara a sobreposição nos dois sentidos e quem não aparece na lista', async () => {
     await cenario({ noWorkspace: 'maintainer' });
 
+    expect(screen.getByText(/esse papel vence o do workspace, também para baixo/)).toBeInTheDocument();
+    // A explicação inteira mora no "?" (AT-719).
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda:/ }));
     expect(
-      screen.getByText(/substitui o do workspace neste projeto, nos dois sentidos/),
+      await screen.findByText(/substitui o do workspace neste projeto, nos dois sentidos/),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/só pelo workspace não aparece na lista/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/só pelo workspace não aparece na lista/)).toBeInTheDocument();
   });
 });

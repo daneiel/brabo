@@ -14,7 +14,8 @@ import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
 import { conversaoSemBroker } from '../containers-subida';
 import type { CicloDeVidaDoContainer, ExecutionMode, Project } from '../../lib/api-types';
-import { Alert } from '../../components/ui/Alert';
+import { Ajuda } from '../../components/ui/Ajuda';
+import { Perigo } from '../../components/ui/Perigo';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -325,28 +326,8 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
     }
   }
 
-  return (
-    <SecaoDeConfiguracoes chave="execution-mode">
-      <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('executionMode.title')}</h2>
-        <span className={styles.eyebrow}>{t('executionMode.eyebrow')}</span>
-      </div>
-      <div className={styles.subtitle}>
-        {t('executionMode.subtitle')}
-        {!podeEditar && ` ${t('executionMode.needsMaintainer')}`}
-      </div>
-
-      {/*
-        TRÊS fatos, e não um parágrafo (RN-560). O tom passou de `accent` para
-        `warning` porque o terceiro deles é uma PERDA de alcance: o que ficou
-        na pasta antiga ninguém vai buscar depois.
-
-        Sem `role="alert"`: é texto que já estava na tela quando ela abriu, e
-        uma live region assertiva aqui viraria interrupção sem causa (o mesmo
-        motivo documentado em `Alert`).
-      */}
-      {(!sessoes.data || sessoes.data.length > 0 || modo !== project.executionMode) && (
-      <Alert tone="warning">
+  const avisoDaConversao = (
+    <div data-testid="aviso-conversao">
         <div>{t('executionMode.warning.refuses')}</div>
         <div style={{ marginTop: 6 }}>{t('executionMode.warning.carries')}</div>
         <div style={{ marginTop: 6 }}>
@@ -379,15 +360,27 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
             })}
           </div>
         )}
-      </Alert>
+      </div>
+  );
+  const mostrarAviso = (!sessoes.data || sessoes.data.length > 0 || modo !== project.executionMode);
+
+  return (
+    <SecaoDeConfiguracoes chave="execution-mode">
+      <div className={styles.sectionHead}>
+        <h2 className={styles.title}>{t('executionMode.title')}</h2>
+        <Ajuda assunto={t('executionMode.title')}>
+          {t('executionMode.subtitle')}
+          {descricaoDoModo ? ` ${t(descricaoDoModo)}` : null}
+        </Ajuda>
+        <span className={styles.eyebrow}>{t('executionMode.eyebrow')}</span>
+      </div>
+      {!podeEditar && (
+        <div className={styles.subtitle}>{t('executionMode.needsMaintainer')}</div>
       )}
 
       <div className={styles.ajusteCard} style={{ marginTop: 12 }}>
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('executionMode.card.title')}</div>
-          <div className={styles.ajusteHint}>
-            {descricaoDoModo ? t(descricaoDoModo) : null}
-          </div>
         </div>
         <div className={styles.ajusteControle}>
           <Select
@@ -405,6 +398,11 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
               </option>
             ))}
           </Select>
+          {/* O aviso da conversão (RN-560/AT-144) mora no botão de perigo
+              (ADR 0243): mesmas condições, mesmo conteúdo, só o lugar mudou. */}
+          {mostrarAviso && (
+            <Perigo assunto={t('executionMode.warning.assunto')}>{avisoDaConversao}</Perigo>
+          )}
         </div>
       </div>
 
@@ -438,7 +436,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
           </div>
           <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
             {modo === 'runner'
-              ? t('executionMode.path.runnerTyped')
+              ? (<>{t('executionMode.path.runnerTypedCurto')}<Ajuda assunto={t('executionMode.path.runnerTypedCurto')}>{t('executionMode.path.runnerTyped')}</Ajuda></>)
               : estadoDaBase.tipo === 'presente'
                 ? t('executionMode.path.underBase', { base: estadoDaBase.base })
                 : estadoDaBase.tipo === 'ausente'
@@ -452,7 +450,8 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
 
       {semBroker && (
         <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
-          {t('executionMode.noBroker')}
+          {t('executionMode.noBrokerCurto')}
+          <Ajuda assunto={t('executionMode.noBrokerAssunto')}>{t('executionMode.noBroker')}</Ajuda>
         </div>
       )}
 
@@ -474,7 +473,8 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
             {t('executionMode.nextStep.intro')}
           </div>
           <div className={styles.ajusteHint} style={{ marginTop: 6 }}>
-            {t('executionMode.nextStep.machineAgent')}
+            {t('executionMode.nextStep.machineAgentCurto')}
+            <Ajuda assunto={t('executionMode.nextStep.machineAgentCurto')}>{t('executionMode.nextStep.machineAgent')}</Ajuda>
           </div>
           <code style={{ display: 'block', marginTop: 6 }}>
             {t('executionMode.nextStep.restartLinux')}

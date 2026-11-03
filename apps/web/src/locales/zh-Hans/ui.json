@@ -45,5 +45,8 @@
   },
   "ajuda": {
     "rotulo": "帮助：{{assunto}}"
+  },
+  "perigo": {
+    "rotulo": "注意：{{assunto}}"
   }
 }

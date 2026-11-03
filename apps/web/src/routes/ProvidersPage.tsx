@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listProviderCapabilities } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { CabecalhoDePagina } from '@/components/shadcn/cabecalho-de-pagina';
 import { Ajuda } from '../components/ui/Ajuda';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
@@ -37,10 +38,7 @@ export function ProvidersPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.subtitle}>{t('subtitle')}</p>
-      </header>
+      <CabecalhoDePagina titulo={t('title')} descricao={t('subtitle')} />
 
       <CredentialsSection />
 
