@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **api/engine**: uma mensagem para vários agentes (`POST /projects/:projectId/sessions/:sessionId/messages`, `developer`): UM `chat.message` com `destinatarios`, uma entrega por agente com o mesmo `mensagemId` e `recusada` com motivo para quem não a recebe; a rota de um agente só passa a gravar `destinatarios: [agent]`; entregue/cancelada na fila valem só para o agente da cópia (AT-717, RN-991, ADR 0247).
 - **api**: capability `vision` ligada só no OpenRouter, provada por smoke real em 2026-11-03 com `google/gemini-2.5-flash` (AT-715, RN-989); os outros providers seguem `false`.
 - **web**: selos de citação `[n]` inline no texto da resposta do agente (AT-716): só os índices de `citacoes` viram selo com HoverCard da fonte; os demais `[n]` somem e código fica literal.
 

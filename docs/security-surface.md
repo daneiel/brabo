@@ -1497,6 +1497,7 @@ detalhar o motivo na URL.
 | POST | `/projects/:projectId/sessions/:sessionId/chat` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/events` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/events` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/messages` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/events/:eventId` | role:viewer |
 | GET | `/projects/:projectId/sessions/:sessionId/context-summary` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/execution/parallelize` | role:developer |

@@ -16860,8 +16860,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:183`
-  (`resolverIdioma`), `:90` (`idiomaAlvo`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:151`
+  (`resolverIdioma`), `:155` (`idiomaAlvo`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:215`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
@@ -19671,8 +19671,8 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`receber_mensagem`), `:245` (`tratar_resultado`), `:519` (`entregar_fila`),
   `:380` (`cancelar_mensagem`), `:425` (`fila_ao_subir`), `:559`
   (`emitir_recusa_por_fila_cheia`);
-  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:106`
-  (`fora_do_historico`), `:152` (`texto_do_turno`), `:176`
+  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:111`
+  (`fora_do_historico`), `:158` (`texto_do_turno`), `:182`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
@@ -19893,7 +19893,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
   `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126` (`resolverPerfil`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:152` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:253` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
@@ -20380,8 +20380,8 @@ melhoria do produto, separado do perfil da pessoa.
 
 - **Onde:** `apps/api/src/domain/anamnese/proficiencia-do-autor.ts:22`
   (`textoDaProficienciaDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126`
-  (`resolverPerfil`), `:134` (`resolverProficiencia`)
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:152`
+  (`resolverPerfil`), `:203` (`resolverProficiencia`)
 - **Teste:** `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:254`
   (o nível vai, o rationale não), `:274` (leitura falha, a mensagem segue —
   caso de falha); `apps/api/test/domain/anamnese/proficiencia-do-autor.spec.ts`
@@ -25553,7 +25553,7 @@ sem dizer qual.
 ### RN-987 — O `chat.message` guarda só a referência do anexo, nunca os bytes {#rn-987}
 
 - **Regra:** `POST .../agents/:agent/message` aceita `anexos?: string[]` (ids), no máximo 4, todos da MESMA sessão e do MESMO autor — senão 400. O evento grava `anexos: [{id, nome, mime, tamanho}]`; o log é append-only e não incha com bytes. A mesma lista de referências viaja ao engine em `anexos` (omitida quando vazia). Quem precisa dos bytes (L2, a api na chamada ao provider) os lê pelo `ChatAttachmentRepository`.
-- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:91` (`referencias`), `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:93` (`execute`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:210` (`sendAgentMessage`), `apps/api/src/interfaces/http/agents/dto/send-agent-message.dto.ts:34` (`anexos`).
+- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:91` (`referencias`), `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:67` (`execute`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:210` (`sendAgentMessage`), `apps/api/src/interfaces/http/agents/dto/send-agent-message.dto.ts:34` (`anexos`).
 - **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-987").
 - **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
 
@@ -25577,3 +25577,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/harness/anexos_do_turno.ex:56` (`anexar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:324` (`receber_mensagem`), `apps/engine/lib/engine/agents/reidratacao.ex:443` (`usuario`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:545` (`autor_do_turno`).
 - **Teste:** `apps/engine/test/engine/agents/anexos_do_turno_test.exs`.
 - **Origem:** AT-715 fatia 1, lane L3 (EP-031), ADR 0246.
+
+### RN-991 — Uma mensagem pode ter vários destinatários, e o log diz quais {#rn-991}
+
+- **Regra:** `POST /projects/:projectId/sessions/:sessionId/messages` (`developer`) recebe `destinatarios` (1 a 7) e grava UM `chat.message` com `payload.destinatarios`; a rota de um agente só grava `[agent]`. Cada agente recebe a entrega com o MESMO `mensagemId`, pelo caminho de sempre (turno, fila RN-673, recusa nomeada do engine). Quem o engine recusa vem como `recusada` com `motivo`, sem derrubar os outros; sessão encerrada é 409 `sessao_encerrada` (RN-581). Com o `mensagemId` repartido, `chat.message_delivered` e `chat.message_cancelled` só fecham a cópia do agente a que se referem. Revisa a RN-584/631.
+- **Onde:** `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:96` (`executeVarios`), `apps/api/src/interfaces/http/agents/agents.controller.ts:115` (`messages`), `apps/engine/lib/engine/agents/fila_de_mensagens.ex:76` (`pendentes`).
+- **Teste:** `apps/api/test/application/use-cases/agents/send-message-to-agents.use-case.spec.ts`, `apps/engine/test/engine/agents/fila_de_mensagens_test.exs`.
+- **Origem:** AT-717 (EP-031), ADR 0247.
