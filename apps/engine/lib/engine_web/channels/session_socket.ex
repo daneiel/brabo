@@ -32,13 +32,14 @@ defmodule EngineWeb.SessionSocket do
   def connect(%{"ticket" => ticket}, socket, _connect_info)
       when is_binary(ticket) and ticket != "" do
     case SocketTicket.validar(ticket) do
-      {:ok, %{project_id: project_id, user_id: user_id, scope: scope}} ->
+      {:ok, %{project_id: project_id, user_id: user_id, scope: scope} = linha} ->
         socket =
           socket
           |> assign(:ticket, ticket)
           |> assign(:project_id, project_id)
           |> assign(:user_id, user_id)
           |> assign(:scope, scope)
+          |> assign(:pode_ver_raciocinio, Map.get(linha, :pode_ver_raciocinio) == true)
 
         {:ok, socket}
 

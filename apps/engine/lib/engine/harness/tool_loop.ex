@@ -201,7 +201,10 @@ defmodule Engine.Harness.ToolLoop.Default do
                 # resolver o binding), então não há chamada nova.
                 modelName: Map.get(resp, "modelName")
               },
-              Engine.Agents.FontesDoTurno.descarregar()
+              Map.merge(
+                Engine.Agents.FontesDoTurno.descarregar(),
+                Engine.Agents.RaciocinioDoTurno.descarregar()
+              )
             )
             |> Engine.Harness.CitacaoDasFontes.marcar()
           )
