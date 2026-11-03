@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { ArrowLeft } from 'lucide-react';
 import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
 import { pollQueParaNoErro } from '../lib/query-policy';
@@ -161,8 +162,8 @@ export function StatusPage({
       </div>
       <p style={{ marginTop: 'var(--space-4)' }}>
         {/* AT-327: um botão de verdade, não um link de 33×20 px. */}
-        <Button variant="secondary" onClick={() => irPara(voltarPara)}>
-          {t('status.back')}
+        <Button variant="secondary" legenda={t('status.back')} onClick={() => irPara(voltarPara)}>
+          <ArrowLeft aria-hidden="true" />
         </Button>
       </p>
     </main>

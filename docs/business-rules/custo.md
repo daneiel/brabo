@@ -3307,7 +3307,7 @@ Revisa a [RN-212](autenticacao.md#rn-212) no destino do botão "Definir orçamen
 3. **Orçamento.** A aba traz o editor do teto (`PUT projects/:projectId/budget`, `maintainer` pela `roleAtLeast`); abaixo do papel o controle fica inerte e o motivo é dito em texto. O botão "Definir orçamento" do card do projeto abre `?tab=spend` (antes `?tab=settings`, onde nenhuma tela gravava o orçamento).
 4. **Assinatura.** `assinaturaMicros` aparece num destaque separado; linha de modelo marcado `subscription` com custo zero mostra "assinatura — sem preço registrado", nunca "US$ 0".
 
-- **Código:** `apps/web/src/components/SpendPaineis.tsx:144` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:342` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:167` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
+- **Código:** `apps/web/src/components/SpendPaineis.tsx:148` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:346` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:167` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
 - **Teste:** `apps/web/src/routes/SpendPage.test.tsx` (owner × não-owner, sem provider para quem não é owner); `apps/web/src/routes/ProjectSpendTab.test.tsx` (owner só do projeto, membro por agente e área, editor grava, teto inválido e papel baixo recusados)
 - **Origem:** AT-632
 ### RN-964 — O preço e a cobrança são curados na tela de Providers, e a edição manual protege o número do sync {#rn-964}

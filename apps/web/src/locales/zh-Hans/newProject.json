@@ -61,6 +61,7 @@
   },
   "details": {
     "adopt": {
+      "assunto": "采用现有仓库",
       "repoLabel": "现有仓库",
       "placeholderLocal": "/caminho/do/repo.git",
       "placeholderRemote": "acme/checkout",
@@ -87,6 +88,9 @@
     "mountedUnderBase": "该文件夹位于本次安装的<strong>项目根目录内</strong>（<code>{{base}}</code>）——这是你电脑上 api 和 engine 容器唯一能看到的文件夹。它<strong>现在不必存在</strong>：会在 Infra 启动项目容器时创建。",
     "mountedOutsideBase": "该路径位于本次安装的<strong>项目根目录之外</strong>（<code>{{base}}</code>），api 会<strong>拒绝创建</strong>位于其外的挂载项目。请选择 <code>{{base}}</code> 下的文件夹。",
     "noBroker": "<strong>此安装不会为“容器”和“挂载文件夹”模式启动容器。</strong>它没有容器 broker（<code>BROKER_URL</code> 为空），而这两种模式的容器正是由它启动的——没有容器，任何开发智能体都无法工作。请使用<strong>本地 runner</strong>：代码存放在你自己的文件夹中，由本地代理在你的机器上启动容器。",
+    "noBrokerCurto": "此安装不会为“容器”和“挂载文件夹”模式启动容器：请使用本地 runner。",
+    "noBrokerAssunto": "没有容器 broker",
+    "mountedUnderBaseAssunto": "项目根目录内的文件夹",
     "runnerHint": {
       "intro": "创建项目后，在你的机器上运行：",
       "introExisting": "项目已存在——在你的机器上运行：",

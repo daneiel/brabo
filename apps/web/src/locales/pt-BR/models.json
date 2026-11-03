@@ -219,6 +219,7 @@
     }
   },
   "credentialStep": {
+    "assunto": "Token de acesso pessoal",
     "hint": "Provisionar no {{provider}} exige um token de acesso pessoal (PAT). Selecione um já cadastrado ou adicione um novo — o token é cifrado ao salvar e nunca é reexibido. A verificação fica nas configurações do projeto, sobre o token já guardado.",
     "credLabel": "{{provider}} conectado",
     "credMeta": "desde {{time}}",

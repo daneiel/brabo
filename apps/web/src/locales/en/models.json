@@ -211,6 +211,7 @@
     }
   },
   "credentialStep": {
+    "assunto": "Personal access token",
     "hint": "Provisioning on {{provider}} requires a personal access token (PAT). Select one already registered or add a new one — the token is encrypted on save and never shown again. Verification lives in the project settings, over the token already stored.",
     "credLabel": "{{provider}} connected",
     "credMeta": "since {{time}}",
