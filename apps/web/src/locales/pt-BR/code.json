@@ -14,6 +14,7 @@
     }
   },
   "bottomPanel": {
+    "semIntegracao": "Nenhum lint ou teste integrado roda sobre este repositório ainda.",
     "tablistLabel": "Painel inferior",
     "tabs": {
       "terminal": "Terminal",

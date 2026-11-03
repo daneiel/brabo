@@ -1,4 +1,6 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { Button } from '@/components/ui/Button';
+import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -47,9 +49,9 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
         {gitRef && raizQuery.isError && (
           <div className={styles.estadoErro} role="alert">
             <span>{mensagemDaApi(raizQuery.error, t('explorer.loadErrorFallback'))}</span>
-            <button type="button" className={styles.botaoTentar} onClick={() => void raizQuery.refetch()}>
-              {t('shared.retry')}
-            </button>
+            <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void raizQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
           </div>
         )}
 

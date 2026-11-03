@@ -14,6 +14,7 @@
     }
   },
   "bottomPanel": {
+    "semIntegracao": "No lint or test is integrated into this repository yet.",
     "tablistLabel": "Bottom panel",
     "tabs": {
       "terminal": "Terminal",

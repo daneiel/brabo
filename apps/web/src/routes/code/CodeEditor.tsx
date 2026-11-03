@@ -1,4 +1,6 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { Button } from '@/components/ui/Button';
+import { RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -244,7 +246,6 @@ export function CodeEditor({
               .join(' ')}
             aria-pressed={blameOn}
             onClick={() => setBlameOn((v) => !v)}
-            title={t('editor.blameButtonTitle')}
           >
             <UserIcon size={13} />
             {t('editor.blameButton')}
@@ -296,13 +297,9 @@ export function CodeEditor({
                   <span>
                     {mensagemDaApi(blameQuery.error, t('editor.blameErrorFallback'))}
                   </span>
-                  <button
-                    type="button"
-                    className={styles.blameTentar}
-                    onClick={() => void blameQuery.refetch()}
-                  >
-                    {t('shared.retry')}
-                  </button>
+                  <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void blameQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
                 </div>
               )}
 

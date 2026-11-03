@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getCodeBranches, getRepository } from '../../lib/api-client';
@@ -124,30 +125,32 @@ export function CodeShell({ projectId }: { projectId: string }) {
 
       <div className={styles.corpo}>
         <div className={styles.rail} role="tablist" aria-label={t('shell.railTablistLabel')}>
-          <button
+          <Button
             type="button"
             role="tab"
+            variant="ghost"
+            legenda={t('shell.explorerTitle')}
             aria-selected={railView === 'explorer'}
             className={[styles.railItem, railView === 'explorer' && styles.railItemAtivo]
               .filter(Boolean)
               .join(' ')}
-            title={t('shell.explorerTitle')}
             onClick={() => setRailView('explorer')}
           >
             <FolderIcon size={18} />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="tab"
+            variant="ghost"
+            legenda={t('shell.searchTitle')}
             aria-selected={railView === 'search'}
             className={[styles.railItem, railView === 'search' && styles.railItemAtivo]
               .filter(Boolean)
               .join(' ')}
-            title={t('shell.searchTitle')}
             onClick={() => setRailView('search')}
           >
             <SearchIcon size={18} />
-          </button>
+          </Button>
           {RAIL_DESABILITADO.map((item) => {
             const rotulo = t(item.chaveRotulo);
             const motivo = t(item.chaveMotivo);

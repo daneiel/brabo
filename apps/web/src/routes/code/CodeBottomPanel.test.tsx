@@ -71,6 +71,8 @@ describe('CodeBottomPanel', () => {
     const user = userEvent.setup();
     montar();
     await user.click(screen.getByRole('tab', { name: 'Problemas' }));
+    expect(screen.getByText('Nenhum lint ou teste integrado roda sobre este repositório ainda.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ajuda: Problemas' }));
     expect(screen.getByText(/Não há lint nem testes integrados/)).toBeInTheDocument();
   });
 
@@ -78,6 +80,7 @@ describe('CodeBottomPanel', () => {
     const user = userEvent.setup();
     montar();
     await user.click(screen.getByRole('tab', { name: 'Saída' }));
+    await user.click(screen.getByRole('button', { name: 'Ajuda: Saída' }));
     expect(screen.getByText(/Não há saída de comando de build ou deploy/)).toBeInTheDocument();
   });
 
@@ -132,7 +135,7 @@ describe('CodeBottomPanel', () => {
       getContainerLifecycle.mockRejectedValue(new Error('boom'));
       montar();
       expect(await screen.findByRole('alert')).toBeInTheDocument();
-      expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
     });
 
     it('trocar para outra aba não busca o ciclo de vida — só a Terminal pergunta', async () => {

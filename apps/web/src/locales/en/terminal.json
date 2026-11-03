@@ -30,6 +30,7 @@
     "semRespostaRessalva": "Nobody answered in time. That is not proof there is no local agent running: it can be a slow machine or a slow connection."
   },
   "runnerOnboarding": {
+    "instaladorAssunto": "What the installer does",
     "defaultMessage": "No runner connected to this project.",
     "noProjectMessage": "After you create the project, you'll be able to set up the runner here.",
     "instructionPrefix": "On your machine, inside the Brabo checkout (see",

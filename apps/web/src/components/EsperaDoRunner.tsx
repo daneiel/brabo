@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject } from '../lib/api-client';
@@ -171,12 +172,13 @@ export function EsperaDoRunner({
         <Button
           type="button"
           variant="secondary"
+          legenda={t('esperaDoRunner.procurarDeNovo')}
           onClick={() => {
             setExpirou(false);
             setRodada((n) => n + 1);
           }}
         >
-          {t('esperaDoRunner.procurarDeNovo')}
+          <RefreshCw aria-hidden="true" />
         </Button>
       </div>
     );
