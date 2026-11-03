@@ -6,6 +6,7 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { AbasDoProjeto, itensDasAbas, type ItemDaLista } from './AbasDoProjeto';
 import shellPtBR from '../locales/pt-BR/shell.json';
+import settingsPtBR from '../locales/pt-BR/settings.json';
 import { simularLayoutMovel } from '../test/match-media';
 import type { ContagensDeAba } from './project-tabs';
 
@@ -19,11 +20,11 @@ import type { ContagensDeAba } from './project-tabs';
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
-    resources: { 'pt-BR': { shell: shellPtBR } },
+    resources: { 'pt-BR': { shell: shellPtBR, settings: settingsPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'shell',
-    ns: ['shell'],
+    ns: ['shell', 'settings'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -79,7 +80,7 @@ const ORDEM_ACHATADA = [
   'Backlog',
   'Arquitetura',
   'Gastos',
-  'Configurações',
+'Configurações', 'Modelos', 'Projeto e execução', 'Pessoas e acesso', 'Avançado',
 ];
 
 /** `AbasDoProjeto` é totalmente controlado — este wrapper é o dono do estado,
@@ -100,7 +101,7 @@ function Controlado({
 }
 
 describe('AbasDoProjeto — os três grupos ficam abertos ao mesmo tempo', () => {
-  it('as 12 abas aparecem juntas, na ordem declarada — nunca só o nível de topo', () => {
+  it('as 12 abas e 4 sub-itens aparecem juntas, na ordem declarada — nunca só o nível de topo', () => {
     render(<Controlado inicial="overview" />);
 
     const abas = screen.getAllByRole('tab');
@@ -116,13 +117,13 @@ describe('AbasDoProjeto — os três grupos ficam abertos ao mesmo tempo', () =>
     }
   });
 
-  it('a lista é um tablist VERTICAL, e as 12 abas são filhas diretas dele', () => {
+  it('a lista é um tablist VERTICAL, e as 12 abas e 4 sub-itens são filhas diretas dele', () => {
     render(<Controlado inicial="overview" />);
 
     const lista = screen.getByRole('tablist');
     expect(lista).toHaveAttribute('aria-orientation', 'vertical');
     expect(lista).toHaveAccessibleName('Abas de Checkout');
-    expect(within(lista).getAllByRole('tab')).toHaveLength(12);
+    expect(within(lista).getAllByRole('tab')).toHaveLength(16);
   });
 });
 
@@ -235,7 +236,7 @@ describe('AbasDoProjeto — navegação por teclado', () => {
     const usuario = userEvent.setup();
     render(<Controlado inicial="settings" />);
 
-    screen.getByRole('tab', { name: 'Configurações' }).focus();
+    screen.getByRole('tab', { name: 'Avançado' }).focus();
     await usuario.keyboard('{ArrowDown}');
 
     const primeiro = screen.getByRole('tab', { name: 'Visão geral' });
@@ -250,9 +251,8 @@ describe('AbasDoProjeto — navegação por teclado', () => {
     screen.getByRole('tab', { name: 'Visão geral' }).focus();
     await usuario.keyboard('{ArrowUp}');
 
-    const ultimo = screen.getByRole('tab', { name: 'Configurações' });
-    expect(document.activeElement).toBe(ultimo);
-    expect(ultimo.getAttribute('aria-selected')).toBe('true');
+    // O último item agora é o sub-item "Avançado" (RN-980).
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Avançado' }));
   });
 
   it('Home vai para a primeira aba e End para a última, de onde quer que se esteja', async () => {
@@ -262,9 +262,7 @@ describe('AbasDoProjeto — navegação por teclado', () => {
     screen.getByRole('tab', { name: 'Código' }).focus();
     await usuario.keyboard('{End}');
 
-    const ultimo = screen.getByRole('tab', { name: 'Configurações' });
-    expect(document.activeElement).toBe(ultimo);
-    expect(ultimo.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Avançado' }));
 
     await usuario.keyboard('{Home}');
 
@@ -319,7 +317,7 @@ describe('AbasDoProjeto — dentro da sidebar (ADR 0211)', () => {
     try {
       render(<Controlado inicial="overview" />);
       expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
-      expect(screen.getAllByRole('tab')).toHaveLength(12);
+      expect(screen.getAllByRole('tab')).toHaveLength(16);
     } finally {
       largura.restaurar();
     }
@@ -357,5 +355,25 @@ describe('AbasDoProjeto — dentro da sidebar (ADR 0211)', () => {
       ['arquitetura', 5],
     ]);
     expect(folhas(itensDasAbas(undefined)).every((f) => f.count === undefined)).toBe(true);
+  });
+});
+
+describe('AbasDoProjeto — sub-itens de Configurações (RN-980)', () => {
+  it('o grupo aberto é o marcado; sem grupo, o pai; o item pai não disputa a marca', () => {
+    const itens = [{ tipo: 'aba' as const, aba: { key: 'settings', label: 'Configurações' } }];
+    const props = { projectId: 'p', nomeDoProjeto: 'X', itens, active: 'settings', onChange: () => {} };
+    const { rerender } = render(<AbasDoProjeto {...props} />);
+    const marcadas = () =>
+      screen
+        .getAllByRole('tab')
+        .filter((a) => a.getAttribute('aria-selected') === 'true')
+        .map((a) => a.textContent);
+    expect(marcadas()).toEqual(['Configurações']);
+    expect(screen.getByRole('tab', { name: 'Pessoas e acesso' })).toHaveAttribute(
+      'href',
+      '/projects/p?tab=settings&group=pessoas',
+    );
+    rerender(<AbasDoProjeto {...props} grupoAtivo="pessoas" />);
+    expect(marcadas()).toEqual(['Pessoas e acesso']);
   });
 });

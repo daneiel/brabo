@@ -5,6 +5,7 @@ import {
   Bot, Code2, GitPullRequest, Lightbulb, LayoutDashboard, ListTodo,
   MessagesSquare, Network, Settings, ShieldCheck, Sparkles, Wallet, type LucideIcon,
 } from 'lucide-react';
+import { GRUPOS_DO_SUMARIO } from './settings/sumario';
 import styles from './AbasDoProjeto.module.css';
 
 const ICONES: Record<string, LucideIcon> = {
@@ -62,6 +63,8 @@ interface AbasDoProjetoProps {
   /** A aba selecionada agora, ou `undefined` quando este projeto não está aberto. */
   active: string | undefined;
   onChange: (key: string) => void;
+  /** RN-980: a página de Configurações aberta (`settings:<grupo>` é a chave do sub-item). */
+  grupoAtivo?: string;
 }
 
 const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
@@ -85,14 +88,25 @@ const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
  * do meio/Ctrl abre noutra aba do navegador; o clique simples chama
  * `onChange`, que navega no lugar.
  */
-export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChange }: AbasDoProjetoProps) {
-  const { t } = useTranslation('shell');
+export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChange, grupoAtivo }: AbasDoProjetoProps) {
+  const { t } = useTranslation(['shell', 'settings']);
   const refs = useRef(new Map<string, HTMLAnchorElement | null>());
 
+  // RN-980: os sub-itens de Configurações entram na MESMA lista de teclado.
   const folhas = useMemo<FolhaDaLista[]>(
-    () => itens.flatMap((item) => (item.tipo === 'grupo' ? item.abas : [item.aba])),
-    [itens],
+    () =>
+      itens
+        .flatMap((item) => (item.tipo === 'grupo' ? item.abas : [item.aba]))
+        .flatMap((f) => [f, ...(f.key === 'settings' ? subitens() : [])]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [itens, t],
   );
+  function subitens(): FolhaDaLista[] {
+    return GRUPOS_DO_SUMARIO.map((g) => ({
+      key: `settings:${g}`,
+      label: t(`summary.groups.${g}`, { ns: 'settings' }),
+    }));
+  }
 
   // A ativa é trazida para dentro da área visível da sidebar — a lista de
   // projetos rola, e a aba aberta pode nascer abaixo da dobra.
@@ -119,20 +133,25 @@ export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChang
   }
 
   function folha(item: FolhaDaLista) {
-    const ativo = item.key === active;
+    const sub = item.key.startsWith('settings:');
+    const ativo = sub
+      ? active === 'settings' && item.key === `settings:${grupoAtivo}`
+      : item.key === active && !(item.key === 'settings' && grupoAtivo);
     return (
       <a
         key={item.key}
         ref={(el) => {
           refs.current.set(item.key, el);
         }}
-        href={`/projects/${encodeURIComponent(projectId)}?tab=${encodeURIComponent(item.key)}`}
+        href={`/projects/${encodeURIComponent(projectId)}?tab=${sub ? `settings&group=${item.key.slice('settings:'.length)}` : encodeURIComponent(item.key)}`}
         role="tab"
         aria-selected={ativo}
         // Roving tabindex: um ponto de parada por lista no Tab, e as setas
         // andam dentro dela. Sem ativa (projeto fechado), a primeira recebe.
         tabIndex={ativo || (!active && item.key === folhas[0]?.key) ? 0 : -1}
-        className={[styles.item, ativo && styles.itemAtivo].filter(Boolean).join(' ')}
+        className={[styles.item, sub && styles.subitem, (ativo || (item.key === 'settings' && item.key === active)) && styles.itemAtivo]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(e) => {
           if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           e.preventDefault();
@@ -149,6 +168,10 @@ export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChang
         )}
       </a>
     );
+  }
+
+  function comSubitens(f: FolhaDaLista) {
+    return [folha(f), ...(f.key === 'settings' ? subitens().map(folha) : [])];
   }
 
   return (
@@ -168,11 +191,11 @@ export function AbasDoProjeto({ projectId, nomeDoProjeto, itens, active, onChang
             <span className={styles.grupoLabel} role="presentation">
               {item.label}
             </span>
-            {item.abas.map(folha)}
+            {item.abas.flatMap(comSubitens)}
           </div>
         ) : (
           <div key={`aba:${item.aba.key}`} className={styles.solta} role="presentation">
-            {folha(item.aba)}
+            {comSubitens(item.aba)}
           </div>
         ),
       )}

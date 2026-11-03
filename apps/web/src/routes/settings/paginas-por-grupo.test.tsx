@@ -1,10 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProjectSettingsTab } from '../ProjectSettingsTab';
 import { ToastProvider } from '../../components/ui/ToastProvider';
-import { ContextoDeSecaoInicial } from './secao-inicial';
-import { SECOES_DE_CONFIGURACOES, idDaSecao, type ChaveDeSecao } from './sumario';
+import { ContextoDeGrupoInicial, ContextoDeSecaoInicial } from './secao-inicial';
+import {
+  GRUPOS_DO_SUMARIO,
+  SECOES_DE_CONFIGURACOES,
+  grupoDaSecao,
+  idDaSecao,
+  resolverGrupo,
+  type ChaveDeSecao,
+  type GrupoDoSumario,
+} from './sumario';
 // A instância REAL do app, como `ProficiencySection.test.tsx` já faz: a aba
 // usa `useTranslation` sem provedor próprio.
 import i18n from '../../lib/i18n';
@@ -98,12 +106,9 @@ vi.mock('../../lib/api-client', async () => {
 
 /** As entradas capturadas do `IntersectionObserver` que o provedor criou. */
 type Callback = (entradas: { target: Element; isIntersecting: boolean }[]) => void;
-let ultimoObservador: Callback | undefined;
 
 class ObservadorFalso {
-  constructor(cb: Callback) {
-    ultimoObservador = (entradas) => cb(entradas);
-  }
+  constructor(_cb: Callback) {}
   observe() {}
   disconnect() {}
   unobserve() {}
@@ -117,7 +122,6 @@ const scrollIntoView = vi.fn();
 beforeEach(async () => {
   await i18n.changeLanguage('pt-BR');
   papel.mockReturnValue({ data: { role: 'owner' } });
-  ultimoObservador = undefined;
   scrollIntoView.mockClear();
   // jsdom não implementa NENHUM dos dois — mesma lacuna que
   // `SessionPage.ordenacao-e-avisos.test.tsx` já contorna para o
@@ -141,142 +145,65 @@ afterAll(() => {
   void i18n.changeLanguage('en');
 });
 
-function montar(secaoInicial?: ChaveDeSecao) {
+function montar(grupo?: GrupoDoSumario, secaoInicial?: ChaveDeSecao) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <ContextoDeSecaoInicial.Provider value={secaoInicial}>
-          <ProjectSettingsTab projectId="proj-1" />
+          <ContextoDeGrupoInicial.Provider value={grupo}>
+            <ProjectSettingsTab projectId="proj-1" />
+          </ContextoDeGrupoInicial.Provider>
         </ContextoDeSecaoInicial.Provider>
       </ToastProvider>
     </QueryClientProvider>,
   );
 }
 
-function entradaDoSumario(nome: string): HTMLElement {
-  const sumario = screen.getByRole('navigation', {
-    name: 'Sumário das configurações',
-  });
-  const alvo = Array.from(sumario.querySelectorAll('button')).find(
-    (b) => b.textContent === nome,
-  );
-  if (!alvo) throw new Error(`entrada "${nome}" não está no sumário`);
-  return alvo;
-}
+const noDom = (chave: string) => document.getElementById(idDaSecao(chave as ChaveDeSecao));
 
-describe('sumário ancorado de Configurações', () => {
-  it('TODA seção do registro tem âncora alcançável no DOM', async () => {
+describe('Configurações em páginas por grupo (RN-980)', () => {
+  it.each(GRUPOS_DO_SUMARIO)('a página %s monta as seções do grupo e nenhuma de outro', async (grupo) => {
+    montar(grupo);
+    const dele = SECOES_DE_CONFIGURACOES.filter((s) => s.grupo === grupo);
+    // Presentes as que não dependem de papel/dado (as que renderizam `null` não contam).
+    await waitFor(() => expect(noDom(dele[0].chave)).toBeTruthy());
+    for (const s of SECOES_DE_CONFIGURACOES.filter((s) => s.grupo !== grupo))
+      expect(noDom(s.chave)).toBeNull();
+  });
+
+  it('sem grupo, a página padrão é Modelos', async () => {
     montar();
-
-    // O acordo que importa: o registro não lista seção que o barrel não
-    // compõe, e o barrel não compõe seção que o registro não conhece. Sem
-    // isto, uma seção nova nasceria sem entrada no sumário e uma chave morta
-    // continuaria aceita em `?section=`.
-    for (const secao of SECOES_DE_CONFIGURACOES) {
-      await waitFor(() =>
-        expect(document.getElementById(idDaSecao(secao.chave))).toBeTruthy(),
-      );
-    }
+    await waitFor(() => expect(noDom('models')).toBeTruthy());
+    expect(noDom('members')).toBeNull();
   });
 
-  it('a âncora é uma `region` com nome — o mesmo título que a seção mostra', async () => {
-    montar();
-
-    await waitFor(() =>
-      expect(document.getElementById(idDaSecao('budget'))).toBeTruthy(),
-    );
-    const secao = document.getElementById(idDaSecao('budget'));
-    expect(secao?.tagName).toBe('SECTION');
-    expect(secao?.getAttribute('aria-label')).toBe('Teto de gasto por área');
+  it('todo ?section= antigo cai na página do seu grupo; aposentada ou desconhecida, no topo de Modelos', () => {
+    for (const s of SECOES_DE_CONFIGURACOES)
+      expect(resolverGrupo(s.chave, undefined)).toBe(grupoDaSecao(s.chave));
+    expect(resolverGrupo('members', 'modelos')).toBe('pessoas'); // a seção vence
+    expect(resolverGrupo(undefined, 'pessoas')).toBe('pessoas');
+    // `router.tsx` já descarta a chave aposentada (RN-911) antes daqui.
+    expect(resolverGrupo(undefined, undefined)).toBeUndefined();
+    expect(resolverGrupo(undefined, 'credentials')).toBeUndefined();
   });
 
-  it('clicar numa entrada rola até a seção correspondente', async () => {
-    montar();
-    await waitFor(() => entradaDoSumario('Teto de gasto por área'));
-
-    fireEvent.click(entradaDoSumario('Teto de gasto por área'));
-
-    expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView.mock.instances[0]).toBe(
-      document.getElementById(idDaSecao('budget')),
-    );
-    // Sem `behavior: 'smooth'` — a rolagem suave foi MEDIDA como cancelada
-    // dentro do container desta aba; o porquê está em `SecaoDeConfiguracoes`.
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
-  });
-
-  it('o deep-link `?section=` rola para a seção pedida ao abrir', async () => {
-    montar('models');
-
+  it('o deep-link ?section= rola até a seção pedida dentro da página do grupo', async () => {
+    montar('pessoas', 'members');
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.instances[0]).toBe(
-      document.getElementById(idDaSecao('models')),
-    );
-    expect(entradaDoSumario('Modelos por agente').getAttribute('aria-current')).toBe(
-      'location',
-    );
+    expect(scrollIntoView.mock.instances[0]).toBe(noDom('members'));
   });
 
-  it('sem `?section=` a aba abre no topo, sem rolar sozinha', async () => {
-    montar();
-    await waitFor(() => entradaDoSumario('Repositório'));
-
+  it('sem ?section= a página abre no topo, sem rolar sozinha', async () => {
+    montar('projeto');
+    await waitFor(() => expect(noDom('execution')).toBeTruthy());
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
-  it('o scroll-spy marca a PRIMEIRA seção visível, na ordem de render', async () => {
-    montar();
-    await waitFor(() => entradaDoSumario('Membros e papéis'));
-    expect(ultimoObservador).toBeTruthy();
-
-    // Duas visíveis ao mesmo tempo: quem manda é a de cima na página, e a
-    // ordem de cima é a do registro — nunca a ordem em que o observador
-    // entregou as entradas.
-    ultimoObservador?.([
-      { target: document.getElementById(idDaSecao('proficiency'))!, isIntersecting: true },
-      { target: document.getElementById(idDaSecao('members'))!, isIntersecting: true },
-    ]);
-
-    await waitFor(() =>
-      expect(entradaDoSumario('Membros e papéis').getAttribute('aria-current')).toBe(
-        'location',
-      ),
-    );
-    expect(
-      entradaDoSumario('Perfil de proficiência').getAttribute('aria-current'),
-    ).toBeNull();
-  });
-
-  it('nenhuma seção visível MANTÉM a última marcada, não apaga a marcação', async () => {
-    montar();
-    await waitFor(() => entradaDoSumario('Membros e papéis'));
-
-    const membros = document.getElementById(idDaSecao('members'))!;
-    ultimoObservador?.([{ target: membros, isIntersecting: true }]);
-    await waitFor(() =>
-      expect(entradaDoSumario('Membros e papéis').getAttribute('aria-current')).toBe(
-        'location',
-      ),
-    );
-
-    ultimoObservador?.([{ target: membros, isIntersecting: false }]);
-
-    await waitFor(() =>
-      expect(entradaDoSumario('Membros e papéis').getAttribute('aria-current')).toBe(
-        'location',
-      ),
-    );
-  });
-
-  it('a aba NÃO tem o gasto por chave nem para o owner, nem a matriz (RN-911)', async () => {
-    papel.mockReturnValue({ data: { role: 'owner' } });
-    montar();
-
-    await waitFor(() => entradaDoSumario('Membros e papéis'));
-    expect(document.getElementById('secao-key-spend')).toBeNull();
-    for (const saiu of ['approval-matrix', 'credentials', 'model-catalog'])
+  it('CASO DE FALHA: a aba NÃO tem o gasto por chave nem a matriz (RN-911)', async () => {
+    montar('modelos');
+    await waitFor(() => expect(noDom('models')).toBeTruthy());
+    for (const saiu of ['key-spend', 'approval-matrix', 'credentials', 'model-catalog'])
       expect(document.getElementById(`secao-${saiu}`)).toBeNull();
-    expect(() => entradaDoSumario('Gasto das suas chaves')).toThrow();
   });
 });

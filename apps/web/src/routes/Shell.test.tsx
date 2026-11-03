@@ -591,7 +591,7 @@ describe('Shell — abas do projeto aberto (ADR 0211)', () => {
 
     const lista = screen.getByRole('tablist', { name: 'Abas de Core API' });
     expect(lista).toHaveAttribute('aria-orientation', 'vertical');
-    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length + 4);
     for (const grupo of ['Agentes', 'Dev', 'Documentação']) {
       expect(within(lista).getByText(grupo).textContent).toBe(grupo);
     }
@@ -661,7 +661,7 @@ describe('Shell — abas do projeto aberto (ADR 0211)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Core API' }));
     const flyout = screen.getByTestId('flyout-do-projeto');
     const lista = within(flyout).getByRole('tablist', { name: 'Abas de Core API' });
-    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length + 4);
     expect(within(lista).getByRole('tab', { name: 'PRs' })).toHaveAttribute('aria-selected', 'true');
     // Recolhida continua recolhida: o flyout não expande a sidebar.
     expect(window.localStorage.getItem(CHAVE_COLAPSADO)).toBe('1');
@@ -678,7 +678,7 @@ describe('Shell — abas do projeto aberto (ADR 0211)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
       const dialogo = screen.getByRole('dialog');
       const lista = within(dialogo).getByRole('tablist', { name: 'Abas de Core API' });
-      expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+      expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length + 4);
       fireEvent.click(within(lista).getByRole('tab', { name: 'Gastos' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(navigate).toHaveBeenLastCalledWith(

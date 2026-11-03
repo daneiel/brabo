@@ -101,3 +101,21 @@ export function ehChaveDeSecao(valor: unknown): valor is ChaveDeSecao {
 export function resolverChaveDeSecao(valor: unknown): ChaveDeSecao | undefined {
   return ehChaveDeSecao(valor) ? valor : undefined;
 }
+
+export function ehGrupoDoSumario(valor: unknown): valor is GrupoDoSumario {
+  return typeof valor === 'string' && (GRUPOS_DO_SUMARIO as readonly string[]).includes(valor);
+}
+
+/** RN-980: o grupo (a PÁGINA) de uma seção vem do registro, nunca de outra lista. */
+export function grupoDaSecao(chave: ChaveDeSecao): GrupoDoSumario {
+  return SECOES_DE_CONFIGURACOES.find((s) => s.chave === chave)?.grupo ?? 'modelos';
+}
+
+/** A página pedida: `?section=` vence `?group=` (é a mais específica); sem nenhum, Modelos. */
+export function resolverGrupo(
+  secao: ChaveDeSecao | undefined,
+  grupo: unknown,
+): GrupoDoSumario | undefined {
+  if (secao) return grupoDaSecao(secao);
+  return ehGrupoDoSumario(grupo) ? grupo : undefined;
+}

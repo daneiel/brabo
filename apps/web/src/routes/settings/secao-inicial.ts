@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { ChaveDeSecao } from './sumario';
+import type { ChaveDeSecao, GrupoDoSumario } from './sumario';
 
 /**
  * A seção que o deep-link `?section=` pediu, de `router.tsx` até dentro da aba
@@ -19,4 +19,11 @@ export const ContextoDeSecaoInicial = createContext<ChaveDeSecao | undefined>(un
 
 export function useSecaoInicial(): ChaveDeSecao | undefined {
   return useContext(ContextoDeSecaoInicial);
+}
+
+/** RN-980: a página (grupo) de Configurações aberta; `undefined` = Modelos. */
+export const ContextoDeGrupoInicial = createContext<GrupoDoSumario | undefined>(undefined);
+
+export function useGrupoInicial(): GrupoDoSumario | undefined {
+  return useContext(ContextoDeGrupoInicial);
 }

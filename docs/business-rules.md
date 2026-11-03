@@ -17750,7 +17750,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:366` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:376` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -25506,3 +25506,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:127` (`ARTEFATOS_DO_FIO`).
 - **Teste:** `apps/web/src/lib/artefato-do-fio.test.ts` (um caso por tipo e payload sem campo opcional).
 - **Origem:** AT-683 (EP-031).
+
+### RN-980 — As Configurações do projeto são uma página por grupo, com os grupos como sub-itens da sidebar; só o grupo aberto monta {#rn-980}
+
+- **Regra:** revisa a [RN-645](#rn-645) no item 3. O sumário lateral deixa de existir: cada grupo do registro (`modelos`, `projeto`, `pessoas`, `avancado`) é uma PÁGINA, e os quatro são sub-itens de "Configurações" na barra lateral do projeto (também no flyout da barra recolhida, com o mesmo teclado do `tablist`). O endereço é `?tab=settings&group=<grupo>`; Modelos é a página padrão. `?section=` continua valendo: abre a página do grupo da seção e rola até ela, e vence um `group` incoerente; chave aposentada ([RN-911](#rn-911)) ou desconhecida abre Modelos no topo. O grupo é derivado do campo `grupo` do registro, nunca de outra lista. Só as seções do grupo aberto montam, então a carga busca só o que é da página (abrindo em Modelos, no máximo 21 requisições, contra 30; teto em `configuracoes.orcamento.test.tsx`). Os itens 1 e 2 da RN-645 (frescor de um minuto, sem poll) não mudam, e trocar de página dentro do minuto não refaz busca. Trocar de página descarta rascunho não salvo, como trocar de aba.
+- **Onde:** `apps/web/src/routes/settings/sumario.ts:110` (`grupoDaSecao`), `apps/web/src/routes/settings/sumario.ts:115` (`resolverGrupo`), `apps/web/src/routes/ProjectSettingsTab.tsx:63` (`ProjectSettingsTab`).
+- **Teste:** `apps/web/src/routes/settings/paginas-por-grupo.test.tsx` (página só com as seções do grupo; todo `?section=` antigo cai no seu grupo; rola até a seção), `apps/web/src/routes/configuracoes.orcamento.test.tsx` (carga de Modelos não busca o resto), `apps/web/src/routes/AbasDoProjeto.test.tsx` (sub-itens e teclado).
+- **Origem:** AT-719 (EP-031).
