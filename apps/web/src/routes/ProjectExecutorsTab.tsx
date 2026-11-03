@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -257,6 +258,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
     <div>
       <div className={styles.sectionRow}>
         <h2 className={styles.sectionHeader}>{t('tab.title')}</h2>
+        <Ajuda assunto={t('tab.title')}>{t('tab.subtitle')}</Ajuda>
         {sessionId && (
           <span className={styles.sectionCount}>
             {t('tab.summary', {
@@ -267,7 +269,6 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           </span>
         )}
       </div>
-      <div className={styles.sectionSub}>{t('tab.subtitle')}</div>
 
       {/* Indicador de QUAL sessão a aba está olhando (RN-139) — os três
           estados da RN-088, erro antes de vazio: sem isto a troca silenciosa

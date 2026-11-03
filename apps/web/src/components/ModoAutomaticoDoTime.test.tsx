@@ -178,14 +178,16 @@ describe('agentesDaOfertaEmLote (AT-449, RN-766)', () => {
     ]);
   });
 
-  it('RN-816 (AT-488): no cartão do plano não afirma que a execução começou', () => {
+  it('RN-816 (AT-488): no cartão do plano não afirma que a execução começou', async () => {
     montar({ noPlano: true });
-    expect(screen.getByText(/Ao aprovar o plano, a execução começa/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda: / }));
+    expect(await screen.findByText(/Ao aprovar o plano, a execução começa/)).toBeInTheDocument();
     expect(screen.queryByText(/A execução começou/)).not.toBeInTheDocument();
   });
 
-  it('na aba Executores segue dizendo que a execução começou', () => {
+  it('na aba Executores segue dizendo que a execução começou', async () => {
     montar();
-    expect(screen.getByText(/A execução começou/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda: / }));
+    expect(await screen.findByText(/A execução começou/)).toBeInTheDocument();
   });
 });
