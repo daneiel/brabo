@@ -2,7 +2,7 @@
 
 - **Status:** aceito
 - **Data:** 2026-11-03
-- **Referencia:** os ADRs [0163](0163-o-clique-que-dispara-turno-responde-ao-aceitar.md) (responder ao aceitar) e [0191](0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md) (fila por agente). Revisa a RN-584 e a RN-631 (um destinatário só por mensagem). Nenhum ADR é editado.
+- **Referencia:** os ADRs [0163](0163-o-clique-responde-ao-aceitar.md) (responder ao aceitar) e [0191](0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md) (fila por agente). Revisa a RN-584 e a RN-631 (um destinatário só por mensagem). Nenhum ADR é editado.
 
 ## Contexto
 
