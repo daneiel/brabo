@@ -246,6 +246,7 @@
     "resultadoCortado": "结果已按 2000 字符上限截断。",
     "passosDoTurno": "轮次步骤",
     "consultado": "本轮已查阅",
+    "fonteN": "来源 {{n}}：{{rotulo}}",
     "consultadoCorte": "显示 {{shown}} / {{total}}",
     "passosCount_other": "{{count}} 步"
   },

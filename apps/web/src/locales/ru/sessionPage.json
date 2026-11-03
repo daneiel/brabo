@@ -270,6 +270,7 @@
     "resultadoCortado": "Результат обрезан по лимиту в 2000 символов.",
     "passosDoTurno": "Шаги хода",
     "consultado": "Использовано в этом ходе",
+    "fonteN": "Источник {{n}}: {{rotulo}}",
     "consultadoCorte": "показано {{shown}} из {{total}}",
     "passosCount_one": "{{count}} шаг",
     "passosCount_few": "{{count}} шага",
