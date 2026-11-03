@@ -204,7 +204,7 @@ function LinkDoRodape({
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton render={<Link to={to} />} title={rotulo} aria-label={rotulo}>
+      <SidebarMenuButton render={<Link to={to} className={styles.linkRodape} />} title={rotulo} aria-label={rotulo}>
         {icone}
         {!colapsado && <span>{rotulo}</span>}
       </SidebarMenuButton>

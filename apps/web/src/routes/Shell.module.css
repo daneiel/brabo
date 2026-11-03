@@ -546,3 +546,13 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+/* Links globais do rodapé: texto neutro da sidebar; o acento fica só na rota atual. */
+.linkRodape,
+.linkRodape:hover {
+  color: var(--color-sidebar-foreground);
+}
+
+.linkRodape[aria-current='page'] {
+  color: var(--accent);
+}
