@@ -53,6 +53,7 @@ const listProjectFolders = vi.fn();
 const useCurrentWorkspaceWithRole = vi.fn();
 const getContainerLifecycle = vi.fn();
 const listRunnerDeviceKeys = vi.fn();
+const listSessions = vi.fn();
 
 vi.mock('../../lib/hooks', () => ({
   useCurrentWorkspaceWithRole: (...args: unknown[]) =>
@@ -72,6 +73,7 @@ vi.mock('../../lib/api-client', async () => {
     listProjectFolders: (...args: unknown[]) => listProjectFolders(...args),
     getContainerLifecycle: (...args: unknown[]) => getContainerLifecycle(...args),
     listRunnerDeviceKeys: (...args: unknown[]) => listRunnerDeviceKeys(...args),
+    listSessions: (...args: unknown[]) => listSessions(...args),
   };
 });
 
@@ -110,6 +112,12 @@ async function montar() {
   await screen.findByText(settingsPtBR.executionMode.title);
 }
 
+// O aviso da conversão mora no botão de perigo (ADR 0243): abre o popover.
+async function abrirAviso(nome = 'Atenção: o que a conversão faz') {
+  fireEvent.click(await screen.findByRole('button', { name: nome }));
+  return screen.findByTestId('aviso-conversao');
+}
+
 function trocarModoPara(modo: string) {
   fireEvent.change(screen.getByLabelText(settingsPtBR.executionMode.selectAria), {
     target: { value: modo },
@@ -127,6 +135,8 @@ beforeEach(async () => {
   convertProjectExecutionMode.mockResolvedValue(projeto());
   getContainerLifecycle.mockResolvedValue(null);
   listRunnerDeviceKeys.mockResolvedValue([]);
+  // Sem resposta, o aviso aparece ("não sei" não vira "não há sessão").
+  listSessions.mockRejectedValue(new Error('rede'));
   listProjectFolders.mockResolvedValue({
     base: '/home/dani/projetos',
     path: '/home/dani/projetos',
@@ -221,7 +231,7 @@ describe('RN-559 — o navegador de pastas no ramo `mounted`', () => {
     trocarModoPara('runner');
 
     expect(screen.queryByRole('button', { name: /Procurar pasta/ })).toBeNull();
-    expect(screen.getByText(settingsPtBR.executionMode.path.runnerTyped)).toBeTruthy();
+    expect(screen.getByText(settingsPtBR.executionMode.path.runnerTypedCurto)).toBeTruthy();
     // O campo segue lá, digitável: o que falta é o navegador, não a conversão.
     expect(screen.getByLabelText(settingsPtBR.executionMode.pathAria)).not.toBeDisabled();
   });
@@ -256,6 +266,7 @@ describe('RN-560 — o aviso da conversão', () => {
       projeto({ executionMode: 'mounted', workspacePath: '/home/dani/projetos/loja' }),
     );
     await montar();
+    await abrirAviso();
 
     expect(screen.getByText(settingsPtBR.executionMode.warning.refuses)).toBeTruthy();
     expect(screen.getByText(settingsPtBR.executionMode.warning.carries)).toBeTruthy();
@@ -280,10 +291,38 @@ describe('RN-560 — o aviso da conversão', () => {
 
   it('sem caminho antigo (o projeto é `container`), o aviso aponta a pasta GERENCIADA em vez de um caminho vazio', async () => {
     await montar();
+    await abrirAviso();
 
     expect(screen.getByText(settingsPtBR.executionMode.warning.leavesManaged)).toBeTruthy();
     // Nada de "fica em ``" — a variante com caminho não é renderizada.
     expect(screen.queryByText(/O que estiver em \s*—/)).toBeNull();
+  });
+});
+
+describe('ADR 0243 — o aviso da conversão mora no botão de perigo', () => {
+  it('existe quando o aviso existiria, com o conteúdo COMPLETO e o ícone escondido da leitura', async () => {
+    await montar();
+    const botao = await screen.findByRole('button', { name: 'Atenção: o que a conversão faz' });
+    expect(botao.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    // O aviso não fica solto na tela: só o popover o guarda.
+    expect(screen.queryByTestId('aviso-conversao')).toBeNull();
+
+    const aviso = await abrirAviso();
+    expect(aviso.textContent).toContain(settingsPtBR.executionMode.warning.refuses);
+    expect(aviso.textContent).toContain(settingsPtBR.executionMode.warning.carries);
+    expect(aviso.textContent).toContain(settingsPtBR.executionMode.warning.leavesManaged);
+  });
+
+  it('caso de falha: sem sessão no projeto e com o modo salvo no seletor, não há botão', async () => {
+    listSessions.mockResolvedValue([]);
+    await montar();
+    await waitFor(() => expect(listSessions).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Atenção/ })).toBeNull(),
+    );
+    // Escolher outro modo traz o botão de volta (a condição da AT-372).
+    trocarModoPara('runner');
+    expect(await screen.findByRole('button', { name: /Atenção/ })).toBeTruthy();
   });
 });
 
@@ -298,7 +337,7 @@ describe('RN-591 — a conversão sabe se a instalação tem broker (AT-105)', (
     await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
     trocarModoPara('container');
 
-    expect(await screen.findByText(settingsPtBR.executionMode.noBroker)).toBeTruthy();
+    expect(await screen.findByText(settingsPtBR.executionMode.noBrokerCurto)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Converter' })).toBeDisabled();
   });
 
@@ -312,7 +351,7 @@ describe('RN-591 — a conversão sabe se a instalação tem broker (AT-105)', (
     await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
     trocarModoPara('container');
 
-    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+    expect(screen.queryByText(settingsPtBR.executionMode.noBrokerCurto)).toBeNull();
     expect(screen.getByRole('button', { name: 'Converter' })).not.toBeDisabled();
   });
 
@@ -322,7 +361,7 @@ describe('RN-591 — a conversão sabe se a instalação tem broker (AT-105)', (
     await waitFor(() => expect(getProjectsBase).toHaveBeenCalled());
     trocarModoPara('runner');
 
-    expect(screen.queryByText(settingsPtBR.executionMode.noBroker)).toBeNull();
+    expect(screen.queryByText(settingsPtBR.executionMode.noBrokerCurto)).toBeNull();
   });
 });
 
@@ -348,6 +387,7 @@ describe('AT-144 — o aviso diz só as consequências que valem para ESTE proje
   it('container REGISTRADO num projeto `container`: o aviso diz que ele é removido', async () => {
     getContainerLifecycle.mockResolvedValue(CICLO_REGISTRADO);
     await montar();
+    await abrirAviso();
 
     const linha = await screen.findByTestId('aviso-container');
     expect(linha.textContent).toBe(settingsPtBR.executionMode.warning.containerRemoved);
@@ -364,6 +404,7 @@ describe('AT-144 — o aviso diz só as consequências que valem para ESTE proje
   it('caso de falha: a leitura do ciclo de vida FALHA — "não sei" tem texto próprio e nunca vira "não há container"', async () => {
     getContainerLifecycle.mockRejectedValue(new Error('rede'));
     await montar();
+    await abrirAviso();
 
     const linha = await screen.findByTestId('aviso-container');
     expect(linha.textContent).toBe(settingsPtBR.executionMode.warning.containerUnknown);
@@ -379,6 +420,7 @@ describe('AT-144 — o aviso diz só as consequências que valem para ESTE proje
     );
     getContainerLifecycle.mockResolvedValue(CICLO_REGISTRADO);
     await montar();
+    await abrirAviso();
 
     const espelho = await screen.findByTestId('aviso-espelho');
     expect(espelho.textContent).toContain('/home/dani/espelho/loja');
@@ -396,6 +438,7 @@ describe('AT-144 — o aviso diz só as consequências que valem para ESTE proje
       }),
     );
     await montar();
+    await abrirAviso();
 
     const linha = await screen.findByTestId('aviso-pasta-confirmada');
     expect(linha.textContent).toContain(
@@ -416,6 +459,7 @@ describe('AT-144 — o aviso diz só as consequências que valem para ESTE proje
       </Wrapper>,
     );
     await screen.findByText(settingsEn.executionMode.title);
+    await abrirAviso('Warning: what the conversion does');
 
     expect((await screen.findByTestId('aviso-container')).textContent).toBe(
       settingsEn.executionMode.warning.containerRemoved,
@@ -454,7 +498,7 @@ describe('RN-612 — converter para `runner`: converte, DEPOIS onboarda (AT-143)
 
     const passo = await screen.findByTestId('proximo-passo-runner');
     expect(passo.textContent).toContain(settingsPtBR.executionMode.nextStep.title);
-    expect(passo.textContent).toContain(settingsPtBR.executionMode.nextStep.machineAgent);
+    expect(passo.textContent).toContain(settingsPtBR.executionMode.nextStep.machineAgentCurto);
     expect(passo.textContent).toContain('systemctl --user restart brabo-runner.service');
     // O painel é o MESMO da aba Código, e pergunta pelas chaves DESTE projeto.
     await waitFor(() => expect(listRunnerDeviceKeys).toHaveBeenCalledWith('proj-1'));
@@ -510,6 +554,6 @@ describe('RN-612 — converter para `runner`: converte, DEPOIS onboarda (AT-143)
     );
     const passo = await screen.findByTestId('proximo-passo-runner');
     expect(passo.textContent).toContain(settingsEn.executionMode.nextStep.title);
-    expect(screen.getByText(settingsEn.executionMode.path.runnerTyped)).toBeTruthy();
+    expect(screen.getByText(settingsEn.executionMode.path.runnerTypedCurto)).toBeTruthy();
   });
 });

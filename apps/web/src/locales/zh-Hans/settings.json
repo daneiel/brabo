@@ -143,7 +143,8 @@
         "alreadyInherits": "{{area}}领域本来就是继承",
         "partial": "领域默认值已保存，但 {{agent}} 自己的模型未被移除（{{reason}}）"
       }
-    }
+    },
+    "ajudaRoteamento": "路由：该偏好（最低价格、最高吞吐、最低延迟）只有在针对真实 API 证实之后，才会为提供方声明。未经证实时，该行会说明尚未证实。"
   },
   "members": {
     "title": "成员与角色",
@@ -169,7 +170,8 @@
       "roleErrorTitle": "无法更改角色",
       "removeErrorTitle": "无法移除成员"
     },
-    "emptyMessage": "除项目所有者外暂无其他成员。"
+    "emptyMessage": "除项目所有者外暂无其他成员。",
+    "avisoCurto": "仅列出在此项目中有角色的成员，该角色优先于工作区角色，降级也一样。"
   },
   "repository": {
     "title": "仓库",
@@ -212,7 +214,8 @@
       "mirrorCleared": "镜像目标（{{destino}}）会被清空：每次转换都会清除它，如果新模式支持镜像，之后需要重新声明。",
       "containerRemoved": "本项目已登记的容器会被停止并移除：离开 Container 模式会拆除它，且不会自动重新启动。",
       "containerUnknown": "无法读取本项目是否有已登记的容器。如果有，离开 Container 模式会停止并移除它。",
-      "verifiedLost": "于 {{data}} 确认的目录将不再视为已确认：每次转换都会清除这条记录，Runner 项目需要 runner 在连接时重新确认目录。"
+      "verifiedLost": "于 {{data}} 确认的目录将不再视为已确认：每次转换都会清除这条记录，Runner 项目需要 runner 在连接时重新确认目录。",
+      "assunto": "转换会做什么"
     },
     "card": {
       "title": "执行模式"
@@ -225,7 +228,8 @@
       "noBase": "此安装未声明挂载项目的基础目录：无处可浏览，挂载目录模式在这里也无处存在。",
       "baseUnknown": "无法查询此安装的项目基础目录——无法确定它是否存在，因此目录浏览器不可用。请刷新页面重试。",
       "baseLoading": "正在查询此安装的项目基础目录…",
-      "runnerTyped": "这里输入的路径是临时的：在 Runner 项目中，目录由 runner 在连接时决定，它的确认会覆盖这个值（机器智能体使用 <base>/<项目目录>）。这也是这里没有目录浏览器的原因：浏览需要一个已连接到此项目的 runner，而已连接的 runner 已经确认了自己的目录。先转换；下一步——连接 runner——会出现在下方。"
+      "runnerTyped": "这里输入的路径是临时的：在 Runner 项目中，目录由 runner 在连接时决定，它的确认会覆盖这个值（机器智能体使用 <base>/<项目目录>）。这也是这里没有目录浏览器的原因：浏览需要一个已连接到此项目的 runner，而已连接的 runner 已经确认了自己的目录。先转换；下一步——连接 runner——会出现在下方。",
+      "runnerTypedCurto": "临时：runner 连接时会确认该文件夹。"
     },
     "save": "转换",
     "saving": "正在转换…",
@@ -238,8 +242,11 @@
       "intro": "项目现在处于 Runner 模式，目录尚未确认。转换已保存；还差一个 runner 连接到本项目——由它来确认目录。",
       "machineAgent": "如果你的机器上已经运行着机器智能体：当它没有服务任何 Runner 项目时，会在 60 秒内自动接手本项目。当它已在服务其他 Runner 项目时，不会接手——项目列表只在智能体启动时读取一次——因此请重启它的服务：",
       "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
-      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
-    }
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS",
+      "machineAgentCurto": "机器代理已运行并服务其他项目？请重启其服务："
+    },
+    "noBrokerCurto": "此安装没有 broker：只能转换为 Runner。",
+    "noBrokerAssunto": "为什么无法转换"
   },
   "parallelism": {
     "title": "按领域的并行度",
@@ -332,7 +339,7 @@
     "otherLabel": "语言代码（BCP-47）",
     "otherHint": "例如：pt-PT、es-MX、fr-CA。api 会拒绝不是语言的代码。",
     "save": "保存",
-    "readOnly": "只有项目的 maintainer 或 owner 可以更改语言。你可以看到当前值，但控件不可用。",
+    "readOnly": "只有 maintainer 或 owner 才能更改语言。",
     "toast": {
       "saved": "项目语言已保存",
       "error": "无法保存项目语言"
@@ -512,7 +519,9 @@
       "precisao": "只有用此密钥连接的会断开：你在同一项目中通过其他密钥或令牌认证的其他 runner 仍保持连接。用它发起但尚未使用的连接请求也会失效。",
       "cancel": "取消",
       "confirm": "撤销"
-    }
+    },
+    "subtitleAlcanceCurto": "吊销机器密钥会使您所有 runner 项目中的代理下线。",
+    "subtitleNaoEBatimentoCurto": "已注册不代表当前正在运行。"
   },
   "instructionVersions": {
     "title": "指令历史",
@@ -542,12 +551,13 @@
       "latency": "最低延迟"
     },
     "notSupported": "无路由偏好：provider {{provider}} 未声明此能力——该能力只有在针对真实 API 验证后才会声明。",
-    "inherited": "路由：{{valor}}——随 {{nivel}} 层级的模型而来。",
+    "inherited": "路由：{{valor}}（来自 {{nivel}} 级别）",
     "inheritedHint": "若要在此定义，请为这一行选择自有模型。",
     "toast": {
       "saveError": "无法保存路由偏好"
     },
-    "teto": "在 OpenRouter 上，每次调用还带有价格上限（目录价格的 1.5 倍）：只有上限内的上游会提供服务；若没有上游符合，则不带上限重试一次。"
+    "teto": "在 OpenRouter 上，每次调用还带有价格上限（目录价格的 1.5 倍）：只有上限内的上游会提供服务；若没有上游符合，则不带上限重试一次。",
+    "notSupportedCurto": "路由：{{provider}} 上未经证实"
   },
   "resolvedBindings": {
     "readError": "无法读取当前生效的模型：{{reason}}",

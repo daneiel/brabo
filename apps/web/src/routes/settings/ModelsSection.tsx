@@ -783,6 +783,8 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         {t('modelsSection.subtitle.mostSpecificWins')}{' '}
         <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
         {t('modelsSection.subtitle.areaExplain')}
+        <br />
+        {t('modelsSection.ajudaRoteamento')} {t('roteamento.inheritedHint')} {t('roteamento.teto')}
         </span>
         </Ajuda>
         <span className={styles.eyebrow}>{t('modelsSection.eyebrow')}</span>

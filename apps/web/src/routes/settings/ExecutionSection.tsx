@@ -3,6 +3,7 @@ import { Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject, updateProject } from '../../lib/api-client';
+import { Ajuda } from '../../components/ui/Ajuda';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -65,9 +66,9 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="execution">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('execution.title')}</h2>
+        <Ajuda assunto={t('execution.title')}>{t('execution.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('execution.eyebrow')}</span>
       </div>
-      <div className={styles.subtitle}>{t('execution.subtitle')}</div>
 
       <div className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>

@@ -13224,8 +13224,8 @@ interrupção sem causa.
   ele vem da rota que JÁ existe, `GET projects/:projectId/container/lifecycle`
   (`viewer`), consultada só quando o projeto é `container` — nenhum endpoint
   novo. Enquanto a leitura está em voo, a linha simplesmente não aparece.
-  - **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:102`
-    (`consequenciasCondicionais`), `:118` (`containerParaOAviso`, os três
+  - **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:106`
+    (`consequenciasCondicionais`), `:122` (`containerParaOAviso`, os três
     estados), `:240` (`cicloQuery`, só em `container`), `:344` (as quatro
     linhas no `Alert`)
   - **Teste:** o describe `AT-144` em
@@ -13291,7 +13291,7 @@ botão seria um controle que não controla nada; a seção diz isso em texto
   (`RunnerOnboardingPanel`, o mesmo da aba Código);
   `apps/web/src/locales/pt-BR/settings.json:249` e
   `apps/web/src/locales/en/settings.json:249` (`executionMode.nextStep.*`) e
-  `:234` (`executionMode.path.runnerTyped`, reescrito); a cadência medida em
+  `:238` (`executionMode.path.runnerTyped`, reescrito); a cadência medida em
   `apps/runner/src/espera-de-projetos.ts:60` (`CADENCIA_DA_ESPERA_MS`) e a
   lista lida uma vez em `apps/runner/src/index.ts` (`rodarComoAgenteDeMaquina`)
 - **Teste:** o describe `RN-612` em

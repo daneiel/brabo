@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
+import uiPtBR from '../../locales/pt-BR/ui.json';
 import settingsEn from '../../locales/en/settings.json';
 import modelsPtBR from '../../locales/pt-BR/models.json';
 import modelsEn from '../../locales/en/models.json';
@@ -155,13 +156,13 @@ function montar(secao: ReactNode, lng: 'pt-BR' | 'en' = 'pt-BR') {
   const i18n = i18next.createInstance();
   void i18n.use(initReactI18next).init({
     resources: {
-      'pt-BR': { settings: settingsPtBR, models: modelsPtBR },
+      'pt-BR': { settings: settingsPtBR, models: modelsPtBR, ui: uiPtBR },
       en: { settings: settingsEn, models: modelsEn },
     },
     lng,
     fallbackLng: lng,
     defaultNS: 'settings',
-    ns: ['settings', 'models'],
+    ns: ['settings', 'models', 'ui'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -256,7 +257,7 @@ describe('critério de roteamento — quando NÃO há o que escolher', () => {
     montar(<ModelsSection projectId="proj-1" />);
 
     expect(
-      await screen.findByText(/o provider openrouter não declara essa capacidade/),
+      await screen.findByText(/Roteamento: não provado em openrouter/),
     ).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: ROTULO })).toBeNull();
   });
@@ -266,7 +267,7 @@ describe('critério de roteamento — quando NÃO há o que escolher', () => {
     montar(<ModelsSection projectId="proj-1" />, 'en');
 
     expect(
-      await screen.findByText(/the openrouter provider does not declare that capability/),
+      await screen.findByText(/Routing: not proven on openrouter/),
     ).toBeInTheDocument();
   });
 
@@ -281,7 +282,7 @@ describe('critério de roteamento — quando NÃO há o que escolher', () => {
     montar(<ModelsSection projectId="proj-1" />);
 
     expect(
-      await screen.findByText(/Roteamento: maior vazão — vem com o modelo do nível área/),
+      await screen.findByText(/Roteamento: maior vazão \(do nível área\)/),
     ).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: ROTULO })).toBeNull();
   });
@@ -345,11 +346,14 @@ describe('teto de preço (priceCeiling) junto do critério de roteamento', () =>
     listProviderCapabilities.mockResolvedValue(capacidades(true, true));
     montar(<ModelsSection projectId="proj-1" />);
 
+    // O teto mora no "?" da seção, não na linha (AT-719).
+    await screen.findByRole('combobox', { name: ROTULO });
+    expect(screen.queryByText(/teto de preço/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Ajuda: Modelos por agente/ }));
     expect(await screen.findByText(/teto de preço/)).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: ROTULO })).toBeInTheDocument();
   });
 
-  it('caso de falha: sem a capability, a frase do teto não aparece', async () => {
+  it('caso de falha: a linha nunca repete a frase do teto — fechado, o "?" não a mostra', async () => {
     montar(<ModelsSection projectId="proj-1" />);
 
     await screen.findByRole('combobox', { name: ROTULO });

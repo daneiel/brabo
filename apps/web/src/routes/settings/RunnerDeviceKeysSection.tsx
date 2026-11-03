@@ -273,7 +273,10 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="device-keys">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('runnerDeviceKeys.title')}</h2>
-        <Ajuda assunto={t('runnerDeviceKeys.title')}>{t('runnerDeviceKeys.subtitle')}</Ajuda>
+        <Ajuda assunto={t('runnerDeviceKeys.title')}>
+          {t('runnerDeviceKeys.subtitle')} {t('runnerDeviceKeys.subtitleAlcance')}{' '}
+          {t('runnerDeviceKeys.subtitleNaoEBatimento')}
+        </Ajuda>
         <span className={styles.eyebrow}>{t('runnerDeviceKeys.eyebrow')}</span>
       </div>
       <p className={styles.subtitle}>
@@ -283,13 +286,13 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
           "derruba o agente aqui" de "derruba o agente em todos os seus
           projetos".
         */}
-        {t('runnerDeviceKeys.subtitleAlcance')}
+        {t('runnerDeviceKeys.subtitleAlcanceCurto')}
         {/*
           E a ressalva de sempre: registro de uma confirmação, não batimento.
           Mesmo vocabulário da RN-548, de propósito.
         */}
         {' '}
-        {t('runnerDeviceKeys.subtitleNaoEBatimento')}
+        {t('runnerDeviceKeys.subtitleNaoEBatimentoCurto')}
         {/*
           O motivo dos controles ausentes, dito UMA vez e em TEXTO — o fato é
           sobre quem está lendo, não sobre uma linha da tabela, e `title` em
