@@ -86,7 +86,7 @@
   align-items: center;
   gap: 6px;
   min-height: 24px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   color: var(--text-primary);
   flex: 1;
@@ -138,7 +138,7 @@
 /* Campo ocupa o lugar exato do rótulo — mesma métrica de fonte, senão a
    linha salta no instante em que se clica para renomear. */
 .rowIdEditavel {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 12px;
   color: var(--text-primary);
   flex: 1;

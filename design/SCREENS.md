@@ -252,7 +252,7 @@ o TIPO da linha — e persiste via `PUT .../permissions`).
 
 ## Configurações (`Brabo Settings.dc.html`)
 
-Layout: mesma estrutura de header+tabs (`max-width:1040px`), 2 seções.
+Layout: mesma estrutura de header+tabs (`max-width:1040px`, alinhada à esquerda desde o ADR 0244), 2 seções.
 
 **Seção "Modelos por agente"**: subtítulo explicando a cascata
 (`global → projeto → agente`, cores muted/warning/accent respectivamente

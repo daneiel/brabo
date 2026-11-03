@@ -96,15 +96,15 @@
    Desde o ADR 0126 este é filho de `.corpo` (linha), não de `.wrapper`
    (coluna): `flex: 1` passou a repartir LARGURA com o trilho, e `min-width:
    0` é o que impede um filho largo (tabela, terminal) de empurrar o trilho
-   para fora da tela. A centralização por `margin: 0 auto` continua, agora
-   dentro do espaço que sobra à direita do trilho. */
+   para fora da tela. Desde o ADR 0244 a coluna fica à ESQUERDA, junto do cabeçalho
+   (sem `margin: auto`), com a largura máxima de leitura. */
 .body {
   flex: 1;
   min-height: 0;
   min-width: 0;
   width: 100%;
   max-width: 1040px;
-  margin: 0 auto;
+  margin: 0;
   overflow-y: auto;
   padding: 24px;
 }

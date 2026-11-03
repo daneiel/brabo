@@ -8,6 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
 - A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).
+- A coluna das abas do projeto fica alinhada à esquerda, o rótulo das sessões usa a fonte de corpo e o vazio de PR de infra ganha respiro lateral (AT-720, ADR 0244).
 
 ### Correções
 
