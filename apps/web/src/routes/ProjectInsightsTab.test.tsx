@@ -195,11 +195,11 @@ describe('ProjectInsightsTab — Psicólogo pausado globalmente', () => {
   it('reanalisar com sucesso avisa e não desabilita o botão', async () => {
     montar();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Reanalisar' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Roda a análise de novo/ }));
 
     expect(await screen.findByText('Reanálise enfileirada')).toBeTruthy();
     expect(reanalyzeSession).toHaveBeenCalledWith('proj-1', 'sess-1');
-    expect(screen.getByRole('button', { name: 'Reanalisar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Roda a análise de novo/ })).not.toBeDisabled();
   });
 
   it('503 (desativado globalmente) é distinto de erro genérico: some toast claro, o botão desabilita e a explicação fica na tela', async () => {
@@ -212,7 +212,7 @@ describe('ProjectInsightsTab — Psicólogo pausado globalmente', () => {
     );
     montar();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Reanalisar' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Roda a análise de novo/ }));
 
     expect(await screen.findByText('Psicólogo pausado')).toBeTruthy();
     expect(
@@ -224,7 +224,7 @@ describe('ProjectInsightsTab — Psicólogo pausado globalmente', () => {
     // Persistente na tela, não só o toast (RN-088) — e o botão para de
     // convidar um clique que sabidamente falha.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Reanalisar' })).toBeDisabled(),
+      expect(screen.getByRole('button', { name: /^Roda a análise de novo/ })).toBeDisabled(),
     );
     expect(
       screen.getByText(/O Psicólogo está pausado globalmente por decisão do time/),
@@ -235,10 +235,10 @@ describe('ProjectInsightsTab — Psicólogo pausado globalmente', () => {
     reanalyzeSession.mockRejectedValue(new ApiError(500, { message: 'boom' }));
     montar();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Reanalisar' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Roda a análise de novo/ }));
 
     expect(await screen.findByText('Erro')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Reanalisar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Roda a análise de novo/ })).not.toBeDisabled();
   });
 });
 
@@ -282,7 +282,7 @@ describe('ProjectInsightsTab — a pausa se sabe ANTES de clicar (RN-454)', () =
     montar();
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Reanalisar' })).toBeDisabled(),
+      expect(screen.getByRole('button', { name: /^Roda a análise de novo/ })).toBeDisabled(),
     );
     expect(
       screen.getByText(/O Psicólogo está pausado globalmente por decisão do time/),

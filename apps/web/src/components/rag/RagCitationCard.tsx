@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { mensagemDaApi, sendRagFeedback } from '../../lib/api-client';
 import type { RagSearchHit, RagVerdict } from '../../lib/api-types';
 import { Badge, type BadgeTone } from '../ui/Badge';
+import { ChevronUp, ChevronDown, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { FileIcon, SessionIcon } from '../ui/icons';
 import styles from './RagCitationCard.module.css';
 
@@ -101,8 +102,10 @@ export function RagCitationCard({
 
       <p className={expandido ? styles.conteudoExpandido : styles.conteudo}>{hit.content}</p>
       {hit.content.length > 240 && (
-        <button type="button" className={styles.botaoExpandir} onClick={() => setExpandido((v) => !v)}>
-          {expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
+        <button type="button" className={styles.botaoExpandir} aria-label={expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
+            title={expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
+            onClick={() => setExpandido((v) => !v)}>
+          {expandido ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
         </button>
       )}
 
@@ -133,17 +136,21 @@ export function RagCitationCard({
             type="button"
             className={styles.votoBotao}
             disabled={voto.isPending}
+            aria-label={t('ragCitation.feedback.useful')}
+            title={t('ragCitation.feedback.useful')}
             onClick={() => voto.mutate('util')}
           >
-            {t('ragCitation.feedback.useful')}
+            <ThumbsUp size={14} aria-hidden="true" />
           </button>
           <button
             type="button"
             className={styles.votoBotao}
             disabled={voto.isPending}
+            aria-label={t('ragCitation.feedback.irrelevant')}
+            title={t('ragCitation.feedback.irrelevant')}
             onClick={() => voto.mutate('irrelevante')}
           >
-            {t('ragCitation.feedback.irrelevant')}
+            <ThumbsDown size={14} aria-hidden="true" />
           </button>
 
           {/* Os três estados, cada um com texto próprio (RN-088). */}

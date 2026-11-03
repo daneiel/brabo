@@ -21,6 +21,7 @@ import { idCurtoDaSessao } from '../lib/session-label';
 import { HypothesisCard } from '../components/HypothesisCard';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Badge } from '../components/ui/Badge';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/ToastProvider';
@@ -209,13 +210,9 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
                     className={styles.analysisReanalyze}
                     onClick={() => reanalyze(run.sessionId)}
                     disabled={psicologoBloqueado}
-                    title={
-                      psicologoBloqueado
-                        ? t('projectInsightsTab.analysisStrip.reanalyzeTitleDisabled')
-                        : t('projectInsightsTab.analysisStrip.reanalyzeTitleEnabled')
-                    }
+                    legenda={t('projectInsightsTab.analysisStrip.reanalyzeTitleEnabled')}
                   >
-                    {t('projectInsightsTab.analysisStrip.reanalyzeButton')}
+                    <RefreshCw aria-hidden="true" />
                   </Button>
                 </div>
               ))}

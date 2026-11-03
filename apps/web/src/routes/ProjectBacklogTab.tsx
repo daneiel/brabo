@@ -24,6 +24,7 @@ import { Input } from '../components/ui/Input';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Ajuda } from '../components/ui/Ajuda';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { Textarea } from '../components/ui/Textarea';
@@ -242,8 +243,8 @@ function PromotionQueue({
       <div className={styles.sectionLabel}>
         {t('sectionLabel.promotionQueue')}
         <Badge tone="warning">{stories.length}</Badge>
+        <Ajuda assunto={t('sectionLabel.promotionQueue')}>{t('promotionQueue.hint')}</Ajuda>
       </div>
-      <p className={styles.promotionHint}>{t('promotionQueue.hint')}</p>
 
       {selected.size > 0 && (
         <div className={styles.selectionBar}>
@@ -522,6 +523,7 @@ function StoryNode({
           <div className={styles.storyActions}>
             <Button
               variant="ghost"
+              legenda={t('storyNode.editTitle')}
               disabled={inerte !== null || ocupado}
               onClick={() => {
                 setTitulo(story.title);
@@ -529,7 +531,6 @@ function StoryNode({
               }}
             >
               <Pencil aria-hidden="true" />
-              {t('storyNode.editTitle')}
             </Button>
             <Button
               variant="ghost"
