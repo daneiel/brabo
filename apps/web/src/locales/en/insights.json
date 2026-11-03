@@ -28,7 +28,8 @@
       "psychologistPausedTitle": "Psychologist paused",
       "psychologistPausedFallback": "The Psychologist is globally disabled.",
       "reanalyzeError": "Could not queue the reanalysis"
-    }
+    },
+    "emptyTitle": "No hypotheses"
   },
   "hypothesisCard": {
     "status": {

@@ -34,7 +34,8 @@
       "psychologistPausedTitle": "Psicólogo приостановлен",
       "psychologistPausedFallback": "Psicólogo отключён глобально.",
       "reanalyzeError": "Не удалось поставить повторный анализ в очередь"
-    }
+    },
+    "emptyTitle": "Гипотез нет"
   },
   "hypothesisCard": {
     "status": {

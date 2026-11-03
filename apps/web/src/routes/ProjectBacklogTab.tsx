@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Archive, Pencil, Save, X } from 'lucide-react';
+import { Archive, ListTree, Pencil, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -98,7 +98,7 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
 
         <div className={styles.sectionLabel}>{t('sectionLabel.backlog')}</div>
         {!epics || epics.length === 0 ? (
-          <EmptyState>{t('empty.epics')}</EmptyState>
+          <EmptyState titulo={t('empty.epicsTitle')} icone={<ListTree size={18} />}>{t('empty.epics')}</EmptyState>
         ) : (
           epics.map((epic) => (
             <EpicNode
@@ -121,7 +121,7 @@ export function ProjectBacklogTab({ projectId }: { projectId: string }) {
           )}
         </div>
         {!coverage || coverage.rules.length === 0 ? (
-          <EmptyState>{t('empty.rules')}</EmptyState>
+          <EmptyState titulo={t('empty.rulesTitle')} icone={<ListTree size={18} />}>{t('empty.rules')}</EmptyState>
         ) : (
           coverage.rules.map((r) => (
             <div

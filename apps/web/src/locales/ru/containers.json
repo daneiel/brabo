@@ -4,7 +4,12 @@
   "loadError": "Не удалось загрузить контейнеры.",
   "loading": "Загрузка…",
   "empty": "В этом workspace пока нет ни одного проекта.",
-  "pagination": { "label": "Страницы", "previous": "Назад", "next": "Далее", "status": "{{page}} / {{total}}" },
+  "pagination": {
+    "label": "Страницы",
+    "previous": "Назад",
+    "next": "Далее",
+    "status": "{{page}} / {{total}}"
+  },
   "table": {
     "project": "Проект",
     "image": "Образ",
@@ -97,7 +102,8 @@
     "networkValue": {
       "none": "Без сети",
       "egress": "Исходящий доступ в интернет"
-    }
+    },
+    "notFoundTitle": "Контейнер не найден"
   },
   "rede": {
     "titulo": "Порты, DNS и хосты",

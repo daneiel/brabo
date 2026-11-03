@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ApiError, mensagemDaApi } from '../lib/api-client';
+import { RefreshCw, TriangleAlert } from 'lucide-react';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import styles from './ErroDeCarregamento.module.css';
@@ -41,7 +42,11 @@ export function ErroDeCarregamento({
   const traceId = erro instanceof ApiError ? erro.traceId : undefined;
 
   return (
-    <Alert tone="danger" role="alert">
+    <Alert
+      tone="danger"
+      role="alert"
+      icon={<span className={styles.quadro}><TriangleAlert size={16} aria-hidden="true" /></span>}
+    >
       <strong>{titulo}</strong>
       <p>{mensagemDaApi(erro, t('erroDeCarregamento.defaultMessage'))}</p>
       {traceId && (
@@ -50,6 +55,7 @@ export function ErroDeCarregamento({
       {onTentarDeNovo && (
         <div className={styles.acao}>
           <Button variant="secondary" onClick={onTentarDeNovo}>
+            <RefreshCw size={14} aria-hidden="true" />
             {t('erroDeCarregamento.retry')}
           </Button>
         </div>

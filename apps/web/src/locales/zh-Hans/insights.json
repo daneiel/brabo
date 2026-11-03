@@ -25,7 +25,8 @@
       "psychologistPausedTitle": "Psicólogo 已暂停",
       "psychologistPausedFallback": "Psicólogo 已全局停用。",
       "reanalyzeError": "无法将重新分析加入队列"
-    }
+    },
+    "emptyTitle": "暂无假设"
   },
   "hypothesisCard": {
     "status": {

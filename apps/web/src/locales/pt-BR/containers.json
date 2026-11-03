@@ -4,7 +4,12 @@
   "loadError": "Não foi possível carregar os containers.",
   "loading": "Carregando…",
   "empty": "Este workspace ainda não tem projeto nenhum.",
-  "pagination": { "label": "Paginação", "previous": "Anterior", "next": "Próxima", "status": "{{page}} / {{total}}" },
+  "pagination": {
+    "label": "Paginação",
+    "previous": "Anterior",
+    "next": "Próxima",
+    "status": "{{page}} / {{total}}"
+  },
   "table": {
     "project": "Projeto",
     "image": "Imagem",
@@ -97,7 +102,8 @@
     "networkValue": {
       "none": "Sem rede",
       "egress": "Com saída para a internet"
-    }
+    },
+    "notFoundTitle": "Contêiner não encontrado"
   },
   "rede": {
     "titulo": "Portas, DNS e hosts",
