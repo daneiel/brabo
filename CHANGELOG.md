@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Funcionalidades
 
 - **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
+- A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).
 
 ### Correções
 

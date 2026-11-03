@@ -509,7 +509,10 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 ## Desenho linear da v7 (AT-714, ADR 0241/0242)
 
 - **Sidebar**: block `sidebar-07` do shadcn, 256px abertos e 48 recolhidos,
-  Ctrl/Cmd+B, ícones Lucide.
+  Ctrl/Cmd+B, ícones Lucide. Abas do projeto: fonte de corpo, `--text-primary`,
+  32px, ícones de 16px e divisória entre grupos. Rodapé: cartão do usuário é o
+  gatilho de um `DropdownMenu` (Conta, Tema, Sair); recolhida, só o avatar e o
+  menu abre ao lado.
 - **Tabela linear** (`components/ui/Table`, Containers com
   `@tanstack/react-table`): uma linha por item, ações só ícone com `legenda`.
 - **`CabecalhoDePagina`** (`components/shadcn/cabecalho-de-pagina.tsx`): título,
