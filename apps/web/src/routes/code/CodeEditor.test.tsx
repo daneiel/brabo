@@ -155,7 +155,7 @@ describe('CodeEditor — blame', () => {
     await ligarBlame();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
     // O conteúdo do arquivo continua visível — erro de blame não derruba o editor.
     expect(screen.getByText(porTextoDaLinha('const a = 1;'))).toBeInTheDocument();
   });

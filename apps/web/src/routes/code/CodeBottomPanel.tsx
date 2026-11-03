@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getContainerLifecycle } from '../../lib/api-client';
@@ -141,14 +142,16 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
         {aba === 'problems' && (
           <div className={styles.terminalVazio}>
             <AlertIcon size={22} />
-            <p>{t('bottomPanel.problemsEmpty')}</p>
+            <p>{t('bottomPanel.semIntegracao')}</p>
+            <Ajuda assunto={t('bottomPanel.tabs.problems')}>{t('bottomPanel.problemsEmpty')}</Ajuda>
           </div>
         )}
         {aba === 'diff' && <CodeDiffPanel projectId={projectId} />}
         {aba === 'output' && (
           <div className={styles.terminalVazio}>
             <OutputIcon size={22} />
-            <p>{t('bottomPanel.outputEmpty')}</p>
+            <p>{t('bottomPanel.semIntegracao')}</p>
+            <Ajuda assunto={t('bottomPanel.tabs.output')}>{t('bottomPanel.outputEmpty')}</Ajuda>
           </div>
         )}
       </div>

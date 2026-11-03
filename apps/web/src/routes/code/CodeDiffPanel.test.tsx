@@ -112,7 +112,7 @@ describe('CodeDiffPanel — lista de PRs', () => {
     getCodePullRequests.mockRejectedValue(new Error('boom'));
     montar();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 
   // Achado de uso: o 409 do portão do container (RN-105) — o Arquiteto ainda
@@ -135,7 +135,7 @@ describe('CodeDiffPanel — lista de PRs', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/o Arquiteto ainda não decidiu/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.queryByText('Tentar de novo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument();
   });
 });
 
@@ -212,7 +212,7 @@ describe('CodeDiffPanel — diff por id conhecido', () => {
     await screen.findByText('Nenhuma PR aberta neste repositório.');
     await pedirDiffPeloId('1');
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 
   it('409 do portão do container no diff por id também mostra o estado dedicado', async () => {

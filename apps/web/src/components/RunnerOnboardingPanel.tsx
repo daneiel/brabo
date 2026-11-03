@@ -1,4 +1,5 @@
 import { Snippet } from './ai-elements/snippet';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { Shimmer } from './ui/Shimmer';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -218,7 +219,7 @@ export function RunnerOnboardingPanel({
         <div className={styles.instrucao}>
           <p className={styles.avisoPassoHumano}>{t('runnerOnboarding.instaladorIntro')}</p>
           <Snippet texto={COMANDO_DO_INSTALADOR} rotulo={t('runnerOnboarding.copyButton')} rotuloCopiado={t('runnerOnboarding.copiedButton')} />
-          <p className={styles.detalhe}>{t('runnerOnboarding.instaladorFaz')}</p>
+          <Ajuda assunto={t('runnerOnboarding.instaladorAssunto')}>{t('runnerOnboarding.instaladorFaz')}</Ajuda>
           <p className={styles.detalhe}>{t('runnerOnboarding.instaladorOutraMaquina')}</p>
           <p className={styles.detalhe}>{t('runnerOnboarding.passoHumano')}</p>
 

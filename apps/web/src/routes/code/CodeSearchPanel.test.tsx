@@ -103,6 +103,6 @@ describe('CodeSearchPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 });

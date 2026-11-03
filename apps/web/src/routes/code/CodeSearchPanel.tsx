@@ -1,4 +1,7 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -46,9 +49,9 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
           placeholder={t('search.placeholder')}
           aria-label={t('search.ariaLabel')}
         />
-        <button type="submit" className={styles.botao} disabled={!gitRef}>
-          {t('search.button')}
-        </button>
+        <Button type="submit" legenda={t('search.button')} disabled={!gitRef}>
+          <Search aria-hidden="true" />
+        </Button>
       </form>
 
       <div className={styles.resultados}>
@@ -59,9 +62,9 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
         {buscado && searchQuery.isError && (
           <div className={styles.estadoErro} role="alert">
             <span>{mensagemDaApi(searchQuery.error, t('search.errorFallback'))}</span>
-            <button type="button" className={styles.botaoTentar} onClick={() => void searchQuery.refetch()}>
-              {t('shared.retry')}
-            </button>
+            <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void searchQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
           </div>
         )}
 

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { LockIcon } from './ui/icons';
 import styles from './ContainerImageGate.module.css';
 
@@ -47,7 +48,7 @@ export function ContainerImageGateNotice({
       </span>
       <h2 className={styles.bloqueadoTitulo}>{t(`${bloco}.title`, nomes)}</h2>
       <p className={styles.bloqueadoTexto}>{t(`${bloco}.description`, nomes)}</p>
-      <p className={styles.bloqueadoNota}>{t(`${bloco}.note`, nomes)}</p>
+      <Ajuda assunto={t(`${bloco}.title`, nomes)}>{t(`${bloco}.note`, nomes)}</Ajuda>
     </div>
   );
 }

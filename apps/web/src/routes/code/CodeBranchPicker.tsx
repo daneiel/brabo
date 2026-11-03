@@ -1,4 +1,7 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -117,13 +120,9 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
               <span>
                 {mensagemDaApi(branchesQuery.error, t('branchPicker.loadErrorFallback'))}
               </span>
-              <button
-                type="button"
-                className={styles.botaoTentar}
-                onClick={() => void branchesQuery.refetch()}
-              >
-                {t('shared.retry')}
-              </button>
+              <Button type="button" variant="secondary" size="sm" legenda={t('shared.retry')} onClick={() => void branchesQuery.refetch()}>
+<RotateCcw aria-hidden="true" />
+</Button>
             </div>
           )}
 
@@ -181,9 +180,9 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
               placeholder={t('branchPicker.manualPlaceholder')}
               aria-label={t('branchPicker.manualAriaLabel')}
             />
-            <button type="submit" className={styles.botaoIr} disabled={!refManual.trim()}>
-              {t('branchPicker.goButton')}
-            </button>
+            <Button type="submit" variant="secondary" legenda={t('branchPicker.goButton')} disabled={!refManual.trim()}>
+              <ArrowRight aria-hidden="true" />
+            </Button>
           </form>
         </div>
       )}

@@ -139,6 +139,6 @@ describe('CodeBranchPicker', () => {
     await user.click(screen.getByRole('button', { name: /dev/ }));
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
   });
 });

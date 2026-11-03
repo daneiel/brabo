@@ -14,6 +14,7 @@
     }
   },
   "bottomPanel": {
+    "semIntegracao": "此仓库尚未集成任何 lint 或测试。",
     "tablistLabel": "底部面板",
     "tabs": {
       "terminal": "终端",

@@ -36,6 +36,7 @@
     "semRespostaRessalva": "Никто не ответил вовремя. Это не доказывает, что локальный агент не запущен: возможно, медленная машина или соединение."
   },
   "runnerOnboarding": {
+    "instaladorAssunto": "Что делает установщик",
     "defaultMessage": "К этому проекту не подключён ни один runner.",
     "noProjectMessage": "После создания проекта здесь можно настроить runner.",
     "instructionPrefix": "На своей машине, в checkout Brabo (см.",
