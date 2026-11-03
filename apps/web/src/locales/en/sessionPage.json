@@ -85,7 +85,62 @@
     "perguntasEmAberto_one": "{{count}} open question",
     "perguntasEmAberto_other": "{{count}} open questions",
     "responderPerguntas": "Answer them",
-    "sugestaoExigeDeveloper": "This action requires the developer role in this workspace."
+    "sugestaoExigeDeveloper": "This action requires the developer role in this workspace.",
+    "menu": {
+      "agentes": "Session agents",
+      "comandos": "Commands",
+      "vazio": "Nothing found",
+      "removerDestinatario": "Remove {{agente}} from the recipients",
+      "fecharAjuda": "Close help",
+      "erroEnviarVarios": "Could not send the message to the recipients. The text is back in the field."
+    },
+    "comandos": {
+      "indisponivel": "Unavailable right now",
+      "pronto": {
+        "nome": "ready",
+        "descricao": "Confirms readiness and calls the PO"
+      },
+      "arquitetura": {
+        "nome": "architecture",
+        "descricao": "Confirms the architecture"
+      },
+      "handoff": {
+        "nome": "handoff",
+        "descricao": "Opens the manual handoff"
+      },
+      "perguntas": {
+        "nome": "questions",
+        "descricao": "Goes to the open questions"
+      },
+      "parar": {
+        "nome": "stop",
+        "descricao": "Stops the running turn"
+      },
+      "aprovar": {
+        "nome": "approve",
+        "descricao": "You are deciding through this command. The same limits as the approval card apply.",
+        "confirmar": "Approve: {{acao}}",
+        "cancelar": "Cancel",
+        "aprovar": "Approve",
+        "nenhuma": "No action is waiting for your decision.",
+        "soNoCard": "There is more than one pending action, or it can only be decided on its card: decide there.",
+        "erro": "Could not approve. Decide on the card."
+      },
+      "ajuda": {
+        "nome": "help",
+        "descricao": "Lists the commands"
+      },
+      "resumo": {
+        "nome": "summary",
+        "descricao": "Inserts a summary request in the field",
+        "texto": "Summarize in bullet points what we decided so far and what is left."
+      },
+      "plano": {
+        "nome": "plan",
+        "descricao": "Inserts a request for the current plan in the field",
+        "texto": "Show your current plan."
+      }
+    }
   },
   "ativacao": {
     "encerradaTitulo": "Session closed",

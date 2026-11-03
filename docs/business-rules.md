@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1179` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1192` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -17670,7 +17670,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
   `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:359` (`destinatarioRow`), `:257`
+  `apps/web/src/routes/SessionComposer.tsx:380` (`destinatarioRow`), `:278`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:354`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:565`
   (`handoffIdDoEvento`), `:573` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -18499,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1204`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1217`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -20407,7 +20407,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:440`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:445`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:508`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -22414,7 +22414,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:506`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:598`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23548,7 +23548,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:142` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:136` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -23638,7 +23638,7 @@ sem dizer qual.
   `aria-live="polite"`: o leitor de tela anuncia a resposta nova e o que o
   agente está fazendo sem interromper quem está lendo. A checagem mora no
   composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:89` (`ignorarComposicaoIme`),
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:97` (`ignorarComposicaoIme`),
   `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
   composição chega ao handler de envio", "a faixa do turno é uma região de
@@ -24143,7 +24143,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:210` (`releSeInfraAbriuPr`),
-  `apps/web/src/lib/api-client.ts:869` (`getRunInstructions`)
+  `apps/web/src/lib/api-client.ts:882` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
@@ -25482,7 +25482,7 @@ sem dizer qual.
 ### RN-976 — As ações de passo da conversa são sugestões acima do destinatário, com o mesmo predicado e o mesmo endpoint, e a inércia é dita em texto {#rn-976}
 
 - **Regra:** "Estou pronto", "Confirmar arquitetura pronta", "Responder N perguntas em aberto" e "Endereçar handoff a outro agente…" saem de dentro e de cima do composer e viram uma fileira de sugestões fixa, ACIMA da linha "Para". O predicado de cada uma e o handler (e o endpoint) são os de antes (RN-142, RN-657, RN-672, RN-861, RN-712); a caixa de mensagem fica sozinha na linha e ocupa a largura do fio (780px, antes ~448px). O clique só chama o handler da página, nunca escreve no campo (RN-882), e nada é clicado sozinho; merge nunca vira sugestão. Ação inerte diz o motivo em TEXTO visível, nunca em `title` (RN-102, ADR 0064); as de prontidão e o handoff manual ficam inertes sem o papel `developer`, o mínimo do endpoint, com o motivo de papel dito uma vez. A ordem no DOM (a fileira antes do "Para", e o Enviar como primeiro botão do composer) é contrato do E2E `turno-pelo-canal`.
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:144` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:50` (`SugestoesDeAcao`).
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:150` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:50` (`SugestoesDeAcao`).
 - **Teste:** `apps/web/src/routes/SessionPage.sugestoes-no-chat.test.tsx`, `apps/web/src/components/ai-elements/suggestion.test.tsx`.
 - **Origem:** AT-681 (EP-031).
 
@@ -25533,7 +25533,7 @@ sem dizer qual.
 ### RN-983 — O clique numa fonte consultada é gravado em tabela própria e nunca é voto {#rn-983}
 
 - **Regra:** o clique num link do bloco "Consultado neste turno" (RN-982) vira uma linha em `source_clicks`, de escopo de PROJETO como `rag_searches` (RN-479): `projectId`, `sessionId` (anulável), `eventId` (o `agent.response`), `tipo`, `ref`/`searchId`/`chunkId` e o usuário que clicou, congelados sem FK de sessão/evento. NÃO é voto: o único sinal de verdade do RAG segue sendo o `rag_feedback` (RN-480), que esta tabela nunca alimenta, porque clique mede curiosidade. `POST /projects/:projectId/source-clicks` é `viewer` (quem lê pode clicar). Gravar a medição nunca derruba o que ela mede: a falha vira log de origem `infra` e `null` explícito, e o clique navega do mesmo jeito. No web, o clique dispara o POST sem esperar a resposta (um POST por clique, sem poll nem query nova, RN-579); fonte que é só texto não grava.
-- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1443` (`sendSourceClick`).
+- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1456` (`sendSourceClick`).
 - **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-716 fatia 4 (EP-031).
 
@@ -25584,3 +25584,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:96` (`executeVarios`), `apps/api/src/interfaces/http/agents/agents.controller.ts:115` (`messages`), `apps/engine/lib/engine/agents/fila_de_mensagens.ex:76` (`pendentes`).
 - **Teste:** `apps/api/test/application/use-cases/agents/send-message-to-agents.use-case.spec.ts`, `apps/engine/test/engine/agents/fila_de_mensagens_test.exs`.
 - **Origem:** AT-717 (EP-031), ADR 0247.
+
+### RN-992 — O composer interpreta `@` e `/` só na tela: `@` escolhe destinatários entre os agentes da sessão, `/` dispara a ação do botão ou insere um prompt, e nenhum comando decide por teto {#rn-992}
+
+- **Regra:** `@` e `/` no início de uma palavra abrem a lista de sugestões (`Command` do shadcn dentro de um `Popover`); o campo segue NÃO controlado (RN-882) e o texto depois do gatilho só filtra a lista. O `@` lista SÓ os agentes que já estão na sessão e vira chip; um chip usa a rota por agente de hoje, dois ou mais usam `POST .../messages` com `destinatarios`. O `/` tem nome localizado e aceita o id interno: `/pronto`, `/arquitetura`, `/handoff`, `/perguntas` e `/parar` chamam o handler e o predicado do botão (RN-976); `/resumo` e `/plano` inserem um texto fixo traduzido para a pessoa editar; `/ajuda` lista os comandos. `/aprovar` com UMA pendência pede confirmação e chama o endpoint do `ApprovalCard`; com várias, ou com teto (`git_merge`, `instruction_patch`, `parallelize`, `raise_max_parallel`, deploy, `sudo`/`doas`, RN-154/RN-418), só leva ao card. Enter e Tab escolhem, Esc fecha, e com o menu aberto Enter NÃO envia; composição de acento (RN-830) é ignorada. Nenhum comando cria `proposed_action`.
+- **Onde:** `apps/web/src/lib/comandos-do-composer.ts:110` (`gatilhoNoCursor`), `apps/web/src/lib/comandos-do-composer.ts:127` (`destinoDoAprovar`), `apps/web/src/lib/use-menu-do-composer.ts:24` (`useMenuDoComposer`), `apps/web/src/components/ai-elements/menu-do-composer.tsx:15` (`MenuDoComposer`).
+- **Teste:** `apps/web/src/routes/SessionComposer.menu.test.tsx` (menu, filtro, Enter sem enviar, Esc, `/aprovar` comum e de teto, `/resumo`, `@` da sessão, chips e rota nova), `apps/web/src/lib/comandos-do-composer.test.ts`.
+- **Origem:** AT-717 (EP-031), lane web.

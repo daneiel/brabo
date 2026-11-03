@@ -16,6 +16,8 @@ type Props = {
   /** Detalhe em largura cheia abaixo do título e das ações. */
   children?: ReactNode;
   className?: string;
+  /** Âncora do card (AT-717: o comando /aprovar rola até ele). */
+  id?: string;
 };
 
 /** Padrão Confirmation: SÓ layout. Frase, papel e tetos são do chamador (`lib/aprovacoes.ts`). */
@@ -30,6 +32,7 @@ export function Confirmacao({
   acoes,
   children,
   className,
+  id,
 }: Props) {
   const padrao = (
     <>
@@ -43,7 +46,7 @@ export function Confirmacao({
   );
   const botoes = acoes === undefined ? padrao : acoes;
   return (
-    <Item variant="outline" className={className} data-confirmacao="">
+    <Item variant="outline" className={className} data-confirmacao="" id={id} tabIndex={id ? -1 : undefined}>
       <ItemContent>
         <ItemTitle className="line-clamp-none w-full flex-col items-stretch gap-0">{titulo}</ItemTitle>
         {descricao && <ItemDescription>{descricao}</ItemDescription>}
