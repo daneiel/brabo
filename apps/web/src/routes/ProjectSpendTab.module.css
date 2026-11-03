@@ -52,10 +52,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-4);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
 }
 
 .nota {
@@ -74,6 +70,8 @@
   flex-direction: column;
   gap: var(--space-2);
   max-width: 360px;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
 }
 
 /* Editor de orçamento: grade de largura natural, botão do kit sem esticar. */

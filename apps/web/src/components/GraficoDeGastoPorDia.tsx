@@ -27,7 +27,7 @@ export default function GraficoDeGastoPorDia({
 
   return (
     <figure className="m-0 grid gap-2">
-      <figcaption className="text-sm text-[var(--text-muted)]">{completo}</figcaption>
+      <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">{completo}</figcaption>
       <div role="img" aria-label={completo}>
         <ChartContainer config={config} className="aspect-auto h-40 w-full">
           <BarChart data={dados} accessibilityLayer>
