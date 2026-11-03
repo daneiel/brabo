@@ -23,9 +23,14 @@ ARG VITE_ENGINE_URL=http://localhost:4000
 # de tag nenhuma.
 ARG VITE_BRABO_VERSION=dev
 
+# Ambiente (AT-722): o Vite troca `import.meta.env.VITE_BRABO_AMBIENTE` por
+# literal e corta o ramo do acesso rápido quando não é `local`. Vazio por padrão.
+ARG VITE_BRABO_AMBIENTE=
+
 ENV VITE_API_URL=$VITE_API_URL \
     VITE_ENGINE_URL=$VITE_ENGINE_URL \
-    VITE_BRABO_VERSION=$VITE_BRABO_VERSION
+    VITE_BRABO_VERSION=$VITE_BRABO_VERSION \
+    VITE_BRABO_AMBIENTE=$VITE_BRABO_AMBIENTE
 
 # pnpm sem corepack (AT-360): o Node 25+ não traz corepack. Tarball do registry
 # conferido contra o sha512 GRAVADO aqui (`npm view pnpm@<v> dist.integrity`, em

@@ -28,6 +28,13 @@ import { entrar } from '../suporte/navegador.ts';
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('autenticação no navegador', () => {
+  // AT-722: o compose de produção do smoke não é `local`; o acesso rápido não existe.
+  test('o acesso rápido não existe fora do ambiente local', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await expect(page.locator('[data-acesso-rapido]')).toHaveCount(0);
+  });
+
   test('sem sessão, a raiz manda para o login', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);

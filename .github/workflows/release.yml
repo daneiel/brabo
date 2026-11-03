@@ -311,6 +311,9 @@ jobs:
           # `containerimage.digest`. Com `type=docker` (o default, que o
           # `ci.yml` usa) o digest não existe: ele nasce do push.
           OUTPUT: type=registry
+          # AT-722: tag de release nasce da main. Nunca `local`.
+          AMBIENTE: prd
+          # AT-722: tag de release nasce da main. Nunca `local`.
 
       # O registro por DIGEST do que esta tag publicou. Reprova se qualquer um
       # dos cinco alvos vier sem digest — quatro imagens novas e uma velha em

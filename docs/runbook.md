@@ -1037,6 +1037,26 @@ Nenhum script faz isso por você, de propósito: `docker volume rm` do
 
 ---
 
+### Ligando o acesso rápido na instalação local (TP-01) {#acesso-rapido-local}
+
+O acesso rápido por papel (ADR 0245, RN-984) só existe em imagem construída
+nesta máquina, nunca nas das Actions. Para a instalação local do TP-01
+(`~/brabo-v7`):
+
+1. No checkout da `dev`: `AMBIENTE=local docker buildx bake` (ou os
+   `docker build` com `--build-arg BRABO_AMBIENTE=local` na api e
+   `--build-arg VITE_BRABO_AMBIENTE=local` no web).
+2. No `.env` da instalação: `BRABO_AMBIENTE=local` e `BRABO_BIND=127.0.0.1`
+   (sem o bind, a porta fica aberta na rede e qualquer um entra como owner).
+3. Copie o `docker/docker-compose.install.yml` novo para a pasta da
+   instalação (o de lá é cópia).
+4. `docker compose up -d`. A tela de login mostra o botão "Acesso rápido"; as
+   contas `<papel>@brabo.dev` ficam num workspace próprio. A instalação precisa
+   já ter a primeira conta (sem usuário a rota responde 409).
+
+Para desligar: reconstrua sem `AMBIENTE` e tire `BRABO_AMBIENTE` do `.env`.
+O `install.sh` não liga o `local`.
+
 ## Deploy local {#deploy-local}
 
 Sobe o Brabo inteiro num cluster local e o valida com um

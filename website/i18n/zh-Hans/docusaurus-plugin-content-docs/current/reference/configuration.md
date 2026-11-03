@@ -138,7 +138,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 | 变量 | 默认值 | 作用 |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `brabo12345678` | 种子用户（`owner@brabo.dev`、`dev@brabo.dev`）的密码，创建时邮箱**已验证** |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | 种子用户（`owner@brabo.dev`、`maintainer@brabo.dev`、`developer@brabo.dev`、`viewer@brabo.dev`）的密码，创建时邮箱**已验证** |
 | `BRABO_FORCE_SEED` | — | 在 `NODE_ENV=production` 下解锁种子，默认情况下种子在那里**拒绝运行**。不要在真实环境中定义它：账户会带着已知且已验证的密码被创建 |
 
 > 种子是幂等的，**不会改动**已存在用户的密码。在有人修改自己的密码后再次运行它，不会把密码改回去。
@@ -550,7 +550,7 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从代码中提取的清单：运行时读取 **182 个变量**。全部都在上方表格中有描述。
+从代码中提取的清单：运行时读取 **183 个变量**。全部都在上方表格中有描述。
 
 每个来源都标记为 **产品**——运维安装的人在部署 `.env` 中设置的内容——或 **工具**，仅由 CI 和开发产品的人读取。工具变量绝不应出现在运维人员的 `.env` 中。
 
@@ -690,9 +690,10 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 4 个变量 · 产品
+**web** — 5 个变量 · 产品
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>

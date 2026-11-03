@@ -150,7 +150,8 @@ Windows есть известные ловушки (права/владелец 
 pnpm --filter api seed
 ```
 
-Он создаёт `owner@brabo.dev` (owner) и `dev@brabo.dev` (developer), оба уже с
+Он создаёт по учётной записи на каждую роль: `owner@brabo.dev` (owner), `maintainer@brabo.dev` (maintainer),
+`developer@brabo.dev` (developer) и `viewer@brabo.dev` (viewer), все уже с
 подтверждённым e-mail и паролем `brabo12345678` — его можно переопределить
 через `BRABO_SEED_PASSWORD`. Вместе с ними создаётся workspace **Acme Corp**,
 готовый к созданию проекта.

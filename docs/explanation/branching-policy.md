@@ -48,6 +48,13 @@ flowchart LR
 | `dev` | desenvolvimento | integrado, testado pelo CI |
 | `main` | produção | o que está no ar |
 
+A branch também decide o **ambiente gravado na imagem** (`BRABO_AMBIENTE`,
+ADR 0245): o `release.yml` constrói com `prd`, e o `ci.yml` constrói a PR com
+`prd` quando a base é a `main` e `dev` nos demais casos. O terceiro valor,
+`local`, nunca sai por workflow — só existe em build feito na máquina (dev e
+instalação local) e é o único que liga o acesso rápido por papel. O spec
+`scripts/ci/ambiente-nas-actions.spec.ts` reprova workflow que passe `local`.
+
 Existia um quarto degrau, `rc` (pré-produção), entre `qa` e `main`. Ele foi
 removido: com um único mantenedor e um ciclo curto, o degrau a mais custava
 uma promoção inteira e um ambiente para separar "validado" de "quase pronto"

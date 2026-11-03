@@ -152,7 +152,8 @@ usuário pronto:
 pnpm --filter api seed
 ```
 
-Ele cria `owner@brabo.dev` (owner) e `dev@brabo.dev` (developer), os dois já
+Ele cria uma conta por papel: `owner@brabo.dev` (owner), `maintainer@brabo.dev` (maintainer),
+`developer@brabo.dev` (developer) e `viewer@brabo.dev` (viewer), todas já
 com e-mail verificado e a senha `brabo12345678` — sobrescrevível por
 `BRABO_SEED_PASSWORD`. Junto vem o workspace **Acme Corp**, pronto para criar
 projeto.

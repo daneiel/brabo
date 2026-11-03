@@ -129,6 +129,10 @@
   `exigirSenhaValida` do domínio — por isso o DTO dessa rota NÃO repete um
   `@MinLength`, que cobriria só uma das cinco recusas e divergiria da do
   registro no primeiro dia em que uma das duas mudasse.
+- O acesso rápido por papel (`POST /auth/dev-login`, contas `<papel>@brabo.dev`)
+  só existe com `BRABO_AMBIENTE=local` e nunca sai por Actions: `dev`/`prd`
+  vão no build, o `ambiente-nas-actions.spec.ts` reprova `local` em workflow
+  (ADR 0245, RN-984). Não ligue por `BRABO_FORCE_SEED` nem pelo `install.sh`.
 - Toda mudança entra por PR — push direto em permanente é bloqueado;
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
