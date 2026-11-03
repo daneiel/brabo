@@ -14,6 +14,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- Sessão no tratamento R3 da v7 (AT-720, RN-981): botão do contexto com legenda e `aria-expanded`, títulos maiores, "Arquivos tocados" recolhível, esqueleto "Carregando sessão…", faixa de sessão encerrada com ícone e título, perguntas mais compactas, e as caixas de pergunta e aprovação do fio encostadas na borda.
 - Configurações em páginas por grupo (AT-719, RN-980): Modelos, Projeto, Pessoas e Avançado viram abas numa faixa no topo da página de Configurações, que segue um item só da barra lateral (`?tab=settings&group=`); só o grupo aberto monta e busca, e todo `?section=` antigo abre a página do seu grupo.
 - Visão geral no tratamento R3 (AT-720): a hora de todo marco da linha do tempo fica na coluna da direita e o espaço entre marcos diminui; avisos da Visão geral ganham ícone `Info`, a aba PRs ganha ícone no título e o vazio da Arquitetura usa `EmptyState` com título e ícone.
 - Estados vazios e de erro no tratamento R3 (AT-720): `EmptyState` ganha `titulo` opcional (Executores, Percepções, Backlog e contêiner não encontrado), e `ErroDeCarregamento` ganha quadro de ícone e ícone em "Tentar de novo", sem mudar a frase da api nem o `trace`.
