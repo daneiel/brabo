@@ -4,6 +4,7 @@
   "loadError": "Could not load the containers.",
   "loading": "Loading…",
   "empty": "This workspace has no projects yet.",
+  "pagination": { "label": "Pagination", "previous": "Previous", "next": "Next", "status": "{{page}} / {{total}}" },
   "table": {
     "project": "Project",
     "image": "Image",

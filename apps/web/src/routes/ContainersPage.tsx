@@ -1,3 +1,13 @@
+import { useState } from 'react';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useLegacyTable,
+  type LegacyColumnDef,
+} from '@tanstack/react-table/legacy';
+import { CabecalhoDePagina } from '@/components/shadcn/cabecalho-de-pagina';
+import { Button } from '../components/ui/Button';
 import { Shimmer } from '../components/ui/Shimmer';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -36,9 +46,36 @@ export function ContainersPage() {
   const papel = atual?.role;
   const query = useContainersOverview(workspace?.id);
 
+  // Ordenar e paginar no CLIENTE (nenhuma query nova): o react-table só decide
+  // a ORDEM e a PÁGINA; o desenho segue sendo a Grade da casa.
+  const [pagina, setPagina] = useState({ pageIndex: 0, pageSize: 10 });
+  const [ordenacao, setOrdenacao] = useState<{ id: string; desc: boolean }[]>([]);
+  const colunasDeOrdem: LegacyColumnDef<ContainerOverviewItem>[] = [
+    { id: 'project', accessorFn: (i) => i.projectName.toLowerCase() },
+    { id: 'image', accessorFn: (i) => i.registrado?.imagem ?? '' },
+    { id: 'status', accessorFn: (i) => i.registrado?.status ?? '' },
+    { id: 'since', accessorFn: (i) => i.registrado?.statusChangedAt ?? '' },
+  ];
+  const tabela = useLegacyTable<ContainerOverviewItem>({
+    data: query.data ?? [],
+    columns: colunasDeOrdem,
+    state: { sorting: ordenacao, pagination: pagina },
+    onSortingChange: setOrdenacao,
+    onPaginationChange: setPagina,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+  const ordenavel = (key: string) => {
+    const coluna = tabela.getColumn(key);
+    if (!coluna) return {};
+    return { ordem: coluna.getIsSorted(), onOrdenar: () => coluna.toggleSorting() };
+  };
+
   const columns: TableColumn<ContainerOverviewItem>[] = [
     {
       key: 'project',
+      ...ordenavel('project'),
       label: t('table.project'),
       width: '1.4fr',
       render: (item) => (
@@ -67,6 +104,7 @@ export function ContainersPage() {
     },
     {
       key: 'image',
+      ...ordenavel('image'),
       label: t('table.image'),
       width: '1.6fr',
       render: (item) =>
@@ -87,6 +125,7 @@ export function ContainersPage() {
     },
     {
       key: 'status',
+      ...ordenavel('status'),
       label: t('table.registered'),
       width: '0.9fr',
       render: (item) =>
@@ -126,6 +165,7 @@ export function ContainersPage() {
     },
     {
       key: 'since',
+      ...ordenavel('since'),
       label: t('table.since'),
       width: '1fr',
       render: (item) =>
@@ -148,14 +188,18 @@ export function ContainersPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>
-          {t('title')} <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
-        </h1>
-        {papel && !podeDecidirCicloDeVida(papel) && (
-          <p className={styles.motivo}>{t('actions.bloqueio.sem_papel')}</p>
-        )}
-      </div>
+      <CabecalhoDePagina
+        titulo={
+          <>
+            {t('title')} <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
+          </>
+        }
+        descricao={
+          papel && !podeDecidirCicloDeVida(papel) ? (
+            <span className={styles.motivo}>{t('actions.bloqueio.sem_papel')}</span>
+          ) : undefined
+        }
+      />
 
       {query.isError && (
         <ErroDeCarregamento
@@ -170,12 +214,38 @@ export function ContainersPage() {
       )}
 
       {!query.isError && !query.isPending && (
-        <Table
-          columns={columns}
-          rows={query.data ?? []}
-          rowKey={(item) => item.projectId}
-          emptyMessage={t('empty')}
-        />
+        <>
+          <Table
+            columns={columns}
+            rows={tabela.getRowModel().rows.map((r) => r.original)}
+            rowKey={(item) => item.projectId}
+            emptyMessage={t('empty')}
+          />
+          {tabela.getPageCount() > 1 && (
+            <nav className={styles.paginacao} aria-label={t('pagination.label')}>
+              <Button
+                variant="secondary"
+                disabled={!tabela.getCanPreviousPage()}
+                onClick={() => tabela.previousPage()}
+              >
+                {t('pagination.previous')}
+              </Button>
+              <span>
+                {t('pagination.status', {
+                  page: pagina.pageIndex + 1,
+                  total: tabela.getPageCount(),
+                })}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={!tabela.getCanNextPage()}
+                onClick={() => tabela.nextPage()}
+              >
+                {t('pagination.next')}
+              </Button>
+            </nav>
+          )}
+        </>
       )}
     </div>
   );
