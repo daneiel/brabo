@@ -1,4 +1,5 @@
 import { Shimmer } from '../components/ui/Shimmer';
+import { Save } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -221,6 +222,7 @@ function EditorDoOrcamento({
       </label>
       <div className={styles.acoes}>
         <Button type="submit" disabled={!podeEditar || salvar.isPending}>
+          <Save aria-hidden="true" />
           {salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
         </Button>
       </div>

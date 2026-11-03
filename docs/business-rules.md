@@ -5708,7 +5708,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:54` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:202` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -13226,7 +13226,7 @@ interrupção sem causa.
   novo. Enquanto a leitura está em voo, a linha simplesmente não aparece.
   - **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:102`
     (`consequenciasCondicionais`), `:118` (`containerParaOAviso`, os três
-    estados), `:236` (`cicloQuery`, só em `container`), `:344` (as quatro
+    estados), `:240` (`cicloQuery`, só em `container`), `:344` (as quatro
     linhas no `Alert`)
   - **Teste:** o describe `AT-144` em
     `apps/web/src/routes/settings/conversao-de-modo.test.tsx` — nenhuma
@@ -14931,7 +14931,7 @@ com a causa do fechamento anterior quando ela foi gravada.
 
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
   (`reopen`); `apps/web/src/lib/api-client.ts:634` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:153` (`podeReabrir`);
+  `apps/web/src/routes/SessionPage.tsx:158` (`podeReabrir`);
   `apps/web/src/lib/session-acoes-da-sessao.ts:77` (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
 - **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:22`
@@ -17318,8 +17318,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:71`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:150` (`podeDecidir`), `:272`
-  (`useRetomarTurnoDoLog`), `:767` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:155` (`podeDecidir`), `:277`
+  (`useRetomarTurnoDoLog`), `:771` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17672,8 +17672,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:350` (`destinatarioRow`), `:250`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:560`
-  (`handoffIdDoEvento`), `:568` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:553`
+  (`handoffIdDoEvento`), `:559` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18645,7 +18645,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:167` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:175` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19304,13 +19304,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1173` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1194` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1173` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1194` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1173` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1194` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19685,7 +19685,7 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
   `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
   `apps/web/src/lib/enfileirar-mensagem.ts:25` (`useEnfileirarMensagem`);
-  `apps/web/src/routes/SeloDaFila.tsx:22` (`SeloDaFila`)
+  `apps/web/src/routes/PainelDaFila.tsx:20` (`PainelDaFila`, que substituiu o selo — RN-978)
 - **Teste:** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
   (entra na fila — caminho feliz), `:181` (N mensagens = 1 turno), `:223` (a
   que chega na janela vai ao fim), `:246` (teto de 10 — caso de falha), `:276`
@@ -20346,7 +20346,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:128` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:136` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20527,7 +20527,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
   `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:826` (`passos`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:849` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -21516,8 +21516,8 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:790` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:622`
+  `apps/web/src/routes/SessionPage.tsx:794` (`otimistaJaNoLog`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:613`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -22168,7 +22168,7 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:896` (`respostaCortada`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:919` (`respostaCortada`),
   `apps/web/src/routes/SessionPage.tsx:447` (`continuarRespostaCortada`),
   `:686` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
@@ -23622,7 +23622,7 @@ sem dizer qual.
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:273` (`BolhaDoStreaming`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:132` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:140` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -23949,7 +23949,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:503` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1210` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1231` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -25082,7 +25082,7 @@ sem dizer qual.
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1016` (`conversacional`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1037` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
@@ -25468,7 +25468,7 @@ sem dizer qual.
 ### RN-974 — O fio mostra os passos do turno encerrado, recolhidos, sem os args {#rn-974}
 
 - **Regra:** antes de cada `agent.response` o fio mostra um `ChainOfThought` recolhido, "Passos do turno · N passos", com um `Tool` por `tool.result` do MESMO ator desde a resposta anterior: nome, estado (ok ou falha) e o `resultado` (RN-589), com aviso quando há `resultadoTotal` (corte de 2.000 caracteres). Nunca os `args` (RN-096). Turno sem ferramenta não ganha bloco. O bloco é só do turno ENCERRADO (a faixa narra o turno em curso, RN-460), vai junto da resposta e não conta como mensagem no corte do histórico recolhido (RN-644); lê só a janela de eventos já carregada (RN-180).
-- **Onde:** `apps/web/src/lib/passos-do-turno.ts:16` (`passosDoTurno`), `apps/web/src/routes/session-timeline-montagem.tsx:917` (`passosDoTurno`), `apps/web/src/components/ai-elements/passos-encerrados.tsx:8` (`PassosEncerrados`).
+- **Onde:** `apps/web/src/lib/passos-do-turno.ts:16` (`passosDoTurno`), `apps/web/src/routes/session-timeline-montagem.tsx:938` (`passosDoTurno`), `apps/web/src/components/ai-elements/passos-encerrados.tsx:8` (`PassosEncerrados`).
 - **Teste:** `apps/web/src/components/ai-elements/passos-encerrados.test.tsx`.
 - **Origem:** AT-675 (EP-031).
 
@@ -25485,3 +25485,24 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/SessionComposer.tsx:140` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:46` (`SugestoesDeAcao`).
 - **Teste:** `apps/web/src/routes/SessionPage.sugestoes-no-chat.test.tsx`, `apps/web/src/components/ai-elements/suggestion.test.tsx`.
 - **Origem:** AT-681 (EP-031).
+
+### RN-977 — O fio da Sessão para de seguir quando a pessoa sobe e oferece "Ir ao fim" {#rn-977}
+
+- **Regra:** revisa a [RN-951](#rn-951), que não é editada (decisão do dono de 02/11, AT-683). O fio acompanha a última mensagem — por identidade de evento/ação, texto do streaming e `ResizeObserver` — SÓ enquanto a pessoa está no fim. Rolou para mais de 80 px do fim: o acompanhamento PAUSA (nenhum gatilho rola) e aparece o botão "Ir ao fim" (`afastado`); o clique, ou voltar ao fim rolando à mão, retoma e rola ao fim. Rolagem instantânea (`block: 'end'`), foco intocado, `?highlightEvent` como na RN-951. O texto por token continua fora do estado da página (RN-639): `SessionPage.streaming-isolado.test.tsx` segue verde.
+- **Onde:** `apps/web/src/lib/session-rolagem.ts:36` (`useRolagemDoFio`), `apps/web/src/components/ai-elements/conversation.tsx:10` (`ConversationScrollButton`).
+- **Teste:** `apps/web/src/lib/session-rolagem.test.tsx` (para ao subir, mostra o botão, o clique retoma; perto do fim não pausa), `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx`.
+- **Origem:** AT-683 (EP-031).
+
+### RN-978 — As mensagens na fila de um agente aparecem num painel acima da caixa, e a cancelada some {#rn-978}
+
+- **Regra:** revisa a apresentação da [RN-673](#rn-673): o selo sob cada mensagem sai e o `PainelDaFila` lista, acima da caixa, TODAS as pendentes (`estadosNaFila` em `naFila`), uma linha "Agente: texto" por mensagem. O painel só existe com pendente. Cancelar chama o MESMO endpoint (`cancelQueuedAgentMessage`), só aparece para quem ENVIOU e com a sessão ativa, não é otimista (o item sai quando o log disser `chat.message_cancelled`) e a recusa é dita no toast. Decisão do dono (02/11): a mensagem CANCELADA (e a entregue) deixa de aparecer em qualquer lugar; o log a guarda.
+- **Onde:** `apps/web/src/routes/PainelDaFila.tsx:20` (`PainelDaFila`).
+- **Teste:** `apps/web/src/routes/SessionPage.fila-de-mensagens.test.tsx` (lista as pendentes e só quem enviou cancela; sem pendente não há painel).
+- **Origem:** AT-683 (EP-031).
+
+### RN-979 — Decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio {#rn-979}
+
+- **Regra:** os eventos `artifact.decision_record`, `artifact.module_map`, `artifact.c4_diagram`, `artifact.project_image`, `artifact.qa_verdict` e `artifact.secops_verdict` aparecem no fio com o MESMO cartão do épico/história, com link para a aba (Arquitetura ou PRs). Título e descrição saem dos campos REAIS do payload: decisão (`choice`, `context`), mapa de módulos (sem título; descrição = `modules[].name`), C4 (`systemName`, `systemDescription`), imagem (`image`, `rationale`), pareceres (`veredito` traduzido, `resumo`). Campo ausente cai no rótulo do tipo; descrição passa de 200 caracteres é cortada. Leitura do payload, sem query nova.
+- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:127` (`ARTEFATOS_DO_FIO`).
+- **Teste:** `apps/web/src/lib/artefato-do-fio.test.ts` (um caso por tipo e payload sem campo opcional).
+- **Origem:** AT-683 (EP-031).

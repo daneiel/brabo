@@ -1,4 +1,5 @@
 import { Shimmer } from '../components/ui/Shimmer';
+import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
@@ -191,6 +192,7 @@ export function AdoptionPlanPage({
               onClick={() => void decidir('approve')}
               disabled={decidindo || nadaAFazer}
             >
+              <Check aria-hidden="true" />
               {t('approvePlan')}
             </Button>
             <Button

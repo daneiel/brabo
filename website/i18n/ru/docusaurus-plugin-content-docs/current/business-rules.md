@@ -20226,7 +20226,7 @@ AT-261). До сих пор опущенный `resources` становился 
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
   `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
   `apps/web/src/lib/enfileirar-mensagem.ts:25` (`useEnfileirarMensagem`);
-  `apps/web/src/routes/SeloDaFila.tsx:22` (`SeloDaFila`)
+  `apps/web/src/routes/PainelDaFila.tsx:20` (`PainelDaFila`, que substituiu o selo — RN-978)
 - **Тест:** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
   (попадает в очередь — счастливый путь), `:181` (N сообщений = 1 ход), `:223`
   (пришедшее в окне идёт в конец), `:246` (потолок 10 — случай сбоя), `:276`

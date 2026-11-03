@@ -1,4 +1,6 @@
 import { useContext, useRef, useState, type CSSProperties } from 'react';
+import { Terminal } from './ai-elements/terminal';
+import { Commit } from './ai-elements/commit';
 import { QueryClientContext } from '@tanstack/react-query';
 import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
 import { autorDaMensagem } from '../lib/autor-da-mensagem';
@@ -29,6 +31,7 @@ import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
 import styles from './ApprovalCard.module.css';
+import { Check, X, ShieldCheck, Zap } from 'lucide-react';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
 
@@ -360,9 +363,11 @@ export function ApprovalCard({
             )}
           <div className={styles.acoesDoCard} data-acoes-do-card="">
             <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
+              <Check aria-hidden="true" />
               {t('approvalCard.actions.approve')}
             </Button>
             <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
+              <X aria-hidden="true" />
               {t('approvalCard.actions.deny')}
             </Button>
             {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
@@ -370,6 +375,7 @@ export function ApprovalCard({
                 prometia um efeito que não existe. */}
             {podeSemprePermitir && (
               <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
+                <ShieldCheck aria-hidden="true" />
                 {t('approvalCard.actions.alwaysAllow')}
               </Button>
             )}
@@ -379,6 +385,7 @@ export function ApprovalCard({
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && podeSemprePermitir && (
               <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
+                <Zap aria-hidden="true" />
                 {t('approvalCard.actions.autoMode')}
               </Button>
             )}
@@ -579,32 +586,25 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
 
     return (
       <div className={`${styles.body} ${styles.bodyCode}`}>
-        <div className={styles.commandLine}>
-          {comandoValido ? (
-            <>
-              <span className={styles.prompt}>$</span> {command}
-            </>
-          ) : (
-            // Payload malformado de verdade (o modelo produziu uma tool-call
-            // sem `command`) — um prompt "$ " em branco lia como bug de
-            // renderização, não como o que era: a ferramenta não recebeu
-            // argumento nenhum.
-            <span className={styles.vazio}>{t('approvalCard.body.terminal.invalidCommand')}</span>
-          )}
-        </div>
-        {executionResult && (
-          <div className={styles.outputBlock}>
-            <div className={styles.outputHeader}>
-              <span>{t('approvalCard.body.terminal.outputHeader')}</span>
-              {compressionPct !== null && compressionPct > 0 && (
-                <span>{t('approvalCard.body.terminal.compression', { percent: compressionPct })}</span>
-              )}
-            </div>
-            <div className={styles.outputBody}>
-              {executionResult.stdout || executionResult.stderr || t('approvalCard.body.terminal.emptyOutput')}
-            </div>
-          </div>
-        )}
+        <Terminal
+          comando={comandoValido ? command : undefined}
+          semComando={t('approvalCard.body.terminal.invalidCommand')}
+          saida={executionResult ? executionResult.stdout || executionResult.stderr : undefined}
+          semSaida={t('approvalCard.body.terminal.emptyOutput')}
+          exitCode={executionResult?.exitCode}
+          cabecalho={
+            executionResult
+              ? [
+                  t('approvalCard.body.terminal.outputHeader'),
+                  compressionPct !== null && compressionPct > 0
+                    ? t('approvalCard.body.terminal.compression', { percent: compressionPct })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : undefined
+          }
+        />
       </div>
     );
   }
@@ -752,6 +752,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     if (files && files.length > 0) {
       return (
         <div className={styles.body}>
+          <Commit
+            mensagem={readString(payload, 'message')}
+            autor={readString(payload, 'author')}
+            arquivos={files}
+          />
           {files.map((file) => {
             const open = expandedFile === file.path;
             // Não migrado para o `Disclosure` do design system, de propósito

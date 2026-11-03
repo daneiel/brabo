@@ -294,6 +294,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           onClick={() => setAbrindoForm((v) => !v)}
           variant={abrindoForm ? 'ghost' : 'primary'}
           aria-expanded={abrindoForm}
+          legenda={abrindoForm ? undefined : t(copy.abrir)}
         >
           {/* AT-327: o CTA de criar é ícone + verbo, como "Novo projeto" no
               Dashboard — nunca o caractere "+" dentro do texto. */}
@@ -301,7 +302,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
             t('sessionsTab.cancelButton')
           ) : (
             <>
-              <PlusIcon size={14} /> {t(copy.abrir)}
+              <PlusIcon size={14} aria-hidden="true" />
             </>
           )}
         </Button>

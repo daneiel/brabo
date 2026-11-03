@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useArchitecture } from '../lib/hooks';
+import { GrafoDeModulos } from '../components/GrafoDeModulos';
 import { C4DiagramView } from '../components/C4DiagramView';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import type { Architecture } from '../lib/api-types';
@@ -63,6 +64,9 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
           {!moduleMap || moduleMap.modules.length === 0 ? (
             <div className={styles.sectionSub}>{t('architectureTab.noModules')}</div>
           ) : (
+            <>
+            {/* Grafo derivado do mesmo module_map (RN-149), acima dos cartões. */}
+            <GrafoDeModulos modulos={moduleMap.modules} />
             <div className={styles.moduleGrid}>
               {moduleMap.modules.map((m) => (
                 <Card key={m.name} radius="md" padding="sm">
@@ -81,6 +85,7 @@ function ArchitectureContent({ architecture }: { architecture?: Architecture }) 
                 </Card>
               ))}
             </div>
+            </>
           )}
 
           <div className={styles.archLabel}>

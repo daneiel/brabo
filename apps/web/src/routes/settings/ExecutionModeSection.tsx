@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -460,6 +461,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         onClick={() => void handleSave()}
         disabled={!podeEditar || !mudouAlgo || !valido || saving || semBroker}
       >
+        <Save aria-hidden="true" />
         {saving ? t('executionMode.saving') : t('executionMode.save')}
       </Button>
 

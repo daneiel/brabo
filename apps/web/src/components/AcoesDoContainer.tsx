@@ -24,6 +24,7 @@ import { Badge, type BadgeTone } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
+import { Square, Trash2, Play } from 'lucide-react';
 
 export const TOM_DO_STATUS: Record<ContainerLifecycleStatus, BadgeTone> = {
   provisioning: 'warning',
@@ -285,29 +286,32 @@ export function AcoesDoContainer({
       <div className={styles.acoes}>
         <Button
           variant="secondary"
+          legenda={t('actions.stop')}
           disabled={!podeParar}
           loading={emAndamento === 'parar'}
           onClick={() => void parar()}
         >
-          {t('actions.stop')}
+          <Square aria-hidden="true" />
         </Button>
         <Button
           variant="danger"
+          legenda={t('actions.remove')}
           disabled={!podeRemover}
           loading={emAndamento === 'remover'}
           onClick={() => void remover()}
         >
-          {t('actions.remove')}
+          <Trash2 aria-hidden="true" />
         </Button>
         <Button
           variant="primary"
+          legenda={item.registrado ? t('actions.startAgain') : t('actions.start')}
           disabled={!subida.pode}
           loading={emAndamento === 'subir'}
           onClick={() => {
             if (subida.pode) void subir(subida.acao);
           }}
         >
-          {item.registrado ? t('actions.startAgain') : t('actions.start')}
+          <Play aria-hidden="true" />
         </Button>
       </div>
       {aviso && <p className={styles.motivo}>{t('actions.desatualizada', aviso)}</p>}

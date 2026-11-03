@@ -13,6 +13,7 @@ function base(paths: string[], props: IconProps, fill: 'none' | 'currentColor' =
       width={size}
       height={size}
       viewBox="0 0 24 24"
+      aria-hidden="true"
       fill={fill}
       stroke="currentColor"
       strokeWidth={1.6}

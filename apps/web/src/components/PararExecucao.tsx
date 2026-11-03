@@ -8,6 +8,7 @@ import { useBacklog } from '../lib/hooks';
 import { contarTarefasAfetadasAoParar } from '../lib/execution';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup } from './shadcn/item';
+import { Square } from 'lucide-react';
 
 export interface PararExecucaoProps {
   projectId: string;
@@ -61,6 +62,7 @@ export function PararExecucao({ projectId, sessionId, podeParar }: PararExecucao
       </ItemContent>
       <ItemActions>
         <Button variant="danger" onClick={() => setConfirmando(true)} disabled={!podeParar}>
+          <Square aria-hidden="true" />
           {t('parar.botao')}
         </Button>
       </ItemActions>
@@ -89,6 +91,7 @@ export function PararExecucao({ projectId, sessionId, podeParar }: PararExecucao
           </ItemGroup>
           {erro && <p role="alert">{erro}</p>}
           <Button variant="danger" onClick={() => void parar()} disabled={enviando}>
+            <Square aria-hidden="true" />
             {t('parar.confirmar')}
           </Button>
         </Modal>

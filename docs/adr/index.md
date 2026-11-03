@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 232 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 234 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -308,6 +308,8 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0232](0232-shadcn-com-base-ui-no-apps-web.md) | shadcn/ui com Base UI (`base-nova`) e Tailwind 4 no `apps/web` (AT-645): tema = tokens do Brabo, sem preflight até a limpeza, alias `@/`, `components/shadcn/`, grupo `vendor-ui`; nenhuma tela muda. |
 | [0234](0234-shiki-e-recharts-por-carga-dinamica.md) | `shiki` no Code Block e `recharts` no Chart dos Gastos (AT-657, AT-658), liberados pelo dono em 31/10: versão exata, sempre por `import()`/lazy, fora do JS inicial e de `codeSplitting.groups`; cor por token; o realce por regex e o SVG de hoje ficam como queda. |
 | [0237](0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.md) | O visual v3 (meio-termo, aprovado em 02/11) liga o preflight do Tailwind e sobe os raios para `--radius` 0,625rem, mantendo terracota, tipografia e superfícies do Brabo; revisa o ADR 0232 só no preflight.
+| [0238](0238-o-grafo-de-modulos-vira-canvas-xyflow.md) | O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`, AT-684): chunk próprio de ~42 KB gzip por `import()`, derivado do `module_map` (RN-149), cores por token. |
+| [0239](0239-csp-frame-src-local-para-o-web-preview.md) | CSP `frame-src http://localhost:* http://127.0.0.1:*` para o Web preview do entregável (AT-685), `sandbox` mínimo e só URL local (`urlLocalSegura`). |
 
 ## Operação, deploy e instalação {#tema-operacao}
 
@@ -373,7 +375,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0238**.
+  é substituído — o próximo é **0240**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

@@ -237,7 +237,18 @@
     "prsNaoLidas_other": "{{count}} PRs ficaram de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas."
   },
   "turno": {
-    "artefato": { "epico": "Épico criado", "historia": "História criada" },
+    "artefato": {
+      "epico": "Épico criado",
+      "historia": "História criada",
+      "decisao": "Decisão registrada",
+      "mapaDeModulos": "Mapa de módulos",
+      "c4": "Diagrama C4",
+      "imagem": "Imagem do projeto",
+      "parecerQa": "Parecer do QA",
+      "parecerSecops": "Parecer do SecOps",
+      "ver": "Ver na aba",
+      "veredito": { "approved": "aprovado", "changes_requested": "pede mudanças" }
+    },
     "pensando": "Pensando…",
     "ferramentaFalhou": "A ferramenta falhou.",
     "resultadoCortado": "Resultado cortado pelo limite de 2.000 caracteres.",
@@ -327,12 +338,12 @@
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "Conversa da sessão"
+    "rotuloDoFio": "Conversa da sessão",
+    "irAoFim": "Ir ao fim"
   },
   "fila": {
-    "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",
+    "painel": "Mensagens na fila",
     "cancelar": "Cancelar",
-    "cancelada": "cancelada na fila — nenhum agente a leu",
     "cancelarSoAutor": "Só quem enviou a mensagem pode cancelá-la.",
     "erroCancelar": "Não foi possível cancelar a mensagem.",
     "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."

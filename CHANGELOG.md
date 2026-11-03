@@ -4,8 +4,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- Botões de Provedores, Configurações, Backlog, Gasto, Plano de adoção e do cartão de agente ganham ícone Lucide (Salvar, Trocar, Remover, Atualizar catálogo, Recusar, Editar título, Arquivar, Aprovar plano, Manual/Automático), sempre com o texto; o Testar do provedor vira só ícone com nome acessível e `title` (AT-682).
+- Regra do dono: botão só de ícone com legenda em Tooltip (hover e foco) e `aria-label`; começam Containers (Parar, Remover, Subir), Nova ideação/conversa e Novo projeto; texto só onde nenhum ícone cobre o sentido (AT-682).
+- A aba Arquitetura ganha o grafo de módulos em Canvas (`@xyflow/react`, chunk próprio carregado só na aba, ADR 0238) e o cartão "Rodar na sua máquina" mostra o entregável num Web preview com `sandbox` mínimo, só para URL local; o CSP do web ganha `frame-src` para `localhost` e `127.0.0.1` (ADR 0239). Textos nos quatro idiomas (AT-684, AT-685).
+- O fio da Sessão para de seguir quando a pessoa sobe e mostra "Ir ao fim" (revisa a RN-951), as mensagens na fila de um agente viram um painel acima da caixa (a cancelada some) e decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio, nos quatro idiomas (AT-683, RN-977 a RN-979).
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
+
+- A aprovação de comando de terminal passa a mostrar a saída com as cores ANSI e o `exit` (vermelho quando diferente de 0), a de commit ganha a mensagem, o autor e o total de arquivos (com plural nos quatro idiomas), e os marcos estáticos da linha do tempo dos Executores viram linhas de Trace. A lib `ansi-to-react` entra só no chunk do `ApprovalCard`, com override de `linkify-it` para fechar o advisory GHSA-22p9-wv53-3rq4/GHSA-v245-v573-v5vm (AT-683).
+- A árvore de arquivos da aba Código vira o `FileTree` do AI Elements (árvore ARIA com tabindex móvel: um só ponto de Tab, setas/Home/End movem o foco, direita/esquerda abrem e fecham pasta) e os comandos do instalador, do runner e do token pessoal passam a usar o `Snippet` (bloco mono com botão Copiar só de ícone, com rótulo acessível; falha de clipboard no token pessoal volta a avisar) (AT-683).
+
+- Ícones do shadcn (Lucide) nos botões de ação do chat, das aprovações e dos containers (AT-682, lanes L1, L2 e L5): Retomar e Retomar gate (`RotateCcw`), Mergear (`GitMerge`), Parar execução e Parar container (`Square`), Religar e Subir (`Play`), Remover (`Trash2`), Salvar rede (`Save`), Aprovar (`Check`), Negar e Limpar seleção (`X`), Sempre permitir (`ShieldCheck`) e Modo automático (`Zap`). O texto fica em todos (ações destrutivas e irreversíveis inclusive), o ícone é `aria-hidden` e nenhuma chave de tradução mudou.
 
 - Base dos ícones do shadcn (AT-682): ícone dentro de `Button` passa a 16px, `svg.lucide` usa traço 1,6 como os da casa, o `lucide-react` sai do grupo `vendor-ui` da carga inicial e `design/COMPONENTS.md` ganha a seção "Iconografia".
 

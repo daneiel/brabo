@@ -9490,7 +9490,7 @@ ADR 0055 的范围上限把每条命令都与「宿主机」上的项目文件�
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`；
   `apps/web/src/lib/fila-de-mensagens.ts:27`（`estadosNaFila`）；
   `apps/web/src/lib/enfileirar-mensagem.ts:25`（`useEnfileirarMensagem`）；
-  `apps/web/src/routes/SeloDaFila.tsx:22`（`SeloDaFila`）
+  `apps/web/src/routes/PainelDaFila.tsx:20`（`PainelDaFila`，RN-978）
 - **测试：** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
   （进入队列——正常路径），`:181`（N 条消息 = 1 轮），`:223`（在窗口中到达的放到末尾），`:246`（10 条上限——失败情形），`:276`
   和 `:306`（取消以及在队列外取消），`:322`（重启），`:349`（Dev Lead 挂起），`:78`/`:120`（推导和重新水合）；

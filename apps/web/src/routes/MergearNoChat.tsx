@@ -7,6 +7,7 @@ import type { ProposedAction, SessionEvent } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './SessionPage.module.css';
+import { GitMerge } from 'lucide-react';
 
 /** A PR que uma ação `pr_open` abriu, lida do evento que a execução gravou. */
 export interface PrAbertaDaAcao {
@@ -132,6 +133,7 @@ export function MergearNoChat({
         loading={propondo}
         onClick={() => void propor()}
       >
+        <GitMerge aria-hidden="true" />
         {propondo ? t('mergearNoChat.propondo') : t('mergearNoChat.botao')}
       </Button>
       <span className={styles.mergearNota} data-testid="mergear-nota">

@@ -156,5 +156,16 @@
     "notaAntes": "Declarado pela Infra na",
     "pr": "PR",
     "notaDepois": ", não verificado na sua máquina."
+  },
+  "grafo": {
+    "carregando": "Carregando o grafo…",
+    "vazio": "Sem módulos para desenhar o grafo."
+  },
+  "entregavel": {
+    "recarregar": "Recarregar",
+    "endereco": "Endereço",
+    "abrir": "Abrir em nova aba",
+    "titulo": "Entregável",
+    "vazio": "Não há entregável publicado para visualizar."
   }
 }

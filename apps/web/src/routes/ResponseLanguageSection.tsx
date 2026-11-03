@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -164,6 +165,7 @@ export function ResponseLanguageSection() {
             disabled={!codigo.trim()}
             loading={salvar.isPending}
           >
+            <Save aria-hidden="true" />
             {t('account.save')}
           </Button>
         </form>

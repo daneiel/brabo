@@ -3,7 +3,17 @@ import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 
 /* Action "Copiar" do Message (AT-674). Sem clipboard (contexto inseguro), não copia e não marca "copiado". */
-export function AcaoCopiar({ texto, rotulo, rotuloCopiado }: { texto: string; rotulo: string; rotuloCopiado: string }) {
+export function AcaoCopiar({
+  texto,
+  rotulo,
+  rotuloCopiado,
+  aoFalhar,
+}: {
+  texto: string;
+  rotulo: string;
+  rotuloCopiado: string;
+  aoFalhar?: () => void;
+}) {
   const [copiado, setCopiado] = useState(false);
   const nome = copiado ? rotuloCopiado : rotulo;
   return (
@@ -20,7 +30,7 @@ export function AcaoCopiar({ texto, rotulo, rotuloCopiado }: { texto: string; ro
             setCopiado(true);
             setTimeout(() => setCopiado(false), 2000);
           },
-          () => {},
+          () => aoFalhar?.(),
         );
       }}
     >

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 // Instância REAL, não uma isolada: `lib/session-kind.ts` (`TIPOS_DE_SESSAO`)
 // e `components/CredentialSpendSection.tsx#formatarUsd` são módulos
@@ -450,6 +450,16 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
       await screen.findByText('Dúvidas de billing · #22222222'),
     ).toBeTruthy();
     expect(screen.queryByText(/Checkout do carrinho/)).toBeNull();
+  });
+
+  it('AT-682: "Nova ideação" é só ícone, com nome e title', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText('Criativo');
+    const b = screen.getByRole('button', { name: 'Nova ideação' });
+    expect(b.textContent).toBe('');
+    expect(b.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    act(() => b.focus());
+    expect(await screen.findByText('Nova ideação', { selector: '[data-slot="tooltip-content"]' })).toBeTruthy();
   });
 
   it('a aba NÃO pergunta o tipo de novo — ele é o lugar', async () => {

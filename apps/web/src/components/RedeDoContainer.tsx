@@ -18,6 +18,7 @@ import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
+import { Save } from 'lucide-react';
 
 const chaveDaRede = (projectId: string) => ['container-network', projectId] as const;
 
@@ -157,6 +158,7 @@ export function RedeDoContainer({
               loading={salvando}
               onClick={() => void salvar()}
             >
+              <Save aria-hidden="true" />
               {t('rede.salvar')}
             </Button>
             <Button

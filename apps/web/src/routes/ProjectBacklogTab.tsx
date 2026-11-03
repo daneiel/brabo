@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Archive, Pencil, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -297,6 +298,7 @@ function PromotionQueue({
                   setMotivo('');
                 }}
               >
+                <X aria-hidden="true" />
                 {t('promotionQueue.reject')}
               </Button>
             </div>
@@ -526,6 +528,7 @@ function StoryNode({
                 setEditando(true);
               }}
             >
+              <Pencil aria-hidden="true" />
               {t('storyNode.editTitle')}
             </Button>
             <Button
@@ -536,6 +539,7 @@ function StoryNode({
                 setArquivando(true);
               }}
             >
+              <Archive aria-hidden="true" />
               {t('storyNode.archive')}
             </Button>
           </div>
@@ -565,6 +569,7 @@ function StoryNode({
               disabled={titulo.trim() === ''}
               onClick={salvarTitulo}
             >
+              <Save aria-hidden="true" />
               {t('storyNode.save')}
             </Button>
             <Button variant="ghost" onClick={() => setEditando(false)}>

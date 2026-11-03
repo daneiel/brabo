@@ -46,6 +46,7 @@ import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { AGENTS, AREAS } from '../lib/agents';
 import type { DelegationEventPayload } from '../lib/api-types';
 import styles from './ProjectApprovalsTab.module.css';
+import { X } from 'lucide-react';
 
 /** O mínimo de uma query do TanStack que o bloco abaixo consome. */
 interface EstadoDaQuery<T> {
@@ -452,6 +453,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
                 {t('approvalsTab.pending.approveSelected')}
               </Button>
               <Button variant="secondary" onClick={() => setSelected(new Set())}>
+                <X aria-hidden="true" />
                 {t('approvalsTab.pending.clear')}
               </Button>
             </div>

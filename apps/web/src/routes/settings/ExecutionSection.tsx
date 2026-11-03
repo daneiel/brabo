@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Save } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject, updateProject } from '../../lib/api-client';
@@ -94,6 +95,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
           />
         </div>
         <Button onClick={handleSave} disabled={!valido || saving}>
+          <Save aria-hidden="true" />
           {saving ? t('execution.saving') : t('execution.save')}
         </Button>
       </div>

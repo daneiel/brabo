@@ -31,12 +31,12 @@ function montar(inicial: Props) {
       // Os refs ficam prontos antes dos efeitos (no DOM real o React os liga).
       r.messagesEndRef.current ??= { scrollIntoView: rolar } as unknown as HTMLDivElement;
       r.messagesInnerRef.current ??= {} as HTMLDivElement;
-      r.scrollContainerRef.current ??= {} as HTMLDivElement;
+      r.scrollContainerRef.current ??= document.createElement('div');
       return r;
     },
     { initialProps: inicial },
   );
-  return { hook, rolar, store };
+  return { hook, rolar, store, rolagem: () => hook.result.current };
 }
 
 beforeEach(() => {
@@ -58,8 +58,8 @@ describe('identidadeDoFio (RN-951)', () => {
   });
 });
 
-describe('useRolagemDoFio (RN-951)', () => {
-  it('abre no fim e cada mensagem nova vai ao fim, mesmo quem rolou para cima', () => {
+describe('useRolagemDoFio (RN-951, revisada na RN-977)', () => {
+  it('abre no fim e cada mensagem nova vai ao fim enquanto a pessoa está no fim', () => {
     const { hook, rolar } = montar({ events: [ev(1)], actions: [] });
     expect(rolar).toHaveBeenCalledTimes(1);
     expect(rolar).toHaveBeenLastCalledWith({ block: 'end' });
@@ -116,5 +116,40 @@ describe('useRolagemDoFio (RN-951)', () => {
   it('CASO DE FALHA evitado: sem eventos nem ações não rola', () => {
     const { rolar } = montar({ events: [], actions: [] });
     expect(rolar).not.toHaveBeenCalled();
+  });
+
+  function rolarContainer(el: HTMLElement, distanciaDoFim: number) {
+    Object.defineProperty(el, 'scrollHeight', { value: 1000, configurable: true });
+    Object.defineProperty(el, 'clientHeight', { value: 400, configurable: true });
+    el.scrollTop = 600 - distanciaDoFim;
+    act(() => {
+      el.dispatchEvent(new Event('scroll'));
+    });
+  }
+
+  it('RN-977: acima do limite o fio PARA de seguir e mostra "ir ao fim"; o clique retoma', () => {
+    const { hook, rolar, rolagem } = montar({ events: [ev(1)], actions: [] });
+    expect(rolagem().afastado).toBe(false);
+    rolar.mockClear();
+    rolarContainer(rolagem().scrollContainerRef.current!, 300);
+    expect(rolagem().afastado).toBe(true);
+    hook.rerender({ events: [ev(1), ev(2)], actions: [] });
+    observadores[0]!.cb();
+    expect(rolar).not.toHaveBeenCalled();
+    act(() => rolagem().irAoFim());
+    expect(rolar).toHaveBeenCalledTimes(1);
+    expect(rolagem().afastado).toBe(false);
+    hook.rerender({ events: [ev(1), ev(2), ev(3)], actions: [] });
+    expect(rolar).toHaveBeenCalledTimes(2);
+  });
+
+  it('RN-977: voltar ao fim rolando à mão também retoma, e perto do fim (<=80px) não pausa', () => {
+    const { rolagem } = montar({ events: [ev(1)], actions: [] });
+    rolarContainer(rolagem().scrollContainerRef.current!, 60);
+    expect(rolagem().afastado).toBe(false);
+    rolarContainer(rolagem().scrollContainerRef.current!, 300);
+    expect(rolagem().afastado).toBe(true);
+    rolarContainer(rolagem().scrollContainerRef.current!, 0);
+    expect(rolagem().afastado).toBe(false);
   });
 });

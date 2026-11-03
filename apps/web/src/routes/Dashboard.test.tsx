@@ -282,6 +282,16 @@ describe('Dashboard — layout estreito (AT-330)', () => {
     expect(screen.getByRole('button', { name: /Novo projeto/ })).toBeInTheDocument();
   });
 
+  it('AT-682: "Novo projeto" é só ícone, com nome e legenda no foco', async () => {
+    useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });
+    renderDashboard();
+    const b = screen.getByRole('button', { name: 'Novo projeto' });
+    expect(b.textContent).toBe('');
+    expect(b.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    act(() => b.focus());
+    expect(await screen.findByText('Novo projeto', { selector: '[data-slot="tooltip-content"]' })).toBeTruthy();
+  });
+
   it('no desktop, a barra continua de uma linha — e cruzar o corte a rearruma', () => {
     largura = simularLayoutMovel(false);
     useProjectsMock.mockReturnValue({ data: [PROJECT], isLoading: false });

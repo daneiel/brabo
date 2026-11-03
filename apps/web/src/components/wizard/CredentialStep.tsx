@@ -128,8 +128,10 @@ export function CredentialStep({
           type="button"
           className={styles.addToggle}
           onClick={() => setAdding(true)}
+          aria-label={t('credentialStep.addNewToken')}
+          title={t('credentialStep.addNewToken')}
         >
-          <PlusIcon size={14} /> {t('credentialStep.addNewToken')}
+          <PlusIcon size={14} aria-hidden="true" />
         </button>
       )}
     </div>

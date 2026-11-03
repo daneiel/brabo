@@ -157,6 +157,11 @@
       "approved": "Aprovado"
     },
     "body": {
+      "commit": {
+        "files_zero": "{{count}} arquivos",
+        "files_one": "{{count}} arquivo",
+        "files_other": "{{count}} arquivos"
+      },
       "terminal": {
         "invalidCommand": "O modelo não produziu um comando válido para esta ação.",
         "outputHeader": "terminal · output",

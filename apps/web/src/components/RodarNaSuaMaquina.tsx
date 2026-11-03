@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { Snippet } from './ai-elements/snippet';
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getRunInstructions } from '../lib/api-client';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { EntregavelPreview } from './EntregavelPreview';
 import styles from './RodarNaSuaMaquina.module.css';
 
 /** A `queryKey` do cartão; o aviso `infra.pr_opened` do canal a invalida. */
@@ -31,7 +32,6 @@ export function urlLocalSegura(url: string): boolean {
  */
 export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
   const { t } = useTranslation('overview');
-  const [copiado, setCopiado] = useState(false);
   const query = useQuery({
     queryKey: chaveDasInstrucoesDeExecucao(projectId),
     queryFn: () => getRunInstructions(projectId),
@@ -40,27 +40,11 @@ export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
   const run = query.data;
   if (!run) return null;
 
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(run!.command);
-      setCopiado(true);
-    } catch {
-      setCopiado(false);
-    }
-  }
-
   return (
     <section className={styles.cartao} data-testid="rodar-na-sua-maquina" aria-label={t('rodarNaSuaMaquina.title')}>
       <h2 className={styles.titulo}>{t('rodarNaSuaMaquina.title')}</h2>
       {run.envExample && <p className={styles.texto}>{t('rodarNaSuaMaquina.envExample')}</p>}
-      <div className={styles.comando}>
-        <pre className={styles.codigo}>
-          <code>{run.command}</code>
-        </pre>
-        <button type="button" className={styles.copiar} onClick={() => void copiar()}>
-          {copiado ? t('rodarNaSuaMaquina.copiado') : t('rodarNaSuaMaquina.copiar')}
-        </button>
-      </div>
+      <Snippet texto={run.command} rotulo={t('rodarNaSuaMaquina.copiar')} rotuloCopiado={t('rodarNaSuaMaquina.copiado')} />
       <ul className={styles.urls}>
         {run.urls.map((u) => (
           <li key={u.url}>
@@ -75,6 +59,7 @@ export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
           </li>
         ))}
       </ul>
+      <EntregavelPreview urls={run.urls} />
       <p className={styles.nota}>
         {t('rodarNaSuaMaquina.notaAntes')}{' '}
         <a href={run.prUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>

@@ -5,6 +5,7 @@ import type { SessionEvent } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './SessionPage.module.css';
+import { RotateCcw } from 'lucide-react';
 
 /**
  * Por que o ciclo estacionou (RN-867). O payload tem dois emissores: o resgate
@@ -86,6 +87,7 @@ export function RetomarGateEstacionado({ projectId, taskId, gate, podeDecidir }:
         loading={retomando}
         onClick={() => void retomar()}
       >
+        <RotateCcw aria-hidden="true" />
         {t('gateEstacionado.botao')}
       </Button>
       <span className={styles.mergearNota} data-testid="retomar-gate-nota">
