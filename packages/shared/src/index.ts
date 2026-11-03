@@ -138,6 +138,8 @@ export interface LLMProviderCapabilities {
    * nunca por leitura de documentação (ADR 0041).
    */
   readonly promptCaching: boolean;
+  /** O provider aceita imagem em `ChatMessage.content` (AT-715, ADR 0246). `true` só com smoke real. */
+  readonly vision: boolean;
 }
 
 /**
@@ -286,9 +288,14 @@ export interface ToolDef {
   parameters: Record<string, unknown>;
 }
 
+/** Parte de conteúdo multimodal; texto puro continua `string` (AT-715). */
+export type ParteDeConteudo =
+  | { type: 'text'; text: string }
+  | { type: 'image'; mime: string; base64: string };
+
 export interface ChatMessage {
   role: ChatRole;
-  content: string;
+  content: string | ParteDeConteudo[];
   /** Só em mensagens `assistant` que pediram ferramentas. */
   toolCalls?: ToolCall[];
   /** Só em mensagens `tool` (resultado): a qual tool call responde. */

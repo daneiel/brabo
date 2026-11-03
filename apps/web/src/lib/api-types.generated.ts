@@ -3285,6 +3285,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uploads a chat attachment (JSON with base64)
+         * @description Text/code (UTF-8) up to 512 KB or png/jpeg/webp/gif up to 5 MB; the type is checked against the bytes. Returns the reference to pass as `anexos` in the agent message. JSON+base64 instead of multipart: it fits the 10 MB body limit and adds no parser (RN-986).
+         */
+        post: operations["AttachmentsController_enviar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/sessions/{sessionId}/attachments/{attachmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Downloads the attachment bytes
+         * @description Every `viewer` of the project reads it (RN-988). Served with the stored `Content-Type`, `nosniff`, and `attachment` disposition for anything that is not an image.
+         */
+        get: operations["AttachmentsController_ler"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/budget": {
         parameters: {
             query?: never;
@@ -4966,6 +5006,19 @@ export interface components {
             sugestao: string;
             /** @example 72 */
             confiancaPercent: number;
+        };
+        AnexoResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example erro.png */
+            nome: string;
+            /** @example image/png */
+            mime: string;
+            /**
+             * @description Size in bytes.
+             * @example 1024
+             */
+            tamanho: number;
         };
         AnswerDetectedLanguageDto: {
             /**
@@ -7645,6 +7698,11 @@ export interface components {
              * @example false
              */
             promptCaching: boolean;
+            /**
+             * @description The provider accepts images in message content (AT-715, ADR 0246). Only `true` after a smoke against the real API described a known image.
+             * @example false
+             */
+            vision: boolean;
         };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];
@@ -10388,6 +10446,8 @@ export interface components {
              * @example I want to allow discount coupons at checkout.
              */
             text: string;
+            /** @description Ids of chat attachments (`POST .../attachments`): at most 4, all from this session and uploaded by the sender (RN-987). The `chat.message` records only the reference, never the bytes. */
+            anexos?: string[];
         };
         SendChatMessageDto: {
             /**
@@ -11394,6 +11454,12 @@ export interface components {
              * @example acme-corp
              */
             slug?: string;
+        };
+        UploadAnexoDto: {
+            /** @example erro.png */
+            nome: string;
+            /** @description File bytes in base64. The type is read from the BYTES (png, jpeg, webp, gif or UTF-8 text), never from the name. Limits: 5 MB per image, 512 KB per text file (RN-986). */
+            base64: string;
         };
         UpsertBudgetDto: {
             /**
@@ -20374,6 +20440,140 @@ export interface operations {
                 content?: never;
             };
             /** @description Project, session, or handoff not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AttachmentsController_enviar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadAnexoDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnexoResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project, session or attachment not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The session is closed (`sessao_encerrada`, RN-581). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Over the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Type not accepted. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AttachmentsController_ler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+                attachmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The raw bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project, session or attachment not found. */
             404: {
                 headers: {
                     [name: string]: unknown;

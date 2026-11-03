@@ -15,6 +15,7 @@ import {
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
+import { subirAnexosPendentes } from '../lib/anexos';
 import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem'; import { marcarMensagemNaoEnviada } from '../lib/mensagem-nao-enviada';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
@@ -622,7 +623,9 @@ export function SessionPage({
     // sem efeito observável.
     iniciarTurnoDoAgente(agentParaEnviar);
     try {
-      const resposta = await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      // AT-715: sobe os anexos pendentes ANTES; falha de upload lança e a mensagem não sai.
+      const anexos = agenteForcado ? [] : await subirAnexosPendentes(projectId, sessionId);
+      const resposta = await sendAgentMessage(projectId, sessionId, agentParaEnviar, text, ...(anexos.length ? [anexos] : []));
       setIdDaOtimista(resposta?.mensagemId ?? null);
       // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
       // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
