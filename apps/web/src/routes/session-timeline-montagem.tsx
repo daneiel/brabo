@@ -33,6 +33,13 @@ import { AcaoCopiar } from '../components/ai-elements/copiar';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
 import { respostaCortada } from '../lib/resposta-cortada';
+import { AnexosDaMensagem } from '../components/ai-elements/anexos';
+import type { AnexoDaMensagem } from '../lib/api-client';
+
+const anexosDoEvento = (e: { payload: unknown }): AnexoDaMensagem[] => {
+  const a = (e.payload as { anexos?: unknown })?.anexos;
+  return Array.isArray(a) ? (a as AnexoDaMensagem[]) : [];
+};
 import {
   AlertCircleIcon,
   ChevronRightIcon,
@@ -495,6 +502,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             autor={rotuloDoAutor(autor)}
           >
             {text}
+            {anexosDoEvento(event).length > 0 && (
+              <AnexosDaMensagem projectId={projectId} sessionId={sessionId} anexos={anexosDoEvento(event)} />
+            )}
           </MensagemDeConversa>
         ),
       });

@@ -2,6 +2,7 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { sendAgentMessage } from './api-client';
+import { subirAnexosPendentes } from './anexos';
 import { mensagemDaRecusaDoAgente } from './recusa-do-agente';
 import { nomeDoAgente } from './agents';
 import { useToast } from '../components/ui/ToastProvider';
@@ -36,7 +37,8 @@ export function useEnfileirarMensagem(
     async (text: string, agente: string) => {
       setDraft('');
       try {
-        const resposta = await sendAgentMessage(projectId, sessionId, agente, text);
+        const anexos = await subirAnexosPendentes(projectId, sessionId);
+        const resposta = await sendAgentMessage(projectId, sessionId, agente, text, ...(anexos.length ? [anexos] : []));
         if (resposta?.entrega === 'enfileirada') {
           showToast({
             title: t('composer.enfileirar'),

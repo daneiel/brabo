@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:716` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:722` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:684` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1160` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1179` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -17671,9 +17671,9 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:359` (`destinatarioRow`), `:257`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:553`
-  (`handoffIdDoEvento`), `:563` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:354`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:565`
+  (`handoffIdDoEvento`), `:573` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18499,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1185`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1204`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18646,6 +18646,7 @@ sempre dele.
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
   `apps/web/src/routes/session-timeline-montagem.tsx:179` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:185` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19304,13 +19305,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19969,7 +19970,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
   `apps/web/src/lib/session-destinatario.ts:347` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`);
+  `apps/web/src/routes/SessionPage.tsx:684` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -20347,6 +20348,7 @@ no fio: fica de fora até alguém pedir.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
   `apps/web/src/routes/session-timeline-montagem.tsx:140` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:146` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20406,8 +20408,8 @@ E o composer e os campos de texto das perguntas estruturadas levam
 `data-form-type="other"`): cada foco abria o popup de autofill do navegador.
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
-  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:438`
+  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:440`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:445`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -20527,7 +20529,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
   `:123` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:853` (`passos`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:865` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -21516,8 +21518,8 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:794` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:617`
+  `apps/web/src/routes/SessionPage.tsx:798` (`otimistaJaNoLog`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:629`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -22168,9 +22170,9 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:923` (`respostaCortada`),
-  `apps/web/src/routes/SessionPage.tsx:447` (`continuarRespostaCortada`),
-  `:686` (`enviarMensagem`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:935` (`respostaCortada`),
+  `apps/web/src/routes/SessionPage.tsx:451` (`continuarRespostaCortada`),
+  `:692` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
   (RN-749)`: as duas linhas reconhecidas; resposta inteira e a frase no meio do
   texto não)
@@ -22414,7 +22416,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:497`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:506`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23548,7 +23550,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:138` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:142` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -23623,6 +23625,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:264` (`BolhaDoStreaming`),
   `apps/web/src/routes/session-timeline-montagem.tsx:144` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:150` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -23949,7 +23952,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:504` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1250` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1262` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -24143,7 +24146,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:210` (`releSeInfraAbriuPr`),
-  `apps/web/src/lib/api-client.ts:850` (`getRunInstructions`)
+  `apps/web/src/lib/api-client.ts:869` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
@@ -25082,7 +25085,7 @@ sem dizer qual.
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1056` (`conversacional`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
@@ -25468,7 +25471,7 @@ sem dizer qual.
 ### RN-974 — O fio mostra os passos do turno encerrado, recolhidos, sem os args {#rn-974}
 
 - **Regra:** antes de cada `agent.response` o fio mostra um `ChainOfThought` recolhido, "Passos do turno · N passos", com um `Tool` por `tool.result` do MESMO ator desde a resposta anterior: nome, estado (ok ou falha) e o `resultado` (RN-589), com aviso quando há `resultadoTotal` (corte de 2.000 caracteres). Quando o `tool.result` não traz `resultado` mas traz `result` (formato do `ToolLoop` dos dev agents e dos gates, AT-718), a saída é esse `result` (objeto vira JSON), com o MESMO teto de 2.000 caracteres e o MESMO aviso de corte; o evento gravado não muda. Nunca os `args` (RN-096). Turno sem ferramenta não ganha bloco. O bloco é só do turno ENCERRADO (a faixa narra o turno em curso, RN-460), vai junto da resposta e não conta como mensagem no corte do histórico recolhido (RN-644); lê só a janela de eventos já carregada (RN-180).
-- **Onde:** `apps/web/src/lib/passos-do-turno.ts:16` (`passosDoTurno`), `apps/web/src/routes/session-timeline-montagem.tsx:942` (`passosDoTurno`), `apps/web/src/components/ai-elements/passos-encerrados.tsx:8` (`PassosEncerrados`).
+- **Onde:** `apps/web/src/lib/passos-do-turno.ts:16` (`passosDoTurno`), `apps/web/src/routes/session-timeline-montagem.tsx:954` (`passosDoTurno`), `apps/web/src/components/ai-elements/passos-encerrados.tsx:8` (`PassosEncerrados`).
 - **Teste:** `apps/web/src/components/ai-elements/passos-encerrados.test.tsx`.
 - **Origem:** AT-675 (EP-031).
 
@@ -25482,7 +25485,7 @@ sem dizer qual.
 ### RN-976 — As ações de passo da conversa são sugestões acima do destinatário, com o mesmo predicado e o mesmo endpoint, e a inércia é dita em texto {#rn-976}
 
 - **Regra:** "Estou pronto", "Confirmar arquitetura pronta", "Responder N perguntas em aberto" e "Endereçar handoff a outro agente…" saem de dentro e de cima do composer e viram uma fileira de sugestões fixa, ACIMA da linha "Para". O predicado de cada uma e o handler (e o endpoint) são os de antes (RN-142, RN-657, RN-672, RN-861, RN-712); a caixa de mensagem fica sozinha na linha e ocupa a largura do fio (780px, antes ~448px). O clique só chama o handler da página, nunca escreve no campo (RN-882), e nada é clicado sozinho; merge nunca vira sugestão. Ação inerte diz o motivo em TEXTO visível, nunca em `title` (RN-102, ADR 0064); as de prontidão e o handoff manual ficam inertes sem o papel `developer`, o mínimo do endpoint, com o motivo de papel dito uma vez. A ordem no DOM (a fileira antes do "Para", e o Enviar como primeiro botão do composer) é contrato do E2E `turno-pelo-canal`.
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:140` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:50` (`SugestoesDeAcao`).
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:144` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:50` (`SugestoesDeAcao`).
 - **Teste:** `apps/web/src/routes/SessionPage.sugestoes-no-chat.test.tsx`, `apps/web/src/components/ai-elements/suggestion.test.tsx`.
 - **Origem:** AT-681 (EP-031).
 
@@ -25504,6 +25507,7 @@ sem dizer qual.
 
 - **Regra:** os eventos `artifact.decision_record`, `artifact.module_map`, `artifact.c4_diagram`, `artifact.project_image`, `artifact.qa_verdict` e `artifact.secops_verdict` aparecem no fio com o MESMO cartão do épico/história, com link para a aba (Arquitetura ou PRs). Título e descrição saem dos campos REAIS do payload: decisão (`choice`, `context`), mapa de módulos (sem título; descrição = `modules[].name`), C4 (`systemName`, `systemDescription`), imagem (`image`, `rationale`), pareceres (`veredito` traduzido, `resumo`). Campo ausente cai no rótulo do tipo; descrição passa de 200 caracteres é cortada. Leitura do payload, sem query nova.
 - **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:131` (`ARTEFATOS_DO_FIO`).
+- **Onde:** `apps/web/src/lib/artefato-do-fio.ts:11` (`camposDoArtefato`), `apps/web/src/routes/session-timeline-montagem.tsx:137` (`ARTEFATOS_DO_FIO`).
 - **Teste:** `apps/web/src/lib/artefato-do-fio.test.ts` (um caso por tipo e payload sem campo opcional).
 - **Origem:** AT-683 (EP-031).
 
@@ -25532,7 +25536,7 @@ sem dizer qual.
 ### RN-983 — O clique numa fonte consultada é gravado em tabela própria e nunca é voto {#rn-983}
 
 - **Regra:** o clique num link do bloco "Consultado neste turno" (RN-982) vira uma linha em `source_clicks`, de escopo de PROJETO como `rag_searches` (RN-479): `projectId`, `sessionId` (anulável), `eventId` (o `agent.response`), `tipo`, `ref`/`searchId`/`chunkId` e o usuário que clicou, congelados sem FK de sessão/evento. NÃO é voto: o único sinal de verdade do RAG segue sendo o `rag_feedback` (RN-480), que esta tabela nunca alimenta, porque clique mede curiosidade. `POST /projects/:projectId/source-clicks` é `viewer` (quem lê pode clicar). Gravar a medição nunca derruba o que ela mede: a falha vira log de origem `infra` e `null` explícito, e o clique navega do mesmo jeito. No web, o clique dispara o POST sem esperar a resposta (um POST por clique, sem poll nem query nova, RN-579); fonte que é só texto não grava.
-- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
+- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1443` (`sendSourceClick`).
 - **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-716 fatia 4 (EP-031).
 
