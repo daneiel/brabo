@@ -69,6 +69,7 @@ defmodule Engine.Agents.TextoDoTurno do
     case Enum.reject(pedacos ++ [ultimo || ""], &(&1 == "")) do
       [] ->
         Engine.Agents.GravadoNoTurno.descarregar()
+        Engine.Agents.FontesDoTurno.descarregar()
 
         # AT-570: resposta cortada sem texto algum NÃO fecha calada — a linha
         # da RN-737 vira o fecho (o fio mostra "Continuar de onde parou").
@@ -97,7 +98,13 @@ defmodule Engine.Agents.TextoDoTurno do
             linha -> fecho <> "\n\n" <> linha
           end
 
-        base = %{content: fecho, modelName: modelo || visto}
+        # RN-982: as fontes são as leituras `ok` do turno, FORA do `content`.
+        base =
+          Map.merge(
+            %{content: fecho, modelName: modelo || visto},
+            Engine.Agents.FontesDoTurno.descarregar()
+          )
+
         if passos == [], do: base, else: Map.put(base, :passos, passos)
     end
   end

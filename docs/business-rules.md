@@ -17673,7 +17673,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `apps/web/src/routes/SessionComposer.tsx:359` (`destinatarioRow`), `:257`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:553`
-  (`handoffIdDoEvento`), `:559` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`handoffIdDoEvento`), `:563` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -19304,13 +19304,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1213` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20525,7 +20525,7 @@ sete conversacionais (o Infra Lead também, sem `modelName`). Sem teto próprio
 para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
-  `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
+  `:123` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
   `apps/web/src/routes/session-timeline-montagem.tsx:853` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
@@ -21287,7 +21287,7 @@ turno continua.
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
   (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:368` (`run_direct`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:377` (`run_direct`);
   `apps/engine/lib/engine/agents/arquiteto_server.ex:357`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
@@ -22747,7 +22747,7 @@ sem dizer qual.
   o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:239`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
   (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
@@ -23215,7 +23215,7 @@ sem dizer qual.
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
   `codigo` e desarmou o dev. A correção pós-gate segue a mesma régua
   (AT-621, [RN-864](#rn-864)).
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:275`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:119`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
@@ -23949,7 +23949,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:504` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1235` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1250` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -25082,7 +25082,7 @@ sem dizer qual.
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1041` (`conversacional`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1056` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
@@ -25343,7 +25343,7 @@ sem dizer qual.
 ### RN-946 — O corte pelo teto no meio do texto também é nomeado pelos agentes de QA {#rn-946}
 
 - **Regra:** estende a RN-945/RN-780: resposta `truncated` COM texto e sem chamada (o raciocínio comeu o teto e o texto saiu cortado) não é "o modelo parou": o `ToolLoop` devolve `corte_com_texto: true`, chave PRÓPRIA (não `corte_pelo_teto`, que o dev agent e a RN-780 casam), e `QaEstrategiaAgent` e `QaAutomacaoAgent` narram, com origem `modelo`, que o teto cortou a resposta no meio do texto antes da ferramenta de término (`MotivoDoCorte.texto_com_texto`). Não há retentativa nova (mudaria laço e custo); resposta não cortada com texto segue "parou sem chamar ...". A mesma lacuna no dev agent fica fora.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:239` (`parada_sem_chamada`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:9` (`texto_com_texto`).
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246` (`parada_sem_chamada`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:9` (`texto_com_texto`).
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`, `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
 - **Origem:** AT-620 (EP-030), TP-01 (22ª) de 31/10/2026.
 
@@ -25520,3 +25520,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/SessionPage.module.css:1261` (`.acaoNoFio`), `apps/web/src/routes/SessionFio.tsx:59` (`SessionFio`), `apps/web/src/routes/SessionTopbar.tsx:101` (`SessionTopbar`).
 - **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (legenda e `aria-expanded`), `apps/web/src/routes/SessionPage.sessao-encerrada.test.tsx`.
 - **Origem:** AT-720 (EP-031).
+
+### RN-982 — As fontes de uma resposta são as leituras ok do próprio turno, registradas pelo servidor, nunca pelo texto do modelo {#rn-982}
+
+- **Regra:** irmã da [RN-731](business-rules.md#rn-731). O servidor anota cada leitura `ok` do turno (listagens de regras, backlog, métricas, ADRs e contratos, `read_file` e os trechos do `rag_search`) e o `agent.response` leva `fontes` FORA do `content`: `{tipo, rotulo, ref?, searchId?, chunkId?}`, teto de 10, com `fontesTotal` quando corta (ADR 0060). Sem leitura, o campo não existe. Leitura com falha não é fonte. A tela diz "consultado", nunca "usado": é o que o agente leu, não o que ele aproveitou. Não muda o `content`, a reidratação (RN-580), o `tool.result` (RN-589) nem o voto do RAG (RN-479..481).
+- **Onde:** `apps/engine/lib/engine/agents/fontes_do_turno.ex:37` (`anotar`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:387` (`anotar`).
+- **Teste:** `apps/engine/test/engine/agents/fontes_do_turno_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-982").
+- **Origem:** AT-716 fatia 1 (EP-031).

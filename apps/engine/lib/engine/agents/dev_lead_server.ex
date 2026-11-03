@@ -524,6 +524,7 @@ defmodule Engine.Agents.DevLeadServer do
     case executar_ferramenta(name, args, state) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(name, {:ok, texto}))
+        Engine.Agents.FontesDoTurno.anotar(name, args, {:ok, texto}, state.project_id)
         {append_tool_message(state, id, name, texto), :ok}
 
       {:pending, action_id} ->

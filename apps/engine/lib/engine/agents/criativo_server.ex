@@ -493,6 +493,7 @@ defmodule Engine.Agents.CriativoServer do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
         Engine.Agents.GravadoNoTurno.anotar(tool, args, {:ok, texto}, state.project_id)
+        Engine.Agents.FontesDoTurno.anotar(tool, args, {:ok, texto}, state.project_id)
         {realimentar(state, call, texto, tool), {:ok, tool}}
 
       {:error, motivo} ->

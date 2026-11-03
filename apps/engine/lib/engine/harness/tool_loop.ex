@@ -182,21 +182,28 @@ defmodule Engine.Harness.ToolLoop.Default do
         # RN-695 (AT-355): quem não conversa com ninguém (a Anamnese) grava o
         # texto com outro tipo, que o fio da sessão não desenha.
         if content != "" do
-          emit(ctx, Map.get(ctx, :response_event, "agent.response"), %{
-            content: content,
-            error: Map.get(resp, "error"),
-            iteration: ctx.iteration,
-            tokensSpentMicros: ctx.tokens_spent_micros,
-            # RN-175: o modelo que gerou a resposta, do MESMO frame de onde já
-            # saem `usage` e `error`. Os quatro conversacionais gravam isto
-            # desde a RN-146; o `ToolLoop` — que é o caminho de TODO agente de
-            # execução e de gate (dev-*, QA, SecOps, Infra-Workflows,
-            # Psicólogo, Anamnese) — nunca gravou, e por isso a tela mostrava
-            # o rótulo genérico para todos eles. `RunLlmTurnUseCase` já
-            # devolve `modelName` no corpo (nulo só quando falha ANTES de
-            # resolver o binding), então não há chamada nova.
-            modelName: Map.get(resp, "modelName")
-          })
+          emit(
+            ctx,
+            Map.get(ctx, :response_event, "agent.response"),
+            Map.merge(
+              %{
+                content: content,
+                error: Map.get(resp, "error"),
+                iteration: ctx.iteration,
+                tokensSpentMicros: ctx.tokens_spent_micros,
+                # RN-175: o modelo que gerou a resposta, do MESMO frame de onde já
+                # saem `usage` e `error`. Os quatro conversacionais gravam isto
+                # desde a RN-146; o `ToolLoop` — que é o caminho de TODO agente de
+                # execução e de gate (dev-*, QA, SecOps, Infra-Workflows,
+                # Psicólogo, Anamnese) — nunca gravou, e por isso a tela mostrava
+                # o rótulo genérico para todos eles. `RunLlmTurnUseCase` já
+                # devolve `modelName` no corpo (nulo só quando falha ANTES de
+                # resolver o binding), então não há chamada nova.
+                modelName: Map.get(resp, "modelName")
+              },
+              Engine.Agents.FontesDoTurno.descarregar()
+            )
+          )
         end
 
         # `toolCalls` vazio não significa necessariamente "o modelo parou":
@@ -376,6 +383,12 @@ defmodule Engine.Harness.ToolLoop.Default do
       |> Map.put(:args, args)
       |> Map.put(:result, result)
       |> Map.put(:result_ok?, ok?)
+
+    Engine.Agents.FontesDoTurno.anotar(
+      name,
+      args,
+      if(ok?, do: {:ok, result}, else: {:error, result})
+    )
 
     halt =
       case Hooks.run(ctx.hooks, :post_tool_use, post_ctx) do
