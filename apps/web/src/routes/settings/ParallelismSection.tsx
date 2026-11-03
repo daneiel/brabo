@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { GitFork } from 'lucide-react';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +63,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="parallelism">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('parallelism.title')}</h2>
+        <h2 className={styles.title}><GitFork aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('parallelism.title')}</h2>
         <Ajuda assunto={t('parallelism.title')}>{t('parallelism.subtitle.before')}
         <strong>{t('parallelism.subtitle.strong')}</strong>
         {t('parallelism.subtitle.after')}</Ajuda>

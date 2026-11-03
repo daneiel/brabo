@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Languages, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { emailDaSessao } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
@@ -62,6 +63,7 @@ export function AccountPage() {
   return (
     <div className={styles.page}>
       <CabecalhoDePagina
+        icone={<UserRound className="size-5" />}
         titulo={t('account.title')}
         descricao={
           <>
@@ -78,6 +80,7 @@ export function AccountPage() {
       <div className={styles.section}>
         <CabecalhoDePagina
           nivel="h2"
+          icone={<Languages className="size-4" />}
           titulo={t('account.language.title')}
           descricao={t('account.language.subtitle')}
           acoes={<span className={styles.eyebrow}>{t('account.language.eyebrow')}</span>}
