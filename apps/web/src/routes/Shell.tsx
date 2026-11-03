@@ -530,7 +530,9 @@ export function Shell() {
         : contagensDoResumo(cardPorProjeto.get(projectId)?.pendingApprovalsCount ?? 0),
     );
   }
-  function irParaAba(projectId: string, chave: string) {
+  function irParaAba(projectId: string, chaveBruta: string) {
+    // RN-980: `settings:<grupo>` é um sub-item de Configurações.
+    const [chave, grupo] = chaveBruta.split(':') as [string, string | undefined];
     gravarProjetoAtivo(projectId);
     gravarAbaAtiva(chave);
     setFlyoutAberto(false);
@@ -540,7 +542,7 @@ export function Shell() {
     void navigate({
       to: '/projects/$projectId',
       params: { projectId },
-      search: { tab: chave } as never,
+      search: (grupo ? { tab: chave, group: grupo } : { tab: chave }) as never,
     });
   }
   // Recolhida, o projeto aberto abre um FLYOUT com as mesmas abas — sem ele,
@@ -722,6 +724,7 @@ export function Shell() {
                   nomeDoProjeto={currentProject.name}
                   itens={itensDoProjeto(currentProject.id)}
                   active={abaAtivaDoAtual}
+                  grupoAtivo={abaPublicada?.projectId === currentProject.id ? abaPublicada.group : undefined}
                   onChange={(chave) => irParaAba(currentProject.id, chave)}
                 />
               </div>
@@ -826,6 +829,7 @@ export function Shell() {
                             nomeDoProjeto={project.name}
                             itens={itensDoProjeto(project.id)}
                             active={project.id === currentProject?.id ? abaAtivaDoAtual : undefined}
+                            grupoAtivo={abaPublicada?.projectId === project.id ? abaPublicada.group : undefined}
                             onChange={(chave) => irParaAba(project.id, chave)}
                           />
                         )}

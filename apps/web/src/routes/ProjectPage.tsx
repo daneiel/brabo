@@ -18,9 +18,9 @@ import { CarregandoRota } from '../components/CarregandoRota';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { ABA_PADRAO, abaPorChave, ehChaveDeAba, type ChaveDeAba } from './project-tabs';
-import { ContextoDeSecaoInicial } from './settings/secao-inicial';
+import { ContextoDeGrupoInicial, ContextoDeSecaoInicial } from './settings/secao-inicial';
 import { ContextoDeHistoriaInicial } from '../lib/historia-inicial';
-import type { ChaveDeSecao } from './settings/sumario';
+import type { ChaveDeSecao, GrupoDoSumario } from './settings/sumario';
 import { Badge } from '../components/ui/Badge';
 import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import styles from './ProjectPage.module.css';
@@ -40,11 +40,13 @@ interface ProjectPageProps {
    * faria a moldura voltar a carregar dado específico de uma aba.
    */
   initialSection?: ChaveDeSecao;
+  /** RN-980: a página (grupo) de Configurações; `undefined` = Modelos. */
+  initialGroup?: GrupoDoSumario;
   /** RN-884: a história que a aba Histórias abre, pelo mesmo caminho. */
   initialStory?: string;
 }
 
-export function ProjectPage({ projectId, initialTab, initialSection, initialStory }: ProjectPageProps) {
+export function ProjectPage({ projectId, initialTab, initialSection, initialGroup, initialStory }: ProjectPageProps) {
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -70,8 +72,12 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
   // A sidebar marca a aba que ESTA moldura mostra (ADR 0211) — inclusive
   // quando quem trocou foi o painel "precisa de você", sem passar pelo router.
   useEffect(() => {
-    publicarAbaAtiva({ projectId, tab });
-  }, [projectId, tab]);
+    publicarAbaAtiva({
+      projectId,
+      tab,
+      group: tab === 'settings' ? (initialGroup ?? 'modelos') : undefined,
+    });
+  }, [projectId, tab, initialGroup]);
   useEffect(() => () => publicarAbaAtiva(null), []);
   // E o inverso: a sidebar PEDE a aba clicada antes de navegar, então o
   // clique na aba que a URL já tem (depois de um salto pelo painel, que não
@@ -192,6 +198,7 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
                   const url = new URL(window.location.href);
                   url.searchParams.set('tab', destino);
                   url.searchParams.delete('section');
+                  url.searchParams.delete('group');
                   window.history.replaceState(window.history.state, '', url);
                 } catch {
                   // sem `window` (teste/SSR): só a troca local
@@ -218,6 +225,7 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
           <ContextoDeSecaoInicial.Provider value={initialSection}>
+          <ContextoDeGrupoInicial.Provider value={initialGroup}>
           <ContextoDeHistoriaInicial.Provider value={initialStory}>
             {/* Cada painel é um chunk próprio (AT-300): o `Suspense` fica AQUI,
                 em volta só do painel, para que trocar de aba nunca apague o
@@ -226,6 +234,7 @@ export function ProjectPage({ projectId, initialTab, initialSection, initialStor
               <PainelDaAba projectId={projectId} />
             </Suspense>
           </ContextoDeHistoriaInicial.Provider>
+          </ContextoDeGrupoInicial.Provider>
           </ContextoDeSecaoInicial.Provider>
         </div>
       </div>

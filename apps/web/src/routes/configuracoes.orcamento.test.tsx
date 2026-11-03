@@ -7,6 +7,7 @@ import i18n from '../lib/i18n';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { OPCOES_PADRAO_DAS_QUERIES } from '../lib/query-policy';
 import type { ChaveDeAba } from './project-tabs';
+import type { GrupoDoSumario } from './settings/sumario';
 
 /**
  * AT-321 (RN-645) — o orçamento de requisições da aba Configurações.
@@ -177,7 +178,7 @@ const deConfiguracao = (porRota: Record<string, number>) =>
   total(Object.fromEntries(Object.entries(porRota).filter(([k]) => ehDeConfiguracao(k))));
 
 /** Uma aba do navegador na aba Configurações; devolve como trocar de aba. */
-async function abrirConfiguracoes() {
+async function abrirConfiguracoes(grupo?: GrupoDoSumario) {
   const { Shell } = await import('./Shell');
   const { ProjectPage } = await import('./ProjectPage');
   // Os painéis são chunks sob demanda (AT-300, `React.lazy` em
@@ -198,7 +199,7 @@ async function abrirConfiguracoes() {
         <QueryClientProvider client={client}>
           <ToastProvider>
             <Shell />
-            <ProjectPage projectId="proj-1" initialTab={aba} />
+            <ProjectPage projectId="proj-1" initialTab={aba} initialGroup={grupo} />
           </ToastProvider>
         </QueryClientProvider>
       </I18nextProvider>
@@ -214,8 +215,8 @@ async function abrirConfiguracoes() {
   };
 }
 
-async function carga() {
-  const aberta = await abrirConfiguracoes();
+async function carga(grupo?: GrupoDoSumario) {
+  const aberta = await abrirConfiguracoes(grupo);
   // Carrega (a moldura só monta a aba depois do projeto) e estabiliza. Menos
   // de 3s: o primeiro poll da moldura (eventos a 3s) não entra na conta.
   await avancar(2_500);
@@ -224,9 +225,13 @@ async function carga() {
   // tetos deste arquivo sem medir nada — foi o que aconteceu ao entrar o
   // AT-300, e só o caso de falha acusou.
   expect(document.body.textContent).not.toContain('Carregando a página');
-  expect(porRota['GET /projects/:id/members']).toBe(1);
+  // Marca de que a página do grupo montou e buscou o que é dela.
+  expect(porRota[grupo === 'pessoas' ? 'GET /projects/:id/members' : 'GET /projects/:id/models']).toBe(1);
   return { ...aberta, porRota };
 }
+
+// RN-980: medido (veja o comentário da carga) — abrindo em Modelos.
+const CARGA_DE_MODELOS = 21;
 
 describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', () => {
   it('a carga busca cada recurso UMA vez — as seções não repetem o que a moldura já trouxe', async () => {
@@ -244,8 +249,11 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     expect(
       Object.keys(porRota).filter((k) => /agent-bindings\/|area-bindings\//.test(k)),
     ).toEqual([]);
-    // `dev`: 53 → 49 (AT-321) → 30 (AT-334).
-    expect(total(porRota)).toBeLessThanOrEqual(30);
+    // `dev`: 53 → 49 (AT-321) → 30 (AT-334) → RN-980: só a página de Modelos monta.
+    expect(total(porRota)).toBeLessThanOrEqual(CARGA_DE_MODELOS);
+    // E o que é de outro grupo não é buscado.
+    for (const de of [/\/members$/, /\/proficiency$/, /instruction-versions/, /runner-device-keys/, /bootstrap-plan/])
+      expect(Object.keys(porRota).filter((k) => de.test(k))).toEqual([]);
   }, 60_000);
 
   it('um minuto parado na aba: nenhum poll de configuração', async () => {
@@ -287,7 +295,7 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
   }, 60_000);
 
   it('CASO DE FALHA: salvar invalida e busca NA HORA, e depois do minuto a volta busca de novo', async () => {
-    const { client, irPara } = await carga();
+    const { client, irPara } = await carga('pessoas');
     contagem.clear();
 
     // O frescor não esconde a própria escrita: toda mutação da aba invalida a
@@ -305,7 +313,7 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     await irPara('settings');
     const volta = Object.fromEntries(contagem);
     expect(volta['GET /projects/:id/members']).toBeGreaterThanOrEqual(1);
-    expect(volta['GET /projects/:id/models']).toBeGreaterThanOrEqual(1);
+    expect(volta['GET /projects/:id/proficiency']).toBeGreaterThanOrEqual(1);
     // Credencial é de provider e mora em /providers (RN-911): a volta não a busca.
     expect(volta['GET /users/me/credentials']).toBeUndefined();
   }, 120_000);

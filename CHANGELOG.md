@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- Configurações em páginas por grupo (AT-719, RN-980): Modelos, Projeto, Pessoas e Avançado viram sub-itens de Configurações na barra lateral do projeto (`?tab=settings&group=`); só o grupo aberto monta e busca, e todo `?section=` antigo abre a página do seu grupo.
 - Desenho linear e blocks do shadcn (v7, AT-714): sidebar `sidebar-07` (256/48px, Ctrl/Cmd+B), Containers e Providers em tabela linear (Containers com `@tanstack/react-table`), `CabecalhoDePagina` e `SectionCards` nas telas e nos painéis de Gastos (ADR 0241 e 0242).
 - O "?" e os botões só de ícone chegam às telas restantes (AT-713): Sessão (Enviar, Pôr na fila, Parar, Ativar, Iniciar ideação, Tentar de novo, Responder, Aceitar sugestão, Dispensar, Fixar idioma; convite, handoff da Infra e reabertura com linha curta e o resto no "?"), Executores e Aprovações (modo automático do time e notas de Sempre permitir/Modo automático curtas, Religar, rearmar, Limpar seleção), Histórias, Percepções e Chat RAG (fila de promoção no "?", Editar título, Reanalisar, Anexar pasta, Reindexar, Buscar, útil/irrelevante), Código e o assistente de projeto. Motivo de inerte, recorte declarado, consequência irreversível e as decisões (Aprovar, Negar, Mergear, Promover, Devolver, Arquivar) seguem com texto visível.
 
