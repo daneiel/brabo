@@ -111,6 +111,7 @@ function capacidades(hubAceita: boolean, teto = false): ProviderCapabilities[] {
     stickySession: false,
     priceCeiling: false,
     promptCaching: false,
+    vision: false,
   };
   return [
     { provider: 'ollama', capabilities: base },

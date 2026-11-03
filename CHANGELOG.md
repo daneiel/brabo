@@ -8,6 +8,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **web**: selos de citação `[n]` inline no texto da resposta do agente (AT-716): só os índices de `citacoes` viram selo com HoverCard da fonte; os demais `[n]` somem e código fica literal.
 
+- **api**: anexos no chat com agente (texto/código e png/jpeg/webp/gif; 5 MB por imagem, 512 KB por texto, 4 por mensagem) guardados em `chat_attachments`; `POST`/`GET /projects/:projectId/sessions/:sessionId/attachments` e `anexos` (ids) no envio de mensagem, com só a referência no `chat.message`; sem antivírus (AT-715, ADR 0246, RN-986..988).
+- **api**: `ChatMessage` aceita conteúdo multimodal e `LLMProviderCapabilities` ganha `vision` (`false` em todos até o smoke real); o `llm-turn` troca o anexo por id pelos bytes só para modelo com visão, senão avisa o agente em texto (AT-715, ADR 0246, RN-989).
+- **engine**: os anexos da mensagem chegam ao turno e passam pela fila de mensagens; a imagem vai ao LLM só no turno em que chegou, e depois volta como `[anexos: nome]` (AT-715, RN-990).
 - **auth**: acesso rápido por papel na tela de login (`GET`/`POST /auth/dev-login`), só com `BRABO_AMBIENTE=local`; as contas passam a `<papel>@brabo.dev` e o `dev@brabo.dev` do seed vira `developer@brabo.dev` (AT-722, ADR 0245, RN-984).
 - **engine**: os sete agentes conversacionais passam a consultar o RAG do projeto (`rag_search`), e os trechos viram `fontes` do `agent.response` (AT-716, RN-982).
 - **api/web**: o clique numa fonte do bloco "Consultado neste turno" é gravado na tabela `source_clicks` (`POST /projects/:projectId/source-clicks`, `viewer`); não é voto e não alimenta o `rag_feedback` (AT-716, RN-983).

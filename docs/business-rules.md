@@ -9700,7 +9700,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:421`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:426`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -14825,7 +14825,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:459` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:471` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -15204,7 +15204,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:482` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:495` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15324,8 +15324,8 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:559`
-  (`recusar_mensagem/5`) e `:560` (`registrar_recusa_de_mensagem/3`)
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:573`
+  (`recusar_mensagem/5`) e `:574` (`registrar_recusa_de_mensagem/3`)
 - **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:207`
   (`qa`, o agente do roster que segue sem conversa — até a RN-617 o caso era o
   `infra`, que passou a conversar: o `agent.error` com a frase e o motivo), `:178` (nome desconhecido
@@ -16495,7 +16495,7 @@ deu e com as quatro ferramentas.
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:604`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:618`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
@@ -16630,7 +16630,7 @@ daquele turno. A Conta deixou de dizer que o valor "ainda não chega".
   (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
   `apps/api/src/db/schema/iam.ts:104` (`responseLanguage`), `:111`
   (`detectedLanguage`), `:128` (`users_idioma_detectado_so_confirmado`);
-  `apps/api/src/db/schema/sessions.ts:120` (`sessionLanguageOverrides`);
+  `apps/api/src/db/schema/sessions.ts:124` (`sessionLanguageOverrides`);
   `apps/api/src/application/use-cases/iam/resolver-idioma-da-resposta.use-case.ts:44`
   (`ResolverIdiomaDaRespostaUseCase`);
   `apps/api/src/application/use-cases/iam/update-user-preferences.use-case.ts:25`
@@ -16860,8 +16860,8 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
-  (`resolverIdioma`), `:74` (`idiomaAlvo`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:183`
+  (`resolverIdioma`), `:90` (`idiomaAlvo`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:215`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
@@ -17111,7 +17111,7 @@ para aceitar os `export` de um módulo CommonJS.
   `apps/api/src/infrastructure/persistence/drizzle/deteccao-de-idioma.repository.ts:27`
   (`ultimasEvidencias`), `:75` (`confirmar`);
   `apps/api/src/db/schema/iam.ts:144` (`detectedLanguageDeclines`);
-  `apps/api/src/db/schema/sessions.ts:164`
+  `apps/api/src/db/schema/sessions.ts:168`
   (`session_events_evidencia_de_idioma_idx`);
   `apps/api/src/interfaces/http/iam/session-response-language.controller.ts:66`
   (`comPergunta`); `apps/api/src/interfaces/http/iam/user-preferences.controller.ts:94`
@@ -17206,11 +17206,11 @@ endpoint é ALPHA e o smoke manual
 
 - **Código:** `apps/api/src/domain/llm/tool-router.ts:27` (`MODELO_DO_JEV`),
   `:109` (`montarPedidoAoJev`), `:166` (`lerRespostaDoJev`), `:216`
-  (`recortarEstado`), `:268` (`menuP3`);
+  (`recortarEstado`), `:272` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:170`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:187`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:177`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:197`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`);
@@ -19668,11 +19668,11 @@ A recusa `turno_em_andamento` continua para o que não é fala: revisão de
 história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:322`
-  (`receber_mensagem`), `:245` (`tratar_resultado`), `:506` (`entregar_fila`),
-  `:367` (`cancelar_mensagem`), `:412` (`fila_ao_subir`), `:542`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:519` (`entregar_fila`),
+  `:380` (`cancelar_mensagem`), `:425` (`fila_ao_subir`), `:559`
   (`emitir_recusa_por_fila_cheia`);
-  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
-  (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
+  `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:106`
+  (`fora_do_historico`), `:152` (`texto_do_turno`), `:176`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
@@ -19893,7 +19893,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/application/graph-projection/graph-event-translator.ts:171` (`projectProfileFact`);
   `apps/api/src/application/use-cases/graph/query-user-context.use-case.ts:68` (`fatos`);
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111` (`resolverPerfil`);
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:253` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
@@ -20380,7 +20380,7 @@ melhoria do produto, separado do perfil da pessoa.
 
 - **Onde:** `apps/api/src/domain/anamnese/proficiencia-do-autor.ts:22`
   (`textoDaProficienciaDoAutor`);
-  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111`
+  `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:126`
   (`resolverPerfil`), `:134` (`resolverProficiencia`)
 - **Teste:** `apps/api/test/application/use-cases/agents/send-agent-message.use-case.spec.ts:254`
   (o nível vai, o rationale não), `:274` (leitura falha, a mensagem segue —
@@ -21618,9 +21618,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:86` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:244`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:256`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:273`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:288`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
@@ -21839,9 +21839,9 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:314`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:240`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:248`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:269`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:280`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -22296,7 +22296,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:392` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:397` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22318,7 +22318,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:411` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:416` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22665,7 +22665,7 @@ sem dizer qual.
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
   (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:180`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:187`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22698,7 +22698,7 @@ sem dizer qual.
   o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
   nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
   valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
   backlog) continuam no menu (RN-784)`)
@@ -22775,9 +22775,9 @@ sem dizer qual.
   turno fechar.
 - **Onde:** `apps/api/src/domain/llm/chamada-em-texto.ts:10`
   (`marcacaoDeChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:321`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:329`
   (`semChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:354`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:365`
   (`semChamadaEmTexto`)
 - **Teste:** `apps/api/test/domain/llm/chamada-em-texto.spec.ts`,
   `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` e
@@ -23195,7 +23195,7 @@ sem dizer qual.
   8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
   obrigação da etapa. Continua valendo que o piso só devolve o que está no
   catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
   as duas continuam no menu (RN-809)`)
@@ -23855,7 +23855,7 @@ sem dizer qual.
   o recorte do Jev nunca tira `report_done` nem `report_blocked`. O resto do
   passo deles segue recortável, com o aviso de recorte da RN-759. Como todo
   piso, ele só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:351` (`pisoDoMenu`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:356` (`pisoDoMenu`)
 - **Teste:** `apps/api/test/domain/llm/piso-dos-dev-agents.spec.ts`
   (`recorte que deixa só \`terminal\` para dev-api: report_done e
   report_blocked continuam`; `falha: dev-lead e outro agente não ganham as
@@ -23872,7 +23872,7 @@ sem dizer qual.
   veredito, com a delegação falhando por origem `modelo` e a tarefa pronta
   bloqueada. Agente fora dos gates não ganha ferramenta de parecer, e o piso
   só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/domain/llm/tool-router-piso-dos-gates.spec.ts`
   (ids e ferramentas conferidos contra os `.ex` do engine; recorte que deixa
   só `terminal`/`read_file` termina com o parecer; falha: `criativo`,
@@ -24194,8 +24194,8 @@ sem dizer qual.
   (RN-839). O critério é o texto que a api já recebe, sem campo novo; o piso
   fixo de todo passo não alarga (RN-759), outro agente não ganha, e o piso só
   acrescenta o que está no catálogo do passo (P3).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:368` (`PISO_DA_CORRECAO_DO_DEV`),
-  `:379` (`ehPassoDeCorrecao`), `:392` (`menuComPiso`),
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:373` (`PISO_DA_CORRECAO_DO_DEV`),
+  `:384` (`ehPassoDeCorrecao`), `:397` (`menuComPiso`),
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248` (`menuComPiso`)
 - **Teste:** `apps/api/test/domain/llm/tool-router-correcao-do-dev.spec.ts`
   ("dev agent em correção recebe write_file e terminal"; "passo comum de
@@ -25168,14 +25168,14 @@ sem dizer qual.
 ### RN-920 — O turno conversacional que o reinício matou é retomado UMA vez no boot, se recente {#rn-920}
 
 - **Regra:** revisa a [RN-586](#rn-586). A varredura de boot (`TurnoOrfao.varrer/2`) retoma o turno órfão cujo agente teve atividade há no máximo 900 s (`:retomada_automatica_janela_segundos`, a mesma régua da [RN-823](#rn-823), medida pela última atividade do agente e não pelo `working`) e que ainda não foi retomado: grava `agent.error` (`turno_interrompido_por_reinicio`, `retomada: "automatica"`), `agent.status: idle` e `agent.turn_resumed` (`automatica: true`) e acorda o agente, cujo `init/1` agenda `:retomar_turno_interrompido` ANTES da entrega da fila (RN-673). O teto é durável no log: um `agent.turn_resumed` do agente entre o último status não-`working` e o `working` órfão. Turno velho ou já retomado é só fechado, com a frase apontando o botão (RN-921). O `fechar_ao_subir/3` do `init/1` continua só fechando, e nó mudo conta como vivo (na dúvida nem fecha nem retoma). Resíduo declarado: dois nós subindo juntos, sem se enxergarem, podem retomar o mesmo turno duas vezes.
-- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:418` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
+- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:430` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
 - **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`TurnoOrfao.varrer/2: retomada automática 1× no boot`, `TurnoAssincrono: retomada no init`); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs`
 - **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
 ### RN-921 — O botão "Retomar" do fio é gesto humano, sem teto, e só vale para o turno interrompido {#rn-921}
 
 - **Regra:** o `agent.error` com `reason: turno_interrompido_por_reinicio` ganha no fio o cartão `RetomarTurnoInterrompido` (objetivo e passos do último plano, "Parou em", botão). O clique chama `POST /projects/:projectId/sessions/:sessionId/agents/:agent/resume` (`developer`; 200 `{ok:true}`; 404 sessão alheia; 409 `turno_nao_interrompido` quando o último desfecho do agente não é a interrupção ou há turno em curso; 409 `agente_sem_retomada`), que pede ao engine `POST /internal/sessions/:sessionId/agent/resume`: ele grava `agent.turn_resumed` com `automatica: false` e manda `:retomar_turno_interrompido` à MESMA `TurnoAssincrono`. Sem teto: cada clique é uma retomada. O cartão some quando algo segue o erro, e a retomada automática vira uma linha discreta. O "sem desfecho" do diário NÃO aparece na tela (o evento não o traz).
-- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:624` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
+- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:638` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
 - **Teste:** `apps/api/test/interfaces/http/sessions/agent-resume.controller.spec.ts` (feliz, duas recusas 409, 404, papel); `apps/web/src/routes/RetomarTurnoInterrompido.test.tsx`; ExUnit do `agent_command_controller`
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25317,7 +25317,7 @@ sem dizer qual.
 ### RN-942 — O recorte do Jev nunca tira do PO a ferramenta de declarar dúvida {#rn-942}
 
 - **Regra:** estende a [RN-758](#rn-758). O piso do PO ganha `declare_open_question`, porque a regra 3 das obrigações do PO manda declarar a dúvida em vez de inventar ou omitir, e o recorte do Jev ([RN-625](#rn-625)) a tirava de todo passo depois do primeiro: o PO punha a lacuna na borda da história e nenhuma `artifact.open_question` nascia. Continua valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`).
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts` (PO recortado mantém `declare_open_question`; catálogo sem ela não a ganha).
 - **Origem:** AT-615 (EP-030).
 ### RN-943 — O bloco de pendências do chat se chama "Pendências deste projeto"; só a aba Executores diz "de outras sessões" {#rn-943}
@@ -25419,7 +25419,7 @@ sem dizer qual.
 ### RN-961 — O aviso de recorte diz que as ferramentas fora dele podem ser pedidas neste passo {#rn-961}
 
 - **Regra:** revisa a [RN-759](#rn-759) (decisão do dono de 31/10, AT-643). O aviso `system` efêmero do passo recortado não diz mais que as ferramentas fora do recorte "voltam nas próximas voltas" nem que ela "volta no seguinte": o recorte é do PASSO, e a RN-759 mandava o agente esperar por um passo que, para o modelo, pode não vir. O texto novo diz a verdade do ADR 0179: as demais seguem disponíveis e podem ser pedidas neste mesmo passo, e o agente não deve concluir que não tem a ferramenta nem encerrar o turno esperando por ela; se precisar de uma delas e responder sem ferramenta, o passo é refeito com o catálogo completo (a repetição da regra 10 do ADR 0179, pelo mecanismo que a fachada já tem). Não muda o piso, a política do Jev nem a montagem do menu: só o texto do aviso.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:412` (`avisoDeRecorte`).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:416` (`avisoDeRecorte`).
 - **Teste:** `apps/api/test/domain/llm/aviso-de-recorte.spec.ts` (fixa o texto novo e reprova o antigo, "voltam nas próximas voltas" e "volta no seguinte").
 - **Origem:** AT-643 (EP-030): o `write_file` e o `terminal` saíam do menu do dev no Jev, e o aviso mandava esperar por uma volta que o modelo não tinha como pedir.
 
@@ -25542,3 +25542,37 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/harness/citacao_das_fontes.ex:22` (`anexar`) e `:43` (`marcar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:739` (`llm_turn`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:206` (`marcar`).
 - **Teste:** `apps/engine/test/engine/harness/citacao_das_fontes_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-985").
 - **Origem:** AT-716 fatia 3 (EP-031).
+### RN-986 — O anexo do chat aceita texto/código e imagem, com tipo pelos bytes e tetos {#rn-986}
+
+- **Regra:** `POST /projects/:projectId/sessions/:sessionId/attachments` (`developer`, JSON `{nome, base64}`) guarda o arquivo em `chat_attachments`. O MIME sai dos BYTES, nunca do nome nem do cabeçalho: png, jpeg, gif e webp pela assinatura; texto/código se for UTF-8 válido e sem byte NUL (`text/plain`); o resto é 415. Tetos: 5 MB por imagem e 512 KB por texto, acima disso 413 (rejeita, nunca trunca). Sessão encerrada recusa com o 409 `sessao_encerrada` da RN-581. JSON com base64 em vez de multipart porque 5 MB viram ~6,7 MB e cabem no corpo de 10 MB (`main.ts`), sem parser novo. Sem antivírus, lacuna declarada em `docs/security-surface.md` e no ADR 0246.
+- **Onde:** `apps/api/src/domain/sessions/anexos.ts:32` (`classificarAnexo`), `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:37` (`enviar`), `apps/api/src/interfaces/http/sessions/attachments.controller.ts:54` (`enviar`), `apps/api/src/db/schema/sessions.ts:303` (`chatAttachments`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-986"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-987 — O `chat.message` guarda só a referência do anexo, nunca os bytes {#rn-987}
+
+- **Regra:** `POST .../agents/:agent/message` aceita `anexos?: string[]` (ids), no máximo 4, todos da MESMA sessão e do MESMO autor — senão 400. O evento grava `anexos: [{id, nome, mime, tamanho}]`; o log é append-only e não incha com bytes. A mesma lista de referências viaja ao engine em `anexos` (omitida quando vazia). Quem precisa dos bytes (L2, a api na chamada ao provider) os lê pelo `ChatAttachmentRepository`.
+- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:91` (`referencias`), `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:93` (`execute`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:210` (`sendAgentMessage`), `apps/api/src/interfaces/http/agents/dto/send-agent-message.dto.ts:34` (`anexos`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-987").
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-988 — Todo `viewer` do projeto lê o anexo, escopado a projeto e sessão {#rn-988}
+
+- **Regra:** `GET .../attachments/:attachmentId` (`viewer`) devolve os bytes com o `Content-Type` gravado, `X-Content-Type-Options: nosniff` e `Content-Disposition: attachment` para o que não é imagem. A consulta casa id, projeto E sessão: anexo de outra sessão ou projeto é 404, igual ao inexistente. Quem vê o evento vê o anexo (decisão do dono, 02/11). Os anexos morrem com a sessão (cascade).
+- **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:80` (`ler`), `apps/api/src/interfaces/http/sessions/attachments.controller.ts:87` (`ler`).
+- **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-988"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-989 — Imagem só vai a modelo com visão provada; sem ela, o agente é avisado {#rn-989}
+
+- **Regra:** o `llm-turn` aceita no `content` de uma mensagem uma lista de partes `{type:'text',text}` e `{type:'anexo',id}` (o engine manda o id, nunca bytes). A api troca o id pelo anexo da MESMA sessão (`ChatAttachmentRepository.find`): imagem vira parte `image` (data URL no formato OpenAI) SÓ quando o provider declara `capabilities.vision` E o modelo tem `supports_vision` — as duas camadas do ADR 0041; `vision` nasce `false` em todos e só vira `true` com smoke real. Sem as duas, a imagem não sai da api e entra no lugar o texto `[imagem <nome> não enviada: o modelo atual não lê imagem]`, que é o aviso ao agente. Anexo de texto vai delimitado (`[anexo: <nome>]` … `[fim do anexo: <nome>]`) com ou sem visão; id que não resolve vira `[anexo <id> indisponível]`. Texto puro continua `string`. Os tokens da imagem entram no metering pelo `usage` do provider (ADR 0188), sem código novo.
+- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:160` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:171` (`resolverAnexos`).
+- **Teste:** `apps/api/test/domain/llm/anexos-no-turno.spec.ts`, `apps/api/test/infrastructure/llm/openai-compatible-provider.visao.spec.ts`; prova da capability: `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (manual, com credencial).
+- **Origem:** AT-715 fatia 1, lane L2 (EP-031), ADR 0246.
+
+### RN-990 — A imagem anexada vai ao LLM só no turno em que a mensagem chegou {#rn-990}
+
+- **Regra:** o `anexos` do `agent/message` (`[{id, nome, mime, tamanho}]`, até 4 por mensagem) entra no turno e na fila de mensagens (RN-673) JUNTO com o texto: o `chat.message_queued` guarda os anexos, e as pendentes que viram UM turno juntam os anexos na ordem. Na PRIMEIRA chamada de LLM do turno, o `content` da última mensagem `user` vira a lista de partes (`text` + uma `{type:'anexo',id}` por anexo); a chamada CONSOME os anexos, então as iterações seguintes do laço de ferramentas e os turnos seguintes mandam só o texto com o rótulo `[anexos: a.png, b.txt]` (teto de 300 caracteres), que é também o que a reidratação devolve a partir do `payload.anexos` do `chat.message`. A imagem nunca é reenviada (custo × iterações × turnos; decisão do dono, 02/11). O caminho é UM só para os sete conversacionais (`TurnoAssincrono` + `Reidratacao`), sem código por servidor; mensagem sem anexos continua `string`.
+- **Onde:** `apps/engine/lib/engine/harness/anexos_do_turno.ex:56` (`anexar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:324` (`receber_mensagem`), `apps/engine/lib/engine/agents/reidratacao.ex:443` (`usuario`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:545` (`autor_do_turno`).
+- **Teste:** `apps/engine/test/engine/agents/anexos_do_turno_test.exs`.
+- **Origem:** AT-715 fatia 1, lane L3 (EP-031), ADR 0246.

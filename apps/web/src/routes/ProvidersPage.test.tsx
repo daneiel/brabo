@@ -35,6 +35,7 @@ const caps = (extra: Record<string, boolean>) => ({
   stickySession: false,
   priceCeiling: false,
   promptCaching: false,
+  vision: false,
   ...extra,
 });
 

@@ -188,7 +188,7 @@ defmodule Engine.Agents.Reidratacao do
     do: [assistente(plano(payload, evento, agent)) | acc]
 
   defp acumular(%{"type" => "chat.message", "payload" => payload}, acc, _agent),
-    do: [usuario(texto(payload, "text")) | acc]
+    do: [usuario(texto(payload, "text"), payload["anexos"]) | acc]
 
   # AT-395: `passos` (as voltas antes do fecho) voltam ANTES do `content`, no
   # mesmo `assistant`: o modelo não perde o que disse no meio do turno — é o
@@ -439,7 +439,14 @@ defmodule Engine.Agents.Reidratacao do
     if String.length(texto) > max, do: String.slice(texto, 0, max) <> "…", else: texto
   end
 
-  defp usuario(texto), do: %{"role" => "user", "content" => texto || "", :pinned => false}
+  # AT-715 (RN-990): anexo antigo volta como TEXTO com os nomes, nunca como parte.
+  defp usuario(texto, anexos),
+    do: %{
+      "role" => "user",
+      "content" => (texto || "") <> Engine.Harness.AnexosDoTurno.rotulo(anexos),
+      :pinned => false
+    }
+
   defp assistente(texto), do: %{"role" => "assistant", "content" => texto, :pinned => false}
   defp sistema(texto), do: %{"role" => "system", "content" => texto, :pinned => false}
 end

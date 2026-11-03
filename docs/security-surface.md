@@ -160,6 +160,15 @@ detalhar o motivo na URL.
 
 ## Notas {#notes}
 
+- **Anexos do chat: SEM antivírus, lacuna declarada**
+  ([ADR 0246](adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.md),
+  [RN-986](business-rules.md#rn-986)/[RN-988](business-rules.md#rn-988)).
+  `POST .../attachments` (`developer`) confere o tipo pelos bytes e os tetos
+  (5 MB imagem, 512 KB texto), mas não varre o conteúdo. Os bytes nunca
+  executam: ficam num `bytea`, nunca em disco nem no worktree, e saem em
+  `GET .../attachments/:id` (`viewer` — todo membro do projeto lê) com
+  `Content-Type` gravado, `nosniff` e `attachment` para o que não é imagem.
+  Não há ClamAV; instalar um é decisão do dono.
 - **`POST /workspaces/:workspaceId/projects` decide onde o agente vai
   escrever, e é por isso que é uma rota de superfície de segurança, não só
   de cadastro**
@@ -1481,6 +1490,8 @@ detalhar o motivo na URL.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agentId/rearm` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/arquiteto/handoff-infra` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/agents/criativo/validate-necessity` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/attachments` | role:developer |
+| GET | `/projects/:projectId/sessions/:sessionId/attachments/:attachmentId` | role:viewer |
 | GET | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | PUT | `/projects/:projectId/sessions/:sessionId/budget` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/chat` | role:developer |
