@@ -23,6 +23,9 @@ export interface TableColumn<T> {
    *  rótulo em 390px (um seletor, um bloco de ações). */
   largaNoMovel?: boolean;
   render: (row: T) => ReactNode;
+  /** Cabeçalho ordenável (AT-714): quem ordena é o chamador; aqui só o gatilho. */
+  ordem?: 'asc' | 'desc' | false;
+  onOrdenar?: () => void;
 }
 
 interface TableProps<T> {
@@ -73,8 +76,33 @@ export function Table<T>({ columns, rows, rowKey, emptyMessage }: TableProps<T>)
       <GradeCabecalho>
         <GradeLinha style={{ gridTemplateColumns }}>
           {columns.map((column) => (
-            <GradeCelula key={column.key} cabecalho>
-              {column.label}
+            <GradeCelula
+              key={column.key}
+              cabecalho
+              aria-sort={
+                column.onOrdenar
+                  ? column.ordem === 'asc'
+                    ? 'ascending'
+                    : column.ordem === 'desc'
+                      ? 'descending'
+                      : 'none'
+                  : undefined
+              }
+            >
+              {column.onOrdenar ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 uppercase"
+                  onClick={column.onOrdenar}
+                >
+                  {column.label}
+                  <span aria-hidden="true">
+                    {column.ordem === 'asc' ? '↑' : column.ordem === 'desc' ? '↓' : '↕'}
+                  </span>
+                </button>
+              ) : (
+                column.label
+              )}
             </GradeCelula>
           ))}
         </GradeLinha>

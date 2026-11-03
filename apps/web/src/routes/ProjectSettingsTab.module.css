@@ -790,37 +790,14 @@
 
 /* --- Conectores de IA (handoff, seção 7 item 4) --- */
 
-.conectorGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
+/* Lista linear (AT-714, prévia v7): uma linha por provider; a cor do conector
+   fica só na sigla. */
+.conectorLista {
+  gap: 6px;
 }
 
-/*
- * A borda esquerda de 2px na cor do conector é o que dá a leitura de "fonte de
- * modelos" a um card que, fora isso, é igual a todos os outros da aba.
- */
-.conectorCard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--conector-cor);
-  border-radius: 10px;
-  padding: 14px 15px;
-  transition: border-color 0.12s;
-}
-
-.conectorCard:hover {
-  border-color: var(--border-strong);
-  border-left-color: var(--conector-cor);
-}
-
-.conectorTopo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.conectorLista input {
+  width: 220px;
 }
 
 .conectorSigla {
@@ -838,22 +815,8 @@
   flex-shrink: 0;
 }
 
-.conectorIdent {
-  flex: 1;
-  min-width: 0;
-}
-
-.conectorNome {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .conectorTipo {
+  font-weight: 400;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.05em;
@@ -886,24 +849,6 @@
    há chave nenhuma. */
 .conectorAtivo .conectorPonto {
   animation: bpulse 2.4s ease-in-out infinite;
-}
-
-.conectorNota {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 9px;
-}
-
-.conectorAcoes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
 }
 
 /* A barra de "aplicar um modelo a todos os agentes". Mesma moldura do

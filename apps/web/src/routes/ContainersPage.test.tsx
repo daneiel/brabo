@@ -225,6 +225,28 @@ describe('ContainersPage', () => {
     expect(screen.getByText('rodando')).toBeInTheDocument();
   });
 
+  it('AT-714: ordena pelo cabeçalho e pagina no cliente (10 por página)', () => {
+    const dados = Array.from({ length: 12 }, (_, i) =>
+      item({ projectId: `p${i}`, projectName: `proj-${String(i).padStart(2, '0')}` }),
+    );
+    useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: dados, refetch: vi.fn() });
+
+    montar();
+
+    expect(screen.getByText('proj-00')).toBeInTheDocument();
+    expect(screen.queryByText('proj-11')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Próxima/ }));
+    expect(screen.getByText('proj-11')).toBeInTheDocument();
+    expect(screen.queryByText('proj-00')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Anterior/ }));
+    const cabecalho = screen.getByRole('button', { name: /^Projeto/i });
+    fireEvent.click(cabecalho);
+    fireEvent.click(cabecalho);
+    expect(screen.getByText('proj-11')).toBeInTheDocument();
+    expect(screen.queryByText('proj-00')).toBeNull();
+  });
+
   it('AT-278 (RN-632): a linha lê a sessão mais recente SEM poll — uma por projeto a cada 5s estourava o teto', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,

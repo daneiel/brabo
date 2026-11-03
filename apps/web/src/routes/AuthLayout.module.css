@@ -267,7 +267,7 @@
 }
 
 .cabeca {
-  padding: 26px 28px 8px;
+  padding: 20px 20px 4px;
 }
 
 .titulo {
@@ -292,7 +292,7 @@
  * aviso de migração não pode entrar na mesma live region do erro).
  */
 .corpo {
-  padding: 20px 28px 26px;
+  padding: 14px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -391,7 +391,7 @@
 .rodapeCartao {
   border-top: 1px solid var(--border);
   background: var(--surface-0);
-  padding: 14px 28px;
+  padding: 10px 20px;
   font-family: var(--font-body);
   font-size: var(--fs-body);
   color: var(--text-secondary);
