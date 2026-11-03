@@ -27,7 +27,8 @@
     "iniciarIdeacao": "开始构思",
     "iniciarIdeacaoTitulo": "让 Criativo 主持本会话的构思 — 他还没有加入",
     "encerrar": "结束",
-    "alternarPainel": "切换上下文面板",
+    "recolherPainel": "收起上下文",
+    "abrirPainel": "打开上下文",
     "fecharPainel": "关闭上下文面板",
     "ajustes": "模型与语言",
     "ajustesAria": "本会话的模型、回复语言与预算",
@@ -74,6 +75,7 @@
     "sugestaoExigeDeveloper": "此操作需要在该工作区拥有 developer 角色。"
   },
   "ativacao": {
+    "encerradaTitulo": "会话已结束",
     "mensagemNaoEnviada": "你的消息未发送",
     "naoAtivada": "会话尚未激活。",
     "ativarSessao": "激活会话",
@@ -305,6 +307,7 @@
     "gatePendente": "此 PR 的 gate {{gate}} 仍待定。合并仍然可用 — 由你决定。"
   },
   "fio": {
+    "carregando": "正在加载会话…",
     "historico": {
       "titulo_other": "最近 {{count}} 条消息之前",
       "outrasCount_other": "{{count}} 条其他记录",

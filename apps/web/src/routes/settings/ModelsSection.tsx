@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { Cpu } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -756,7 +757,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="models">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('modelsSection.title')}</h2>
+        <h2 className={styles.title}><Cpu aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('modelsSection.title')}</h2>
         <Ajuda assunto={t('modelsSection.title')}>
         <span>
         {/* A legenda é a MESMA fonte de rótulos da cadeia da coluna Origem

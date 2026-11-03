@@ -24,3 +24,13 @@
 .acao {
   margin-top: var(--space-2);
 }
+
+.quadro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+}

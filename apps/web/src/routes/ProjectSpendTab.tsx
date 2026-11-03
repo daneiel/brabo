@@ -1,11 +1,12 @@
 import { Ajuda } from '../components/ui/Ajuda';
 import { Shimmer } from '../components/ui/Shimmer';
-import { Save } from 'lucide-react';
+import { Coins, MessageSquare, Save, Wallet } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import { SectionCards } from '../components/shadcn/section-cards';
+import { Badge } from '../components/shadcn/badge';
 import { Alert, AlertTexto } from '../components/shadcn/alert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -139,6 +140,7 @@ function OrcamentoDoProjeto({
   if (!budget.data) {
     return (
       <div className={styles.orcamentoProjeto}>
+        <Badge variant="outline">{t('budget.notConfigured')}</Badge>
         <p className={styles.nota}>{t('budget.notSet')}</p>
         {editor}
       </div>
@@ -299,6 +301,7 @@ function MeuConsumo({ projectId }: { projectId: string }) {
           <SectionCards
             metricas={[
               {
+                icone: <Wallet aria-hidden="true" size={12} />,
                 rotulo: t('member.estimatedLabel', { dias: DIAS }),
                 valor: formatarUsd(meu.data.totalMicros),
                 nota: t('member.callsDetail', {
@@ -307,6 +310,7 @@ function MeuConsumo({ projectId }: { projectId: string }) {
                 }),
               },
               {
+                icone: <Coins aria-hidden="true" size={12} />,
                 rotulo: t('member.tokensLabel'),
                 valor: numberFmt.format(meu.data.inputTokens + meu.data.outputTokens),
                 nota: t('shared.tokensDetail', {
@@ -320,10 +324,12 @@ function MeuConsumo({ projectId }: { projectId: string }) {
           <GastoPorDia
             serie={meu.data.porDia}
             titulo={t('member.dailySpendTitle')}
+            tokens={{ entrada: meu.data.inputTokens, saida: meu.data.outputTokens }}
           />
 
           <Ranking
-            titulo={t('member.bySessionTitle')}
+            icone={<MessageSquare aria-hidden="true" size={12} />}
+titulo={t('member.bySessionTitle')}
             linhas={comoRanking(
               meu.data.porSessao,
               (l) => hashtagDaSessao(l.chave),

@@ -21,7 +21,8 @@
       "autonomyError": "Could not change autonomy",
       "rearmed": "Agent rearmed",
       "rearmError": "Could not rearm the agent"
-    }
+    },
+    "noExecutorsTitle": "Nobody acting yet"
   },
   "agentCard": {
     "status": {

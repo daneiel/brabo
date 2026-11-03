@@ -1,4 +1,5 @@
 import { Shimmer } from '../../components/ui/Shimmer';
+import { Laptop } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -272,7 +273,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="device-keys">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('runnerDeviceKeys.title')}</h2>
+        <h2 className={styles.title}><Laptop aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('runnerDeviceKeys.title')}</h2>
         <Ajuda assunto={t('runnerDeviceKeys.title')}>
           {t('runnerDeviceKeys.subtitle')} {t('runnerDeviceKeys.subtitleAlcance')}{' '}
           {t('runnerDeviceKeys.subtitleNaoEBatimento')}

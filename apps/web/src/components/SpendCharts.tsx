@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alturasRelativas, diaCurto, tituloDoDia, type SpendPorDia } from '../lib/spend';
 import { formatarUsd } from './CredentialSpendSection';
@@ -108,7 +109,9 @@ export function Ranking({
   titulo,
   linhas,
   vazio,
+  icone,
 }: {
+  icone?: ReactNode;
   titulo: string;
   linhas: LinhaDeRanking[];
   vazio: string;
@@ -117,7 +120,10 @@ export function Ranking({
 
   return (
     <section className={styles.ranking}>
-      <h3 className={styles.rankingTitulo}>{titulo}</h3>
+      <h3 className={styles.rankingTitulo}>
+        {icone}
+        {titulo}
+      </h3>
       {linhas.length === 0 ? (
         <div className={styles.rankingVazio}>{vazio}</div>
       ) : (

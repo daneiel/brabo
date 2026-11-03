@@ -1,6 +1,7 @@
 {
   "architectureTab": {
     "title": "架构",
+    "emptyTitle": "尚无架构",
     "emptyState": "尚无架构 —— Arquiteto 会生成 module_map 和 ADR。",
     "modulesLabel": "模块",
     "modulesLabelVersioned": "模块 · v{{version}}",

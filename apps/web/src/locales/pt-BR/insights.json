@@ -31,7 +31,8 @@
       "psychologistPausedTitle": "Psicólogo pausado",
       "psychologistPausedFallback": "O Psicólogo está desativado globalmente.",
       "reanalyzeError": "Não foi possível enfileirar a reanálise"
-    }
+    },
+    "emptyTitle": "Sem hipóteses"
   },
   "hypothesisCard": {
     "status": {

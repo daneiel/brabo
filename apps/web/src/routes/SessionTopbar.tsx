@@ -355,8 +355,8 @@ export function SessionTopbar({
         variant={asideOpen ? 'secondary' : 'ghost'}
         className={styles.toggleAside}
         onClick={() => setAsideOpen((v) => !v)}
-        aria-pressed={asideOpen}
-        aria-label={t('topbar.alternarPainel')}
+        aria-expanded={asideOpen}
+        legenda={t(asideOpen ? 'topbar.recolherPainel' : 'topbar.abrirPainel')}
       >
         <LayoutSidebarIcon size={17} />
       </Button>

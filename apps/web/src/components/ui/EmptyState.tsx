@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
-import { Empty, EmptyContent, EmptyDescription, EmptyMedia } from '@/components/shadcn/empty';
+import { Empty, EmptyContent, EmptyDescription, EmptyMedia, EmptyTitle } from '@/components/shadcn/empty';
 
 interface EmptyStateProps {
   /** A frase do vazio — o que É verdade para este vazio (RN-088/RN-454). */
   children: ReactNode;
+  /** Título opcional acima da frase; quem não passa não muda. */
+  titulo?: ReactNode;
   /** Ícone opcional, num quadrado acima da frase. */
   icone?: ReactNode;
   /** `sucesso` quando o vazio é a boa notícia ("nada pendente"). */
@@ -29,7 +31,7 @@ interface EmptyStateProps {
  * por quem chama. E ele não é erro nem carregando — os três estados da RN-088
  * seguem separados, cada um com o seu componente.
  */
-export function EmptyState({ children, icone, tom = 'neutro', acao, className }: EmptyStateProps) {
+export function EmptyState({ children, titulo, icone, tom = 'neutro', acao, className }: EmptyStateProps) {
   return (
     <Empty className={className} data-empty-state="" data-tone={tom}>
       {icone && (
@@ -37,6 +39,7 @@ export function EmptyState({ children, icone, tom = 'neutro', acao, className }:
           {icone}
         </EmptyMedia>
       )}
+      {titulo && <EmptyTitle>{titulo}</EmptyTitle>}
       <EmptyDescription>{children}</EmptyDescription>
       {acao && <EmptyContent>{acao}</EmptyContent>}
     </Empty>

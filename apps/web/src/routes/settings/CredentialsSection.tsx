@@ -1,4 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react';
+import { KeyRound } from 'lucide-react';
 import { PlugZap, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -221,7 +222,7 @@ export function CredentialsSection() {
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}>{t('credentials.title')}</h2>
+        <h2 className={styles.title}><KeyRound aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('credentials.title')}</h2>
         <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
         <Ajuda assunto={t('credentials.title')}>
           {t('credentials.subtitle.before')}

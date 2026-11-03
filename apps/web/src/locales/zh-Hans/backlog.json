@@ -12,7 +12,9 @@
   },
   "empty": {
     "epics": "还没有史诗。在会话中接受 Criativo 的 handoff，PO 就会生成待办列表。",
-    "rules": "还没有业务规则。"
+    "rules": "还没有业务规则。",
+    "epicsTitle": "待办为空",
+    "rulesTitle": "暂无规则"
   },
   "coverage": {
     "uncoveredBadge_other": "{{count}} 条未覆盖",

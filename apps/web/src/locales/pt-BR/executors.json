@@ -22,7 +22,8 @@
       "autonomyError": "Não foi possível mudar a autonomia",
       "rearmed": "Agente rearmado",
       "rearmError": "Não foi possível rearmar o agente"
-    }
+    },
+    "noExecutorsTitle": "Ninguém em ação"
   },
   "agentCard": {
     "status": {

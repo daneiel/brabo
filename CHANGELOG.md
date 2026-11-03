@@ -4,13 +4,23 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- **web**: páginas globais (Conta, Status) e seções de Configurações ganham ícones no tratamento R3; o vazio das chaves de máquina usa o EmptyState (AT-720)
+- A sidebar ganha o menu do usuário no rodapé (Conta, Tema e Sair) e abas do projeto maiores, com divisória entre os grupos (AT-720, ADR 0241).
+- A coluna das abas do projeto fica alinhada à esquerda, o rótulo das sessões usa a fonte de corpo e o vazio de PR de infra ganha respiro lateral (AT-720, ADR 0244).
+
 ### Correções
 
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
 
 ### Funcionalidades
 
+- Sessão no tratamento R3 da v7 (AT-720, RN-981): botão do contexto com legenda e `aria-expanded`, títulos maiores, "Arquivos tocados" recolhível, esqueleto "Carregando sessão…", faixa de sessão encerrada com ícone e título, perguntas mais compactas, e as caixas de pergunta e aprovação do fio encostadas na borda.
+- Gastos no tratamento R3 (AT-720): gráfico de chamadas por dia e rosca de entrada/saída ao lado do gasto diário (2/3 e 1/3, no mesmo chunk preguiçoso do recharts), ícones nos rankings e nos cartões de métrica, selo "Não configurado" no orçamento sem teto; o contêiner do gráfico passa a ter tamanho inicial, contra o gráfico diário sem barras nem eixos.
 - Configurações em páginas por grupo (AT-719, RN-980): Modelos, Projeto, Pessoas e Avançado viram abas numa faixa no topo da página de Configurações, que segue um item só da barra lateral (`?tab=settings&group=`); só o grupo aberto monta e busca, e todo `?section=` antigo abre a página do seu grupo.
+- Visão geral no tratamento R3 (AT-720): a hora de todo marco da linha do tempo fica na coluna da direita e o espaço entre marcos diminui; avisos da Visão geral ganham ícone `Info`, a aba PRs ganha ícone no título e o vazio da Arquitetura usa `EmptyState` com título e ícone.
+- Estados vazios e de erro no tratamento R3 (AT-720): `EmptyState` ganha `titulo` opcional (Executores, Percepções, Backlog e contêiner não encontrado), e `ErroDeCarregamento` ganha quadro de ícone e ícone em "Tentar de novo", sem mudar a frase da api nem o `trace`.
 - Configurações: as explicações longas vão para o "?" (roteamento dos modelos, Execução, Onde o código mora, Idioma do projeto, Membros e papéis, Chaves de dispositivo), ficando só o motivo de inerte, o alcance da revogação, "registrada não é rodando" e o aviso de papel; o aviso de conversão de modo vira o botão de perigo `Perigo` (ícone `TriangleAlert`, mesmas condições e conteúdo, ADR 0243). Textos nos quatro idiomas (AT-719).
 - Desenho linear e blocks do shadcn (v7, AT-714): sidebar `sidebar-07` (256/48px, Ctrl/Cmd+B), Containers e Providers em tabela linear (Containers com `@tanstack/react-table`), `CabecalhoDePagina` e `SectionCards` nas telas e nos painéis de Gastos (ADR 0241 e 0242).
 - O "?" e os botões só de ícone chegam às telas restantes (AT-713): Sessão (Enviar, Pôr na fila, Parar, Ativar, Iniciar ideação, Tentar de novo, Responder, Aceitar sugestão, Dispensar, Fixar idioma; convite, handoff da Infra e reabertura com linha curta e o resto no "?"), Executores e Aprovações (modo automático do time e notas de Sempre permitir/Modo automático curtas, Religar, rearmar, Limpar seleção), Histórias, Percepções e Chat RAG (fila de promoção no "?", Editar título, Reanalisar, Anexar pasta, Reindexar, Buscar, útil/irrelevante), Código e o assistente de projeto. Motivo de inerte, recorte declarado, consequência irreversível e as decisões (Aprovar, Negar, Mergear, Promover, Devolver, Arquivar) seguem com texto visível.

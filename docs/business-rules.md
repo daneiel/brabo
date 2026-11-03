@@ -16165,7 +16165,7 @@ projeto aberto, e as outras listas seguiam anunciando a revogada.
   (`RevokeMachineDeviceKeyUseCase`);
   `apps/api/src/infrastructure/persistence/drizzle/runner-device-key.repository.ts:97`
   (`listarDeMaquinaDoUsuario`);
-  `apps/web/src/routes/MachineDeviceKeysSection.tsx:69`
+  `apps/web/src/routes/MachineDeviceKeysSection.tsx:73`
   (`MachineDeviceKeysSection`);
   `apps/web/src/lib/chaves-de-dispositivo-queries.ts:31`
   (`invalidarChavesDeDispositivo`);
@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:616` (`execucao`), `:608`
-  (`origemDaAtividade`), `:615` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:631` (`execucao`), `:639`
+  (`origemDaAtividade`), `:646` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18279,7 +18279,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:78` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:85` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
@@ -18342,8 +18342,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:438`
-  (`movel`), `:458` (`prenderFoco`), `:477` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:448`
+  (`movel`), `:489` (`prenderFoco`), `:508` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:70` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:76` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -18873,7 +18873,7 @@ automático (RN-471).
 
 - **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:73`
   (`ModoAutomaticoDoTime`), `:109` (`ligar`), `:44`
-  (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:89`
+  (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:93`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
   gravado ao montar; o clique grava a curinga para cada escolhido — caminho
@@ -19303,9 +19303,9 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:306` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
-  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1198` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
@@ -20462,7 +20462,7 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
   `apps/web/src/lib/models.ts:491` (`providersSemCatalogo`),
   `apps/web/src/lib/models.ts:507` (`algumModeloAtivo`),
-  `apps/web/src/routes/settings/CredentialsSection.tsx:119` (`handleSync`)
+  `apps/web/src/routes/settings/CredentialsSection.tsx:123` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
   (busca por id e sem resultado; sem atalho "ativar e aplicar"; sync no card,
   com e sem catálogo, e a falha)
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:576` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:597` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:523` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:554` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
@@ -22395,7 +22395,7 @@ sem dizer qual.
   bloqueio). Sem sessão no projeto, o mesmo: o motivo vai em texto, nunca só
   no `title` do botão `disabled`, que não abre no Chromium. Se tarefa
   bloqueada deve ou não travar o merge é pergunta do dono, não decidida aqui.
-- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:276` (`avisoDaLinha`)
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:280` (`avisoDaLinha`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("AT-451: tarefa
   bloqueada com gate pendente NÃO diz que o merge segue disponível")
 - **Origem:** AT-451 (TP-01 de 09/10: "O merge segue disponível — a decisão é
@@ -22414,7 +22414,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:482`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:497`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -25513,3 +25513,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/settings/sumario.ts:110` (`grupoDaSecao`), `apps/web/src/routes/settings/sumario.ts:115` (`resolverGrupo`), `apps/web/src/routes/ProjectSettingsTab.tsx:63` (`ProjectSettingsTab`).
 - **Teste:** `apps/web/src/routes/settings/paginas-por-grupo.test.tsx` (página só com as seções do grupo; todo `?section=` antigo cai no seu grupo; rola até a seção), `apps/web/src/routes/configuracoes.orcamento.test.tsx` (carga de Modelos não busca o resto), `apps/web/src/routes/settings/paginas-por-grupo.test.tsx` (a faixa de abas e o teclado).
 - **Origem:** AT-719 (EP-031).
+
+### RN-981 — Na Sessão, as caixas de pergunta e de aprovação ficam na borda do fio, e o contexto e o esqueleto de carregamento ganham o tratamento R3 {#rn-981}
+
+- **Regra:** revisa a [RN-171](business-rules/autenticacao.md#rn-171) e a [RN-173](business-rules/autenticacao.md#rn-173) no alinhamento: a caixa de pergunta estruturada e o contêiner da ação no fio deixam de ser centralizados (`margin: auto`) e ficam encostados na borda esquerda do fio, mantendo o teto de 560px. Decisão do dono (03/11/2026). O resto da RN-171 (texto livre) e da RN-173 (um só `ApprovalCard`) fica. Junto: o botão do contexto tem só ícone, com legenda "Recolher contexto"/"Abrir contexto" e `aria-expanded`; o fio mostra "Carregando sessão…" com esqueleto na mesma condição que adia o convite (RN-131); "Arquivos tocados" é um `Disclosure` com a contagem; a faixa de sessão encerrada tem ícone, título e explicação, e "Reabrir sessão" segue com a regra de papel da RN-650.
+- **Onde:** `apps/web/src/routes/SessionPage.module.css:1261` (`.acaoNoFio`), `apps/web/src/routes/SessionFio.tsx:59` (`SessionFio`), `apps/web/src/routes/SessionTopbar.tsx:101` (`SessionTopbar`).
+- **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (legenda e `aria-expanded`), `apps/web/src/routes/SessionPage.sessao-encerrada.test.tsx`.
+- **Origem:** AT-720 (EP-031).

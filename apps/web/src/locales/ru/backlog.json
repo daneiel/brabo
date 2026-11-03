@@ -12,7 +12,9 @@
   },
   "empty": {
     "epics": "Эпиков пока нет. Примите handoff от Criativo в сессии, чтобы PO сформировал бэклог.",
-    "rules": "Бизнес-правил пока нет."
+    "rules": "Бизнес-правил пока нет.",
+    "epicsTitle": "Бэклог пуст",
+    "rulesTitle": "Правил нет"
   },
   "coverage": {
     "uncoveredBadge_one": "{{count}} не покрыта",

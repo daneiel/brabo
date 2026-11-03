@@ -557,7 +557,12 @@ export function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
-        <div className={styles.asideHeader}>{t('aside.arquivosTocados')}</div>
+        <Disclosure
+          titulo={t('aside.arquivosTocados')}
+          trailing={totalDeArquivos}
+          padraoAberto
+          classNameCabecalho={styles.asideHeader}
+        >
         {filesTouched.length === 0 ? (
           <div className={styles.asideEmpty}>
             {resumo ? t('aside.arquivosVazio') : t('aside.arquivosNaoLidos')}
@@ -587,6 +592,7 @@ export function ContextAside({
             )),
           ]
         )}
+        </Disclosure>
       </div>
 
       {/* Log completo de eventos — o alvo da navegação de evidência do

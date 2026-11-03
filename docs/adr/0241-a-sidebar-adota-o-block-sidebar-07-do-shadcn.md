@@ -26,6 +26,10 @@ e blocks do shadcn) foi aprovada e a sidebar passa a ser o block `sidebar-07`.
   grupos — Modelos, Projeto, Pessoas e Avançado — são ABAS dentro da página,
   numa faixa no topo, e cada um vive em `?tab=settings&group=<grupo>`. A
   implementação é da AT-719.
+- Decisão do dono (03/11): o rodapé vira o menu do usuário do `sidebar-07` (gatilho = cartão
+  com avatar, e-mail e papel; itens Conta, Tema e Sair; recolhida, só o avatar e o menu abre
+  ao lado). "Recolher menu", Containers, Providers e Gastos seguem como links do rodapé. As
+  abas do projeto ficam maiores (corpo, 32px, ícones de 16px) com divisória entre os grupos.
 - Ícones Lucide. O que o ADR 0211 decidiu sobre conteúdo (grupos, aba ativa,
   teclado, contadores nunca somados) continua valendo.
 

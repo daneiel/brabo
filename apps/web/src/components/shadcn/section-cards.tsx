@@ -7,6 +7,8 @@ export type MetricaDoCard = {
   valor: React.ReactNode
   /** Linha de apoio já pronta; o componente não calcula tendência. */
   nota?: React.ReactNode
+  /** Ícone opcional ao lado do rótulo (decorativo). */
+  icone?: React.ReactNode
 }
 
 // Cards de métrica do dashboard-01, sem degradê de primary nem badge de tendência (AT-714).
@@ -31,7 +33,8 @@ function SectionCards({
           data-slot="section-card"
           className="bg-gradient-to-t from-[var(--accent-soft)] to-card"
         >
-          <p className="font-mono text-[10px] font-semibold tracking-[0.05em] text-muted-foreground uppercase">
+          <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold tracking-[0.05em] text-muted-foreground uppercase">
+            {m.icone}
             {m.rotulo}
           </p>
           <p className="mt-1 text-2xl font-semibold text-foreground tabular-nums">
