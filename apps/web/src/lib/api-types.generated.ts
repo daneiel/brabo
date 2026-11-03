@@ -7698,6 +7698,11 @@ export interface components {
              * @example false
              */
             promptCaching: boolean;
+            /**
+             * @description The provider accepts images in message content (AT-715, ADR 0246). Only `true` after a smoke against the real API described a known image.
+             * @example false
+             */
+            vision: boolean;
         };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];

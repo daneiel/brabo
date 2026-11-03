@@ -20670,6 +20670,11 @@
             "type": "boolean",
             "example": false,
             "description": "The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call."
+          },
+          "vision": {
+            "type": "boolean",
+            "example": false,
+            "description": "The provider accepts images in message content (AT-715, ADR 0246). Only `true` after a smoke against the real API described a known image."
           }
         },
         "required": [
@@ -20680,7 +20685,8 @@
           "routingPreference",
           "stickySession",
           "priceCeiling",
-          "promptCaching"
+          "promptCaching",
+          "vision"
         ]
       },
       "LlmTurnResponseDto": {

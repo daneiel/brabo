@@ -17206,11 +17206,11 @@ endpoint é ALPHA e o smoke manual
 
 - **Código:** `apps/api/src/domain/llm/tool-router.ts:27` (`MODELO_DO_JEV`),
   `:109` (`montarPedidoAoJev`), `:166` (`lerRespostaDoJev`), `:216`
-  (`recortarEstado`), `:268` (`menuP3`);
+  (`recortarEstado`), `:272` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:170`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:187`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:177`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:197`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`);
@@ -21618,9 +21618,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:86` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:244`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:256`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:273`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:288`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
@@ -21839,9 +21839,9 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:314`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:240`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:248`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:269`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:280`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -22296,7 +22296,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:392` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:397` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22318,7 +22318,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:411` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:416` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22665,7 +22665,7 @@ sem dizer qual.
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
   (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:180`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:187`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22698,7 +22698,7 @@ sem dizer qual.
   o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
   nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
   valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
   backlog) continuam no menu (RN-784)`)
@@ -22775,9 +22775,9 @@ sem dizer qual.
   turno fechar.
 - **Onde:** `apps/api/src/domain/llm/chamada-em-texto.ts:10`
   (`marcacaoDeChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:321`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:329`
   (`semChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:354`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:365`
   (`semChamadaEmTexto`)
 - **Teste:** `apps/api/test/domain/llm/chamada-em-texto.spec.ts`,
   `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` e
@@ -23195,7 +23195,7 @@ sem dizer qual.
   8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
   obrigação da etapa. Continua valendo que o piso só devolve o que está no
   catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
   as duas continuam no menu (RN-809)`)
@@ -23855,7 +23855,7 @@ sem dizer qual.
   o recorte do Jev nunca tira `report_done` nem `report_blocked`. O resto do
   passo deles segue recortável, com o aviso de recorte da RN-759. Como todo
   piso, ele só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:351` (`pisoDoMenu`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:356` (`pisoDoMenu`)
 - **Teste:** `apps/api/test/domain/llm/piso-dos-dev-agents.spec.ts`
   (`recorte que deixa só \`terminal\` para dev-api: report_done e
   report_blocked continuam`; `falha: dev-lead e outro agente não ganham as
@@ -23872,7 +23872,7 @@ sem dizer qual.
   veredito, com a delegação falhando por origem `modelo` e a tarefa pronta
   bloqueada. Agente fora dos gates não ganha ferramenta de parecer, e o piso
   só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/domain/llm/tool-router-piso-dos-gates.spec.ts`
   (ids e ferramentas conferidos contra os `.ex` do engine; recorte que deixa
   só `terminal`/`read_file` termina com o parecer; falha: `criativo`,
@@ -24194,8 +24194,8 @@ sem dizer qual.
   (RN-839). O critério é o texto que a api já recebe, sem campo novo; o piso
   fixo de todo passo não alarga (RN-759), outro agente não ganha, e o piso só
   acrescenta o que está no catálogo do passo (P3).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:368` (`PISO_DA_CORRECAO_DO_DEV`),
-  `:379` (`ehPassoDeCorrecao`), `:392` (`menuComPiso`),
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:373` (`PISO_DA_CORRECAO_DO_DEV`),
+  `:384` (`ehPassoDeCorrecao`), `:397` (`menuComPiso`),
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248` (`menuComPiso`)
 - **Teste:** `apps/api/test/domain/llm/tool-router-correcao-do-dev.spec.ts`
   ("dev agent em correção recebe write_file e terminal"; "passo comum de
@@ -25317,7 +25317,7 @@ sem dizer qual.
 ### RN-942 — O recorte do Jev nunca tira do PO a ferramenta de declarar dúvida {#rn-942}
 
 - **Regra:** estende a [RN-758](#rn-758). O piso do PO ganha `declare_open_question`, porque a regra 3 das obrigações do PO manda declarar a dúvida em vez de inventar ou omitir, e o recorte do Jev ([RN-625](#rn-625)) a tirava de todo passo depois do primeiro: o PO punha a lacuna na borda da história e nenhuma `artifact.open_question` nascia. Continua valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:315` (`PISO_DO_MENU`).
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts` (PO recortado mantém `declare_open_question`; catálogo sem ela não a ganha).
 - **Origem:** AT-615 (EP-030).
 ### RN-943 — O bloco de pendências do chat se chama "Pendências deste projeto"; só a aba Executores diz "de outras sessões" {#rn-943}
@@ -25419,7 +25419,7 @@ sem dizer qual.
 ### RN-961 — O aviso de recorte diz que as ferramentas fora dele podem ser pedidas neste passo {#rn-961}
 
 - **Regra:** revisa a [RN-759](#rn-759) (decisão do dono de 31/10, AT-643). O aviso `system` efêmero do passo recortado não diz mais que as ferramentas fora do recorte "voltam nas próximas voltas" nem que ela "volta no seguinte": o recorte é do PASSO, e a RN-759 mandava o agente esperar por um passo que, para o modelo, pode não vir. O texto novo diz a verdade do ADR 0179: as demais seguem disponíveis e podem ser pedidas neste mesmo passo, e o agente não deve concluir que não tem a ferramenta nem encerrar o turno esperando por ela; se precisar de uma delas e responder sem ferramenta, o passo é refeito com o catálogo completo (a repetição da regra 10 do ADR 0179, pelo mecanismo que a fachada já tem). Não muda o piso, a política do Jev nem a montagem do menu: só o texto do aviso.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:412` (`avisoDeRecorte`).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:416` (`avisoDeRecorte`).
 - **Teste:** `apps/api/test/domain/llm/aviso-de-recorte.spec.ts` (fixa o texto novo e reprova o antigo, "voltam nas próximas voltas" e "volta no seguinte").
 - **Origem:** AT-643 (EP-030): o `write_file` e o `terminal` saíam do menu do dev no Jev, e o aviso mandava esperar por uma volta que o modelo não tinha como pedir.
 
@@ -25556,3 +25556,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/sessions/anexos-do-chat.use-case.ts:80` (`ler`), `apps/api/src/interfaces/http/sessions/attachments.controller.ts:87` (`ler`).
 - **Teste:** `apps/api/test/application/use-cases/sessions/anexos-do-chat.use-case.spec.ts` ("RN-988"), `apps/api/test/interfaces/route-surface.spec.ts`.
 - **Origem:** AT-715 fatia 1, lane L1 (EP-031), ADR 0246.
+
+### RN-989 — Imagem só vai a modelo com visão provada; sem ela, o agente é avisado {#rn-989}
+
+- **Regra:** o `llm-turn` aceita no `content` de uma mensagem uma lista de partes `{type:'text',text}` e `{type:'anexo',id}` (o engine manda o id, nunca bytes). A api troca o id pelo anexo da MESMA sessão (`ChatAttachmentRepository.find`): imagem vira parte `image` (data URL no formato OpenAI) SÓ quando o provider declara `capabilities.vision` E o modelo tem `supports_vision` — as duas camadas do ADR 0041; `vision` nasce `false` em todos e só vira `true` com smoke real. Sem as duas, a imagem não sai da api e entra no lugar o texto `[imagem <nome> não enviada: o modelo atual não lê imagem]`, que é o aviso ao agente. Anexo de texto vai delimitado (`[anexo: <nome>]` … `[fim do anexo: <nome>]`) com ou sem visão; id que não resolve vira `[anexo <id> indisponível]`. Texto puro continua `string`. Os tokens da imagem entram no metering pelo `usage` do provider (ADR 0188), sem código novo.
+- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:160` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:171` (`resolverAnexos`).
+- **Teste:** `apps/api/test/domain/llm/anexos-no-turno.spec.ts`, `apps/api/test/infrastructure/llm/openai-compatible-provider.visao.spec.ts`; prova da capability: `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (manual, com credencial).
+- **Origem:** AT-715 fatia 1, lane L2 (EP-031), ADR 0246.

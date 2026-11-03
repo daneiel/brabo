@@ -12,7 +12,7 @@ AT-715 (EP-031): nenhum chat de agente aceita arquivo. O dono respondeu às 11 p
 
 1. **Bytes no Postgres.** Tabela `chat_attachments` (`bytea`, FK `cascade` para projeto e sessão), sem UPDATE. O `pg_dump` do backup já a cobre e o RBAC é o do projeto. Nada vai a disco nem ao worktree, então não há contenção de caminho nova (RN-092/095).
 2. **Referência no evento.** O `chat.message` grava `anexos: [{id, nome, mime, tamanho}]` e o engine recebe a mesma lista; os bytes só saem do banco quando a api monta a chamada ao provider (lane L2) ou quando alguém lê o anexo.
-3. **Visão por capability.** O contrato multimodal e a capability `vision` (`false` sem smoke real, ADR 0041) são da lane L2; esta lane só fixa o armazenamento e as rotas.
+3. **Visão por capability.** `ChatMessage.content` aceita `string` ou partes `text`/`image`, e `LLMProviderCapabilities.vision` nasce `false` nos onze providers (ADR 0041; só o smoke real a liga). O engine manda o anexo por id no `llm-turn` (`{type:'anexo',id}`) e a api o resolve: a imagem só sai com provider E modelo com visão; senão vira texto de aviso (RN-989). Anthropic e Ollama têm o formato próprio (`image` base64, `images`), sem prova de capability.
 4. **Quem vê.** Todo `viewer` do projeto, o mesmo alcance do `GET .../events`. Alheio é 404.
 5. **JSON com base64, não multipart.** 5 MB viram ~6,7 MB, dentro do corpo de 10 MB, sem `multer` nem parser novo; é o molde do upload do RAG.
 6. **Tipo pelos bytes.** Assinatura para png/jpeg/gif/webp; texto é UTF-8 válido sem NUL. SVG não é imagem aceita (cairia como texto e é servido `nosniff`/`attachment`).
