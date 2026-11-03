@@ -7117,6 +7117,106 @@ paths:
       summary: Подтверждает, что бизнес-потребность Креатива подтверждена
       tags:
         - agents
+  /projects/{projectId}/sessions/{sessionId}/attachments:
+    post:
+      description: >-
+        Text/code (UTF-8) up to 512 KB or png/jpeg/webp/gif up to 5 MB; the type
+        is checked against the bytes. Returns the reference to pass as `anexos`
+        in the agent message. JSON+base64 instead of multipart: it fits the 10
+        MB body limit and adds no parser (RN-986).
+      operationId: AttachmentsController_enviar
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadAnexoDto'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnexoResponseDto'
+        '400':
+          description: >-
+            Некорректное тело. `ValidationPipe` работает с `whitelist` и
+            `forbidNonWhitelisted`, поэтому неизвестное поле тоже приводит к
+            ошибке.
+        '401':
+          description: Нет токена, токен истёк или подпись недействительна.
+        '403':
+          description: Недостаточная роль в проекте.
+        '404':
+          description: Project, session or attachment not found.
+        '409':
+          description: The session is closed (`sessao_encerrada`, RN-581).
+        '413':
+          description: Over the size limit.
+        '415':
+          description: Type not accepted.
+        '429':
+          description: Ограничение частоты запросов на пользователя или на IP.
+      security:
+        - bearer: []
+      summary: Uploads a chat attachment (JSON with base64)
+      tags:
+        - sessions
+  /projects/{projectId}/sessions/{sessionId}/attachments/{attachmentId}:
+    get:
+      description: >-
+        Every `viewer` of the project reads it (RN-988). Served with the stored
+        `Content-Type`, `nosniff`, and `attachment` disposition for anything
+        that is not an image.
+      operationId: AttachmentsController_ler
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: attachmentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The raw bytes.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Нет токена, токен истёк или подпись недействительна.
+        '403':
+          description: Недостаточная роль в проекте.
+        '404':
+          description: Project, session or attachment not found.
+        '429':
+          description: Ограничение частоты запросов на пользователя или на IP.
+      security:
+        - bearer: []
+      summary: Downloads the attachment bytes
+      tags:
+        - sessions
   /projects/{projectId}/sessions/{sessionId}/budget:
     get:
       description: Именно это питает живой счётчик токенов на экране сессии.
@@ -11147,6 +11247,27 @@ components:
         - hipotese
         - sugestao
         - confiancaPercent
+    AnexoResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: erro.png
+        mime:
+          type: string
+          example: image/png
+        tamanho:
+          type: number
+          example: 1024
+          description: Size in bytes.
+      required:
+        - id
+        - nome
+        - mime
+        - tamanho
     AnswerDetectedLanguageDto:
       type: object
       properties:
@@ -15777,6 +15898,13 @@ components:
             стабильном префиксе вызова (RN-892). `true` только после того, как
             smoke против реального API показал закешированные входные токены при
             повторном вызове.
+        vision:
+          type: boolean
+          example: false
+          description: >-
+            The provider accepts images in message content (AT-715, ADR 0246).
+            Only `true` after a smoke against the real API described a known
+            image.
       required:
         - streaming
         - toolCalling
@@ -15786,6 +15914,7 @@ components:
         - stickySession
         - priceCeiling
         - promptCaching
+        - vision
     LlmTurnResponseDto:
       type: object
       properties:
@@ -20548,6 +20677,15 @@ components:
           minLength: 1
           maxLength: 10000
           description: Сообщение пользователя активному агенту сессии.
+        anexos:
+          maxItems: 4
+          description: >-
+            Ids of chat attachments (`POST .../attachments`): at most 4, all
+            from this session and uploaded by the sender (RN-987). The
+            `chat.message` records only the reference, never the bytes.
+          type: array
+          items:
+            type: string
       required:
         - text
     SendChatMessageDto:
@@ -22232,6 +22370,22 @@ components:
           example: acme-corp
           pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
           description: kebab-case. Уникален в системе и виден в URL.
+    UploadAnexoDto:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: erro.png
+          maxLength: 255
+        base64:
+          type: string
+          description: >-
+            File bytes in base64. The type is read from the BYTES (png, jpeg,
+            webp, gif or UTF-8 text), never from the name. Limits: 5 MB per
+            image, 512 KB per text file (RN-986).
+      required:
+        - nome
+        - base64
     UpsertBudgetDto:
       type: object
       properties:

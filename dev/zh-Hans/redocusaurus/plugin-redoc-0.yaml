@@ -6557,6 +6557,105 @@ paths:
       summary: 确认 Criativo 的业务需求已得到验证
       tags:
         - agents
+  /projects/{projectId}/sessions/{sessionId}/attachments:
+    post:
+      description: >-
+        Text/code (UTF-8) up to 512 KB or png/jpeg/webp/gif up to 5 MB; the type
+        is checked against the bytes. Returns the reference to pass as `anexos`
+        in the agent message. JSON+base64 instead of multipart: it fits the 10
+        MB body limit and adds no parser (RN-986).
+      operationId: AttachmentsController_enviar
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadAnexoDto'
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnexoResponseDto'
+        '400':
+          description: >-
+            请求体无效。`ValidationPipe` 以 `whitelist` 和 `forbidNonWhitelisted`
+            运行，因此未知字段也会失败。
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 在项目中的角色不足。
+        '404':
+          description: Project, session or attachment not found.
+        '409':
+          description: The session is closed (`sessao_encerrada`, RN-581).
+        '413':
+          description: Over the size limit.
+        '415':
+          description: Type not accepted.
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: Uploads a chat attachment (JSON with base64)
+      tags:
+        - sessions
+  /projects/{projectId}/sessions/{sessionId}/attachments/{attachmentId}:
+    get:
+      description: >-
+        Every `viewer` of the project reads it (RN-988). Served with the stored
+        `Content-Type`, `nosniff`, and `attachment` disposition for anything
+        that is not an image.
+      operationId: AttachmentsController_ler
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: attachmentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The raw bytes.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 在项目中的角色不足。
+        '404':
+          description: Project, session or attachment not found.
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: Downloads the attachment bytes
+      tags:
+        - sessions
   /projects/{projectId}/sessions/{sessionId}/budget:
     get:
       description: 这是会话界面实时 token 计量表的数据来源。
@@ -10260,6 +10359,27 @@ components:
         - hipotese
         - sugestao
         - confiancaPercent
+    AnexoResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: erro.png
+        mime:
+          type: string
+          example: image/png
+        tamanho:
+          type: number
+          example: 1024
+          description: Size in bytes.
+      required:
+        - id
+        - nome
+        - mime
+        - tamanho
     AnswerDetectedLanguageDto:
       type: object
       properties:
@@ -14540,6 +14660,13 @@ components:
           description: >-
             提供商接受在调用的稳定前缀上设置显式的提示词缓存断点（`cache_control`）（RN-892）。只有在针对真实 API
             的冒烟测试显示重复调用中出现了缓存的输入 token 之后才为 `true`。
+        vision:
+          type: boolean
+          example: false
+          description: >-
+            The provider accepts images in message content (AT-715, ADR 0246).
+            Only `true` after a smoke against the real API described a known
+            image.
       required:
         - streaming
         - toolCalling
@@ -14549,6 +14676,7 @@ components:
         - stickySession
         - priceCeiling
         - promptCaching
+        - vision
     LlmTurnResponseDto:
       type: object
       properties:
@@ -18889,6 +19017,15 @@ components:
           minLength: 1
           maxLength: 10000
           description: 用户发给会话活跃代理的消息。
+        anexos:
+          maxItems: 4
+          description: >-
+            Ids of chat attachments (`POST .../attachments`): at most 4, all
+            from this session and uploaded by the sender (RN-987). The
+            `chat.message` records only the reference, never the bytes.
+          type: array
+          items:
+            type: string
       required:
         - text
     SendChatMessageDto:
@@ -20433,6 +20570,22 @@ components:
           example: acme-corp
           pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
           description: kebab-case。在系统中唯一，并在 URL 中可见。
+    UploadAnexoDto:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: erro.png
+          maxLength: 255
+        base64:
+          type: string
+          description: >-
+            File bytes in base64. The type is read from the BYTES (png, jpeg,
+            webp, gif or UTF-8 text), never from the name. Limits: 5 MB per
+            image, 512 KB per text file (RN-986).
+      required:
+        - nome
+        - base64
     UpsertBudgetDto:
       type: object
       properties:
