@@ -856,7 +856,7 @@ Bootstrap (`make deploy-local`) и проверки свойств, которы
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Инвентарь, извлечённый из кода: переменных, читаемых во время выполнения, — **182**. У всех есть описание в таблицах выше.
+Инвентарь, извлечённый из кода: переменных, читаемых во время выполнения, — **183**. У всех есть описание в таблицах выше.
 
 Каждый источник помечен как **продукт** — то, что оператор установки задаёт в `.env` развёртывания, — или **инструменты**: их читают только CI и разработчики продукта. Переменной инструментов не место в `.env` оператора.
 
@@ -996,9 +996,10 @@ Bootstrap (`make deploy-local`) и проверки свойств, которы
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — переменных: 4 · продукт
+**web** — переменных: 5 · продукт
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>

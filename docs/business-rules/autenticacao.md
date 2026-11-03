@@ -3286,3 +3286,25 @@ modelo.
 - **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx` (`CriativoKpis`)
 - **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` — "'Taxa
   ideação → commit' é DECLARADA ausente — nunca um número calculado"
+
+### RN-984 — O acesso rápido por papel só existe com `BRABO_AMBIENTE=local` {#rn-984}
+
+`GET`/`POST /auth/dev-login` listam os papéis e emitem a sessão de uma conta
+`<papel>@brabo.dev` (`owner`, `maintainer`, `developer`, `viewer`) sem
+credencial. Só existem quando `BRABO_AMBIENTE=local` E a imagem não traz marca
+ou traz `local` (ADR 0245): fora disso o módulo não é registrado e a rota dá
+404. A imagem das Actions sai marcada `dev` ou `prd` no build, então nem
+`BRABO_AMBIENTE=local` no `.env` a liga. A rota resolve só o e-mail fixo do
+papel, emite pelo mesmo `EmitirSessaoUseCase` do login, audita `dev_login` e,
+na instalação, garante as contas com senha ALEATÓRIA descartada num workspace
+próprio (a RN-546 fica intacta: não há senha conhecida). Sem nenhum usuário
+na instalação responde 409.
+
+- **Onde:** `apps/api/src/infrastructure/security/ambiente.ts:13`
+  (`acessoRapidoLigado`), `apps/api/src/interfaces/http/acesso-rapido/acesso-rapido.controller.ts:34`
+  (`AcessoRapidoController`), `apps/api/src/application/use-cases/acesso-rapido/acesso-rapido.use-case.ts:27`
+  (`AcessoRapidoUseCase`)
+- **Teste:** `apps/api/test/infrastructure/security/ambiente.spec.ts`,
+  `apps/api/test/interfaces/http/acesso-rapido/acesso-rapido.http.spec.ts`,
+  `apps/api/test/application/use-cases/acesso-rapido/acesso-rapido.use-case.spec.ts`,
+  `scripts/ci/ambiente-nas-actions.spec.ts`, `e2e/testes/autenticacao.spec.ts`

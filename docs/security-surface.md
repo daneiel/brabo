@@ -879,7 +879,7 @@ detalhar o motivo na URL.
   responde 404. Quando existe é pública como o `/auth/login` (sem CSRF, sem
   rate limit) e emite a sessão de uma conta `<papel>@brabo.dev` do
   `ROLE_ORDER`, nunca de e-mail livre; sem usuário na instalação responde 409.
-  Registrado aqui porque o teste não a vê.
+  Registrado aqui porque o teste não a vê (ADR 0245, RN-984).
 - **`GET /projects/:projectId/agent-areas` passou a devolver dados reais, e a
   classificação não mudou** — continua `role:developer`, enquanto o `PATCH`
   do teto segue `role:maintainer`. Até a FASE 18 a tabela `agent_areas` nunca

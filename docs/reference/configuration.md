@@ -233,6 +233,8 @@ externo, é daqui que vem a credencial para entrar no web local e no smoke.
 | variável | default | o que faz |
 |---|---|---|
 | `BRABO_SEED_PASSWORD` | `brabo12345678` | senha dos usuários semeados (`owner@brabo.dev`, `maintainer@brabo.dev`, `developer@brabo.dev`, `viewer@brabo.dev`), criados com o email **já verificado** |
+| `BRABO_AMBIENTE` | — | `dev`, `prd` ou `local` (ADR 0245, RN-984). Só `local` registra `GET`/`POST /auth/dev-login`, o acesso rápido por papel; ausente, vazio ou outro valor, a rota não existe. A imagem das Actions é marcada `dev`/`prd` no build (`AMBIENTE` do `docker-bake.hcl`, arquivo `/app/AMBIENTE_DA_IMAGEM`) e vence a variável. O compose de DEV a põe em `local`; o de instalação a deixa vazia |
+| `BRABO_BIND` | `0.0.0.0` | endereço em que o compose de instalação publica as portas da api e do web. Com `BRABO_AMBIENTE=local`, ponha `127.0.0.1`: senão quem está na rede entra como qualquer papel |
 | `BRABO_FORCE_SEED` | — | destrava o seed com `NODE_ENV=production`, onde por padrão ele **recusa rodar**. Não a defina num ambiente real: a conta nasce com senha conhecida e verificada |
 
 > O seed é idempotente e **não mexe na senha** de quem já existe. Rodá-lo de
@@ -511,6 +513,7 @@ boot. As `VITE_*` são o fallback de desenvolvimento.
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
 | `VITE_LOG_LEVEL` | nível do logger JSON do navegador (default `info`). Num cluster manda a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve no `/config.js` — `VITE_*` só conta num build local |
 | `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é de build por escolha, não por limitação** — veja abaixo |
+| `VITE_BRABO_AMBIENTE` | `dev`, `prd` ou `local`; de build, vinda do `AMBIENTE` do `docker-bake.hcl` (default vazio). Só `local` monta o acesso rápido por papel na tela de login (ADR 0245); as Actions passam `dev` ou `prd` |
 
 Página em branco depois do deploy é quase sempre o `/config.js` apontando para
 `localhost` — o smoke do deploy confere exatamente isso.
@@ -859,7 +862,7 @@ ninguém perceba.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventário extraído do código: **182 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **183 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
@@ -999,9 +1002,10 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 4 variáveis · produto
+**web** — 5 variáveis · produto
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
+- `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
