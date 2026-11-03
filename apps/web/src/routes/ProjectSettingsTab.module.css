@@ -4,7 +4,9 @@
  */
 
 .section {
-  margin-bottom: 44px;
+  margin-bottom: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
 }
 
 /*
@@ -61,6 +63,8 @@
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
