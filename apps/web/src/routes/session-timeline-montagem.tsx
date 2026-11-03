@@ -26,6 +26,8 @@ import { MensagemDeConversa } from '../components/ai-elements/message';
 import { ArtifactCard } from '../components/ai-elements/artifact';
 import { PassosEncerrados } from '../components/ai-elements/passos-encerrados';
 import { passosDoTurno } from '../lib/passos-do-turno';
+import { fontesDoTurno } from '../lib/fontes-do-turno';
+import { ConsultadoNesteTurno } from '../components/ai-elements/sources';
 import { AcaoCopiar } from '../components/ai-elements/copiar';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
@@ -942,6 +944,19 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       const ferramentas = passosDoTurno(events, event);
       if (ferramentas.length > 0) {
         empurrar({ node: <PassosEncerrados key={`${event.id}-cadeia`} passos={ferramentas} /> });
+      }
+      const consultado = fontesDoTurno(event.payload);
+      if (consultado.fontes.length > 0) {
+        empurrar({
+          node: (
+            <ConsultadoNesteTurno
+              key={`${event.id}-fontes`}
+              fontes={consultado.fontes}
+              total={consultado.total}
+              projectId={projectId}
+            />
+          ),
+        });
       }
       passos.forEach((passo, i) =>
         empurrar({

@@ -261,6 +261,8 @@
     "ferramentaFalhou": "A ferramenta falhou.",
     "resultadoCortado": "Resultado cortado pelo limite de 2.000 caracteres.",
     "passosDoTurno": "Passos do turno",
+    "consultado": "Consultado neste turno",
+    "consultadoCorte": "mostrando {{shown}} de {{total}}",
     "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",
     "passosCount_other": "{{count}} passos"
