@@ -53,23 +53,16 @@ import {
   lerProjetosAbertos,
 } from '../lib/sidebar-state';
 import type { ProjectCardSummary } from '../lib/api-types';
-import { SearchIcon } from 'lucide-react';
+import { Activity, CircleUser, Container, Folder, FolderOpen, KeyRound, LogOut, PanelLeft, PanelLeftOpen, SearchIcon, SunMoon, Wallet } from 'lucide-react';
 import { deveAbrirPaleta } from '../lib/paleta-de-comandos';
 import { ABA_PADRAO, abaDaRota, type ContagensDeAba } from './project-tabs';
 import { Badge } from '../components/ui/Badge';
 import {
-  ActivityIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   LogoMark,
-  LogoutIcon,
   MenuIcon,
-  MoonIcon,
   PlusIcon,
-  ServerIcon,
-  SunIcon,
-  UserIcon,
   XIcon,
 } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
@@ -187,7 +180,7 @@ function BotaoDeTema({ colapsado }: { colapsado: boolean }) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton onClick={() => setTema(alternarTema())} title={rotulo} aria-label={rotulo}>
-        {claro ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+        <SunMoon size={15} aria-hidden="true" />
         {!colapsado && <span>{rotulo}</span>}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -669,7 +662,7 @@ export function Shell() {
               aria-keyshortcuts="Meta+K Control+K"
               onClick={() => setPaletaAberta(true)}
             >
-              <SearchIcon size={16} />
+              <SearchIcon size={16} aria-hidden="true" />
               {!colapsado && <span>{t('palette.open')}</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -712,7 +705,7 @@ export function Shell() {
                   aria-label={t('sidebar.activities.label')}
                   onClick={() => definirColapso(false)}
                 >
-                  <ActivityIcon size={16} />
+                  <Activity size={16} aria-hidden="true" />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -804,6 +797,7 @@ export function Shell() {
                               />
                             }
                           >
+                            {aberto ? <FolderOpen size={15} aria-hidden="true" /> : <Folder size={15} aria-hidden="true" />}
                             <NavStatusDot
                               summary={summary}
                               blockedTaskCount={blockedByProject.get(project.id) ?? 0}
@@ -882,10 +876,10 @@ export function Shell() {
       <SidebarFooter>
         <SidebarMenu>
           <BotaoDeTema colapsado={colapsado} />
-          <LinkDoRodape to="/containers" icone={<ServerIcon size={15} />} rotulo={tComum('sidebar.containers')} colapsado={colapsado} />
-          <LinkDoRodape to="/providers" icone={<ServerIcon size={15} />} rotulo={tComum('sidebar.providers')} colapsado={colapsado} />
-          <LinkDoRodape to="/spend" icone={<ActivityIcon size={15} />} rotulo={tComum('sidebar.spend')} colapsado={colapsado} />
-          <LinkDoRodape to="/account" icone={<UserIcon size={15} />} rotulo={tComum('sidebar.account')} colapsado={colapsado} />
+          <LinkDoRodape to="/containers" icone={<Container size={15} aria-hidden="true" />} rotulo={tComum('sidebar.containers')} colapsado={colapsado} />
+          <LinkDoRodape to="/providers" icone={<KeyRound size={15} aria-hidden="true" />} rotulo={tComum('sidebar.providers')} colapsado={colapsado} />
+          <LinkDoRodape to="/spend" icone={<Wallet size={15} aria-hidden="true" />} rotulo={tComum('sidebar.spend')} colapsado={colapsado} />
+          <LinkDoRodape to="/account" icone={<CircleUser size={15} aria-hidden="true" />} rotulo={tComum('sidebar.account')} colapsado={colapsado} />
           {/* Na gaveta não há o que recolher — ela já some inteira. */}
           {!movel && (
             <SidebarMenuItem>
@@ -895,7 +889,7 @@ export function Shell() {
                 aria-label={rotuloDoColapso}
                 onClick={() => definirColapso(!colapsado)}
               >
-                {colapsado ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
+                {colapsado ? <PanelLeftOpen size={15} aria-hidden="true" /> : <PanelLeft size={15} aria-hidden="true" />}
                 {!colapsado && <span>{t('sidebar.collapseButton.collapse')}</span>}
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -920,7 +914,7 @@ export function Shell() {
               aria-label={t('sidebar.footer.logout')}
               onClick={() => void sair().then(() => navigate({ to: '/login' }))}
             >
-              <LogoutIcon size={14} />
+              <LogOut size={15} aria-hidden="true" />
               {!colapsado && <span>{t('sidebar.footer.logout')}</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>

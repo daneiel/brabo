@@ -239,6 +239,18 @@ describe('Shell — rodapé', () => {
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
   });
 
+  it('cada item do rodapé tem um svg aria-hidden', () => {
+    renderShell();
+    const hrefs = ['/containers', '/providers', '/spend', '/account'];
+    for (const h of hrefs) {
+      const a = document.querySelector(`a[href="${h}"]`);
+      expect(a?.querySelector('svg[aria-hidden="true"]'), h).not.toBeNull();
+    }
+    for (const nome of ['sair']) {
+      expect(screen.getByRole('button', { name: nome }).querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    }
+  });
+
   it('sair continua funcionando', async () => {
     renderShell();
 

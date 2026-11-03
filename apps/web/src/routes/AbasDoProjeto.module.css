@@ -125,3 +125,8 @@
   border-radius: var(--radius-full);
 }
 
+
+.itemIcone {
+  flex: none;
+  color: var(--text-muted);
+}
