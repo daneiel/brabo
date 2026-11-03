@@ -625,8 +625,10 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
     expect(cardDoModo('Runner local')).not.toBeDisabled();
     const aviso = screen.getByTestId('aviso-sem-broker');
     expect(aviso.textContent).toMatch(/não sobe container/);
-    expect(aviso.textContent).toMatch(/BROKER_URL/);
     expect(aviso.textContent).toMatch(/Runner local/);
+    // A explicação longa mora no "?" (AT-713); a linha curta fica visível.
+    fireEvent.click(screen.getByRole('button', { name: 'Ajuda: Sem broker de container' }));
+    expect(await screen.findByText(/BROKER_URL/)).toBeInTheDocument();
   });
 
   it('base conhecida mas broker DESCONHECIDO (campo ausente): não pré-seleciona Pasta montada nem trava nada', async () => {
@@ -696,8 +698,12 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
     // asserção é sobre a FRASE estar na tela, não sobre quantos nós a
     // carregam. As duas frases escolhidas são exclusivas de cada estado — o
     // card do modo já diz "dentro da base de projetos" o tempo todo.
+    // A nota neutra mora no "?" (AT-713): abre antes de ler.
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ajuda: Pasta dentro da base de projetos' }),
+    );
     expect(
-      screen.getAllByText(/não precisa existir ainda/i).length,
+      (await screen.findAllByText(/não precisa existir ainda/i)).length,
     ).toBeGreaterThan(0);
     expect(screen.queryAllByText(/recusa a criação/i)).toHaveLength(0);
 

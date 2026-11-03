@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { RotateCcw } from 'lucide-react';
+import { Button } from './ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -85,9 +87,9 @@ function Estado({
       {q.isError && (
         <div className={styles.estadoErro} role="alert">
           <span>{erro}</span>
-          <button type="button" className={styles.botao} onClick={() => void q.refetch()}>
-            {t('shared.retry')}
-          </button>
+          <Button variant="ghost" legenda={t('shared.retry')} onClick={() => void q.refetch()}>
+            <RotateCcw aria-hidden="true" />
+          </Button>
         </div>
       )}
     </>

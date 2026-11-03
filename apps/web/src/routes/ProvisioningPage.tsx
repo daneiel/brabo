@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { RotateCcw, RefreshCw } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitProviderName } from '../lib/api-types';
@@ -272,7 +273,9 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
           // antes de existir linha de bootstrap: sem status de falha, nenhum
           // botão era renderizado e a única ação possível era recarregar.
           <>
-            <Button onClick={handleRetry}>{t('provisioningPage.retry')}</Button>
+            <Button legenda={t('provisioningPage.retry')} onClick={handleRetry}>
+              <RotateCcw aria-hidden="true" />
+            </Button>
             {podeSeguirSemProtecao && (
               <Button variant="success" onClick={handleAcknowledge}>
                 {t('provisioningPage.proceedWithoutProtection')}
@@ -284,12 +287,13 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
           // outro POST — o provisionamento pode estar rodando ainda, e um
           // segundo POST criaria uma sessão de bootstrap a mais.
           <Button
+            legenda={t('provisioningPage.watchAgain')}
             onClick={() => {
               setExpirou(false);
               setRodada((r) => r + 1);
             }}
           >
-            {t('provisioningPage.watchAgain')}
+            <RefreshCw aria-hidden="true" />
           </Button>
         ) : (
           <span className={styles.working}>{t('provisioningPage.working')}</span>

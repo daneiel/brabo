@@ -203,6 +203,7 @@
     }
   },
   "credentialStep": {
+    "assunto": "个人访问令牌",
     "hint": "在 {{provider}} 上配置需要个人访问令牌（PAT）。选择已添加的令牌或添加新令牌 —— 令牌在保存时加密，且不会再次显示。验证位于项目设置中，针对已保存的令牌进行。",
     "credLabel": "已连接 {{provider}}",
     "credMeta": "自 {{time}} 起",

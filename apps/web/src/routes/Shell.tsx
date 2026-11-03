@@ -52,7 +52,7 @@ import {
   lerProjetosAbertos,
 } from '../lib/sidebar-state';
 import type { ProjectCardSummary } from '../lib/api-types';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, RotateCcw } from 'lucide-react';
 import { deveAbrirPaleta } from '../lib/paleta-de-comandos';
 import { ABA_PADRAO, abaDaRota, type ContagensDeAba } from './project-tabs';
 import { Badge } from '../components/ui/Badge';
@@ -825,13 +825,14 @@ export function Shell() {
               {projectsQuery.isError && (
                 <div className={styles.navErro} role="alert">
                   <span>{mensagemDaApi(projectsQuery.error, t('sidebar.projects.loadError'))}</span>
-                  <button
-                    type="button"
-                    className={styles.navErroBotao}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    legenda={t('sidebar.projects.retry')}
                     onClick={() => void projectsQuery.refetch()}
                   >
-                    {t('sidebar.projects.retry')}
-                  </button>
+                    <RotateCcw aria-hidden="true" />
+                  </Button>
                 </div>
               )}
               {(projects ?? []).map((project) => {

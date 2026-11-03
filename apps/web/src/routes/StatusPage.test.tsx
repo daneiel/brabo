@@ -78,7 +78,9 @@ describe('StatusPage — data e rótulos na língua de quem lê (AT-327)', () =>
     expect(screen.queryByText('2026-09-30T00:00:00Z')).toBeNull();
     expect(screen.getByText('Última verificação')).toBeInTheDocument();
     expect(screen.getByText('no ar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+    const voltar = screen.getByRole('button', { name: 'Voltar' });
+    expect(voltar.textContent).toBe('');
+    expect(voltar.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('caso de falha: instante inválido ou ausente diz "não informado", nunca "Invalid Date"', async () => {
