@@ -84,7 +84,62 @@
     "enfileirar": "加入队列",
     "perguntasEmAberto_other": "{{count}} 个未回答的问题",
     "responderPerguntas": "回答",
-    "sugestaoExigeDeveloper": "此操作需要在该工作区拥有 developer 角色。"
+    "sugestaoExigeDeveloper": "此操作需要在该工作区拥有 developer 角色。",
+    "menu": {
+      "agentes": "会话中的智能体",
+      "comandos": "命令",
+      "vazio": "没有找到",
+      "removerDestinatario": "将 {{agente}} 从收件人中移除",
+      "fecharAjuda": "关闭帮助",
+      "erroEnviarVarios": "无法把消息发给收件人，文本已退回输入框。"
+    },
+    "comandos": {
+      "indisponivel": "目前不可用",
+      "pronto": {
+        "nome": "就绪",
+        "descricao": "确认就绪并呼叫 PO"
+      },
+      "arquitetura": {
+        "nome": "架构",
+        "descricao": "确认架构"
+      },
+      "handoff": {
+        "nome": "交接",
+        "descricao": "打开手动交接"
+      },
+      "perguntas": {
+        "nome": "问题",
+        "descricao": "前往未决问题"
+      },
+      "parar": {
+        "nome": "停止",
+        "descricao": "中断正在进行的回合"
+      },
+      "aprovar": {
+        "nome": "批准",
+        "descricao": "你正在通过此命令做决定。与审批卡片相同的限制依然适用。",
+        "confirmar": "批准：{{acao}}",
+        "cancelar": "取消",
+        "aprovar": "批准",
+        "nenhuma": "没有等待你决定的操作。",
+        "soNoCard": "待处理操作不止一个，或只能在卡片上决定：请在卡片上决定。",
+        "erro": "无法批准，请在卡片上决定。"
+      },
+      "ajuda": {
+        "nome": "帮助",
+        "descricao": "列出命令"
+      },
+      "resumo": {
+        "nome": "摘要",
+        "descricao": "在输入框插入摘要请求",
+        "texto": "请用要点总结我们目前的决定以及还剩什么。"
+      },
+      "plano": {
+        "nome": "计划",
+        "descricao": "在输入框插入查看当前计划的请求",
+        "texto": "请展示你当前的计划。"
+      }
+    }
   },
   "ativacao": {
     "encerradaTitulo": "会话已结束",

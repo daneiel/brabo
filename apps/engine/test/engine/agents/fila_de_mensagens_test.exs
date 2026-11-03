@@ -75,6 +75,46 @@ defmodule Engine.Agents.FilaDeMensagensTest do
   end
 
   describe "a derivação da fila no log (pura)" do
+    test "AT-717: o mesmo mensagemId em dois agentes — entregar ou cancelar a cópia de um não fecha a do outro" do
+      eventos = [
+        enfileirada(1, "criativo", "mm", "oi"),
+        enfileirada(2, "po", "mm", "oi"),
+        %{
+          "seq" => 3,
+          "type" => "chat.message_delivered",
+          "actor" => %{"id" => "criativo"},
+          "payload" => %{"mensagemIds" => ["mm"]}
+        }
+      ]
+
+      assert [] = FilaDeMensagens.pendentes(eventos, "criativo")
+      assert [%{id: "mm"}] = FilaDeMensagens.pendentes(eventos, "po")
+
+      cancelada = %{
+        "seq" => 4,
+        "type" => "chat.message_cancelled",
+        "actor" => %{"kind" => "user", "id" => "u1"},
+        "payload" => %{"mensagemId" => "mm", "agente" => "po"}
+      }
+
+      assert [] = FilaDeMensagens.pendentes(eventos ++ [cancelada], "po")
+      refute MapSet.member?(FilaDeMensagens.fora_do_historico([cancelada], "criativo"), "mm")
+      assert MapSet.member?(FilaDeMensagens.fora_do_historico([cancelada], "po"), "mm")
+    end
+
+    test "AT-717: a reidratação mostra a mensagem de vários destinatários a CADA um como mensagem do usuário" do
+      m = %{
+        "id" => "mm",
+        "type" => "chat.message",
+        "payload" => %{"text" => "para os dois", "destinatarios" => ["criativo", "po"]}
+      }
+
+      for agente <- ["criativo", "po"] do
+        assert [%{"role" => "user", "content" => "para os dois"}] =
+                 Engine.Agents.Reidratacao.mensagens([m], agente)
+      end
+    end
+
     test "pendente = enfileirada e nem entregue nem cancelada, na ordem do seq, só do agente" do
       eventos = [
         enfileirada(5, "criativo", "m3", "c"),

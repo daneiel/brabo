@@ -3494,6 +3494,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sends one message to several agents (AT-717, ADR 0247)
+         * @description Records ONE `chat.message` with `destinatarios` and delivers it to each agent the way the single-agent route does (turn, queue RN-673, named refusal). An agent that cannot take it is `recusada` in `entregas` and the others still go. A closed session is 409 `sessao_encerrada`.
+         */
+        post: operations["AgentsController_messages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/model-binding": {
         parameters: {
             query?: never;
@@ -6868,6 +6888,17 @@ export interface components {
             /** @example 42 */
             lineNo?: number;
         };
+        EntregaAoAgenteResponseDto: {
+            /** @example po */
+            agente: string;
+            /**
+             * @description `turno`: the agent started a turn with it. `enfileirada`: it joined the agent queue (RN-673). `recusada`: the agent did not take it; see `motivo`.
+             * @enum {string}
+             */
+            entrega: "turno" | "enfileirada" | "recusada";
+            /** @example Agent is not active in this session. */
+            motivo?: string;
+        };
         EpicComHistoriasResponseDto: {
             /** @example 01JC4Z0000EPICO000000000001 */
             id: string;
@@ -7879,6 +7910,11 @@ export interface components {
              * @example 2
              */
             posicao?: number;
+        };
+        MensagemAosAgentesResponseDto: {
+            /** @example 01JC4Z0000EVENTO000000000001 */
+            mensagemId: string;
+            entregas: components["schemas"]["EntregaAoAgenteResponseDto"][];
         };
         MirrorSyncResultInternalDto: {
             /**
@@ -10455,6 +10491,23 @@ export interface components {
              * @example Summarize what we have already decided about checkout.
              */
             text: string;
+        };
+        SendMessageToAgentsDto: {
+            /**
+             * @description User's message to the session's active agent.
+             * @example I want to allow discount coupons at checkout.
+             */
+            text: string;
+            /** @description Ids of chat attachments (`POST .../attachments`): at most 4, all from this session and uploaded by the sender (RN-987). The `chat.message` records only the reference, never the bytes. */
+            anexos?: string[];
+            /**
+             * @description Slugs of the conversational agents that read the message (1 to 7). One that cannot take it comes back as `recusada` in `entregas`; the others are not affected (RN-991).
+             * @example [
+             *       "po",
+             *       "arquiteto"
+             *     ]
+             */
+            destinatarios: string[];
         };
         SessaoResponseDto: {
             /** @description Short-lived EdDSA JWT. */
@@ -21216,6 +21269,74 @@ export interface operations {
                 content?: never;
             };
             /** @description The handoff is not in `offered`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentsController_messages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageToAgentsDto"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MensagemAosAgentesResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project, session, or handoff not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The session is closed (`sessao_encerrada`, RN-581). */
             409: {
                 headers: {
                     [name: string]: unknown;

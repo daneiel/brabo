@@ -290,6 +290,7 @@ export function ApprovalCard({
 
   return (
     <Confirmacao
+      id={`acao-${action.id}`}
       className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}
       titulo={
         <>

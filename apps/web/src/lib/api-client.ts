@@ -726,6 +726,19 @@ export const sendAgentMessage = (
     entrega: 'lida' | 'enfileirada';
     posicao?: number;
   }>(`/projects/${projectId}/sessions/${sessionId}/agents/${agent}/message`, anexos?.length ? { text, anexos } : { text });
+// AT-717: a mesma mensagem a VÁRIOS agentes (`@a @b`). Com um destinatário só, a rota por agente.
+export type EntregaParaVarios = { agente: string; entrega: 'turno' | 'enfileirada' | 'recusada'; motivo?: string };
+export const sendMessageToMany = (
+  projectId: string,
+  sessionId: string,
+  text: string,
+  destinatarios: string[],
+  anexos?: string[],
+) =>
+  post<{ mensagemId: string; entregas: EntregaParaVarios[] }>(
+    `/projects/${projectId}/sessions/${sessionId}/messages`,
+    anexos?.length ? { text, destinatarios, anexos } : { text, destinatarios },
+  );
 // AT-715: anexos do chat. Upload em JSON+base64; a leitura devolve os bytes, e o
 // token vai em Authorization (por isso `<img src>` direto não serve).
 export type AnexoDaMensagem = { id: string; nome: string; mime: string; tamanho: number };

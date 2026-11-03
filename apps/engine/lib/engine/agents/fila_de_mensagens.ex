@@ -79,9 +79,14 @@ defmodule Engine.Agents.FilaDeMensagens do
     fechadas =
       ordenados
       |> Enum.flat_map(fn
-        %{"type" => @entregue, "payload" => %{"mensagemIds" => ids}} when is_list(ids) -> ids
-        %{"type" => @cancelada, "payload" => %{"mensagemId" => id}} -> [id]
-        _ -> []
+        %{"type" => @entregue, "payload" => %{"mensagemIds" => ids}} = e when is_list(ids) ->
+          if ator(e) == agent, do: ids, else: []
+
+        %{"type" => @cancelada, "payload" => %{"mensagemId" => id}} = e ->
+          if cancelada_para?(e, agent), do: [id], else: []
+
+        _ ->
+          []
       end)
       |> MapSet.new()
 
@@ -106,8 +111,9 @@ defmodule Engine.Agents.FilaDeMensagens do
   @spec fora_do_historico([map()], String.t()) :: MapSet.t()
   def fora_do_historico(eventos, agent) do
     canceladas =
-      for %{"type" => @cancelada, "payload" => %{"mensagemId" => id}} <- eventos,
+      for %{"type" => @cancelada, "payload" => %{"mensagemId" => id}} = e <- eventos,
           is_binary(id),
+          cancelada_para?(e, agent),
           do: id
 
     pendentes = for %{id: id} <- pendentes(eventos, agent), do: id
@@ -229,6 +235,11 @@ defmodule Engine.Agents.FilaDeMensagens do
       "infra" => Engine.Infra.InfraLeadSupervisor
     }
   end
+
+  # AT-717: o MESMO `mensagemId` vai a vários agentes; cancelar/entregar a cópia
+  # de um não fecha a dos outros. Evento antigo sem `agente` vale para todos.
+  defp cancelada_para?(%{"payload" => %{"agente" => a}}, agent) when is_binary(a), do: a == agent
+  defp cancelada_para?(_, _), do: true
 
   defp ator(evento), do: get_in(evento, ["actor", "id"]) || evento["actorId"]
 
