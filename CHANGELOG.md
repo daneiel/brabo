@@ -13,6 +13,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
 - **web**: ajustes das telas da R3 (AT-721): o "?" das pendências fica na linha das abas, a explicação de "Reabrir" vai para um "?", o rótulo da falha não cola no nome do agente e os gráficos de gasto sem consumo mostram texto de vazio.
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).
 

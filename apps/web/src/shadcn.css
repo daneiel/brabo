@@ -12,6 +12,13 @@
 @source './components/ai-elements';
 
 /* O tema é escrito por `public/theme-boot.js` em `[data-theme]`, nunca `.dark`. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme {
