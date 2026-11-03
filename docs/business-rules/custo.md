@@ -3307,7 +3307,7 @@ Revisa a [RN-212](autenticacao.md#rn-212) no destino do botão "Definir orçamen
 3. **Orçamento.** A aba traz o editor do teto (`PUT projects/:projectId/budget`, `maintainer` pela `roleAtLeast`); abaixo do papel o controle fica inerte e o motivo é dito em texto. O botão "Definir orçamento" do card do projeto abre `?tab=spend` (antes `?tab=settings`, onde nenhuma tela gravava o orçamento).
 4. **Assinatura.** `assinaturaMicros` aparece num destaque separado; linha de modelo marcado `subscription` com custo zero mostra "assinatura — sem preço registrado", nunca "US$ 0".
 
-- **Código:** `apps/web/src/components/SpendPaineis.tsx:148` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:346` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:167` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
+- **Código:** `apps/web/src/components/SpendPaineis.tsx:153` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:354` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:172` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
 - **Teste:** `apps/web/src/routes/SpendPage.test.tsx` (owner × não-owner, sem provider para quem não é owner); `apps/web/src/routes/ProjectSpendTab.test.tsx` (owner só do projeto, membro por agente e área, editor grava, teto inválido e papel baixo recusados)
 - **Origem:** AT-632
 ### RN-964 — O preço e a cobrança são curados na tela de Providers, e a edição manual protege o número do sync {#rn-964}
@@ -3372,6 +3372,6 @@ Por decisão do dono (31/10, AT-636 decisão 4), a página de Gastos ganha o Cha
 2. **Carga sob demanda.** O gráfico mora em `GraficoDeGastoPorDia.tsx`, carregado por `React.lazy` em `GastoPorDia.tsx`, com o SVG de `BarrasPorDia` como fallback. `SpendCharts.tsx` não importa o recharts, porque a aba Sessões importa o `Destaque` dali.
 3. **Recorte dito e alternativa em texto** ([RN-180](autenticacao.md#rn-180)): o título diz a janela, a figura tem `aria-label` igual a ele, e `<details>` "Ver como tabela" traz dia, gasto e chamadas. Zero requisição nova ([RN-632](../business-rules.md#rn-632)).
 
-- **Código:** `apps/web/src/components/GraficoDeGastoPorDia.tsx:13` (`GraficoDeGastoPorDia`); `apps/web/src/components/GastoPorDia.tsx:8` (`GastoPorDia`)
+- **Código:** `apps/web/src/components/GraficoDeGastoPorDia.tsx:13` (`GraficoDeGastoPorDia`); `apps/web/src/components/GastoPorDia.tsx:16` (`GastoPorDia`)
 - **Teste:** `apps/web/src/components/GraficoDeGastoPorDia.test.tsx` (figura com janela, tabela com os dias, série vazia)
 - **Origem:** AT-658

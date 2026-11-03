@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { RotateCcw } from 'lucide-react';
+import { Bot, Coins, Cpu, Folder, MessageSquare, RotateCcw, Server, User, Wallet } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
@@ -118,11 +118,13 @@ function DestaquesDoTotal({
     <SectionCards
       metricas={[
         {
+          icone: <Wallet aria-hidden="true" size={12} />,
           rotulo: rotuloTotal,
           valor: formatarUsd(total),
           nota: t('workspace.callsDetail', { count: chamadas, n: numberFmt.format(chamadas) }),
         },
         {
+          icone: <Coins aria-hidden="true" size={12} />,
           rotulo: t('workspace.tokensLabel'),
           valor: numberFmt.format(entrada + saida),
           nota: t('shared.tokensDetail', {
@@ -202,22 +204,25 @@ export function GastoDoWorkspace({
             rotuloTotal={t('workspace.totalLabel', { dias })}
           />
           <div className={styles.faixa}>
-            <GastoPorDia serie={r.porDia} titulo={t('workspace.dailySpendTitle')} />
+            <GastoPorDia serie={r.porDia} titulo={t('workspace.dailySpendTitle')} tokens={{ entrada: r.inputTokens, saida: r.outputTokens }} />
           </div>
           <div className={styles.grade}>
             <Ranking
-              titulo={t('workspace.byModelTitle')}
+              icone={<Cpu aria-hidden="true" size={12} />}
+titulo={t('workspace.byModelTitle')}
               linhas={comoRanking(r.porModelo, (l) => l.chave, t, assinaturas)}
               vazio={t('workspace.byModelEmpty')}
             />
             <Ranking
-              titulo={t('workspace.byProviderTitle')}
+              icone={<Server aria-hidden="true" size={12} />}
+titulo={t('workspace.byProviderTitle')}
               linhas={comoRanking(r.porProvider, rotuloDoProvider, t)}
               vazio={t('workspace.byProviderEmpty')}
             />
             {projectId ? (
               <Ranking
-                titulo={t('project.bySessionTitle')}
+                icone={<MessageSquare aria-hidden="true" size={12} />}
+titulo={t('project.bySessionTitle')}
                 linhas={comoRanking(
                   r.porSessao ?? [],
                   (l) => hashtagDaSessao(l.chave),
@@ -227,13 +232,15 @@ export function GastoDoWorkspace({
               />
             ) : (
               <Ranking
-                titulo={t('workspace.byProjectTitle')}
+                icone={<Folder aria-hidden="true" size={12} />}
+titulo={t('workspace.byProjectTitle')}
                 linhas={comoRanking(r.porProjeto, (l) => l.rotulo ?? l.chave, t)}
                 vazio={t('workspace.byProjectEmpty')}
               />
             )}
             <Ranking
-              titulo={t('workspace.byActorTitle')}
+              icone={<User aria-hidden="true" size={12} />}
+titulo={t('workspace.byActorTitle')}
               linhas={comoRanking(r.porAtor, rotuloDoAtor, t)}
               vazio={t('workspace.byActorEmpty')}
             />
@@ -326,7 +333,7 @@ export function MeuConsumoNoWorkspace({ workspaceId }: { workspaceId: string }) 
             rotuloTotal={t('global.memberTotal', { dias })}
           />
           <div className={styles.faixa}>
-            <GastoPorDia serie={d.porDia} titulo={t('global.memberDaily')} />
+            <GastoPorDia serie={d.porDia} titulo={t('global.memberDaily')} tokens={{ entrada: d.inputTokens, saida: d.outputTokens }} />
           </div>
           <Ranking
             titulo={t('global.memberByProject')}
@@ -374,7 +381,8 @@ export function GastoDoTimeNoProjeto({ projectId }: { projectId: string }) {
           />
           <div className={styles.grade}>
             <Ranking
-              titulo={t('team.byAgentTitle')}
+              icone={<Bot aria-hidden="true" size={12} />}
+titulo={t('team.byAgentTitle')}
               linhas={comoRanking(d.porAgente, (l) => l.chave, t)}
               vazio={t('team.byAgentEmpty')}
             />

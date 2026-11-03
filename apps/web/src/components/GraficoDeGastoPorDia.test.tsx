@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import GraficoDeGastoPorDia from './GraficoDeGastoPorDia';
+import GraficoDeGastoPorDia, { GraficoDeChamadasPorDia, GraficoDeTokens } from './GraficoDeGastoPorDia';
 import i18n from '../lib/i18n';
 
 // O jsdom não tem ResizeObserver; o mock fica aqui, não no setup global.
@@ -32,5 +32,18 @@ describe('GraficoDeGastoPorDia', () => {
     render(<GraficoDeGastoPorDia serie={[]} titulo="Gasto por dia" />);
     expect(screen.getByRole('img', { name: /Gasto por dia/ })).toBeTruthy();
     expect(screen.queryByText('30/10')).toBeNull();
+  });
+
+  it('o contêiner do gráfico tem altura explícita (defesa contra 0x0)', () => {
+    const { container } = render(<GraficoDeGastoPorDia serie={serie} titulo="x" />);
+    expect(container.querySelector('[data-slot="chart"]')?.className).toContain('h-40');
+  });
+
+  it('chamadas por dia e rosca de tokens nomeiam o que mostram', () => {
+    render(<GraficoDeChamadasPorDia serie={serie} />);
+    expect(screen.getByRole('img', { name: 'Chamadas por dia' })).toBeTruthy();
+    render(<GraficoDeTokens entrada={100} saida={50} />);
+    expect(screen.getByText(/Entrada: 100/)).toBeTruthy();
+    expect(screen.getByText(/Saída: 50/)).toBeTruthy();
   });
 });

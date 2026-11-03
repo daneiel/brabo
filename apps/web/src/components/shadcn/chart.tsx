@@ -46,7 +46,8 @@ function ChartContainer({
         )}
         {...props}
       >
-        <RechartsPrimitive.ResponsiveContainer>
+        {/* initialDimension: o primeiro quadro já tem tamanho, em vez de 0x0 até o ResizeObserver (AT-720). */}
+        <RechartsPrimitive.ResponsiveContainer initialDimension={{ width: 320, height: 160 }}>
           {children}
         </RechartsPrimitive.ResponsiveContainer>
       </div>

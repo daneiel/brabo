@@ -10,7 +10,8 @@
     "error": "无法确定你在此工作区中的角色，而显示哪份报告正是由它决定的。"
   },
   "budget": {
-    "notSet": "此项目尚未设置预算——没有上限，这里没有可显示的内容。"
+    "notSet": "此项目尚未设置预算——没有上限，这里没有可显示的内容。",
+    "notConfigured": "未配置"
   },
   "workspace": {
     "title": "工作区花费",
@@ -50,7 +51,11 @@
     "viewAsTable": "以表格查看",
     "colDay": "日期",
     "colSpend": "花费",
-    "colCalls": "调用次数"
+    "colCalls": "调用次数",
+    "callsTitle": "每日调用",
+    "tokensTitle": "输入与输出",
+    "tokensIn": "输入",
+    "tokensOut": "输出"
   },
   "libSpend": {
     "callTitle_other": "{{dia}} · {{custo}} · {{count}} 次调用",

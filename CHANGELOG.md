@@ -10,6 +10,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- Gastos no tratamento R3 (AT-720): gráfico de chamadas por dia e rosca de entrada/saída ao lado do gasto diário (2/3 e 1/3, no mesmo chunk preguiçoso do recharts), ícones nos rankings e nos cartões de métrica, selo "Não configurado" no orçamento sem teto; o contêiner do gráfico passa a ter tamanho inicial, contra o gráfico diário sem barras nem eixos.
 - Configurações em páginas por grupo (AT-719, RN-980): Modelos, Projeto, Pessoas e Avançado viram abas numa faixa no topo da página de Configurações, que segue um item só da barra lateral (`?tab=settings&group=`); só o grupo aberto monta e busca, e todo `?section=` antigo abre a página do seu grupo.
 - Configurações: as explicações longas vão para o "?" (roteamento dos modelos, Execução, Onde o código mora, Idioma do projeto, Membros e papéis, Chaves de dispositivo), ficando só o motivo de inerte, o alcance da revogação, "registrada não é rodando" e o aviso de papel; o aviso de conversão de modo vira o botão de perigo `Perigo` (ícone `TriangleAlert`, mesmas condições e conteúdo, ADR 0243). Textos nos quatro idiomas (AT-719).
 - Desenho linear e blocks do shadcn (v7, AT-714): sidebar `sidebar-07` (256/48px, Ctrl/Cmd+B), Containers e Providers em tabela linear (Containers com `@tanstack/react-table`), `CabecalhoDePagina` e `SectionCards` nas telas e nos painéis de Gastos (ADR 0241 e 0242).
