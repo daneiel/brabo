@@ -15618,16 +15618,16 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:746`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:751`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1111`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1115`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
   `:488` (recusado é `ok: false` com o motivo);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:253`
   (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
-  `:863` e `:910` (`container_start_via_runner` com e sem runner)
+  `:863` e `:914` (`container_start_via_runner` com e sem runner)
 - **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)
 
 ### RN-599 — No compose de dev a api encontra o broker sozinha, e a falta da pasta gerenciada é dita a cada subida {#rn-599}
@@ -16071,10 +16071,10 @@ quem clica). A cláusula de pasta usa o carimbo, que não é batimento
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:742`
-  (via runner, `running` recusa), `:804` (`provisioning` recusa), `:814`
+  (via runner, `running` recusa), `:808` (`provisioning` recusa), `:818`
   (`stopped` não recusa), `:779` (sem imagem), `:790` (pasta nunca
-  confirmada), `:850` (`propose_container_start` com container `running`),
-  `:850` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
+  confirmada), `:854` (`propose_container_start` com container `running`),
+  `:854` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
   do via runner), `:901` (sem runner conectado)
 - **Origem:** AT-142
 
@@ -16491,7 +16491,7 @@ deu e com as quatro ferramentas.
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:368`
   (`handle_info`), `:379` (`drenar_correcao_pendente`), `:462`
-  (`toolloop.limit_reached`), `:1158` (`concluir`);
+  (`toolloop.limit_reached`), `:1164` (`concluir`);
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
@@ -16502,7 +16502,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1788` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1792` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -16856,7 +16856,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:527`
   (`idioma_da_resposta`);
-  `apps/engine/lib/engine/agents/criativo_server.ex:136` (`handle_call`, e a
+  `apps/engine/lib/engine/agents/criativo_server.ex:140` (`handle_call`, e a
   MESMA cláusula nos outros seis);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:134`
   (`copiar_dicionario`);
@@ -19099,8 +19099,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:511`
-  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1246`
-  (`registrar_subida`), `:1256` (`fechar_subida`), `:1155`
+  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1252`
+  (`registrar_subida`), `:1262` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19367,7 +19367,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:265` (`handle_cast`),
   `:716` (`propor_container_start`), `:797` (`subir_no_aceite`), `:800`
-  (`eleger_candidata`), `:1429` (`passo_da_subida`)
+  (`eleger_candidata`), `:1435` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1319` (`passo_da_subida`)
@@ -19375,10 +19375,10 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
-  elege e propõe antes do modelo — caminho feliz), `:1454` (`mounted`), `:1464`
+  elege e propõe antes do modelo — caminho feliz), `:1458` (`mounted`), `:1468`
   (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
-  (negada pela política), `:1576` (`eleger_candidata/1`)
+  (negada pela política), `:1580` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
 
 ### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
@@ -19421,8 +19421,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1163` (`oferecer_ao_dev_lead`),
-  `:1158` (`concluir`), `:368` (`handle_info`), `:1075`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1169` (`oferecer_ao_dev_lead`),
+  `:1164` (`concluir`), `:368` (`handle_info`), `:1075`
 
   `:1057` (`concluir`), `:345` (`handle_info`), `:1074`
   (`topico_do_container`);
@@ -19756,7 +19756,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
   (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:401`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
-  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
+  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:706`
   (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:327`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
@@ -20557,8 +20557,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:528` (`fechar_handoff`);
-  `:555` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:533` (`fechar_handoff`);
+  `:560` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20585,11 +20585,11 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:589` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:589` (`kickoff_instruction`);
   `:397` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
@@ -20686,7 +20686,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:415` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:420` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21037,9 +21037,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1290` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1296` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1290` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1296` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -22442,7 +22442,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1601`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1607`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -22590,7 +22590,7 @@ sem dizer qual.
   leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
   [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
-  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
+  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:129`
   (`ListarAdrsPropostas`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   (aprovada aparece aprovada, executada com a PR, recusada com o motivo, só as
@@ -22607,7 +22607,7 @@ sem dizer qual.
   fora da conversa e mandam consultar as duas leituras antes de afirmá-los, em
   vez do retrato de um resultado anterior. Nada de fluxo do time é narrado
   aqui ([RN-711](#rn-711)).
-- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:125`
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:130`
   (`ListarBacklog`), `apps/engine/lib/engine/harness/tools/propose_adr.ex:94`
   (`propor`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`
@@ -22947,7 +22947,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:613` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:618` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -23464,8 +23464,8 @@ sem dizer qual.
   com recusa nomeada que entra no laço (RN-163) e repassado no
   payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:27`
-  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1416`
-  (`build_kickoff`) e `:1317` (`abrir_pr`), e
+  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1422`
+  (`build_kickoff`) e `:1323` (`abrir_pr`), e
   `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   (describe "o compose sobe o app e a PR leva `run` (RN-851)")
@@ -24359,7 +24359,7 @@ sem dizer qual.
   reprova, nunca observação (estende a RN-854).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:60` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1416` (`build_kickoff`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1422` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
@@ -24884,7 +24884,7 @@ sem dizer qual.
   sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
   [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
   passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:681` (`obrigacoes`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:686` (`obrigacoes`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
   kickoff ainda a carrega)
@@ -25113,7 +25113,7 @@ sem dizer qual.
 ### RN-908 — O kickoff do PO pede o backlog em lote, depois de ler, em camadas {#rn-908}
 
 - **Regra:** o kickoff do PO manda, nesta ordem: ler `listar_regras_de_negocio` e `listar_backlog` na mesma resposta, sem escrita junto; depois todos os épicos numa resposta só; depois todas as histórias, com o `epic_id` devolvido; depois todas as tarefas, com o `story_id` devolvido. Nunca recria épico que já existe, e no máximo cerca de 10 chamadas de ferramenta por resposta. Motivo medido: sem o pedido de lote, o nemotron faz 1 ferramenta por resposta e o qwen faz 3; com ele, 9 em cada (`parallel_tool_calls` não mudou nada). Ler primeiro é o que impede o qwen de criar épicos sem ler o backlog. Não altera o teto `@max_iterations` (RN-166).
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:625` (`build_kickoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:630` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
 - **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
 
@@ -25196,7 +25196,7 @@ sem dizer qual.
 ### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
 
 - **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
-- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1651` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1657` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25525,5 +25525,13 @@ sem dizer qual.
 
 - **Regra:** irmã da [RN-731](business-rules.md#rn-731). O servidor anota cada leitura `ok` do turno (listagens de regras, backlog, métricas, ADRs e contratos, `read_file` e os trechos do `rag_search`) e o `agent.response` leva `fontes` FORA do `content`: `{tipo, rotulo, ref?, searchId?, chunkId?}`, teto de 10, com `fontesTotal` quando corta (ADR 0060). Sem leitura, o campo não existe. Leitura com falha não é fonte. A tela diz "consultado", nunca "usado": é o que o agente leu, não o que ele aproveitou. Não muda o `content`, a reidratação (RN-580), o `tool.result` (RN-589) nem o voto do RAG (RN-479..481).
 - **Onde:** `apps/engine/lib/engine/agents/fontes_do_turno.ex:37` (`anotar`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:387` (`anotar`).
-- **Teste:** `apps/engine/test/engine/agents/fontes_do_turno_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-982").
-- **Origem:** AT-716 fatia 1 (EP-031).
+- **Teste:** `apps/engine/test/engine/agents/fontes_do_turno_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-982"), `apps/engine/test/engine/agents/retomada_dos_seis_test.exs` e `apps/engine/test/engine/infra/infra_lead_server_test.exs` (a ferramenta nos sete).
+- **Conversacionais (fatia 2):** os SETE agentes conversacionais oferecem o MESMO `rag_search` dos dev agents (`Engine.Harness.Tools.RagSearch`, escopo do projeto, sem parâmetro de escopo, teto de `top_k` da ferramenta, ADR 0060), despachado por `ArgumentosDeFerramenta.executar/4` (RN-719) e com o resultado no `tool.result` (RN-589). Entra na spec e no despacho de cada servidor: `criativo_server.ex:121`/`:469`, `po_server.ex:153`/`:437`, `arquiteto_server.ex:125`/`:402`, `dev_lead_server.ex:187`/`:580`, `ux_designer_server.ex:121`/`:350`, `staff_server.ex:121`/`:304`, `infra/infra_lead_server.ex:239`/`:1149`.
+- **Origem:** AT-716 fatias 1 e 2 (EP-031).
+
+### RN-983 — O clique numa fonte consultada é gravado em tabela própria e nunca é voto {#rn-983}
+
+- **Regra:** o clique num link do bloco "Consultado neste turno" (RN-982) vira uma linha em `source_clicks`, de escopo de PROJETO como `rag_searches` (RN-479): `projectId`, `sessionId` (anulável), `eventId` (o `agent.response`), `tipo`, `ref`/`searchId`/`chunkId` e o usuário que clicou, congelados sem FK de sessão/evento. NÃO é voto: o único sinal de verdade do RAG segue sendo o `rag_feedback` (RN-480), que esta tabela nunca alimenta, porque clique mede curiosidade. `POST /projects/:projectId/source-clicks` é `viewer` (quem lê pode clicar). Gravar a medição nunca derruba o que ela mede: a falha vira log de origem `infra` e `null` explícito, e o clique navega do mesmo jeito. No web, o clique dispara o POST sem esperar a resposta (um POST por clique, sem poll nem query nova, RN-579); fonte que é só texto não grava.
+- **Onde:** `apps/api/src/application/use-cases/rag/record-source-click.use-case.ts:18` (`execute`), `apps/api/src/db/schema/rag.ts:299` (`sourceClicks`), `apps/api/src/interfaces/http/rag/source-clicks.controller.ts:36` (`registrar`), `apps/web/src/lib/api-client.ts:1424` (`sendSourceClick`).
+- **Teste:** `apps/api/test/application/use-cases/rag/record-source-click.use-case.spec.ts`, `apps/web/src/components/ai-elements/sources.test.tsx` ("RN-983"), `apps/api/test/interfaces/route-surface.spec.ts`.
+- **Origem:** AT-716 fatia 4 (EP-031).

@@ -148,7 +148,9 @@ defmodule Engine.Agents.PoServer do
          # Criativo (RN-162 style reuse), tipo novo (`decision_record`).
          EmitArtifact.spec(),
          DeclareOpenQuestion.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec()
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+         Engine.Harness.Tools.RagSearch.spec()
        ],
        # Épicos criados NESTE processo que ainda não receberam história
        # (RN-165): `%{epic_id => titulo}`. Não é reidratado de propósito — a
@@ -431,6 +433,8 @@ defmodule Engine.Agents.PoServer do
 
   defp run_tool("declare_open_question", args, state),
     do: DeclareOpenQuestion.run(args, state)
+
+  defp run_tool("rag_search", args, state), do: Engine.Harness.Tools.RagSearch.run(args, state)
 
   defp run_tool("registrar_plano", args, state),
     do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
