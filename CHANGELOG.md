@@ -4,12 +4,18 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- O "?" de ajuda fica logo após o texto do título, centralizado na vertical, e o Salvar do teto de orçamento fica na mesma linha de "Ao atingir o teto".
+
+- Ajustes da prévia v6 (AT-682, AT-712, ADR 0240): em Containers os motivos de inércia por linha vão para um "?" ativo ao lado dos botões ("Por que as ações estão indisponíveis"); Ativar vira `Play`, Aceitar e Estou pronto viram `ThumbsUp` e Modo automático vira `Plane` (card de aprovação, toggle do agente e time), todos só ícone com legenda e nome acessível.
+- Componente `Ajuda` (botão "?" sobre o Popover do kit, abre no clique, teclado e hover) para os textos explicativos longos; `ui:ajuda.rotulo` nos quatro idiomas e a régua do que pode e não pode ir para o "?" em `design/COMPONENTS.md`. Ainda sem uso em tela (AT-712).
+- Containers: o subtítulo, os detalhes do broker, a imagem desatualizada (RN-902), a ressalva registrado/observado (RN-486) e a nota de loopback da rede vão para o "?"; ficam uma linha curta e o motivo de inerte. O motivo de papel aparece uma vez no topo; Salvar rede e Aplicar e subir de novo viram só ícone com legenda; a consequência de recriar (RN-939) continua visível (AT-712, AT-682).
 - Botões de Provedores, Configurações, Backlog, Gasto, Plano de adoção e do cartão de agente ganham ícone Lucide (Salvar, Trocar, Remover, Atualizar catálogo, Recusar, Editar título, Arquivar, Aprovar plano, Manual/Automático), sempre com o texto; o Testar do provedor vira só ícone com nome acessível e `title` (AT-682).
 - Regra do dono: botão só de ícone com legenda em Tooltip (hover e foco) e `aria-label`; começam Containers (Parar, Remover, Subir), Nova ideação/conversa e Novo projeto; texto só onde nenhum ícone cobre o sentido (AT-682).
 - A aba Arquitetura ganha o grafo de módulos em Canvas (`@xyflow/react`, chunk próprio carregado só na aba, ADR 0238) e o cartão "Rodar na sua máquina" mostra o entregável num Web preview com `sandbox` mínimo, só para URL local; o CSP do web ganha `frame-src` para `localhost` e `127.0.0.1` (ADR 0239). Textos nos quatro idiomas (AT-684, AT-685).
 - O fio da Sessão para de seguir quando a pessoa sobe e mostra "Ir ao fim" (revisa a RN-951), as mensagens na fila de um agente viram um painel acima da caixa (a cancelada some) e decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio, nos quatro idiomas (AT-683, RN-977 a RN-979).
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
-### Funcionalidades
 
 - A aprovação de comando de terminal passa a mostrar a saída com as cores ANSI e o `exit` (vermelho quando diferente de 0), a de commit ganha a mensagem, o autor e o total de arquivos (com plural nos quatro idiomas), e os marcos estáticos da linha do tempo dos Executores viram linhas de Trace. A lib `ansi-to-react` entra só no chunk do `ApprovalCard`, com override de `linkify-it` para fechar o advisory GHSA-22p9-wv53-3rq4/GHSA-v245-v573-v5vm (AT-683).
 - A árvore de arquivos da aba Código vira o `FileTree` do AI Elements (árvore ARIA com tabindex móvel: um só ponto de Tab, setas/Home/End movem o foco, direita/esquerda abrem e fecham pasta) e os comandos do instalador, do runner e do token pessoal passam a usar o `Snippet` (bloco mono com botão Copiar só de ícone, com rótulo acessível; falha de clipboard no token pessoal volta a avisar) (AT-683).
@@ -1616,7 +1622,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **dev**: o compose de dev vira brabo-dev e recusa subir ao lado de uma instalação (AT-173) (64a12ef027)
 
 ### Novidades
-
 
 - **infra**: a Infra sobe o container com o MENOR recurso elegível, derivado
   do `module_map` (AT-261, [ADR 0199](docs/adr/0199-recurso-minimo-derivado-do-module-map.md),
@@ -6781,7 +6786,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **docs**: a RN vira 503 e o ADR vira 0144, por alocação do coordenador (2245f2016)
 
-
 ## v4.0.1 — 2026-09-04
 
 ### Correções
@@ -7968,7 +7972,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **engine**: mint 1.10.0 fecha duas advisories de DoS (a71b984fb)
-
 
 ## v4.0.0 — 2026-09-04
 
@@ -10120,7 +10123,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **e2e,ci**: E2E de navegador contra o compose de produção (ADR 0120) (#420) (cc0267f05)
 - **web**: mock de api-client exporta mensagemDaApi no caso de falha (44328ee11)
 
-
 ## v3.1.0 — 2026-08-13
 
 ### Novidades
@@ -10139,7 +10141,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - atualiza README, CLAUDE.md e onboarding até o estado de hoje (285db8cd)
 - **changelog**: v3.0.0 (5b14cd57)
-
 
 ## v3.0.0 — 2026-08-13
 
@@ -10766,7 +10767,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docs**: renumera RN-121 do cancelamento de turno para RN-122 (9162f8cf)
 - **design**: o handoff entra no repo e os tokens fecham contra ele (05e02860)
 
-
 ## v2.5.1 — 2026-08-08
 
 ### Correções
@@ -10779,7 +10779,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **branching**: a ordem do escape da célula, na política (06e3d61c)
 - **changelog**: v2.5.0 (b3cc60e6)
-
 
 ## v2.5.0 — 2026-08-08
 
@@ -11098,7 +11097,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **validacao**: duas historias no mesmo modulo, e o teto exercitado (80287a06)
 - **engine**: restaurar env com nil apagava o default (de0ab417)
 
-
 ## v2.4.0 — 2026-08-07
 
 ### Novidades
@@ -11112,7 +11110,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   Como consequência, os dev de módulo deixam de receber handoff direto: quem
   fala com a execução de fora passa a ser o lead, como já acontecia com QA e
   Infra
-
 
 - **engine**: quantas voltas um agente pode dar antes de desistir deixa de ser
   um número só para todos e passa a depender do trabalho que ele faz. O limite
@@ -11134,7 +11131,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   produto gasta sem perguntar agora são intocáveis por qualquer configuração de
   autonomia. Sem isso, um `permissions.json` permissivo tornaria o limite
   decorativo — e o produto poderia elevar o próprio teto de gasto
-
 
 - **api,web**: o teto de agentes de cada área virou configurável em
   Configurações, e — mais importante — passou a valer de verdade. A regra do
@@ -11169,7 +11165,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **changelog**: v2.3.0 (6f6f5be4)
-
 
 ## v2.3.0 — 2026-08-07
 
@@ -11276,7 +11271,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - os achados da execução real em docs/, e quatro deles corrigidos (4dd7a073)
 - **engine,docs**: formato do Elixir e as três docs que o drift cobrava (e01ee61f)
 - **ci**: o release passa a escrever a versão do README junto do CHANGELOG (41f02548)
-
 
 ## v2.2.0 — 2026-08-04
 
@@ -11388,7 +11382,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **design-sync**: re-sync do design system — 66 componentes no Claude Design (3c9b6ad8)
 
-
 ## v2.1.0 — 2026-08-03
 
 ### Novidades
@@ -11407,7 +11400,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **changelog**: v2.0.0 (9336246)
-
 
 ## v2.0.0 — 2026-08-03
 
@@ -11815,7 +11807,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **api**: a rota interna de sync não é "do workspace inteiro" (0962c05)
 - **branching**: o CHANGELOG volta por PR depois do release (fc570b6)
 
-
 ## v1.4.0 — 2026-08-02
 
 ### Novidades
@@ -11862,7 +11853,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - escopo da FASE 12 no CLAUDE.md, e a 11 fecha no Status (706d48b)
 - runbook cobre a derivação de WEB_ORIGIN a partir de WEB_PORT (09f5098)
 
-
 ## v1.3.0 — 2026-08-01
 
 ### Novidades
@@ -11883,7 +11873,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - runbook de condução da 10b e o texto de entrada da sessão 0 (ed2cd39)
 - CLAUDE.md admite o que as Fases 8 e 9 não entregaram (b999249)
 - missão de dogfooding da Fase 10 e insumos do PO (0e27ecd)
-
 
 ## v1.2.0 — 2026-07-30
 
@@ -11921,20 +11910,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ci**: aceita CVE-2026-56852 no binário do gitleaks, com prazo (c0bd99d)
 - **design-sync**: sincroniza o DS com o Input da Fase 7a (752634a)
 
-
 ## v1.1.2 — 2026-07-28
 
 ### Documentação
 
 - corrige o que a doc afirmava sobre estado que mudou nesta sessão (1055e5e)
 
-
 ## v1.1.1 — 2026-07-27
 
 ### Manutenção
 
 - **ci**: torna a Release republicável e documenta as seis tags órfãs (bb517ee)
-
 
 ## v1.1.0 — 2026-07-27
 
@@ -11951,7 +11937,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **ci**: paraleliza o build da release e conserta o cache do Elixir (13dd7e0)
 
-
 ## v1.0.1 — 2026-07-27
 
 ### Correções
@@ -11966,7 +11951,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: fecha os três checks que a FASE 7 deixou vermelhos (5f75f93)
-
 
 ## v1.0.0 — 2026-07-27
 
@@ -12007,7 +11991,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - remove o Keycloak do compose, dos manifests e dos scripts (796e133)
 
-
 ## v0.3.1 — 2026-07-27
 
 ### Correções
@@ -12017,7 +12000,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - CI confere as contagens de ADR escritas em prosa (3efb89a)
-
 
 ## v0.3.0 — 2026-07-27
 
@@ -12033,7 +12015,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Documentação
 
 - **pages**: link para o site publicado e um build de site por PR (a05518b)
-
 
 ## v0.2.0 — 2026-07-27
 
@@ -12063,7 +12044,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Manutenção
 
 - **ci**: escada de três degraus e CI sem gatilho de push (#46) (b52bf00)
-
 
 ## v0.1.0 — 2026-07-26
 

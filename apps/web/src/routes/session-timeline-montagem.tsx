@@ -1,4 +1,5 @@
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from 'react';
+import { Play, ThumbsUp } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
@@ -583,9 +584,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             </span>
             <Button
               variant="success"
+              legenda={t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta!.toAgent) })}
               onClick={() => handleAcceptHandoff(oferta!.id, oferta!.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta!.toAgent) })}
+              <ThumbsUp aria-hidden="true" />
             </Button>
             {/* Handoff pro Dev Lead é o início da EXECUÇÃO — quem aceita
                 precisa saber onde acompanhar depois (RN-125). As outras
@@ -609,11 +611,12 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                   <>
                     <Button
                       variant="secondary"
+                      legenda={t('handoff.ativarExecucao')}
                       loading={ativandoExecucao}
                       onClick={handleActivateExecution}
                       data-testid="ativar-execucao-no-handoff"
                     >
-                      {t('handoff.ativarExecucao')}
+                      <Play aria-hidden="true" />
                     </Button>
                     <span className={styles.timelineLink} data-testid="aviso-ativar-sem-plano">
                       {t('handoff.ativarSemPlanoAviso')}

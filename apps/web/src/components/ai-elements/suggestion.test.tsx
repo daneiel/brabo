@@ -15,6 +15,19 @@ describe('SugestoesDeAcao (RN-976)', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('com ícone: nome acessível é o rótulo, texto visível vazio, e o motivo inerte segue em texto', () => {
+    render(
+      <SugestoesDeAcao
+        acoes={[
+          { chave: 'a', rotulo: 'Estou pronto', icone: <svg aria-hidden="true" />, aoClicar: vi.fn(), desabilitada: true, motivo: 'Falta X' },
+        ]}
+      />,
+    );
+    const b = screen.getByRole('button', { name: 'Estou pronto' });
+    expect(b).toHaveTextContent('');
+    expect(screen.getByText('Falta X')).toBeVisible();
+  });
+
   it('inerte: o motivo vem em texto visível, não em title, e o clique não dispara', () => {
     const aoClicar = vi.fn();
     render(

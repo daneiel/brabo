@@ -1,3 +1,5 @@
+import { Ajuda } from '../components/ui/Ajuda';
+import { Play, ThumbsUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -321,11 +323,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             Os eventos vão FILTRADOS (sem dev/QA — RN-121): a aba Executores
             tem a própria árvore, e mostrar os mesmos ramos nas duas telas
             era duplicar a mesma pergunta sem ganhar nada. */}
-        <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
-        <div className={styles.sectionSub}>
-          {t('timeline.description')}
-          {linhaDoTempoNaExecucao && ` ${t('timeline.lendoExecucao')}`}
-        </div>
+        <h2 className={styles.sectionHeader}>
+          {t('timeline.title')}
+          <Ajuda assunto={t('timeline.title')}>{t('timeline.description')}</Ajuda>
+        </h2>
+        {linhaDoTempoNaExecucao && <div className={styles.sectionSub}>{t('timeline.lendoExecucao')}</div>}
         <AgentTimelineTree events={overviewEvents} projectId={projectId} compactarChamadas />
 
         <ExecutionSection
@@ -607,8 +609,13 @@ function ExecutionSection({
               segue inerte ao lado do link que resolve. */}
           {hasModuleMap && (
             <ItemActions>
-              <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
-                {t('executionSection.activate')}
+              <Button
+                variant="primary"
+                legenda={t('executionSection.activate')}
+                onClick={handleActivate}
+                disabled={semRepositorio}
+              >
+                <Play aria-hidden="true" />
               </Button>
             </ItemActions>
           )}
@@ -714,8 +721,12 @@ function ExecutionSection({
                 </span>
               </ItemContent>
               <ItemActions>
-                <Button variant="secondary" onClick={() => handleAccept(module)}>
-                  {t('executionSection.accept')}
+                <Button
+                  variant="secondary"
+                  legenda={t('executionSection.accept')}
+                  onClick={() => handleAccept(module)}
+                >
+                  <ThumbsUp aria-hidden="true" />
                 </Button>
               </ItemActions>
             </Item>

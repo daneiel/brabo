@@ -14,6 +14,7 @@ import {
 import type { RunnerDeviceKeyListItem } from '../lib/api-types';
 import { Table, type TableColumn } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { Ajuda } from '../components/ui/Ajuda';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { TrashIcon } from '../components/ui/icons';
@@ -147,15 +148,14 @@ export function MachineDeviceKeysSection() {
       width: '56px',
       render: (chave) =>
         chave.revokedAt ? null : (
-          <button
-            type="button"
-            aria-label={t('table.revokeAria', { name: chave.name })}
-            title={t('table.revokeTitle')}
-            className={styles.remove}
+          <Button
+            variant="ghost"
+            icon
+            legenda={t('table.revokeAria', { name: chave.name })}
             onClick={() => setARevogar(chave)}
           >
             <TrashIcon size={14} />
-          </button>
+          </Button>
         ),
     },
   ];
@@ -169,10 +169,12 @@ export function MachineDeviceKeysSection() {
     <div className={styles.section} data-secao="machine-keys">
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle}>{t('title')}</h2>
+        <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('eyebrow')}</span>
       </div>
+      {/* Alcance da revogação e "registrada não é agente de pé" ficam visíveis (RN-543/RN-468). */}
       <p className={styles.sectionSubtitle}>
-        {t('subtitle')} {t('subtitleAlcance')} {t('subtitleNaoEBatimento')}
+        {t('subtitleAlcance')} {t('subtitleNaoEBatimento')}
       </p>
 
       {isPending && <p className={styles.sectionSubtitle}><Shimmer>{t('verificando')}</Shimmer></p>}

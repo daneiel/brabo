@@ -353,6 +353,7 @@ describe('SessionPage — o destinatário do chat é escolhido e visível (RN-63
     const { container } = montar();
     const botao = await screen.findByRole('button', { name: 'Aceitar handoff e iniciar PO' });
     expect(container.querySelector('[data-oferta-fora-da-janela="h-po"]')).not.toBeNull();
+    expect(botao).toHaveTextContent('');
     fireEvent.click(botao);
     await waitFor(() => expect(acceptHandoff).toHaveBeenCalledWith('proj-1', ID, 'h-po'));
   });

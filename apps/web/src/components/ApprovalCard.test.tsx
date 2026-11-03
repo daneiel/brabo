@@ -109,6 +109,13 @@ describe('ApprovalCard', () => {
     expect(screen.queryByRole('button', { name: 'Modo automático' })).toBeNull();
   });
 
+  it('AT-682: "Modo automático" é só ícone (nome acessível, sem texto visível)', () => {
+    render(
+      <ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} onActivateAutoMode={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: 'Modo automático' })).toHaveTextContent('');
+  });
+
   it('com onActivateAutoMode, chama ao clicar em "Modo automático"', () => {
     const onActivateAutoMode = vi.fn();
     render(

@@ -43,5 +43,8 @@
     "copiar": "Copy",
     "copiado": "Copied",
     "falhaAoCopiar": "Could not copy"
+  },
+  "ajuda": {
+    "rotulo": "Help: {{assunto}}"
   }
 }

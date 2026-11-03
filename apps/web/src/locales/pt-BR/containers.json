@@ -74,7 +74,13 @@
       "sem_broker_para_parar": "Sem broker de container nesta instalação: parar e remover só terminariam em falha.",
       "sem_broker_ambos": "Sem broker de container nesta instalação: subir, parar e remover só terminariam em falha."
     },
-    "bloqueioDetalhe": "Por quê?"
+    "desatualizadaCurta": "Imagem desatualizada: o container usa a v{{de}}, a decisão vigente é a v{{para}}.",
+    "ressalvaCurta": {
+      "runner_pode_estar_desconectado": "Agente local pode estar desconectado.",
+      "registrado_rodando_observado_parado": "Registrado rodando, observado parado."
+    },
+    "ajuda": "Ações do container",
+    "ajudaIndisponiveis": "Por que as ações estão indisponíveis"
   },
   "detail": {
     "title": "Container",
@@ -125,6 +131,7 @@
       "ipInvalido": "IP inválido",
       "formatoHost": "use nome e IPv4 separados por espaço",
       "nomeReservado": "nome reservado"
-    }
+    },
+    "ajuda": "Rede do container"
   }
 }

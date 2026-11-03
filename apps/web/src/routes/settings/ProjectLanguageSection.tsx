@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getProject, mensagemDaApi, updateProject } from '../../lib/api-client';
@@ -90,9 +91,9 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="project-language">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('projectLanguage.title')}</h2>
+        <Ajuda assunto={t('projectLanguage.title')}>{t('projectLanguage.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('projectLanguage.eyebrow')}</span>
       </div>
-      <div className={styles.subtitle}>{t('projectLanguage.subtitle')}</div>
       {/* Desde a RN-623 o artefato compartilhado que um agente grava num
           turno COM autor também sai neste idioma (a resposta continua no da
           pessoa). A tela diz a divisão, para não parecer que trocar aqui muda

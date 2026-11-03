@@ -14186,7 +14186,7 @@ instalação sem broker continua possível pelo agente.
   `mounted` recusam antes da imagem), `:75` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:562` (botão inerte e o motivo
-  em texto, nunca propõe), `:672` (`runner` segue subindo)
+  em texto, nunca propõe), `:704` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -17670,7 +17670,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
   `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:350` (`destinatarioRow`), `:250`
+  `apps/web/src/routes/SessionComposer.tsx:354` (`destinatarioRow`), `:250`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:553`
   (`handoffIdDoEvento`), `:559` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -18158,8 +18158,8 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
 - **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
   (`ContainerImageGateNotice`), `:42` (`bloco`);
   `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
-  `apps/web/src/components/AcoesDoContainer.tsx:250` (`semContainer`), `:268`
-  (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
+  `apps/web/src/components/AcoesDoContainer.tsx:252` (`semContainer`), `:272`
+  (`detalhesDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
   (`.danger:disabled`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira
   o estado dedicado, com o texto da aba PRs e não o da aba Código", "409 no
@@ -18587,7 +18587,7 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
   (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:134`
   (`movel`); `apps/web/src/components/ui/Table.tsx:24` (`largaNoMovel`),
   `:39` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
-  `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
+  `apps/web/src/routes/ProjectSessionsTab.tsx:153` (`movel`)
 - **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
   nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e
   fundo fecham; a barra quebra antes das ações; e o caso de falha, no desktop o
@@ -20407,7 +20407,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:429`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:433`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -21251,7 +21251,7 @@ vivo) continua escrevendo a lista à mão: invalidar não grava dado.
 
 - **Onde:** `apps/web/src/lib/acoes-da-sessao.ts:76` (`chaveDasAcoesDaSessao`),
   `:80` (`consultaDasAcoesDaSessao`); `apps/web/src/lib/hooks.ts:432`
-  (`usePendingActions`); `apps/web/src/routes/ProjectSessionsTab.tsx:270`
+  (`usePendingActions`); `apps/web/src/routes/ProjectSessionsTab.tsx:274`
   (`acoesPorSessao`)
 - **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` (describe "a
   leitura de ações é a mesma do fio": com o fio tendo gravado a cauda, montar a
@@ -22414,7 +22414,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:483`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:487`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23027,7 +23027,7 @@ sem dizer qual.
   Proton Pass. O composer da Sessão já o tinha. A constante NÃO tem atributo de
   ignore do NordPass, e nenhum foi inventado: se o NordPass segue se anexando,
   o resto da lacuna é da extensão, como na RN-740.
-- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx:319` (`SEM_AUTOFILL`),
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx:325` (`SEM_AUTOFILL`),
   `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` ("AT-472: o nome
   da nova ideação não convida o gerenciador de senhas")
@@ -23638,7 +23638,7 @@ sem dizer qual.
   `aria-live="polite"`: o leitor de tela anuncia a resposta nova e o que o
   agente está fazendo sem interromper quem está lendo. A checagem mora no
   composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:85` (`ignorarComposicaoIme`),
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:89` (`ignorarComposicaoIme`),
   `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
   composição chega ao handler de envio", "a faixa do turno é uma região de
@@ -23783,7 +23783,7 @@ sem dizer qual.
   deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
   1º clique do TP-01 se perder não foi medido no navegador.
 - **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:494` (`desbloqueio`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:623` (`blockedTasks`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:630` (`blockedTasks`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
   (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
   falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
@@ -25482,7 +25482,7 @@ sem dizer qual.
 ### RN-976 — As ações de passo da conversa são sugestões acima do destinatário, com o mesmo predicado e o mesmo endpoint, e a inércia é dita em texto {#rn-976}
 
 - **Regra:** "Estou pronto", "Confirmar arquitetura pronta", "Responder N perguntas em aberto" e "Endereçar handoff a outro agente…" saem de dentro e de cima do composer e viram uma fileira de sugestões fixa, ACIMA da linha "Para". O predicado de cada uma e o handler (e o endpoint) são os de antes (RN-142, RN-657, RN-672, RN-861, RN-712); a caixa de mensagem fica sozinha na linha e ocupa a largura do fio (780px, antes ~448px). O clique só chama o handler da página, nunca escreve no campo (RN-882), e nada é clicado sozinho; merge nunca vira sugestão. Ação inerte diz o motivo em TEXTO visível, nunca em `title` (RN-102, ADR 0064); as de prontidão e o handoff manual ficam inertes sem o papel `developer`, o mínimo do endpoint, com o motivo de papel dito uma vez. A ordem no DOM (a fileira antes do "Para", e o Enviar como primeiro botão do composer) é contrato do E2E `turno-pelo-canal`.
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:140` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:46` (`SugestoesDeAcao`).
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:140` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:50` (`SugestoesDeAcao`).
 - **Teste:** `apps/web/src/routes/SessionPage.sugestoes-no-chat.test.tsx`, `apps/web/src/components/ai-elements/suggestion.test.tsx`.
 - **Origem:** AT-681 (EP-031).
 

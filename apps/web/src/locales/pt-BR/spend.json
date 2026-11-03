@@ -33,6 +33,7 @@
   },
   "member": {
     "title": "O meu consumo",
+    "subtitleCurto": "Últimos {{dias}} dias, só o que <strong>você</strong> consumiu neste projeto, em custo <strong>estimado</strong>.",
     "subtitle": "Últimos {{dias}} dias, só o que <strong>você</strong> consumiu neste projeto. O custo é <strong>estimado</strong>: quem paga a chamada é a chave do dono do workspace, e a fatura dela é dele.",
     "error": "Não consegui carregar o seu consumo agora. O registro continua lá — isto é só a leitura.",
     "estimatedLabel": "Estimado em {{dias}} dias",

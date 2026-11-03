@@ -1,3 +1,4 @@
+import { Ajuda } from '../components/ui/Ajuda';
 import { Shimmer } from '../components/ui/Shimmer';
 import { Save } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -209,6 +210,7 @@ function EditorDoOrcamento({
         disabled={!podeEditar}
         onChange={(e) => setLimite(e.target.value)}
       />
+      <div className={styles.grupoTeto}>
       <label className={styles.campo}>
         {t('budgetEditor.policyLabel')}
         <Select
@@ -221,10 +223,14 @@ function EditorDoOrcamento({
         </Select>
       </label>
       <div className={styles.acoes}>
-        <Button type="submit" disabled={!podeEditar || salvar.isPending}>
+        <Button
+          type="submit"
+          disabled={!podeEditar || salvar.isPending}
+          legenda={salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
+        >
           <Save aria-hidden="true" />
-          {salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
         </Button>
+      </div>
       </div>
       {!podeEditar && <p className={styles.nota}>{t('budgetEditor.noRole')}</p>}
       {invalido && <Alert variant="danger" role="alert"><AlertTexto>{t('budgetEditor.invalid')}</AlertTexto></Alert>}
@@ -254,10 +260,16 @@ function MeuConsumo({ projectId }: { projectId: string }) {
   return (
     <>
       <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>{t('member.title')}</h2>
+        <h2 className={styles.titulo}>
+          {t('member.title')}
+          <Ajuda assunto={t('member.title')}>
+            <Trans i18nKey="member.subtitle" ns="spend" values={{ dias: DIAS }} components={{ strong: <strong /> }} />
+            {' '}{t('member.note')}
+          </Ajuda>
+        </h2>
         <p className={styles.subtitulo}>
           <Trans
-            i18nKey="member.subtitle"
+            i18nKey="member.subtitleCurto"
             ns="spend"
             values={{ dias: DIAS }}
             components={{ strong: <strong /> }}
@@ -318,7 +330,6 @@ function MeuConsumo({ projectId }: { projectId: string }) {
             vazio={t('member.bySessionEmpty')}
           />
 
-          <p className={styles.nota}>{t('member.note')}</p>
         </>
       )}
     </>

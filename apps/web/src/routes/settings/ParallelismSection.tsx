@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { listAgentAreas, setAreaMaxParallel } from '../../lib/api-client';
@@ -62,12 +63,10 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
     <SecaoDeConfiguracoes chave="parallelism">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('parallelism.title')}</h2>
-        <span className={styles.eyebrow}>{t('parallelism.eyebrow')}</span>
-      </div>
-      <div className={styles.subtitle}>
-        {t('parallelism.subtitle.before')}
+        <Ajuda assunto={t('parallelism.title')}>{t('parallelism.subtitle.before')}
         <strong>{t('parallelism.subtitle.strong')}</strong>
-        {t('parallelism.subtitle.after')}
+        {t('parallelism.subtitle.after')}</Ajuda>
+        <span className={styles.eyebrow}>{t('parallelism.eyebrow')}</span>
       </div>
 
       {!areas || areas.length === 0 ? (

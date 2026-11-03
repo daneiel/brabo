@@ -8,6 +8,8 @@ import {
 import type { ContainerOverviewItem } from '../lib/api-types';
 import { AcoesDoContainer, EstadoObservadoCelula, TOM_DO_STATUS } from '../components/AcoesDoContainer';
 import { Table, type TableColumn } from '../components/ui/Table';
+import { Ajuda } from '../components/ui/Ajuda';
+import { podeDecidirCicloDeVida } from './containers-subida';
 import { Badge } from '../components/ui/Badge';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import styles from './ContainersPage.module.css';
@@ -147,8 +149,12 @@ export function ContainersPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.subtitle}>{t('subtitle')}</p>
+        <h1 className={styles.title}>
+          {t('title')}<Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
+        </h1>
+        {papel && !podeDecidirCicloDeVida(papel) && (
+          <p className={styles.motivo}>{t('actions.bloqueio.sem_papel')}</p>
+        )}
       </div>
 
       {query.isError && (

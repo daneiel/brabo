@@ -323,15 +323,14 @@ describe('ProjectSpendTab — a audiência do membro', () => {
     expect(getMySpend).toHaveBeenCalledWith('p-1', 30);
   });
 
-  it('diz que o custo é estimado e por que não há provider', async () => {
+  it('mantém a janela e o estimado visíveis; o porquê abre no "?"', async () => {
     montar();
 
-    expect(
-      await screen.findByText(/quem paga a chamada é a chave do dono/i),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText(/não há quebra por provider nem por credencial/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/consumiu neste projeto, em custo/i)).toBeInTheDocument();
+    expect(screen.queryByText(/quem paga a chamada é a chave do dono/i)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /Ajuda: O meu consumo/i }));
+    expect(await screen.findByText(/quem paga a chamada é a chave do dono/i)).toBeInTheDocument();
+    expect(await screen.findByText(/não há quebra por provider nem por credencial/i)).toBeInTheDocument();
   });
 
   /** RN-088: carregando, erro e vazio são três estados, e o erro vem antes. */
@@ -482,5 +481,13 @@ describe('ProjectSpendTab — o editor do orçamento', () => {
     expect(await screen.findByText(/exige o papel de maintainer/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Teto em US\$/)).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Salvar orçamento' })).toBeDisabled();
+  });
+
+  it('o Salvar do teto é irmão do select no mesmo grupo', async () => {
+    montar();
+    const salvar = await screen.findByRole('button', { name: 'Salvar orçamento' });
+    const select = screen.getByRole('combobox', { name: /Ao atingir/i });
+    expect(salvar.closest('form')).not.toBeNull();
+    expect(salvar.parentElement?.parentElement).toBe(select.closest('label')?.parentElement);
   });
 });

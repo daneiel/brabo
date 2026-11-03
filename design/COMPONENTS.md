@@ -488,3 +488,19 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 - Controle inerte diz o motivo em TEXTO visível: tooltip em botão `disabled` não abre.
 - Ícone sozinho tem `aria-label` e `title` traduzidos.
 - Controle inerte explica o motivo em TEXTO (ADR 0064), nunca só por tooltip.
+
+## Ajuda (AT-712)
+
+`components/ui/Ajuda.tsx`: o botão "?" que guarda o texto explicativo longo e o abre sob demanda. `<Ajuda assunto="Capacidades">texto</Ajuda>`; o nome acessível é "Ajuda: {assunto}" (`ui:ajuda.rotulo`).
+
+- É o `Popover` do kit com `openOnHover` (Base UI manda Popover, não Tooltip, para infotip): abre no clique, no Enter/Espaço e no hover; fecha com Esc e devolve o foco; o texto é o `aria-describedby` do popup e abre também no toque. O Tooltip do `Button legenda` é só o nome de um botão de ícone, nunca texto explicativo.
+- Fica inline ao lado do título da seção, nunca dentro de controle `disabled`. Só tokens, sem utilitário Tailwind fora de `components/shadcn` (ADR 0232).
+
+**Pode ir para o "?":** subtítulo e legenda explicativos longos, o "como funciona", a nota de contexto. Fica uma linha curta visível quando a regra manda avisar (RN-902).
+
+**NÃO pode, e fica visível em texto:**
+- o motivo de um controle inerte (RN-646, RN-102, ADR 0064): tooltip em `disabled` não abre;
+  - EXCEÇÃO, só na página de Containers (ADR 0240): os motivos por linha moram num `Ajuda` ATIVO, assunto "Por que as ações estão indisponíveis", ao lado dos botões; o "?" não é `disabled` e abre no clique, no teclado e no hover. O motivo de papel continua em texto, no topo. Em nenhuma outra tela.
+- a consequência irreversível ou o teto absoluto antes de agir (RN-939, RN-418);
+- o recorte declarado, como a janela de dias e o teto de leitura (RN-180);
+- a divergência de estado e a lacuna que uma RN manda dizer (RN-486, RN-468, RN-470).

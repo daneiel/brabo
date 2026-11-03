@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react';
-import { Hand, Zap } from 'lucide-react';
+import { Hand, Plane } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
 import { Badge } from './ui/Badge';
 import { Button } from '@/components/shadcn/button';
+import { Button as BotaoDeIcone } from '@/components/ui/Button';
 import { Card } from '@/components/shadcn/card';
 import { Shimmer } from './ui/Shimmer';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
@@ -146,26 +147,26 @@ export function AgentCard({
 
       {autonomy && onAutonomyChange && (
         <div className={styles.autonomy}>
-          <Button
+          <BotaoDeIcone
             type="button"
             size="sm"
             variant={autonomy === 'manual' ? 'secondary' : 'ghost'}
+            legenda={t('agentCard.autonomy.manual')}
             aria-pressed={autonomy === 'manual'}
             onClick={() => onAutonomyChange('manual')}
           >
             <Hand aria-hidden="true" />
-            {t('agentCard.autonomy.manual')}
-          </Button>
-          <Button
+          </BotaoDeIcone>
+          <BotaoDeIcone
             type="button"
             size="sm"
             variant={autonomy === 'auto' ? 'secondary' : 'ghost'}
+            legenda={t('agentCard.autonomy.auto')}
             aria-pressed={autonomy === 'auto'}
             onClick={() => onAutonomyChange('auto')}
           >
-            <Zap aria-hidden="true" />
-            {t('agentCard.autonomy.auto')}
-          </Button>
+            <Plane aria-hidden="true" />
+          </BotaoDeIcone>
         </div>
       )}
       {autonomy && onAutonomyChange && autonomyHint && (

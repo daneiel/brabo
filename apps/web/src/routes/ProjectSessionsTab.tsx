@@ -1,3 +1,4 @@
+import { Ajuda } from '../components/ui/Ajuda';
 import { Item } from '../components/shadcn/item';
 import { Input as CampoDeRenomear } from '../components/shadcn/input';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
@@ -283,11 +284,13 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
     <div>
       <div className={styles.header}>
         <div className={styles.headerTexto}>
-          <span className={styles.title}>{t(copy.titulo)}</span>
+          <span className={styles.title}>
+            {t(copy.titulo)}
+            <Ajuda assunto={t(copy.titulo)}>{tipo.explicacao}</Ajuda>
+          </span>
           {/* A explicação do tipo mora AQUI agora, permanente. Antes ela só
               existia dentro do rádio do formulário — visível no instante da
               escolha e nunca mais. */}
-          <span className={styles.subtitleTipo}>{tipo.explicacao}</span>
         </div>
         <Button
           className={styles.acaoDoCabecalho}

@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { ThumbsUp } from 'lucide-react';
 import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
@@ -141,6 +142,7 @@ export function SessionComposer({
   if (criativoActive && !prontidaoJaDeclarada)
     acoes.push({
       chave: 'pronto',
+      icone: <ThumbsUp aria-hidden="true" />,
       rotulo: t('composer.prontoParaProduzir'),
       aoClicar: handleReadiness,
       desabilitada: streaming || !hasBusinessRule || !podeDecidir,
@@ -226,6 +228,7 @@ export function SessionComposer({
           </div>
           <Button
             variant="success"
+            legenda={t('handoff.infraBotao')}
             onClick={() =>
               handleAcceptHandoff(
                 handoffDaInfraOferecido.id,
@@ -233,7 +236,7 @@ export function SessionComposer({
               )
             }
           >
-            {t('handoff.infraBotao')}
+            <ThumbsUp aria-hidden="true" />
           </Button>
         </div>
       )}
@@ -266,9 +269,10 @@ export function SessionComposer({
             </div>
             <Button
               variant="success"
+              legenda={t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta.toAgent) })}
               onClick={() => handleAcceptHandoff(oferta.id, oferta.toAgent)}
             >
-              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta.toAgent) })}
+              <ThumbsUp aria-hidden="true" />
             </Button>
           </div>
         ))}

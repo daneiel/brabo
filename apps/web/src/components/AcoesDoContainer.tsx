@@ -21,6 +21,7 @@ import {
 } from '../routes/containers-subida';
 import { ApprovalCard } from './ApprovalCard';
 import { Badge, type BadgeTone } from './ui/Badge';
+import { Ajuda } from './ui/Ajuda';
 import { Button } from './ui/Button';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
@@ -261,18 +262,13 @@ export function AcoesDoContainer({
   // explica por que "Subir de novo" não faz nada.
   const aviso = avisoDeImagemDesatualizada(item);
   const motivoDaSubida =
-    !subida.pode && (subida.motivo !== 'ja_esta_de_pe' || aviso) ? subida.motivo : null;
-  const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
-  // A falta de broker é UM fato, mesmo quando trava subir E parar/remover:
-  // uma linha curta só, com o detalhe (o nome da variável, para o operador)
-  // atrás de um `<details>` — o texto longo estourava a célula (AT-324).
-  const chaveCurtaDoBroker = semBrokerNaSubida
-    ? semBrokerParaParar
-      ? 'sem_broker_ambos'
-      : 'sem_broker_na_instalacao'
-    : semBrokerParaParar
-      ? 'sem_broker_para_parar'
+    !subida.pode &&
+    subida.motivo !== 'sem_papel' && // dito UMA vez no topo da página
+    (subida.motivo !== 'ja_esta_de_pe' || aviso)
+      ? subida.motivo
       : null;
+  const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
+  // A falta de broker é UM fato, dito uma vez no "?" (ADR 0240).
   const detalhesDoBroker = [
     semBrokerNaSubida ? t('actions.bloqueio.sem_broker_na_instalacao') : null,
     semBrokerParaParar ? t('actions.bloqueio.sem_broker_para_parar') : null,
@@ -280,6 +276,13 @@ export function AcoesDoContainer({
   const motivo =
     motivoDaSubida && !semBrokerNaSubida ? t(`actions.bloqueio.${motivoDaSubida}`) : null;
   const ressalva = subida.pode && subida.ressalva ? t(`actions.ressalva.${subida.ressalva}`) : null;
+
+  // ADR 0240: nesta página o motivo de controle inerte mora num "?" ativo.
+  const motivosDeInercia = [
+    semContainer ? t(`actions.semContainer.${semContainer}`) : null,
+    ...detalhesDoBroker,
+    motivo,
+  ].filter((texto): texto is string => texto !== null);
 
   return (
     <div className={styles.blocoDeAcoes}>
@@ -313,26 +316,28 @@ export function AcoesDoContainer({
         >
           <Play aria-hidden="true" />
         </Button>
+        {motivosDeInercia.length > 0 && (
+          <Ajuda assunto={t('actions.ajudaIndisponiveis')}>
+            {motivosDeInercia.map((texto) => (
+              <span key={texto} className={styles.detalheDoMotivo}>
+                {texto}{' '}
+              </span>
+            ))}
+          </Ajuda>
+        )}
       </div>
-      {aviso && <p className={styles.motivo}>{t('actions.desatualizada', aviso)}</p>}
-      {semContainer && (
-        <p className={styles.motivo}>{t(`actions.semContainer.${semContainer}`)}</p>
+      {aviso && (
+        <p className={styles.motivo}>
+          {t('actions.desatualizadaCurta', aviso)}{' '}
+          <Ajuda assunto={t('actions.ajuda')}>{t('actions.desatualizada', aviso)}</Ajuda>
+        </p>
       )}
-      {chaveCurtaDoBroker && (
-        <details className={styles.motivoComDetalhe}>
-          <summary className={styles.motivo}>
-            {t(`actions.bloqueioCurto.${chaveCurtaDoBroker}`)}{' '}
-            <span className={styles.porque}>{t('actions.bloqueioDetalhe')}</span>
-          </summary>
-          {detalhesDoBroker.map((texto) => (
-            <p key={texto} className={styles.detalheDoMotivo}>
-              {texto}
-            </p>
-          ))}
-        </details>
+      {ressalva && subida.pode && subida.ressalva && (
+        <p className={styles.ressalva}>
+          {t(`actions.ressalvaCurta.${subida.ressalva}`)}{' '}
+          <Ajuda assunto={t('actions.ajuda')}>{ressalva}</Ajuda>
+        </p>
       )}
-      {motivo && <p className={styles.motivo}>{motivo}</p>}
-      {ressalva && <p className={styles.ressalva}>{ressalva}</p>}
     </div>
   );
 }

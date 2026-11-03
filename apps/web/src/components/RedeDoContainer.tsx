@@ -14,11 +14,12 @@ import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 import { roleAtLeast } from '../lib/roles';
 import { textoDaRede, validarRedeEmTexto, type RedeEmTexto } from '../lib/rede-do-container';
 import type { ContainerOverviewItem, Role } from '../lib/api-types';
+import { Ajuda } from './ui/Ajuda';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
-import { Save } from 'lucide-react';
+import { RefreshCw, Save } from 'lucide-react';
 
 const chaveDaRede = (projectId: string) => ['container-network', projectId] as const;
 
@@ -116,7 +117,9 @@ export function RedeDoContainer({
 
   return (
     <section aria-label={t('rede.titulo')} data-testid="rede-do-container">
-      <h2 className={styles.subtitle}>{t('rede.titulo')}</h2>
+      <h2 className={styles.subtitle}>
+        {t('rede.titulo')}<Ajuda assunto={t('rede.ajuda')}>{t('rede.loopback')}</Ajuda>
+      </h2>
       {rede.isPending && <p className={styles.loading}>{t('loading')}</p>}
       {rede.isError && <p className={styles.motivo}>{mensagemDaApi(rede.error)}</p>}
       {rede.data === null && !sujo && <p className={styles.semRegistro}>{t('rede.nenhuma')}</p>}
@@ -143,7 +146,6 @@ export function RedeDoContainer({
             disabled={!podeEditar}
             onChange={(e) => editar('extraHosts', e.target.value)}
           />
-          <p className={styles.motivo}>{t('rede.loopback')}</p>
           <p className={styles.motivo}>{t('rede.soVale')}</p>
           {!podeEditar && <p className={styles.motivo}>{t('rede.semPapel')}</p>}
           {recusa && (
@@ -156,18 +158,19 @@ export function RedeDoContainer({
               variant="secondary"
               disabled={!podeEditar || !sujo}
               loading={salvando}
+              legenda={t('rede.salvar')}
               onClick={() => void salvar()}
             >
               <Save aria-hidden="true" />
-              {t('rede.salvar')}
             </Button>
             <Button
               variant="danger"
               disabled={motivoDaRecriacao !== null}
               loading={propondo}
+              legenda={t('rede.recriar')}
               onClick={() => void recriar()}
             >
-              {t('rede.recriar')}
+              <RefreshCw aria-hidden="true" />
             </Button>
           </div>
           <p className={styles.motivo}>{t('rede.recriarAviso')}</p>

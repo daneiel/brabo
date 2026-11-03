@@ -32,6 +32,7 @@
   },
   "member": {
     "title": "My consumption",
+    "subtitleCurto": "Last {{dias}} days, only what <strong>you</strong> consumed in this project, as an <strong>estimated</strong> cost.",
     "subtitle": "Last {{dias}} days, only what <strong>you</strong> consumed on this project. The cost is <strong>estimated</strong>: whoever pays for the call is the workspace owner's key, and the invoice is theirs.",
     "error": "I couldn't load your consumption right now. The record is still there — this is just the reading.",
     "estimatedLabel": "Estimated in {{dias}} days",
