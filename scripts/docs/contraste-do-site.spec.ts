@@ -3,10 +3,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // O site de docs segue os tokens do produto (AT-561, ADR 0181): este spec
-// resolve os --ifm-* do site até hex, nos dois temas, e cobra 4,5:1.
+// resolve os --site-* do site até hex, nos dois temas, e cobra 4,5:1.
 const raiz = resolve(__dirname, '../..');
 const TOKENS = readFileSync(resolve(raiz, 'design/tokens.css'), 'utf8');
-const SITE = readFileSync(resolve(raiz, 'website/src/css/custom.css'), 'utf8');
+const SITE = readFileSync(resolve(raiz, 'scripts/docs/site/assets/site.css'), 'utf8');
 
 function bloco(css: string, seletor: string): Record<string, string> {
   const inicio = css.indexOf(`${seletor} {`);
@@ -42,23 +42,32 @@ function contraste(a: string, b: string): number {
   return (x + 0.05) / (y + 0.05);
 }
 
-const TEXTOS = ['--ifm-color-primary', '--ifm-font-color-base', '--ifm-color-content-secondary'];
+// [texto, fundo]: os pares que o site.css realmente desenha.
+const PARES: [string, string][] = [
+  ['--site-texto', '--site-fundo'],
+  ['--site-texto-2', '--site-fundo'],
+  ['--site-texto-mudo', '--site-fundo'],
+  ['--site-link', '--site-fundo'],
+  ['--site-texto', '--site-fundo-lateral'],
+  ['--site-texto-2', '--site-fundo-lateral'],
+  ['--site-link', '--site-fundo-lateral'],
+  ['--site-codigo-texto', '--site-codigo-fundo'],
+];
 
 function medir(tokens: string, site: string) {
   const escuro = bloco(tokens, ':root');
   const claro = { ...escuro, ...bloco(tokens, "[data-theme='light']") };
-  const mapa = bloco(site, 'html[data-theme]');
+  const mapa = bloco(site, ':root');
   const out: { tema: string; nome: string; razao: number }[] = [];
   for (const [tema, base] of [
     ['escuro', escuro],
     ['claro', claro],
   ] as const) {
     const vars = { ...base, ...mapa };
-    const fundo = resolver(vars, '--ifm-background-color');
-    if (!fundo) continue;
-    for (const nome of TEXTOS) {
-      const cor = resolver(vars, nome);
-      if (cor) out.push({ tema, nome, razao: contraste(cor, fundo) });
+    for (const [texto, fundo] of PARES) {
+      const c = resolver(vars, texto);
+      const f = resolver(vars, fundo);
+      if (c && f) out.push({ tema, nome: `${texto} / ${fundo}`, razao: contraste(c, f) });
     }
   }
   return out;
@@ -68,7 +77,7 @@ describe('contraste do site de documentação', () => {
   it('todo texto resolvido passa 4,5:1 contra o fundo nos dois temas', () => {
     const medidas = medir(TOKENS, SITE);
     console.log(medidas.map((m) => `${m.tema} ${m.nome} ${m.razao.toFixed(2)}`).join('\n'));
-    expect(medidas.length, 'CEGO: nenhum valor resolvido').toBe(6);
+    expect(medidas.length, 'CEGO: nenhum valor resolvido').toBe(PARES.length * 2);
     for (const m of medidas) expect(m.razao, `${m.tema} ${m.nome}`).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -79,7 +88,7 @@ describe('contraste do site de documentação', () => {
     );
     expect(mutado).not.toBe(TOKENS);
     const m = medir(mutado, SITE).find(
-      (x) => x.tema === 'claro' && x.nome === '--ifm-color-primary',
+      (x) => x.tema === 'claro' && x.nome === '--site-link / --site-fundo',
     );
     expect(m?.razao).toBeLessThan(4.5);
   });
