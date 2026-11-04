@@ -1156,7 +1156,7 @@ renasce do ponto atual de `work_dir`.
 
 ### RN-070 — Todo gate declarado aponta para a evidência que o prova {#rn-070}
 
-Nenhuma entrada de `docs/gates.yml` existe sem `evidencia`, e o registro não
+Nenhuma entrada de `apps/api/config/gates.yml` existe sem `evidencia`, e o registro não
 pode afirmar mais do que verifica: um gate `block` exige `verificacao:
 script`, e um gate `planned` não carrega evidência de algo que ainda não
 aconteceu.
@@ -1179,7 +1179,7 @@ As duas costumavam ser uma função só, e isso custou um defeito de produção,
 medido na v6.1.0 instalada: `GET /gates` devolvia `500` com
 `RegistroDeGatesInvalido` listando os onze alvos como ausentes — doze 5xx em
 cerca de 55 minutos, em toda instalação. A imagem de produção leva
-`/app/docs/gates.yml` e mais nada de `docs/`; `apps/api/test/`, `scripts/ci/`
+`/app/config/gates.yml` e mais nada; `apps/api/test/`, `scripts/ci/`
 e `.github/` nunca entram nela. A regra não foi afrouxada — foi movida para
 onde a pergunta existe. Não a ponha de volta no loader: `arquivoExiste` num
 processo que não tem repositório responde sobre outra árvore.
@@ -1206,7 +1206,7 @@ coluna `actor_kind` e fica fora do vocabulário declarativo.
 
 - **Onde:** `apps/api/src/domain/gates/gate-registry.ts`
   (`validarRegistro` e `validarLocalizadores`), registrado em
-  `docs/gates.yml`, medido em `apps/api/scripts/validacao-gates.ts`;
+  `apps/api/config/gates.yml`, medido em `apps/api/scripts/validacao-gates.ts`;
   o loader que deliberadamente chama só a primeira é
   `apps/api/src/infrastructure/gates/gate-registry.loader.ts`
 - **Teste:** `apps/api/test/domain/gates/gate-registry.spec.ts`
@@ -1988,7 +1988,7 @@ depois de ler.
   `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
   `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
   e `apps/web/src/routes/ProjectSettingsTab.test.tsx` (`ParallelismSection`)
-- **Gate:** `docs/gates.yml` (`paralelismo-autorizado`) — `status: active`
+- **Gate:** `apps/api/config/gates.yml` (`paralelismo-autorizado`) — `status: active`
   desde a auditoria fluxo.yml × código (achado A1/B5); o mecanismo em si não
   mudou, só o registro que ficou `planned` por engano desde a FASE 14d, ver
   [gates.md](../explanation/gates.md#a-registry-can-age-in-the-wrong-direction--stale-not-inactive)
@@ -2076,7 +2076,7 @@ propósito se perde.
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
 
 O painel do time mostra a etapa em que uma PR está **derivando-a de
-`docs/gates.yml`**, não de uma lista escrita na tela. Gate que sai do registro
+`apps/api/config/gates.yml`**, não de uma lista escrita na tela. Gate que sai do registro
 some da esteira; gate `planned` nunca aparece.
 
 **A regra existe por uma forma específica de envelhecimento.** Antes da FASE
@@ -2225,7 +2225,7 @@ Até essa mudança o plano virava EVENTO simples, sem aprovação: o argumento e
 que propor não tem efeito externo — o gasto acontece quando os agentes sobem,
 e é lá que o teto cobra autorização; transformar a proposta em ação a decidir
 faria você decidir duas vezes a mesma coisa. Uma auditoria de
-`docs/fluxo.yml` × código encontrou que o fluxo já declarava esta saída como
+`packages/contracts/fluxo.yml` × código encontrou que o fluxo já declarava esta saída como
 `via: proposed_action` desde o ADR 0085, e o código nunca foi ajustado para
 bater — o dono do produto decidiu que o código errava: o plano é a PRIMEIRA
 decisão real de quanto a sessão vai gastar com paralelismo, e o usuário passou
