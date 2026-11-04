@@ -31,6 +31,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: salvar, trocar ou remover uma chave de provider atualiza na hora as abas do catálogo (providers com chave e catálogo), sem recarregar a página; a invalidação só roda depois que a api confirma (`aposMudarChave`).
 - **web**: o conteúdo das abas do projeto e da Conta ocupa a largura inteira da área à direita da sidebar, sem a coluna de 1040px nem os 720px (ADR 0248, revisa o 0244).
 - **web**: as listas do chat voltam a ter marcador e número, e os títulos dos diálogos voltam ao tamanho do kit; tokens `--sidebar-w`, `--sidebar-w-collapsed` e `--header-h` removidos (AT-659).
 - **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
