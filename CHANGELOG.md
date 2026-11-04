@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: sai do kit shadcn o que ficou sem uso (`accordion`, `radio-group`, `scroll-area`, `spinner`, `switch`) e um teste reprova componente do kit que ninguém importa (AT-655 V10).
 - **web**: o resto de Visão geral e de Gastos usa o kit shadcn (`Field`, `Table`, `EmptyState`, `Disclosure`, `Card`) no lugar de campo, tabela, vazio e `<details>` desenhados à mão (AT-655 V7).
 - **web**: o composer ganha `/skills` (ferramentas e instrução do agente) e `/buscar` (busca do RAG), só de leitura (AT-724).
 - **web**: o entorno da tela de Sessão usa o kit shadcn: a gaveta do contexto é um `Sheet`, as marcas de passagem de bastão são `Badge`, o idioma da sessão usa `NativeSelect` e `Input` e a seleção em lote do `ApprovalCard` é um `Checkbox` (AT-655 V8).
