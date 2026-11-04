@@ -444,6 +444,7 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   para eles, a feature segue DORMENTE (422 na rota). Ligar outro provider exige
   o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
   prova. Não "ligue de passagem"
+- A capability `reasoningText` (ADR 0249, RN-993, AT-676) é `true` SÓ no OpenRouter e na Anthropic desde 2026-11-03, PROVADA: `openrouter-provider.raciocinio.smoke.spec.ts` (`deepseek/deepseek-r1-0528`) e `anthropic-provider.raciocinio.smoke.spec.ts` (`claude-haiku-5-5` e `claude-sonnet-5-5`, com o texto sendo o RESUMO do raciocínio). Os outros nove seguem `false`; ligar outro provider exige o smoke equivalente com credencial.
 - A capability `stickySession` (ADR 0221, RN-907, AT-580) é `true` SÓ no
   OpenRouter desde 2026-10-21, PROVADA: `openrouter-provider.sessao.smoke.spec.ts`
   rodou com credencial real e, com `session_id`, 6 de 6 chamadas caíram no mesmo
