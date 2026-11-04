@@ -22,7 +22,10 @@ coisas saíram do import sem perder uma palavra:
   no cabeçalho, e o Claude Code os carrega quando a sessão LÊ arquivo daquela
   área: `runner.md` (o `apps/runner`), `broker-e-containers.md` (o broker, a
   `DockerPort` e o corte da FASE 25b) e `ci-e-cadeia-de-suprimentos.md` (CI/CD,
-  pin por SHA/digest, assinatura e o `install-e2e.yml`). Quem vai mexer nessas
+  pin por SHA/digest, assinatura e o `install-e2e.yml`), `web-socket-e-orcamento.md`
+  (socket da sessão, orçamento de requisições e streaming do web) e
+  `chaves-de-dispositivo-e-instalador.md` (chaves de dispositivo, instalador e
+  broker da instalação). Quem vai mexer nessas
   áreas por outro caminho (um script, um workflow citado de longe) LÊ a regra
   antes.
 

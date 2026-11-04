@@ -846,5 +846,7 @@ rules:
       - ".claude/rules/runner.md"
       - ".claude/rules/broker-e-containers.md"
       - ".claude/rules/ci-e-cadeia-de-suprimentos.md"
+      - ".claude/rules/web-socket-e-orcamento.md"
+      - ".claude/rules/chaves-de-dispositivo-e-instalador.md"
     severity: warn
     note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."

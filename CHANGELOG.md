@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **docs**: o contexto lido em toda sessão perde dois blocos de área (socket e orçamento do web; chaves de dispositivo e instalador), que viraram regras de caminho em `.claude/rules/`, sem perder texto.
 - **docs**: o ADR 0252 registra a decisão de separar o monorepo em repositórios `brabo-*` em `viralabs-dev`, com o mapa no contexto do Claude; estado decidido, em migração (AT-690).
 - **web**: sai do kit shadcn o que ficou sem uso (`accordion`, `radio-group`, `scroll-area`, `spinner`, `switch`) e um teste reprova componente do kit que ninguém importa (AT-655 V10).
 - **web**: o resto de Visão geral e de Gastos usa o kit shadcn (`Field`, `Table`, `EmptyState`, `Disclosure`, `Card`) no lugar de campo, tabela, vazio e `<details>` desenhados à mão (AT-655 V7).
