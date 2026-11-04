@@ -197,7 +197,9 @@ de escrever uma linha de código:
   próxima página, com `limit` de 1 a 1000. Quem percorre as páginas é o
   `client.models.list` do SDK oficial, que já pagina sozinho — refazer o laço
   do cursor à mão seria reescrever código mantido pelo fornecedor. Preço **não
-  vem** na resposta, então o modelo entra sem preço em vez de com um inventado.
+  vem** na resposta: o modelo entra com o preço de LISTA datado do provider
+  (`PRECO_DE_LISTA_ANTHROPIC`, [RN-997](../business-rules/custo.md#rn-997)), e
+  sem preço, em vez de com um inventado, quando o id não está na tabela.
   Desde a [RN-965](../business-rules/custo.md#rn-965) a tela de curadoria
   SUGERE o preço que o fabricante publica (tabela curada
   `apps/api/src/domain/llm/precos-do-fabricante.ts`, cada linha com link e
