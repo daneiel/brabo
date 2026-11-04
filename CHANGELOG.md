@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **api**: o catálogo da Anthropic nasce com preço de lista datado (2026-10-06) e `supportsReasoning` do SDK, em vez de preço 0 e raciocínio falso; preço manual segue intocado pelo sync (RN-997, ADR 0251).
 - **api**: a capability `reasoningText` fica `true` no OpenRouter e na Anthropic, provada por smoke com credencial em 2026-11-03 (AT-676, RN-993); o smoke do OpenRouter passa a usar `deepseek/deepseek-r1-0528`.
 - **api**: a Anthropic pede `thinking` adaptive com `display: summarized` nos modelos atuais (o `enabled` com budget dava 400) e mantém `enabled` nos antigos (AT-676, RN-993).
 - **engine**: o raciocínio do turno é gravado inteiro em `agent.response.payload.raciocinio` (fora do `content`, nunca devolvido ao modelo) e vai ao vivo como `agent.reasoning_delta` só para o socket de `developer` ou mais (AT-676, RN-993).
@@ -38,6 +39,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **web**: o chat da Sessão (fio, composer, avisos e pendências) ocupa a largura inteira, sem a coluna de 780px (ADR 0250).
 
 - **web**: no fio da Sessão, as perguntas estruturadas do agente aparecem depois da mensagem dele, não antes (RN-994).
+- **web**: salvar, trocar ou remover uma chave de provider atualiza na hora as abas do catálogo (providers com chave e catálogo), sem recarregar a página; a invalidação só roda depois que a api confirma (`aposMudarChave`).
 - **web**: o conteúdo das abas do projeto e da Conta ocupa a largura inteira da área à direita da sidebar, sem a coluna de 1040px nem os 720px (ADR 0248, revisa o 0244).
 - **web**: as listas do chat voltam a ter marcador e número, e os títulos dos diálogos voltam ao tamanho do kit; tokens `--sidebar-w`, `--sidebar-w-collapsed` e `--header-h` removidos (AT-659).
 - **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
