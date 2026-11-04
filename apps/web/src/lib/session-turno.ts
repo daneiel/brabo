@@ -401,6 +401,10 @@ export function useTurnoDoAgente(
         // trabalhar" (achado B) já cumpriu o papel dele.
         setStatusAgent(null);
       },
+      onReasoningDelta: (text) => {
+        setTurnoViaCanal(true);
+        dispatchAtividade({ tipo: 'raciocinio', texto: text });
+      },
       onToolCall: (tool) => {
         setTurnoViaCanal(true);
         dispatchAtividade({ tipo: 'tool_call', frase: fraseDaFerramenta(tool) });

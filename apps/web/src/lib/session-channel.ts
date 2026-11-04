@@ -33,6 +33,8 @@ export interface SessionChannelHandlers {
   // porque um engine anterior a esta mudança não o envia — nesse caso a tela
   // degrada para "agente", nunca para o nome do modelo.
   onAgentDelta?: (text: string, agent?: string) => void;
+  // AT-676: raciocínio ao vivo; o engine só o manda a quem pode ver (developer+).
+  onReasoningDelta?: (text: string) => void;
   // Fim de um turno do agente — hora de reconciliar com o event log.
   onAgentDone?: () => void;
   // Working/idle nos limites de turno dos agentes conversacionais
@@ -222,6 +224,11 @@ export function connectSessionHeartbeat(
             typeof payload.agent === 'string' ? payload.agent : undefined,
           );
         }
+      });
+    }
+    if (handlers.onReasoningDelta) {
+      on('agent.reasoning_delta', (payload: { text?: string }) => {
+        if (typeof payload?.text === 'string') handlers.onReasoningDelta!(payload.text);
       });
     }
     if (handlers.onAgentDone) {
