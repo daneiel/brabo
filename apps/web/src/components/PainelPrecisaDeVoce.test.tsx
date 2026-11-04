@@ -375,9 +375,13 @@ describe('PainelPrecisaDeVoce — a mecânica que o NotificationBell não tinha'
     const painel = await abrir(user);
 
     // No vazio o único focável é o botão de fechar: `Tab` a partir dele tem
-    // de voltar para ele mesmo, nunca sair para o documento.
+    // de voltar para ele mesmo, nunca sair para o documento. O Base UI põe o
+    // foco inicial e devolve o foco dos guardas num quadro seguinte, então as
+    // duas posições são esperadas, não lidas no mesmo tique (falhou no CI com
+    // cobertura, que é mais lento).
+    await waitFor(() => expect(painel.contains(document.activeElement)).toBe(true));
     await user.tab();
-    expect(painel.contains(document.activeElement)).toBe(true);
+    await waitFor(() => expect(painel.contains(document.activeElement)).toBe(true));
   });
 
   it('o botão de fechar fecha e devolve o foco ao chip', async () => {
