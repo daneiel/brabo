@@ -4,6 +4,7 @@ import { diaCurto, type SpendPorDia } from '../lib/spend';
 import { formatarUsd } from './CredentialSpendSection';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from './shadcn/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './shadcn/table';
+import styles from './GraficoDeGastoPorDia.module.css';
 
 /**
  * A série diária do gasto desenhada pelo Chart do shadcn (AT-658, RN-973).
@@ -26,13 +27,13 @@ export default function GraficoDeGastoPorDia({
   };
 
   return (
-    <figure className="m-0 grid gap-2">
-      <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">{completo}</figcaption>
+    <figure className={styles.figura}>
+      <figcaption className={styles.legenda}>{completo}</figcaption>
       {serie.length > 0 && serie.every((p) => p.costMicros === 0) ? (
-        <p className="m-0 text-xs text-[var(--text-muted)]">{t('charts.noSpendInWindow')}</p>
+        <p className={styles.vazio}>{t('charts.noSpendInWindow')}</p>
       ) : (
       <div role="img" aria-label={completo}>
-        <ChartContainer config={config} className="aspect-auto h-40 w-full">
+        <ChartContainer config={config} className={styles.grafico}>
           <BarChart data={dados} accessibilityLayer>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="rotulo" tickLine={false} axisLine={false} minTickGap={16} />
@@ -58,7 +59,7 @@ export default function GraficoDeGastoPorDia({
       </div>
       )}
       <details>
-        <summary className="cursor-pointer text-xs text-[var(--text-muted)]">
+        <summary className={styles.resumo}>
           {t('charts.viewAsTable')}
         </summary>
         <Table>
@@ -90,15 +91,15 @@ export function GraficoDeChamadasPorDia({ serie }: { serie: SpendPorDia[] }) {
   const dados = serie.map((p) => ({ ...p, rotulo: diaCurto(p.dia) }));
   const config: ChartConfig = { chamadas: { label: t('charts.callsTitle'), color: 'var(--accent)' } };
   return (
-    <figure className="m-0 grid gap-2">
-      <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">
+    <figure className={styles.figura}>
+      <figcaption className={styles.legenda}>
         {t('charts.callsTitle')}
       </figcaption>
       {serie.length > 0 && serie.every((p) => p.chamadas === 0) ? (
-        <p className="m-0 text-xs text-[var(--text-muted)]">{t('charts.noCallsInWindow')}</p>
+        <p className={styles.vazio}>{t('charts.noCallsInWindow')}</p>
       ) : (
       <div role="img" aria-label={t('charts.callsTitle')}>
-        <ChartContainer config={config} className="aspect-auto h-40 w-full">
+        <ChartContainer config={config} className={styles.grafico}>
           <BarChart data={dados} accessibilityLayer>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="rotulo" tickLine={false} axisLine={false} minTickGap={16} />
@@ -122,12 +123,12 @@ export function GraficoDeTokens({ entrada, saida }: { entrada: number; saida: nu
   ];
   const config: ChartConfig = { valor: { label: t('charts.tokensTitle') } };
   return (
-    <figure className="m-0 grid gap-2">
-      <figcaption className="font-mono text-[10px] font-semibold tracking-[0.05em] text-[var(--text-muted)] uppercase">
+    <figure className={styles.figura}>
+      <figcaption className={styles.legenda}>
         {t('charts.tokensTitle')}
       </figcaption>
       <div role="img" aria-label={t('charts.tokensTitle')}>
-        <ChartContainer config={config} className="aspect-auto h-32 w-full">
+        <ChartContainer config={config} className={styles.graficoBaixo}>
           <PieChart>
             <Pie data={dados} dataKey="valor" nameKey="nome" innerRadius="60%" stroke="none">
               {dados.map((d) => (
@@ -137,7 +138,7 @@ export function GraficoDeTokens({ entrada, saida }: { entrada: number; saida: nu
           </PieChart>
         </ChartContainer>
       </div>
-      <ul className="m-0 flex list-none justify-center gap-4 p-0 text-xs text-[var(--text-muted)]">
+      <ul className={styles.legendaDaRosca}>
         {dados.map((d) => (
           <li key={d.nome}>
             {d.nome}: {d.valor.toLocaleString()}

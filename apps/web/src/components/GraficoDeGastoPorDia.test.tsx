@@ -36,7 +36,7 @@ describe('GraficoDeGastoPorDia', () => {
 
   it('o contêiner do gráfico tem altura explícita (defesa contra 0x0)', () => {
     const { container } = render(<GraficoDeGastoPorDia serie={serie} titulo="x" />);
-    expect(container.querySelector('[data-slot="chart"]')?.className).toContain('h-40');
+    expect(container.querySelector('[data-slot="chart"]')?.className).toMatch(/grafico/);
   });
 
   it('AT-721: série zerada mostra o texto de vazio em vez do gráfico em branco', () => {

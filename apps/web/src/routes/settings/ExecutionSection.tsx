@@ -66,7 +66,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="execution">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Play aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('execution.title')}</h2>
+        <h2 className={styles.title}><Play aria-hidden="true" className={styles.tituloIcone} />{t('execution.title')}</h2>
         <Ajuda assunto={t('execution.title')}>{t('execution.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('execution.eyebrow')}</span>
       </div>

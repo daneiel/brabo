@@ -182,7 +182,7 @@ export function MelhoresModelosPorCapacidadeSection({
   return (
     <SecaoDeConfiguracoes chave="best-models">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Trophy aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('bestModels.title')}</h2>
+        <h2 className={styles.title}><Trophy aria-hidden="true" className={styles.tituloIcone} />{t('bestModels.title')}</h2>
         <Ajuda assunto={t('bestModels.title')}>
           {t('bestModels.subtitle.before')}
           <a href="/providers">{t('bestModels.subtitle.link')}</a>

@@ -91,7 +91,7 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="project-language">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Languages aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('projectLanguage.title')}</h2>
+        <h2 className={styles.title}><Languages aria-hidden="true" className={styles.tituloIcone} />{t('projectLanguage.title')}</h2>
         <Ajuda assunto={t('projectLanguage.title')}>
           {t('projectLanguage.subtitle')} {t('projectLanguage.artifactsNote')}
         </Ajuda>

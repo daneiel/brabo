@@ -454,9 +454,9 @@ export function SessionComposer({
         <InputGroup className={styles.composerEntrada}>
           {session?.id && <AnexosPendentes sessionId={session.id} />}
           {menu.destinatarios.length > 0 && (
-            <div className="flex flex-wrap gap-1 px-3 pt-2" data-testid="destinatarios-do-chat">
+            <div className={styles.destinatarios} data-testid="destinatarios-do-chat">
               {menu.destinatarios.map((a) => (
-                <span key={a} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs">
+                <span key={a} className={styles.destinatarioChip}>
                   @{nomeDoAgente(a)}
                   <button
                     type="button"
@@ -470,7 +470,7 @@ export function SessionComposer({
             </div>
           )}
           {menu.ajuda && (
-            <div className="px-3 pt-2 text-xs" data-testid="ajuda-dos-comandos">
+            <div className={styles.menuTexto} data-testid="ajuda-dos-comandos">
               <ul>
                 {menu.ajuda.map((c) => (
                   <li key={c.id}>
@@ -484,7 +484,7 @@ export function SessionComposer({
             </div>
           )}
           {menu.aviso && (
-            <p className="px-3 pt-2 text-xs" role="status" data-testid="aviso-do-menu">
+            <p className={styles.menuTexto} role="status" data-testid="aviso-do-menu">
               {menu.aviso}
             </p>
           )}

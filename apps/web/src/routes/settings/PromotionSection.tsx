@@ -54,7 +54,7 @@ export function PromotionSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="promotion">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><ArrowUpCircle aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('promotion.title')}</h2>
+        <h2 className={styles.title}><ArrowUpCircle aria-hidden="true" className={styles.tituloIcone} />{t('promotion.title')}</h2>
         <Ajuda assunto={t('promotion.title')}>{t('promotion.subtitle.before')}
         <em>{t('promotion.subtitle.em')}</em>
         {t('promotion.subtitle.after')}</Ajuda>

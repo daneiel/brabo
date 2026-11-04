@@ -211,7 +211,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   return (
     <SecaoDeConfiguracoes chave="access-tokens">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><KeySquare aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('personalAccessTokens.title')}</h2>
+        <h2 className={styles.title}><KeySquare aria-hidden="true" className={styles.tituloIcone} />{t('personalAccessTokens.title')}</h2>
         <Ajuda assunto={t('personalAccessTokens.title')}>{t('personalAccessTokens.subtitle.before')}
         <code>brabo-runner</code>
         {t('personalAccessTokens.subtitle.after')}</Ajuda>
@@ -248,7 +248,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       {podeGerenciarDeTodos && (
         <div className={styles.subsecao}>
           <div className={styles.sectionHead}>
-            <h2 className={styles.title}><KeySquare aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('personalAccessTokens.admin.title')}</h2>
+            <h2 className={styles.title}><KeySquare aria-hidden="true" className={styles.tituloIcone} />{t('personalAccessTokens.admin.title')}</h2>
             <span className={styles.eyebrow}>{t('personalAccessTokens.admin.eyebrow')}</span>
           </div>
           <p className={styles.subtitle}>{t('personalAccessTokens.admin.subtitle')}</p>

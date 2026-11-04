@@ -112,3 +112,7 @@
   flex-wrap: wrap;
   margin-top: 14px;
 }
+
+.tituloIcone { display: inline; width: 1rem; height: 1rem; margin-right: 0.5rem; vertical-align: -2px; }
+.iconeG { width: 1.25rem; height: 1.25rem; }
+.iconeM { width: 1rem; height: 1rem; }

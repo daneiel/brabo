@@ -70,7 +70,7 @@ export function BudgetSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="budget">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Wallet aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('budget.title')}</h2>
+        <h2 className={styles.title}><Wallet aria-hidden="true" className={styles.tituloIcone} />{t('budget.title')}</h2>
         <Ajuda assunto={t('budget.title')}>{t('budget.subtitle.before')}
         <strong>{t('budget.subtitle.strong')}</strong>
         {t('budget.subtitle.after')}</Ajuda>

@@ -98,7 +98,7 @@ export function ResponseLanguageSection() {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('account.title')}</h2>
+        <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" className={styles.tituloIcone} />{t('account.title')}</h2>
         <Ajuda assunto={t('account.title')}>{t('account.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('account.eyebrow')}</span>
       </div>

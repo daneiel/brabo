@@ -36,6 +36,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: os utilitários do Tailwind usados fora do kit (47 em 25 arquivos; 11 classes nem existiam no CSS) viram CSS Module e passam a valer: grade 2/3 + 1/3 e altura dos gráficos em Gastos, alinhamento do ícone dos títulos, posição do ⌘K e largura do menu do usuário; um teste reprova a volta (ADR 0232, AT-655 V0).
 - **web**: o chat da Sessão (fio, composer, avisos e pendências) ocupa a largura inteira, sem a coluna de 780px (ADR 0250).
 
 - **web**: no fio da Sessão, as perguntas estruturadas do agente aparecem depois da mensagem dele, não antes (RN-994).

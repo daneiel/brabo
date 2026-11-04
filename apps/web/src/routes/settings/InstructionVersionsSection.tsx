@@ -77,7 +77,7 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
   return (
     <SecaoDeConfiguracoes chave="instructions">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><History aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('instructionVersions.title')}</h2>
+        <h2 className={styles.title}><History aria-hidden="true" className={styles.tituloIcone} />{t('instructionVersions.title')}</h2>
         <span className={styles.eyebrow}>{t('instructionVersions.eyebrow')}</span>
       </div>
       <div className={styles.subtitle} style={{ marginBottom: 12 }}>

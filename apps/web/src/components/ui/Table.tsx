@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLayoutMovel } from '../../lib/layout-movel';
+import styles from './Table.module.css';
 import {
   Grade,
   GradeCabecalho,
@@ -92,7 +93,7 @@ export function Table<T>({ columns, rows, rowKey, emptyMessage }: TableProps<T>)
               {column.onOrdenar ? (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 uppercase"
+                  className={styles.ordenar}
                   onClick={column.onOrdenar}
                 >
                   {column.label}
