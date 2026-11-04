@@ -192,3 +192,17 @@
   line-height: 1.4;
   color: var(--text-muted);
 }
+
+.catalog {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.scroll {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  padding-left: 0;
+  white-space: pre-wrap;
+  list-style: none;
+}

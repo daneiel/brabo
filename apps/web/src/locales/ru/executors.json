@@ -39,7 +39,28 @@
       "auto": "авто",
       "autoModeHint": "Автоматический режим: выполняет любую команду, в том числе вне папки проекта. git push и PR разрешены; deploy, sudo/doas и merge в защищённую ветку по-прежнему требуют вашего одобрения."
     },
-    "rearm": "перезапустить"
+    "rearm": "перезапустить",
+    "catalog": {
+      "instructions": "Instructions",
+      "tools": "Tools",
+      "identity": "Identity",
+      "projectInstruction": "Project instruction (version {{versao}})",
+      "noProjectInstruction": "This agent has no instruction of its own in this project yet.",
+      "instructionsUnavailable": "Could not read the instructions right now.",
+      "toolsUnavailable": "Could not read the tools right now.",
+      "noTools": "This agent has no tools.",
+      "note": "Full catalog: at each step the model may see only part of it.",
+      "loading": "Loading…",
+      "error": "Could not read this agent's catalog.",
+      "missing_one": "Не хватает символов: {{count}} (текст обрезан)",
+      "missing_few": "Не хватает символов: {{count}} (текст обрезан)",
+      "missing_many": "Не хватает символов: {{count}} (текст обрезан)",
+      "missing_other": "Не хватает символов: {{count}} (текст обрезан)",
+      "toolCount_one": "Инструментов: {{count}}",
+      "toolCount_few": "Инструментов: {{count}}",
+      "toolCount_many": "Инструментов: {{count}}",
+      "toolCount_other": "Инструментов: {{count}}"
+    }
   },
   "teamGrid": {
     "leadBadge": "Lead",

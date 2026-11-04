@@ -36,7 +36,22 @@
       "auto": "自动",
       "autoModeHint": "自动模式：可运行任何命令，包括项目文件夹之外的命令。git push 和 PR 将放行；部署、sudo/doas 以及合并到受保护分支仍需你的批准。"
     },
-    "rearm": "重新启用"
+    "rearm": "重新启用",
+    "catalog": {
+      "instructions": "Instructions",
+      "tools": "Tools",
+      "identity": "Identity",
+      "projectInstruction": "Project instruction (version {{versao}})",
+      "noProjectInstruction": "This agent has no instruction of its own in this project yet.",
+      "instructionsUnavailable": "Could not read the instructions right now.",
+      "toolsUnavailable": "Could not read the tools right now.",
+      "noTools": "This agent has no tools.",
+      "note": "Full catalog: at each step the model may see only part of it.",
+      "loading": "Loading…",
+      "error": "Could not read this agent's catalog.",
+      "missing_other": "缺少 {{count}} 个字符(文本已截断)",
+      "toolCount_other": "{{count}} 个工具"
+    }
   },
   "teamGrid": {
     "leadBadge": "Lead",

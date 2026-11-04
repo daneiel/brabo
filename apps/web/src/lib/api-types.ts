@@ -15,6 +15,8 @@
 // sem entender consumidor a consumidor.
 import type { components } from './api-types.generated';
 
+export type CatalogoDeAgentes = components['schemas']['CatalogoDeAgentesResponseDto'];
+
 export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
 
 /**
