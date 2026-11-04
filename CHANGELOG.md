@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: as Configurações do projeto usam `Item`, `Table` e `Button` do kit shadcn no lugar dos cartões, da matriz e dos chips desenhados à mão (AT-655 V6).
+
 - **web**: a gaveta móvel da barra lateral usa o `Sheet` do kit shadcn, com as mesmas entradas, foco preso e Esc (AT-655 V3b)
 - **web**: Conta, Status e as telas de login passam para os componentes do kit shadcn (`Item`, `Card`, `Table`, `Badge`, `Button`), sem mudar o que a pessoa vê nem faz (AT-655 V5)
 

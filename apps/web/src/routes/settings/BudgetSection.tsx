@@ -14,6 +14,7 @@ import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { MarcaDeNaoSalvo, useSecaoSalvavel } from './secao-salvavel';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * O teto de GASTO de cada área, opcional (ADR 0110, RN-443).
@@ -86,7 +87,7 @@ export function BudgetSection({ projectId }: { projectId: string }) {
       ) : (
         <>
           {areas.map((area) => (
-            <div key={area.key} className={styles.ajusteCard}>
+            <Item variant="outline" key={area.key} className={styles.ajusteCard}>
               <div className={styles.ajusteInfo}>
                 <div className={styles.ajusteTitulo}>
                   {t('budget.card.title', { area: area.key })}
@@ -122,7 +123,7 @@ export function BudgetSection({ projectId }: { projectId: string }) {
                   onChange={(e) => secao.editar(area.key, e.target.value)}
                 />
               </div>
-            </div>
+            </Item>
           ))}
 
           <div className={styles.acoesDaSecao}>

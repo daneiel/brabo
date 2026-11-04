@@ -97,13 +97,7 @@
 
 /* Card de custo do time, acima da tabela de modelos. */
 .custoCard {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
   margin-bottom: 14px;
 }
 
@@ -352,50 +346,14 @@
  * tabelas do desenho. Sem a moldura ela era a única tabela da aba sem borda
  * externa, e o cabeçalho em `--surface-2` flutuava com os cantos quadrados.
  */
+.matrixCol {
+  text-align: center;
+}
+
 .matrixWrap {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-}
-
-.matrixTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-body);
-}
-
-.matrixTable th,
-.matrixTable td {
-  padding: 11px 8px;
-  border-left: 1px solid var(--border);
-  text-align: center;
-}
-
-.matrixTable tbody tr {
-  border-top: 1px solid var(--border);
-}
-
-.matrixTable tbody tr:hover {
-  background: var(--surface-1);
-}
-
-.matrixTable th {
-  background: var(--surface-2);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.matrixTable td:first-child,
-.matrixTable th:first-child {
-  padding-left: 14px;
-  padding-right: 14px;
-  border-left: none;
-  text-align: left;
-  color: var(--text-secondary);
 }
 
 /*
@@ -533,14 +491,7 @@
  * estiliza mais.
  */
 .ajusteCard {
-  display: flex;
-  align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 18px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 10px;
   margin-bottom: 10px;
 }
 
@@ -666,25 +617,6 @@
  * visual cobra: com `padding: 2px 6px` o chip media 20px de altura e entrava na
  * lista de achados em toda passada por esta aba.
  */
-.evidenceChip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 2px 9px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.evidenceChip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .versionRow {
   display: flex;
   align-items: center;
@@ -762,14 +694,7 @@
 /* Faixa do repositório do handoff: card raio 10, padding 12×14, tudo numa
    linha só (com quebra quando o caminho é longo). */
 .repoCard {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
   margin-bottom: 10px;
 }
 

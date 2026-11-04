@@ -12,6 +12,7 @@ import styles from '../ProjectSettingsTab.module.css';
 import { MarcaDeHeranca } from './heranca';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 const DEFAULT_MAX_CONSECUTIVE_BLOCKED = 3;
 
@@ -71,7 +72,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
         <span className={styles.eyebrow}>{t('execution.eyebrow')}</span>
       </div>
 
-      <div className={styles.ajusteCard}>
+      <Item variant="outline" className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('execution.card.title')}</div>
           <div className={styles.ajusteHint}>
@@ -100,7 +101,7 @@ export function ExecutionSection({ projectId }: { projectId: string }) {
           <Save aria-hidden="true" />
           {saving ? t('execution.saving') : t('execution.save')}
         </Button>
-      </div>
+      </Item>
     </SecaoDeConfiguracoes>
   );
 }
