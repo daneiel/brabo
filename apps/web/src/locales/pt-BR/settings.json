@@ -1,7 +1,5 @@
 {
   "summary": {
-    "title": "Nesta página",
-    "ariaLabel": "Sumário das configurações",
     "groups": {
       "projeto": "Projeto e execução",
       "modelos": "Modelos",
@@ -566,7 +564,6 @@
       "throughput": "maior vazão",
       "latency": "menor latência"
     },
-    "notSupported": "Sem preferência de roteamento: o provider {{provider}} não declara essa capacidade — ela só é declarada depois de provada contra a API real.",
     "inherited": "Roteamento: {{valor}} (do nível {{nivel}})",
     "inheritedHint": "Para defini-lo aqui, escolha um modelo próprio para esta linha.",
     "toast": {

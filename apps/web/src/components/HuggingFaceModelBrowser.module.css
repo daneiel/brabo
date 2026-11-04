@@ -29,13 +29,6 @@
   color: var(--text-muted);
 }
 
-.subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  max-width: 60ch;
-}
-
 .buscaLinha {
   display: flex;
   align-items: flex-start;

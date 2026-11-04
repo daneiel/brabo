@@ -115,10 +115,6 @@
   padding: 12px 0;
 }
 
-.grupo {
-  margin-bottom: 18px;
-}
-
 .linha {
   display: flex;
   align-items: center;
@@ -178,42 +174,8 @@
 /* Contagem ao lado do rótulo do grupo — com 338 modelos, saber o tamanho
    antes de abrir é o que decide se vale rolar. */
 /* O cabeçalho do grupo também abre e fecha. */
-.grupoTitulo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  transition: color 0.1s;
-}
-
-.grupoTitulo:hover {
-  color: var(--text-primary);
-}
-
-.grupoTitulo {
-  border-bottom: 1px solid var(--border);
-}
 
 /* Quem serve o catálogo do hub — em caixa normal, porque é nome próprio. */
-.grupoProvedores {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--text-muted);
-}
 
 .grupoContagem {
   font-family: var(--font-mono);
@@ -253,12 +215,6 @@
 .subgrupoTitulo:hover {
   color: var(--text-primary);
   border-left-color: var(--accent);
-}
-
-.chevron {
-  display: flex;
-  color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 /* Um subgrupo fechado com itens marcados precisa dizer isso: a barra de lote
@@ -306,13 +262,6 @@
   color: var(--warning);
   border-color: var(--warning-line);
   background: var(--warning-soft);
-}
-
-.explicacaoDoLote {
-  flex-basis: 100%;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
 }
 
 .rotuloDoLote {

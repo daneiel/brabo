@@ -1,7 +1,5 @@
 {
   "summary": {
-    "title": "本页内容",
-    "ariaLabel": "设置目录",
     "groups": {
       "projeto": "项目与执行",
       "modelos": "模型",
@@ -550,7 +548,6 @@
       "throughput": "最高吞吐量",
       "latency": "最低延迟"
     },
-    "notSupported": "无路由偏好：provider {{provider}} 未声明此能力——该能力只有在针对真实 API 验证后才会声明。",
     "inherited": "路由：{{valor}}（来自 {{nivel}} 级别）",
     "inheritedHint": "若要在此定义，请为这一行选择自有模型。",
     "toast": {

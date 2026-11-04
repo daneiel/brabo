@@ -12,26 +12,6 @@
   max-width: 720px;
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.title {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 22px;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
 .identity {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -124,24 +104,6 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
-}
-
-.remove {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-sm);
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: color 0.1s, border-color 0.1s;
-}
-
-.remove:not(:disabled):hover {
-  color: var(--danger);
-  border-color: var(--danger-line);
 }
 
 .acoes {

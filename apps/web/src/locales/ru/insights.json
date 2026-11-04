@@ -20,8 +20,6 @@
       "metaHypotheses_few": "{{count}} гипотезы",
       "metaHypotheses_many": "{{count}} гипотез",
       "metaHypotheses_other": "{{count}} гипотезы",
-      "reanalyzeButton": "Проанализировать заново",
-      "reanalyzeTitleDisabled": "Psicólogo приостановлен глобально",
       "reanalyzeTitleEnabled": "Запускает анализ заново и расходует бюджет; предыдущий остаётся в истории"
     },
     "pausedNotice": "Psicólogo приостановлен глобально по решению команды — новых повторных анализов пока не будет. Уже выданные гипотезы остаются здесь.",

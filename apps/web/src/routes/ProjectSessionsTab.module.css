@@ -21,13 +21,6 @@
   flex-shrink: 0;
 }
 
-.subtitleTipo {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-muted);
-  max-width: 62ch;
-}
-
 .title {
   font-family: var(--font-heading);
   font-weight: 600;

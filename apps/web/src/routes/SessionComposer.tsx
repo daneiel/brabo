@@ -451,7 +451,7 @@ export function SessionComposer({
           )}
         </div>
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
-        <InputGroup className={styles.textarea}>
+        <InputGroup className={styles.composerEntrada}>
           {session?.id && <AnexosPendentes sessionId={session.id} />}
           {menu.destinatarios.length > 0 && (
             <div className="flex flex-wrap gap-1 px-3 pt-2" data-testid="destinatarios-do-chat">

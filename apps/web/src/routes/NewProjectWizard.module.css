@@ -145,22 +145,6 @@
   color: var(--text-primary);
 }
 
-
-
-
-.notaDaAdocao {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.notaDaAdocao code {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
 .summary {
   display: flex;
   flex-direction: column;

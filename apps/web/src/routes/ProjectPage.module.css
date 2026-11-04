@@ -136,9 +136,6 @@
 /* Layout móvel (RN-643, AT-316): os respiros laterais caem para os 16px de
    uma tela de telefone. `.movel` vem de `useLayoutMovel`; as abas moram na
    gaveta da sidebar desde o ADR 0211. */
-.movel .headerTop {
-  padding: 12px 16px;
-}
 
 .movel .body {
   padding: 16px;

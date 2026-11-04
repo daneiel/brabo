@@ -6,26 +6,12 @@
   gap: var(--space-4);
 }
 
-.cabecalho {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .titulo {
   margin: 0;
   font-family: var(--font-heading);
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.subtitulo {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  max-width: 68ch;
 }
 
 /* Os três estados da RN-088. O erro vem ANTES do vazio, e diz o que fazer. */
@@ -40,12 +26,6 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-}
-
-.destaques {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-3);
 }
 
 .grade {
@@ -100,9 +80,6 @@
 }
 
 /* O <figure> do gráfico vinha com a margem do navegador (40px) dentro da faixa. */
-.grafico figure {
-  margin: 0;
-}
 
 .grupoTeto {
   display: flex;
