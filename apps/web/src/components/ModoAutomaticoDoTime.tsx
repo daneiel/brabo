@@ -1,3 +1,4 @@
+import { Card } from './ui/Card';
 import { useState } from 'react';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { useTranslation } from 'react-i18next';
@@ -139,7 +140,7 @@ export function ModoAutomaticoDoTime({
   }
 
   return (
-    <section className={styles.card} aria-labelledby="modo-automatico-do-time-titulo">
+    <Card className={styles.card} role="region" aria-labelledby="modo-automatico-do-time-titulo">
       <h3 id="modo-automatico-do-time-titulo" className={styles.titulo}>
         {t('autoModeTeam.title')}
       </h3>
@@ -206,6 +207,6 @@ export function ModoAutomaticoDoTime({
                 })}
         </p>
       )}
-    </section>
+    </Card>
   );
 }

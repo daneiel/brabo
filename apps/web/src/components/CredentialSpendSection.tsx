@@ -5,6 +5,8 @@ import { getCredentialSpend } from '../lib/api-client';
 import { ROTULO_DO_PROVIDER } from '../lib/models';
 import type { LLMProviderName } from '../lib/api-types';
 import { Badge } from './ui/Badge';
+import { EmptyState } from './ui/EmptyState';
+import { Table } from './ui/Table';
 import i18n from '../lib/i18n';
 import styles from './CredentialSpendSection.module.css';
 
@@ -41,14 +43,12 @@ export function CredentialSpendSection({ workspaceId }: { workspaceId: string })
         </div>
       </div>
 
-      {isLoading && <div className={styles.vazio}><Shimmer>{t('spend.loading')}</Shimmer></div>}
+      {isLoading && <EmptyState><Shimmer>{t('spend.loading')}</Shimmer></EmptyState>}
 
-      {isError && <div className={styles.vazio}>{t('spend.error')}</div>}
+      {isError && <EmptyState>{t('spend.error')}</EmptyState>}
 
       {data && data.porProvider.length === 0 && (
-        <div className={styles.vazio}>
-          {t('spend.empty', { months: data.meses })}
-        </div>
+        <EmptyState>{t('spend.empty', { months: data.meses })}</EmptyState>
       )}
 
       {data && data.porProvider.length > 0 && (
@@ -62,40 +62,31 @@ export function CredentialSpendSection({ workspaceId }: { workspaceId: string })
             </span>
           </div>
 
-          <div className={styles.tabela}>
-            <div className={styles.cabecalho}>
-              <span>{t('spend.headers.provider')}</span>
-              <span>{t('spend.headers.agents')}</span>
-              <span>{t('spend.headers.youInChat')}</span>
-              <span>{t('spend.headers.calls')}</span>
-              <span className={styles.direita}>{t('spend.headers.total')}</span>
-            </div>
-
-            {data.porProvider.map((p) => (
-              <div key={p.provider} className={styles.linha}>
-                <span className={styles.provider}>
-                  {ROTULO_DO_PROVIDER[p.provider as LLMProviderName] ??
-                    p.provider}
-                  {/* Chave removida cujo gasto continua no histórico: o
-                      consumo aconteceu, e some-lo daria um total que não bate
-                      com fatura nenhuma. */}
-                  {!p.temCredencial && (
-                    <Badge tone="muted">{t('spend.credentialNotRegistered')}</Badge>
-                  )}
-                </span>
-                <span className={styles.numero}>
-                  {formatarUsd(p.costMicrosAgentes)}
-                </span>
-                <span className={styles.numero}>
-                  {formatarUsd(p.costMicrosPessoas)}
-                </span>
-                <span className={styles.numero}>{p.chamadas}</span>
-                <span className={[styles.numero, styles.direita].join(' ')}>
-                  {formatarUsd(p.costMicros)}
-                </span>
-              </div>
-            ))}
-          </div>
+          <Table
+            rows={data.porProvider}
+            rowKey={(p) => p.provider}
+            columns={[
+              {
+                key: 'provider',
+                label: t('spend.headers.provider'),
+                render: (p) => (
+                  <>
+                    {ROTULO_DO_PROVIDER[p.provider as LLMProviderName] ?? p.provider}
+                    {/* Chave removida cujo gasto continua no histórico: o
+                        consumo aconteceu, e some-lo daria um total que não bate
+                        com fatura nenhuma. */}
+                    {!p.temCredencial && (
+                      <Badge tone="muted">{t('spend.credentialNotRegistered')}</Badge>
+                    )}
+                  </>
+                ),
+              },
+              { key: 'agents', label: t('spend.headers.agents'), render: (p) => formatarUsd(p.costMicrosAgentes) },
+              { key: 'you', label: t('spend.headers.youInChat'), render: (p) => formatarUsd(p.costMicrosPessoas) },
+              { key: 'calls', label: t('spend.headers.calls'), render: (p) => p.chamadas },
+              { key: 'total', label: t('spend.headers.total'), render: (p) => formatarUsd(p.costMicros) },
+            ]}
+          />
 
           <div className={styles.meses}>
             {data.porProvider.map((p) =>

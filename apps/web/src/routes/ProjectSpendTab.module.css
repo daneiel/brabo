@@ -67,14 +67,6 @@
   grid-column: 1 / -1;
 }
 
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
 .acoes {
   display: flex;
 }

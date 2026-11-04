@@ -139,6 +139,24 @@
         "nome": "plan",
         "descricao": "Inserts a request for the current plan in the field",
         "texto": "Show your current plan."
+      },
+      "skills": {
+        "nome": "skills",
+        "descricao": "Lists the agent's tools and instruction",
+        "titulo_one": "{{agente}}: {{count}} tool",
+        "titulo_other": "{{agente}}: {{count}} tools",
+        "naoSei": "I don't know {{agente}}'s tools right now: the engine did not answer.",
+        "semAgente": "{{agente}} is not in the catalog.",
+        "instrucao": "Current instruction (v{{versao}})",
+        "erro": "Could not read the catalog: {{motivo}}"
+      },
+      "buscar": {
+        "nome": "search",
+        "descricao": "Searches the project base for the field text",
+        "semConsulta": "Type what to search in the field and use /search.",
+        "titulo_one": "Search \"{{consulta}}\": {{count}} passage",
+        "titulo_other": "Search \"{{consulta}}\": {{count}} passages",
+        "erro": "The search failed: {{motivo}}"
       }
     }
   },

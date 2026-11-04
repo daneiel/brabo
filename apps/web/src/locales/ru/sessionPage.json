@@ -141,6 +141,28 @@
         "nome": "план",
         "descricao": "Вставляет в поле просьбу о текущем плане",
         "texto": "Покажи свой текущий план."
+      },
+      "skills": {
+        "nome": "skills",
+        "descricao": "Показывает инструменты и инструкцию агента",
+        "titulo_one": "{{agente}}: {{count}} инструмент",
+        "titulo_few": "{{agente}}: {{count}} инструмента",
+        "titulo_many": "{{agente}}: {{count}} инструментов",
+        "titulo_other": "{{agente}}: {{count}} инструмента",
+        "naoSei": "Сейчас не знаю инструменты {{agente}}: engine не ответил.",
+        "semAgente": "{{agente}} нет в каталоге.",
+        "instrucao": "Текущая инструкция (v{{versao}})",
+        "erro": "Не удалось прочитать каталог: {{motivo}}"
+      },
+      "buscar": {
+        "nome": "poisk",
+        "descricao": "Ищет в базе проекта текст из поля",
+        "semConsulta": "Введите в поле, что искать, и используйте /poisk.",
+        "titulo_one": "Поиск \"{{consulta}}\": {{count}} фрагмент",
+        "titulo_few": "Поиск \"{{consulta}}\": {{count}} фрагмента",
+        "titulo_many": "Поиск \"{{consulta}}\": {{count}} фрагментов",
+        "titulo_other": "Поиск \"{{consulta}}\": {{count}} фрагмента",
+        "erro": "Поиск не удался: {{motivo}}"
       }
     }
   },

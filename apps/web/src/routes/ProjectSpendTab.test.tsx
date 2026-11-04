@@ -489,6 +489,6 @@ describe('ProjectSpendTab — o editor do orçamento', () => {
     const salvar = await screen.findByRole('button', { name: 'Salvar orçamento' });
     const select = screen.getByRole('combobox', { name: /Ao atingir/i });
     expect(salvar.closest('form')).not.toBeNull();
-    expect(salvar.parentElement?.parentElement).toBe(select.closest('label')?.parentElement);
+    expect(salvar.parentElement?.parentElement).toBe(select.closest('[data-slot="field"]')?.parentElement);
   });
 });
