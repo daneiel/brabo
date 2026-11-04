@@ -9700,7 +9700,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:426`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:433`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -20115,7 +20115,7 @@ rótulo, não o comportamento.
   (`execute`), `:109` (`derrubarConexoesDaChave`);
   `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
   (`derrubarConexoesDoPat`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:674`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:693`
   (`disconnectRunnerCredential`);
   `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
   (`anular_pendentes_da_credencial`);
@@ -21488,7 +21488,7 @@ O kickoff do PO diz as três coisas.
   (`resume`),
   `apps/api/src/application/use-cases/gates/resume-parked-gate.use-case.ts:18`
   (`execute`),
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:360`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:379`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
   (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:59`
@@ -25591,3 +25591,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/comandos-do-composer.ts:110` (`gatilhoNoCursor`), `apps/web/src/lib/comandos-do-composer.ts:127` (`destinoDoAprovar`), `apps/web/src/lib/use-menu-do-composer.ts:24` (`useMenuDoComposer`), `apps/web/src/components/ai-elements/menu-do-composer.tsx:15` (`MenuDoComposer`).
 - **Teste:** `apps/web/src/routes/SessionComposer.menu.test.tsx` (menu, filtro, Enter sem enviar, Esc, `/aprovar` comum e de teto, `/resumo`, `@` da sessão, chips e rota nova), `apps/web/src/lib/comandos-do-composer.test.ts`.
 - **Origem:** AT-717 (EP-031), lane web.
+
+### RN-995 — O catálogo do agente vem do engine e é só leitura: identidade e ferramentas do engine, instrução vigente do banco, sem prompt composto e sem schema, e engine fora do ar é "não sei", nunca "sem ferramentas" {#rn-995}
+
+- **Regra:** `GET /projects/:projectId/agent-catalog` (`viewer`, RN-102) devolve, por agente, a identidade do código, a instrução VIGENTE do projeto (`agent_instructions`, só a versão atual) e as ferramentas (`nome` e `descricao`, o texto em pt-BR que o modelo lê; os outros idiomas caem nele, ADR 0216). A fonte das ferramentas e da identidade é o engine, por `GET /internal/agents/catalog` (service token) — uma fonte só, sem cópia na api. Não expõe `parameters` (o JSON schema), o prompt composto do turno, o template do grafo nem credencial ou modelo. É o catálogo COMPLETO: o recorte por passo do Jev (RN-625) pode mostrar menos ao modelo. Leitura contida (ADR 0060): uma chamada ao engine e uma consulta ao banco, sem parâmetro livre; `conteudo` corta em 8 000 caracteres com `conteudoTotal` (molde da RN-589) e `descricao` em 1 000. Engine fora do ar: `identidade` e `ferramentas` vêm `null` com `motivoSemCatalogo: 'engine_indisponivel'` e as instruções do banco continuam vindo (RN-470). Os dev agents por módulo (`dev-api`) herdam a entrada única `dev-*` do engine.
+- **Onde:** `apps/api/src/application/use-cases/agents/get-agent-catalog.use-case.ts:39` (`execute`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:280` (`getAgentCatalog`), `apps/api/src/interfaces/http/agents/agent-catalog.controller.ts:32` (`get`); lado do engine: lane E1 da AT-686 (`Engine.Agents.CatalogoDeFerramentas`).
+- **Teste:** `apps/api/test/application/use-cases/agents/get-agent-catalog.use-case.spec.ts` (junção, tetos, `dev-*`, engine fora), `apps/api/test/interfaces/route-surface.spec.ts` (a rota e o papel).
+- **Origem:** AT-686 (EP-031), lane A1 (api).
