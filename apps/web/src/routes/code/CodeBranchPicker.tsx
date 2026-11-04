@@ -14,6 +14,7 @@ import type {
 } from '../../lib/api-types';
 import { AGENTS, type AgentDef } from '../../lib/agents';
 import { BranchIcon, CheckIcon, ChevronDownIcon } from '../../components/ui/icons';
+import { Input } from '@/components/shadcn/input';
 import styles from './CodeBranchPicker.module.css';
 
 const CHAVE_ESTADO_PR: Record<CodePullRequestState, string> = {
@@ -173,7 +174,8 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
           )}
 
           <form className={styles.formManual} onSubmit={irParaRefManual}>
-            <input
+            <Input
+              data-mono=""
               className={styles.inputManual}
               value={refManual}
               onChange={(e) => setRefManual(e.target.value)}

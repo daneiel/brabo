@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { mensagemDaApi, searchCode } from '../../lib/api-client';
+import { Input } from '@/components/shadcn/input';
 import styles from './CodeSearchPanel.module.css';
 
 interface CodeSearchPanelProps {
@@ -42,7 +43,7 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
       <div className={styles.cabecalho}>{t('search.title')}</div>
 
       <form className={styles.formulario} onSubmit={submeter}>
-        <input
+        <Input
           className={styles.input}
           value={termo}
           onChange={(e) => setTermo(e.target.value)}
