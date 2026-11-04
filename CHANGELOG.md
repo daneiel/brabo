@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **engine**: `GET /internal/agents/catalog` (service token) expõe a identidade e as ferramentas (nome e descrição) de cada agente, extraídas do `tool_specs/0` dos sete conversacionais e dos registros de execução e de gate; só leitura, sem schema nem prompt composto (RN-995, AT-686).
 - **api/engine**: uma mensagem para vários agentes (`POST /projects/:projectId/sessions/:sessionId/messages`, `developer`): UM `chat.message` com `destinatarios`, uma entrega por agente com o mesmo `mensagemId` e `recusada` com motivo para quem não a recebe; a rota de um agente só passa a gravar `destinatarios: [agent]`; entregue/cancelada na fila valem só para o agente da cópia (AT-717, RN-991, ADR 0247).
 - **web**: menus `@` e `/` no composer com o autocompletar do shadcn (`Command` em `Popover`): `@` escolhe vários destinatários entre os agentes da sessão (chips; dois ou mais usam `POST .../messages`) e `/` dispara `/pronto`, `/arquitetura`, `/handoff`, `/perguntas`, `/parar`, `/aprovar` (com confirmação, tetos só levam ao card), `/resumo`, `/plano` e `/ajuda`, com nome localizado (AT-717, RN-992).
 - **api**: capability `vision` ligada só no OpenRouter, provada por smoke real em 2026-11-03 com `google/gemini-2.5-flash` (AT-715, RN-989); os outros providers seguem `false`.

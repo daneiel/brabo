@@ -113,13 +113,7 @@ defmodule Engine.Agents.StaffServer do
        messages: [system_msg | history],
        # Frente 3 do plano de decision_record: `emit_artifact` entra como
        # SEGUNDA ferramenta, aditiva — `propose_rfc` continua a primeira.
-       tool_specs: [
-         StaffTools.spec(),
-         EmitArtifact.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec()
-       ],
+       tool_specs: tool_specs(),
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -378,5 +372,16 @@ defmodule Engine.Agents.StaffServer do
 
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      StaffTools.spec(),
+      EmitArtifact.spec(),
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec()
+    ]
   end
 end

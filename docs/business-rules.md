@@ -13609,7 +13609,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:895`
+  dispatch de `container_start` consultando antes de propor), `:889`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14333,7 +14333,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:638`
+  `propose_infra_pr` perguntando antes do HALT), `:632`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15617,10 +15617,10 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:751`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:321`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:744`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1115`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1120`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
@@ -16063,10 +16063,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:895`
-  (`recusa_local_de_subida`), `:953` (`recusa_por_estado`), `:1025`
-  (`recusa_ja_de_pe`), `:1033` (`recusa_sem_imagem_decidida`), `:1034`
-  (`recusa_pasta_nunca_confirmada`), `:1035` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:889`
+  (`recusa_local_de_subida`), `:945` (`recusa_por_estado`), `:1025`
+  (`recusa_ja_de_pe`), `:1027` (`recusa_sem_imagem_decidida`), `:1028`
+  (`recusa_pasta_nunca_confirmada`), `:1029` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16490,7 +16490,7 @@ deu e com as quatro ferramentas.
   (`user_message`), `:211` (`TurnoOrfao.fechar_ao_subir`), `:248`
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:368`
-  (`handle_info`), `:379` (`drenar_correcao_pendente`), `:462`
+  (`handle_info`), `:373` (`drenar_correcao_pendente`), `:456`
   (`toolloop.limit_reached`), `:1164` (`concluir`);
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
@@ -19098,9 +19098,9 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:511`
-  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1252`
-  (`registrar_subida`), `:1262` (`fechar_subida`), `:1155`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:505`
+  (`dispatch_calls`), `:541` (`recusa_pr_repetida_no_lote`), `:1252`
+  (`registrar_subida`), `:1254` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19365,8 +19365,8 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:265` (`handle_cast`),
-  `:716` (`propor_container_start`), `:797` (`subir_no_aceite`), `:800`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:259` (`handle_cast`),
+  `:710` (`propor_container_start`), `:791` (`subir_no_aceite`), `:794`
   (`eleger_candidata`), `:1435` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
@@ -19488,7 +19488,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:811`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:805`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -19675,7 +19675,7 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`fora_do_historico`), `:158` (`texto_do_turno`), `:182`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:245` (`_mensagem_id`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:405`
   (`cancel_queued_message`), `:468` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
@@ -20478,8 +20478,8 @@ nem a que o modelo copie do histórico. O catálogo volta intacto no turno
 seguinte; o turno normal continua com `emit_artifact` e
 `ask_structured_questions`.
 
-- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:228` (`executar_confirm_readiness`);
-  `:273` (`ferramentas_da_prontidao`)
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:223` (`executar_confirm_readiness`);
+  `:268` (`ferramentas_da_prontidao`)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:172` (o turno
   vai com `tools: []` e não grava regra nem pergunta) e `:192` (regressão: o turno
   normal mantém as duas ferramentas)
@@ -20557,8 +20557,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:533` (`fechar_handoff`);
-  `:560` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:510` (`fechar_handoff`);
+  `:551` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20585,12 +20585,12 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:589` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:578` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:589` (`kickoff_instruction`);
-  `:397` (`run_turn`)
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:578` (`kickoff_instruction`);
+  `:388` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
   (sem mapa, diz que não há — caso de falha) e `:202` (plano recusado pela api →
@@ -20686,7 +20686,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:420` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:404` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21037,9 +21037,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1296` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1288` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1296` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1288` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21335,7 +21335,7 @@ a tool `propose_container_start` sem `network`. A autonomia semeada não muda:
 publicadas da máquina, ADR 0189) está declarado no ADR.
 
 - **Código:** `apps/engine/lib/engine/session_events/event.ex:139` (`rede_do_arquiteto`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:809` (`rede_herdada`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:803` (`rede_herdada`)
 - **Testes:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` —
   "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
   "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
@@ -22110,7 +22110,7 @@ sem dizer qual.
   suspende o turno, RN-284) e Infra Lead.
 - **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:77` (`anotar`),
   `:96` (`descarregar`), `:141` (`classe`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:334` (`dispatch_tool`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:330` (`dispatch_tool`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs`
   ("Arquiteto com as cinco propose_adr recusadas fecha com nada gravado";
   "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
@@ -22442,7 +22442,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1607`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1599`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -22590,7 +22590,7 @@ sem dizer qual.
   leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
   [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
-  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:129`
+  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:615`
   (`ListarAdrsPropostas`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   (aprovada aparece aprovada, executada com a PR, recusada com o motivo, só as
@@ -22607,7 +22607,7 @@ sem dizer qual.
   fora da conversa e mandam consultar as duas leituras antes de afirmá-los, em
   vez do retrato de um resultado anterior. Nada de fluxo do time é narrado
   aqui ([RN-711](#rn-711)).
-- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:130`
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:616`
   (`ListarBacklog`), `apps/engine/lib/engine/harness/tools/propose_adr.ex:94`
   (`propor`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`
@@ -22947,7 +22947,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:618` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:593` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -23464,8 +23464,8 @@ sem dizer qual.
   com recusa nomeada que entra no laço (RN-163) e repassado no
   payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:27`
-  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1422`
-  (`build_kickoff`) e `:1323` (`abrir_pr`), e
+  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1414`
+  (`build_kickoff`) e `:1327` (`abrir_pr`), e
   `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   (describe "o compose sobe o app e a PR leva `run` (RN-851)")
@@ -23929,7 +23929,7 @@ sem dizer qual.
   não afirmar estado de ADR diferente. Leitura que falha diz "NÃO CONSEGUI LER"
   e manda dizer que não sabe — nunca "pendente".
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:50`
-  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:242`
+  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:223`
   (`contexto_de_prontidao`).
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   ("contexto_de_prontidao/2 (RN-849)").
@@ -24359,7 +24359,7 @@ sem dizer qual.
   reprova, nunca observação (estende a RN-854).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:60` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1422` (`build_kickoff`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1414` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
@@ -24952,7 +24952,7 @@ sem dizer qual.
   `heartbeat_timeout` 26 s depois de o usuário sair da tela. Presença por aba
   do projeto NÃO entra ([RN-064](business-rules/custo.md#rn-064)).
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`),
-  `apps/engine/lib/engine/agents/po_server.ex:320` (`gravar_texto_do_turno`)
+  `apps/engine/lib/engine/agents/po_server.ex:327` (`gravar_texto_do_turno`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:194` e
   `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origem:** AT-572 (TP-01 18ª, achado 4)
@@ -25113,7 +25113,7 @@ sem dizer qual.
 ### RN-908 — O kickoff do PO pede o backlog em lote, depois de ler, em camadas {#rn-908}
 
 - **Regra:** o kickoff do PO manda, nesta ordem: ler `listar_regras_de_negocio` e `listar_backlog` na mesma resposta, sem escrita junto; depois todos os épicos numa resposta só; depois todas as histórias, com o `epic_id` devolvido; depois todas as tarefas, com o `story_id` devolvido. Nunca recria épico que já existe, e no máximo cerca de 10 chamadas de ferramenta por resposta. Motivo medido: sem o pedido de lote, o nemotron faz 1 ferramenta por resposta e o qwen faz 3; com ele, 9 em cada (`parallel_tool_calls` não mudou nada). Ler primeiro é o que impede o qwen de criar épicos sem ler o backlog. Não altera o teto `@max_iterations` (RN-166).
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:630` (`build_kickoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:617` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
 - **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
 
@@ -25196,7 +25196,7 @@ sem dizer qual.
 ### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
 
 - **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
-- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1657` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1649` (`correct`), `:408` (`iniciar_correcao`), `:200` (`init`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25413,7 +25413,7 @@ sem dizer qual.
 ### RN-962 — O compose do entregável usa volume nomeado, nunca bind-mount relativo {#rn-962}
 
 - **Regra:** o Infra Lead pede VOLUME NOMEADO para dados persistentes e `.env.example` só com as variáveis obrigatórias, sem valor. `propose_infra_pr` recusa, ANTES de abrir a PR, arquivo de compose com bind-mount relativo (`- ./pasta:/destino` ou `source: ./pasta`): a pasta nasce `root` na primeira subida e o app non-root não grava nela. A recusa é resultado de ferramenta (entra no laço, RN-163) e registra `tool.result` com `ok: false`.
-- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:675` (`recusa_de_bind_mount_relativo`).
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:669` (`recusa_de_bind_mount_relativo`).
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` (volume nomeado passa; formas curta, com aspas e longa são recusadas).
 - **Origem:** AT-644 (EP-031).
 ### RN-961 — O aviso de recorte diz que as ferramentas fora dele podem ser pedidas neste passo {#rn-961}
@@ -25591,3 +25591,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/comandos-do-composer.ts:110` (`gatilhoNoCursor`), `apps/web/src/lib/comandos-do-composer.ts:127` (`destinoDoAprovar`), `apps/web/src/lib/use-menu-do-composer.ts:24` (`useMenuDoComposer`), `apps/web/src/components/ai-elements/menu-do-composer.tsx:15` (`MenuDoComposer`).
 - **Teste:** `apps/web/src/routes/SessionComposer.menu.test.tsx` (menu, filtro, Enter sem enviar, Esc, `/aprovar` comum e de teto, `/resumo`, `@` da sessão, chips e rota nova), `apps/web/src/lib/comandos-do-composer.test.ts`.
 - **Origem:** AT-717 (EP-031), lane web.
+
+### RN-995 — O catálogo do agente (identidade e ferramentas) vem do engine e é só leitura, sem prompt composto e sem schema {#rn-995}
+
+- **Regra:** `GET /internal/agents/catalog` (service token, sem parâmetro) devolve, por agente, a identidade do código e as ferramentas (`nome`, `descricao` até 1 000 caracteres). A fonte é o `tool_specs/0` de cada um dos sete conversacionais e os registros de execução e de gate; nada é copiado. Não devolve `parameters`, o prompt composto nem o template do grafo. É o catálogo COMPLETO: o Jev (RN-625) recorta o menu por passo. Psicólogo e Anamnese ficam fora.
+- **Onde:** `apps/engine/lib/engine/agents/catalogo_de_ferramentas.ex:38` (`listar`), `apps/engine/lib/engine_web/controllers/agent_catalog_controller.ex:9` (`index`), `apps/engine/lib/engine_web/router.ex:79`, `apps/engine/lib/engine/agents/po_server.ex:824` (`tool_specs`).
+- **Teste:** `apps/engine/test/engine/agents/catalogo_de_ferramentas_test.exs` (bate com cada fonte, teto da descrição, 401 sem token e 200 com).
+- **Origem:** AT-686 (EP-031), lane engine.
