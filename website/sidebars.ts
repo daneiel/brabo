@@ -187,17 +187,17 @@ const sidebars: SidebarsConfig = {
         {
           type: 'link',
           label: 'Como contribuir',
-          href: 'https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md',
+          href: `https://github.com/${process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo'}/blob/dev/CONTRIBUTING.md`,
         },
         {
           type: 'link',
           label: 'Onde pedir ajuda',
-          href: 'https://github.com/daneiel/brabo/blob/dev/SUPPORT.md',
+          href: `https://github.com/${process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo'}/blob/dev/SUPPORT.md`,
         },
         {
           type: 'link',
           label: 'Reportar vulnerabilidade',
-          href: 'https://github.com/daneiel/brabo/blob/dev/SECURITY.md',
+          href: `https://github.com/${process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo'}/blob/dev/SECURITY.md`,
         },
       ],
     },

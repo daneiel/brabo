@@ -23,6 +23,9 @@ import { join, resolve } from 'node:path';
 // config uma vez por locale com `DOCUSAURUS_CURRENT_LOCALE` definido (`start`
 // sem `--locale` cai no pt-BR). O derivado vai para `website/.openapi/`,
 // ignorado pelo git, porque o plugin só aceita caminho de arquivo.
+// O dono do repositório vem do ambiente (AT-691); o CI exporta GITHUB_REPOSITORY.
+const REPO = process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo';
+const OWNER = REPO.split('/')[0];
 const LOCALE_ATUAL = process.env.DOCUSAURUS_CURRENT_LOCALE || 'pt-BR';
 const RAIZ_DO_REPO = resolve(__dirname, '..');
 const SPEC_DO_LOCALE = (() => {
@@ -96,9 +99,9 @@ const config: Config = {
     'Um time de agentes de IA conduz sua aplicação — você mantém a autoridade final',
   favicon: 'img/favicon.ico',
 
-  url: 'https://daneiel.github.io',
+  url: `https://${OWNER}.github.io`,
   baseUrl: BASE_URL,
-  organizationName: 'daneiel',
+  organizationName: OWNER,
   projectName: 'brabo',
   trailingSlash: false,
 
@@ -246,7 +249,7 @@ const config: Config = {
           // o caminho relativo ao siteDir e produziria `.../docs/../docs/x.md`,
           // que o GitHub não resolve. `docPath` já vem relativo a docs/.
           editUrl: ({ docPath }) =>
-            `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/docs/${docPath}`,
+            `https://github.com/${REPO}/blob/${EDIT_BRANCH}/docs/${docPath}`,
           showLastUpdateTime: true,
           showLastUpdateAuthor: true,
           // O NÚMERO DO ADR É A IDENTIDADE DELE. Por padrão o Docusaurus
@@ -311,12 +314,12 @@ const config: Config = {
           label: CAMINHO_ATUAL,
           position: 'right',
           items: DEGRAUS.map((d) => ({
-            href: `https://daneiel.github.io/brabo/${d.caminho}/`,
+            href: `https://${OWNER}.github.io/brabo/${d.caminho}/`,
             label: d.branch === DOCS_BRANCH ? `${d.rotulo} ✓` : d.rotulo,
           })),
         },
         {
-          href: 'https://github.com/daneiel/brabo',
+          href: `https://github.com/${REPO}`,
           label: 'GitHub',
           position: 'right',
         },
@@ -346,34 +349,34 @@ const config: Config = {
           items: [
             {
               label: 'Como contribuir',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/CONTRIBUTING.md`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/CONTRIBUTING.md`,
             },
             {
               label: 'Onde pedir ajuda',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/SUPPORT.md`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/SUPPORT.md`,
             },
             {
               label: 'Segurança',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/SECURITY.md`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/SECURITY.md`,
             },
           ],
         },
         {
           title: 'Mais',
           items: [
-            { label: 'GitHub', href: 'https://github.com/daneiel/brabo' },
+            { label: 'GitHub', href: `https://github.com/${REPO}` },
             { label: 'Me pague um café (Ko-fi)', href: 'https://ko-fi.com/daneiel' },
             {
               label: 'CHANGELOG',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/CHANGELOG.md`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/CHANGELOG.md`,
             },
             {
               label: 'Licença MIT',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/LICENSE`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/LICENSE`,
             },
             {
               label: 'Avisos de terceiros',
-              href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/THIRD_PARTY_NOTICES.md`,
+              href: `https://github.com/${REPO}/blob/${EDIT_BRANCH}/THIRD_PARTY_NOTICES.md`,
             },
           ],
         },
