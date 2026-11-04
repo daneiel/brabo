@@ -10,6 +10,8 @@ import type {
   RegistroDeGates,
 } from '../lib/api-types';
 import { Badge } from './ui/Badge';
+import { Alert } from './ui/Alert';
+import { Card } from './ui/Card';
 import { TestResults } from './ai-elements/test-results';
 import { Table, type TableColumn } from './ui/Table';
 import { AlertIcon, CheckIcon, ClockIcon, PrIcon } from './ui/icons';
@@ -190,7 +192,7 @@ export function PrGateTimeline({
   const prUrl = executionResult?.pullRequestUrl;
 
   return (
-    <div className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.header}>
         <PrIcon size={16} />
         <span className={styles.title}>{task.title}</span>
@@ -222,7 +224,9 @@ export function PrGateTimeline({
       </div>
 
       {task.blocked && task.blockedReason && (
-        <div className={styles.blockedReason}>{task.blockedReason}</div>
+        <Alert tone="danger">
+          <span className={styles.blockedReason}>{task.blockedReason}</span>
+        </Alert>
       )}
 
       {verdicts.length > 0 && (
@@ -237,7 +241,7 @@ export function PrGateTimeline({
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -275,7 +279,7 @@ function VerdictCard({
   ];
 
   return (
-    <div className={styles.verdictCard}>
+    <Card padding="none" radius="md" recorta className={styles.verdictCard}>
       <Collapsible open={expanded} onOpenChange={() => onToggle()}>
       <CollapsibleTrigger className={styles.verdictHeader}>
         <Badge tone={approved ? 'success' : 'danger'}>
@@ -304,7 +308,7 @@ function VerdictCard({
           {verdict.subVerdicts && verdict.subVerdicts.length > 0 && (
             <div className={styles.subVerdicts}>
               {verdict.subVerdicts.map((sv) => (
-                <div key={sv.agentId} className={styles.subVerdictCard}>
+                <Card key={sv.agentId} padding="sm" radius="md" className={styles.subVerdictCard}>
                   <div className={styles.subVerdictHeader}>
                     <Badge tone={sv.veredito === 'approved' ? 'success' : 'danger'}>
                       {sv.label}:{' '}
@@ -321,27 +325,27 @@ function VerdictCard({
                       ))}
                     </ItemGroup>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}
           {verdict.dispensed && verdict.dispensed.length > 0 && (
             <div className={styles.subVerdicts}>
               {verdict.dispensed.map((d) => (
-                <div key={d.agentId} className={styles.subVerdictCard}>
+                <Card key={d.agentId} padding="sm" radius="md" className={styles.subVerdictCard}>
                   <div className={styles.subVerdictHeader}>
                     <Badge tone="muted">
                     {d.label}: {t('prGateTimeline.verdict.dispensed')}
                   </Badge>
                     <span className={styles.verdictSummary}>{d.justification}</span>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
         </div>
       </CollapsibleContent>
       </Collapsible>
-    </div>
+    </Card>
   );
 }
