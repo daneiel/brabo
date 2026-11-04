@@ -10,11 +10,11 @@ A `/v1/models` da Anthropic não traz preço nem sinaliza raciocínio no Brabo: 
 
 ## Decisão
 
-1. Provider cuja API não informa preço guarda uma tabela de preço de LISTA no código, com a data da fonte (`PRECO_DE_LISTA_ANTHROPIC`, 2026-10-06), casada pelo ID sem sufixo de data. ID fora da tabela segue sem preço.
+1. Provider cuja API não informa preço lê o preço de LISTA da tabela única do fabricante (`precos-do-fabricante.ts`, RN-965, com link e data da fonte por linha), a MESMA da tela de sugestão, e agora também usada pelo sync. O `listModels` casa pelo ID e, se não achar, pelo ID sem sufixo de data. ID fora da tabela segue sem preço.
 2. O sync não muda: `manual_pricing` continua vencendo o catálogo remoto; o preço de lista só entra em linha não manual.
 3. `supportsReasoning` vem de `capabilities.thinking` do SDK, com a família como reserva.
 
 ## Consequências
 
-- A tabela envelhece: atualizar é editar a constante e a data, e o preço de modelo novo é curadoria até lá.
-- A tela de sugestão (`precos-do-fabricante.ts`, RN-965) segue independente.
+- A tabela envelhece: atualizar é editar `precos-do-fabricante.ts` e `conferidoEm`, e o preço de modelo novo é curadoria até lá.
+- Há uma fonte só: tela de sugestão e sync não divergem.
