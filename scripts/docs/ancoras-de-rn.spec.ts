@@ -82,8 +82,8 @@ describe('a árvore real', () => {
       return [];
     });
     for (const l of ['en', 'ru', 'zh-Hans']) {
-      expect(pedidos).toContain(`website/i18n/${l}/docusaurus-plugin-content-docs/current/business-rules.md`);
-      expect(pedidos).toContain(`website/i18n/${l}/docusaurus-plugin-content-docs/current/business-rules/*.md`);
+      expect(pedidos).toContain(`docs/i18n/${l}/business-rules.md`);
+      expect(pedidos).toContain(`docs/i18n/${l}/business-rules/*.md`);
     }
     expect(pedidos.some((g) => g.includes('i18n/pt-BR'))).toBe(false);
   });

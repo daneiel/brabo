@@ -24,7 +24,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'website/build');
+const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'build/docs-site');
 const SPEC = JSON.parse(readFileSync(join(RAIZ, 'docs/reference/openapi.json'), 'utf8'));
 
 const METODOS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);

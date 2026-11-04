@@ -5,7 +5,7 @@
  *
  *   node scripts/docs/links-do-locale.mjs [<dir-do-build>]
  *
- * Sem argumento, usa `website/build`. Roda DEPOIS de `pnpm docs:build`.
+ * Sem argumento, usa `build/docs-site`. Roda DEPOIS de `pnpm docs:build`.
  *
  * DUAS PEÇAS NUM ARQUIVO, porque são a mesma afirmação vista dos dois lados:
  *
@@ -93,12 +93,9 @@ export function reescreverLinkDeGap(
 ) {
   // `sourceFilePath` chega relativo ao CWD do processo (`website/`), por isso
   // `../docs/reference/...` — nunca comparar com `startsWith` supondo raiz do
-  // repo. Uma fonte em `website/i18n/pt-BR/.../current/adr/x.md` e uma em
+  // repo. Uma fonte em `docs/i18n/pt-BR/adr/x.md` e uma em
   // `docs/adr/x.md` são o MESMO tipo de arquivo, só em locales diferentes.
-  const MARCA_I18N = 'docusaurus-plugin-content-docs/current/';
-  const origemRelativaARaiz = sourceFilePath.includes(MARCA_I18N)
-    ? sourceFilePath.slice(sourceFilePath.indexOf(MARCA_I18N) + MARCA_I18N.length)
-    : sourceFilePath.slice(sourceFilePath.indexOf('docs/') + 'docs/'.length);
+  const origemRelativaARaiz = sourceFilePath.replace(/^.*?docs\/(?:i18n\/[^/]+\/)?/, '');
 
   // As três zonas de gap conhecidas (ver o comentário no config): `reference/`
   // é gerado e não traduzido; `adr/` atrasa tradução toda semana; `explanation/`
@@ -192,7 +189,7 @@ export function acharLocaleDuplicado(dirBuild) {
 
 function main() {
   const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-  const dir = path.resolve(process.argv[2] ?? path.join(raiz, 'website/build'));
+  const dir = path.resolve(process.argv[2] ?? path.join(raiz, 'build/docs-site'));
   if (!existsSync(dir)) {
     console.error(`links-do-locale: o build não existe em ${dir} — rode \`pnpm docs:build\` antes.`);
     process.exit(2);

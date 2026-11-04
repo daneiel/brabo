@@ -19,11 +19,10 @@ Todo texto novo nasce em pt-BR; os outros idiomas são traduções dele.
 | Русский | `ru` | one, few, many, other | [Notas do russo](localizacao-ru.md) |
 | 简体中文 | `zh-Hans` | other | [Notas do chinês](localizacao-zh-hans.md) |
 
-Os códigos são os mesmos no Docusaurus, no i18next, no `<html lang>` e em
+Os códigos são os mesmos no gerador do site, no i18next, no `<html lang>` e em
 `users.locale`. A busca local do site usa os dela (`pt`, `en`, `ru`, `zh`).
 
-No site, o seletor de idioma fica na barra de cima (`localeDropdown` em
-`website/docusaurus.config.ts`), com os rótulos acima, e leva à mesma página no
+No site, o seletor de idioma fica na barra de cima (`scripts/docs/site/layout.mjs`), com os rótulos acima, e leva à mesma página no
 idioma escolhido; cada idioma mora no próprio caminho (`/en/`, `/ru/`,
 `/zh-Hans/`; o pt-BR na raiz do degrau).
 
@@ -56,7 +55,7 @@ commit da fonte que ela traduz. É ele que separa "em dia" de "defasada". A
 medição de hoje está em [Paridade de tradução](../reference/paridade-de-traducao.md),
 gerada por `pnpm docs:generate`.
 
-Os rótulos da lateral de Referência e da barra de cima vêm de `website/sidebars.ts` e dos `navbar.json`/`current.json` de cada idioma; desde o ADR 0219 o conteúdo das páginas de `reference/` também é traduzido, inclusive o bloco gerado, e só a página de paridade fica fora.
+Os rótulos da lateral de Referência e da barra de cima vêm de `scripts/docs/site/navegacao.mjs` e do `current.json` de cada idioma em `docs/i18n/<locale>/`; desde o ADR 0219 o conteúdo das páginas de `reference/` também é traduzido, inclusive o bloco gerado, e só a página de paridade fica fora.
 
 ## O que nunca se traduz
 

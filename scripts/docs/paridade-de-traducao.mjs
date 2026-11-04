@@ -4,7 +4,7 @@
  * Mede, por locale (`en`, `ru`, `zh-Hans`), quanto da fonte pt-BR (`docs/`,
  * inclusive `docs/reference/**` desde o ADR 0219, menos o próprio relatório e
  * o `openapi.json` — `ehFonteTraduzivel`) tem tradução em
- * `website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, e se cada
+ * `docs/i18n/<locale>/docusaurus-plugin-content-docs/current/`, e se cada
  * tradução está EM DIA ou DEFASADA. A procedência é o `traducao_de:` do
  * frontmatter (o commit da fonte que foi traduzido). Defasada = a fonte tem
  * commit MAIS NOVO (pela data de commit, nunca pelo relógio) que o
@@ -207,7 +207,7 @@ export function relatorio(docs, ui, aviso, api) {
   if (api) {
     l.push('## API (Redoc)', '');
     l.push(
-      'Textos distintos da referência da API (`/reference/api/`) contra o catálogo `website/i18n/<locale>/openapi-textos.json` (ADR 0220). ' +
+      'Textos distintos da referência da API (`/reference/api/`) contra o catálogo `docs/i18n/<locale>/openapi-textos.json` (ADR 0220). ' +
         'A fonte é o texto dos decorators da api, quase todo em inglês: `pt-BR`, `ru` e `zh-Hans` traduzem todos, e `en` só os que estão em pt-BR ' +
         '(diacrítico do português ou palavra funcional como "não", "para", "que"). Não soma aos caracteres das páginas.',
       '',
@@ -261,7 +261,7 @@ export function medirDoRepositorio(raiz) {
   }
   const traducoes = {};
   for (const loc of LOCALES) {
-    const dir = join(raiz, 'website/i18n', loc, 'docusaurus-plugin-content-docs/current');
+    const dir = join(raiz, 'docs/i18n', loc);
     traducoes[loc] = new Map(listar(dir).map((rel) => [rel, readFileSync(join(dir, rel), 'utf8')]));
   }
   const cache = new Map();

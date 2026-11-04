@@ -298,7 +298,7 @@ correção). Não alargue a janela, e não estreite o padrão para fazer uma
 referência real sumir; estreite-o só por um falso positivo real, com o
 caso no spec.
 
-As traduções pt-BR dos três arquivos de RN sob `website/i18n/` **não**
+As traduções pt-BR dos três arquivos de RN sob `docs/i18n/` **não**
 são conferidas. Elas têm poucas referências (23 casam com o padrão, 15
 delas erradas em 2026-10-01), e a tradução está atrás da fonte em inglês
 de todo modo; conferir uma cópia que ninguém mantém em dia reprovaria
@@ -312,7 +312,7 @@ outro arquivo. Em 2026-09-26 (AT-230) a `dev` tinha **451** cabeçalhos
 `### RN-` e **449** âncoras. A RN-305 e a RN-306 tinham sido escritas
 sem uma, em `business-rules.md` e na tradução pt-BR dele, e nada
 reprovou. O build do site não pega isso: sem âncora explícita o
-Docusaurus deriva o id do texto do cabeçalho e a página compila. O que
+o gerador deriva o id do texto do cabeçalho e a página compila. O que
 quebra é um link `#rn-305` que alguém escreve depois. A contagem de RNs
 também não pega, porque conta cabeçalhos, não âncoras.
 
@@ -333,7 +333,7 @@ acrescenta.
 **As traduções também são cobertas.** Os arquivos são achados por glob:
 `docs/business-rules.md`, `docs/business-rules/*.md` (a fonte pt-BR,
 ADR 0216), e os mesmos dois caminhos sob
-`website/i18n/<locale>/docusaurus-plugin-content-docs/current/` para
+`docs/i18n/<locale>/` para
 cada locale traduzido em `LOCALES_TRADUZIDOS` (`en`, `ru`, `zh-Hans`).
 O site de um locale serve `business-rules#rn-305` a partir do arquivo
 traduzido, e uma tradução anterior tinha copiado o cabeçalho sem a
@@ -392,7 +392,7 @@ culpa do PR que a quebrou, que é também o PR que pode consertá-la.
 
 **Só o runbook da fonte (`docs/runbook.md`) tem a tabela.** A cópia
 pt-BR antiga dele estava atrás (AT-209) e saiu com o ADR 0216; uma
-tradução futura sob `website/i18n/<locale>/` cai na regra `traducao` do
+tradução futura sob `docs/i18n/<locale>/` cai na regra `traducao` do
 docmap (`warn`) e não teria os dez ids explícitos que esta tabela
 acrescentou. Uma segunda cópia da tabela ali, sem conferência, seria
 exatamente a cópia que a tabela existe para substituir.
@@ -428,7 +428,7 @@ fase) é `CEGO` e reprova.
 **Severidade: `block`**, como a tabela do runbook: nasceu com todo ADR
 classificado, então o que a quebrar depois é um ADR novo cujo PR
 esqueceu a linha dele em `temas.yml` — o PR que pode consertá-la. As
-traduções do índice moram sob `website/i18n/<locale>/` e não são
+traduções do índice moram sob `docs/i18n/<locale>/` e não são
 conferidas; a regra `traducao` avisa, como sempre.
 
 ## As peças {#the-pieces}
@@ -596,28 +596,26 @@ create no mesmo arquivo.
 em vez de virar um 404 em produção. É o mecanismo mais barato do
 conjunto inteiro.
 
-### Página nova precisa entrar à mão no `sidebars.ts` {#a-new-page-needs-to-be-added-to-sidebarsts-by-hand}
+### Página nova precisa entrar à mão em `navegacao.mjs` {#a-new-page-needs-to-be-added-to-sidebarsts-by-hand}
 
 O conteúdo Markdown mora em `docs/`, mas o **roteamento** mora em
-`website/sidebars.ts` — e as seções dele enumeram os itens um a um, em
-vez de varrer o diretório. Criar um arquivo em `docs/` sem acrescentá-lo
-lá produz uma página que existe, é servida por URL direta e **não
-aparece na navegação**.
+`scripts/docs/site/navegacao.mjs` (o porte do antigo `sidebars.ts`) — e as
+seções dele enumeram os itens um a um, em vez de varrer o diretório. Criar um
+arquivo em `docs/` sem acrescentá-lo lá produz uma página que existe, é servida
+por URL direta e **não aparece na navegação**.
 
-O build **não** reprova por isso: uma página órfã não é um link
-quebrado. É uma conferência visual, e é o único passo do mecanismo sem
-rede de segurança — depois do `pnpm docs:build`, abra a barra lateral e
-confirme que a página está lá.
+O build **não** reprova por isso: uma página órfã não é um link quebrado. É uma
+conferência visual — depois do `pnpm docs:build`, abra a barra lateral e confirme
+que a página está lá.
 
-A exceção são os ADRs: o grupo "Decisões (ADR)" é **derivado** a cada
-build de `docs/adr/temas.yml` e dos arquivos em `docs/adr/` — uma
-subcategoria por tema, na ordem da lista, com os ADRs em ordem numérica
-(AT-560). ADR novo entra no grupo do tema dele sem tocar no
-`sidebars.ts`. Se o parser não achar tema nenhum, ADR mapeado nenhum ou
-um ADR sem tema (que o `docs:check` já reprova), o build quebra com erro
-nomeado em vez de desenhar uma lateral errada. A Explicação é enumerada à mão em
-cinco grupos por assunto, e página nova ali ainda entra pelo caminho
-acima.
+A exceção são os ADRs: o grupo "Decisões (ADR)" é **derivado** a cada build de
+`docs/adr/temas.yml` e dos arquivos em `docs/adr/` — uma subcategoria por tema,
+na ordem da lista, com os ADRs em ordem numérica (AT-560). ADR novo entra no
+grupo do tema dele sem tocar na navegação. Se o parser não achar tema nenhum,
+ADR mapeado nenhum ou um ADR sem tema (que o `docs:check` já reprova), o build
+quebra com erro nomeado em vez de desenhar uma lateral errada. A Explicação é
+enumerada à mão em cinco grupos por assunto, e página nova ali ainda entra pelo
+caminho acima.
 
 ### `api-render-check.mjs` — build verde não é página que renderiza {#api-render-checkmjs--a-green-build-isnt-a-page-that-renders}
 
@@ -626,12 +624,9 @@ operação da referência da API foram ao ar mortas nas releases `v1.0.0`
 e `v1.0.1`**, e nenhuma checagem pegou.
 
 A configuração do Docusaurus não declarava `docItemComponent:
-'@theme/ApiItem'`, então o Docusaurus usou o `@theme/DocItem` padrão.
-`ApiItem` é o único lugar do `docusaurus-theme-openapi-docs` que monta o
-`<Provider>` do redux, e o `@theme/ApiExplorer/MethodEndpoint` que cada
-`.api.mdx` importa lê esse store com `useSelector`. Sem o invólucro, o
-contexto é nulo — e o error boundary trocava a página inteira por
-*"This page crashed."*
+'@theme/ApiItem'`, e o `ApiItem` é o único lugar do plugin de OpenAPI que
+montava o `<Provider>` do redux. Sem o invólucro, o contexto era nulo — e o
+error boundary trocava a página inteira por *"This page crashed."*
 
 O modo de falha é o que importa aqui, porque ele derrota todas as outras
 peças deste mecanismo:
@@ -646,35 +641,32 @@ peças deste mecanismo:
 Em outras palavras: **"o build passou" nunca foi prova de que a página
 funciona.**
 
-Desde o ADR 0206 esse plugin saiu: a referência é **uma página Redoc**
-(redocusaurus, renderizada no servidor) em `/reference/api/`, e não há
-`ApiItem` para esquecer. A lição fica, então a guarda fica também:
-`api-render-check.mjs` roda depois do `docs:build` e afirma, nos dois
-locales, que `reference/api.html` existe, carrega o `info.title` do spec
-e contém uma seção renderizada no servidor por operação de
-`docs/reference/openapi.json` (o `data-section-id=tag/<tag>/operation/<id>`
-do Redoc).
+Desde o ADR 0206 esse plugin saiu e, desde o ADR 0253, a referência é uma
+página **Redoc 3 por tag**, gerada por SSR no build (`scripts/docs/site/openapi.mjs`,
+`disableTelemetry: true`, sem hidratação no navegador): `reference/api.html` é o
+índice das tags e cada tag fica em `reference/api/<tag>.html#<operationId>`. A
+lição fica, então a guarda fica também: `api-render-check.mjs` roda depois do
+`docs:build` e afirma, nos quatro locales, que as páginas existem, carregam o
+`info.title` do spec e somam uma seção renderizada por operação de
+`docs/reference/openapi.json` (263 hoje, contadas por página).
 
-Ela pega a página sumindo, renderizando vazia ou perdendo operações —
-não uma falha de hidratação, que exigiria um navegador headless.
+Ela pega a página sumindo, renderizando vazia ou perdendo operações.
 
 O mesmo episódio produziu a regra `site-e-publicacao` do mapa:
 `website/**` não era coberto por regra nenhuma, e mudar a configuração
-do site não cobrava documentação.
+do site não cobrava documentação (hoje a regra cobre também `scripts/docs/site/**`).
 
 ### Quatro locales, com pt-BR como fonte (ADR 0216) {#four-locales-with-pt-br-as-the-source-adr-0216}
 
 `docs/` é a árvore **pt-BR**, a fonte e o locale padrão
 (`defaultLocale: 'pt-BR'`, servido na raiz de cada ambiente). Os locales
-traduzidos são `en`, `ru` e `zh-Hans`, sob
-`website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, com os
-rótulos do tema em `website/i18n/<locale>/docusaurus-theme-classic/` e
-os rótulos da barra lateral em
-`.../docusaurus-plugin-content-docs/current.json`. Uma página sem
-tradução num locale é servida a partir da fonte pt-BR no mesmo slug. A
-busca local indexa `pt`, `en`, `ru` e `zh`. Páginas cuja cópia pt-BR
-antiga estava desatualizada ficam em `docs/` no idioma em que estão até
-o lote delas.
+traduzidos são `en`, `ru` e `zh-Hans`, sob `docs/i18n/<locale>/` (o gerador
+NÃO trata essa pasta como página da fonte pt-BR), com os rótulos da barra lateral
+em `docs/i18n/<locale>/current.json` e os textos da moldura no próprio gerador
+(`scripts/docs/site/layout.mjs`). Uma página sem tradução num locale é servida a
+partir da fonte pt-BR no mesmo slug. A busca é por substring, com um índice por
+idioma carregado só quando a pessoa busca. Páginas cuja cópia pt-BR antiga estava
+desatualizada ficam em `docs/` no idioma em que estão até o lote delas.
 
 O site em inglês saiu da raiz para `/brabo/<environment>/en/…`, e links
 antigos para `/brabo/<environment>/pt-BR/…` são reescritos pelo
@@ -683,7 +675,7 @@ antigos para `/brabo/<environment>/pt-BR/…` são reescritos pelo
 0073).
 
 A regra `traducao` do docmap (era `traducao-pt-br`) vigia a fonte e
-aponta para `website/i18n/`. Ela é `warn` e nunca `block`: exigir
+aponta para `docs/i18n/`. Ela é `warn` e nunca `block`: exigir
 tradução em todo PR de doc custaria três traduções por mudança.
 
 ### A paridade de tradução é gerada, e a página diz quando está atrás (AT-550) {#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550}
@@ -692,7 +684,7 @@ O que segura o atraso é medição, não o docmap.
 `scripts/docs/paridade-de-traducao.mjs` (provado por mutação no spec ao
 lado) roda dentro do `pnpm docs:generate` e escreve dois arquivos:
 `docs/reference/paridade-de-traducao.md` (`generated: true`) e
-`website/src/data/traducao.json`. Por locale ele conta páginas e
+`docs/i18n/traducao.json`. Por locale ele conta páginas e
 caracteres traduzidos sobre a fonte (`docs/` inteiro, `reference/` incluído desde o ADR 0219, menos o próprio relatório e o `openapi.json`),
 e divide as páginas traduzidas em **em dia**, **desatualizadas** e **sem
 proveniência**. A proveniência é o `traducao_de: <SHA>` no frontmatter
@@ -706,12 +698,9 @@ pt-BR, e exige toda forma de plural que o `Intl.PluralRules` dá àquele
 locale. O `--check` reprova quando qualquer um dos dois arquivos está
 desatualizado.
 
-A faixa é um swizzle de wrap de `@theme/DocItem/Content`
-(`website/src/theme/DocItem/Content/index.tsx`). Fora do pt-BR, uma
-página cujo `metadata.source` está sob `@site/docs/` é o fallback pt-BR
-e diz isso; uma página traduzida que o `traducao.json` marca como
-desatualizada mostra a data da tradução e diz que o original mudou. Os
-textos moram no `code.json` de cada locale.
+A faixa é desenhada pelo `layout.mjs`. Fora do pt-BR, uma página servida do
+fallback pt-BR diz isso, e uma página traduzida que o `traducao.json` marca como
+desatualizada mostra a data da tradução e diz que o original mudou.
 `scripts/docs/faixa-de-traducao-check.mjs` roda depois do
 `pnpm docs:build` e confere o HTML estático: uma página de fallback tem a
 faixa (a amostra vem do primeiro locale, `en`, `ru` ou `zh-Hans`, que ainda
@@ -724,14 +713,13 @@ traduz estão em [Localização](localizacao.md).
 
 A fonte das descrições da página Redoc continua sendo o texto dos decorators
 da api, quase todo em inglês. Cada locale tem um catálogo
-`website/i18n/<locale>/openapi-textos.json`, chaveado pelo sha1 (12 hex) do
-texto da fonte, com `fonte` e `traducao`. O `docusaurus.config.ts` lê
-`DOCUSAURUS_CURRENT_LOCALE`, aplica o catálogo com
-`scripts/docs/openapi-por-locale.mjs` (função pura, provada por mutação no
-spec ao lado) e grava a spec do locale em `website/.openapi/`, fora do git.
+`docs/i18n/<locale>/openapi-textos.json`, chaveado pelo sha1 (12 hex) do
+texto da fonte, com `fonte` e `traducao`. O gerador do site aplica o catálogo
+com `scripts/docs/openapi-por-locale.mjs` (função pura, provada por mutação no
+spec ao lado) e grava a spec do locale em `reference/openapi.json` do build.
 Texto sem tradução fica o da fonte; o `en` só traduz os textos que estão em
-pt-BR. Os 18 rótulos que o Redoc aceita em `labels` são traduzidos; os demais
-textos fixos dele ficam em inglês. O `docs:check` reprova chave órfã (o texto
+pt-BR. Com o Redoc 3 (ADR 0253) a interface do Redoc fica toda em inglês: o 3.x
+removeu a opção `labels`. Só o texto do spec é traduzido. O `docs:check` reprova chave órfã (o texto
 saiu da api) e entrada inválida (fonte que não bate com o hash, ou número de
 trechos `` `…` `` diferente); faltando só avisa, e a paridade conta numa seção
 própria. `pnpm docs:openapi-textos <locale>` acrescenta ao catálogo as chaves
@@ -739,13 +727,13 @@ que faltam, com `traducao: ""`.
 
 ### `links-do-locale.mjs` — link reescrito escapa da checagem de link quebrado {#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check}
 
-O hook `markdown.hooks.onBrokenMarkdownLinks` em
-`website/docusaurus.config.ts` reescreve links que quebram só por causa
-de uma lacuna de tradução conhecida (`reference/`, `adr/`,
-`explanation/`) para `pathname://`. Essa é a saída de emergência oficial
-do Docusaurus, e escapar é o objetivo: **um link `pathname://` nunca
-mais é conferido**, então uma reescrita errada não consegue reprovar o
-build.
+Era o hook `markdown.hooks.onBrokenMarkdownLinks` do Docusaurus que reescrevia
+links quebrados por lacuna de tradução para `pathname://`, a saída de emergência
+que **nunca mais é conferida**. Com o gerador próprio (ADR 0253) essa reescrita
+desapareceu: cada locale é montado com o conjunto inteiro de páginas (tradução
+ou fallback no mesmo slug), e o checador de links do `docs:build` confere todo
+`href` e toda âncora. A guarda de locale duplicado fica, como histórico da
+lição:
 
 Uma reprovou, para o site pt-BR inteiro (AT-221). A reescrita devolvia
 `pathname:///pt-BR/<slug>`, mas `pathname://` não é um caminho absoluto
@@ -808,7 +796,7 @@ separou os dois: o endereço nomeia o **ambiente** para quem lê, e
 `main` é vocabulário de quem commita. É por isso que a `main` publica
 em `/prd/`; `qa` e `dev` coincidem por acaso, não por regra. O mapa
 branch→caminho existe num ponto por processo — o passo "qual degrau, e
-onde publica" do workflow, a tabela `DEGRAUS` em `docusaurus.config.ts`
+onde publica" do workflow, a tabela `DEGRAUS` em `scripts/docs/site/layout.mjs`
 e a de `landing.mjs` — e todo o resto deriva dele.
 
 Duas consequências que vale lembrar antes de mexer nisso:
@@ -839,10 +827,10 @@ releases.
 
 Três detalhes que não são óbvios e já custaram um bug cada:
 
-- **`baseUrl` vem de `DOCS_BASE_URL`**, com o valor de produção como
-  padrão. Ele entra em toda URL de asset: um site em `/brabo/dev/` com
-  `baseUrl: '/brabo/'` carrega o HTML e mais nada, e a página fica
-  *quebrada sem erro*.
+- **Os assets são RELATIVOS** (ADR 0253): o gerador não precisa do `baseUrl`
+  do degrau, e o mesmo build serve em `/brabo/dev/`, em `/brabo/prd/` ou
+  aberto do disco. No Docusaurus um `baseUrl` errado (`DOCS_BASE_URL`) deixava
+  a página *quebrada sem erro*; o `docs:build` agora checa todo `href`/`src`.
 - **O degrau é declarado em `DOCS_BRANCH`, não deduzido do `baseUrl`.**
   Antes era `BASE_URL === '/brabo/'`, e funcionava enquanto a `main`
   era a única na raiz. Com os três sob um subdiretório, essa comparação
@@ -851,12 +839,9 @@ Três detalhes que não são óbvios e já custaram um bug cada:
   nada no build reprova por subindexação. O ADR 0073 é exatamente o
   cenário para o qual essa separação foi construída: o caminho mudou
   para `/prd/` e `E_PRODUCAO` não precisou saber.
-- **`noIndex` fora da `main` exige `forceIgnoreNoIndex` na busca.**
-  O `@easyops-cn/docusaurus-search-local` descarta toda página com
-  `<meta name="robots" content="noindex">`, então as duas salvaguardas
-  se anulariam: os degraus publicariam com a busca morta, um índice de
-  666 bytes, *"No results"* para tudo. `noIndex` fala com buscadores
-  **externos**; `forceIgnoreNoIndex` fala com o índice **local**.
+- **`noindex` fora da `main`** vai no `<meta name="robots">` de cada página
+  e fala com buscadores **externos**; a busca do site é o índice local por
+  idioma e não o lê, então as duas salvaguardas não se anulam.
 - **A `main` monta a árvore antes de publicar**, trazendo `/dev/` e
   `/qa/` de volta. `keep_files: true` seria mais simples e estaria
   errado: nunca removeria nada, e uma página apagada do repositório
@@ -887,14 +872,12 @@ O desenho inteiro, com as alternativas descartadas, está no
 
 ## As cores do site vêm do produto {#site-colors-come-from-the-product}
 
-O `website/src/css/custom.css` IMPORTA `design/tokens.css` — a mesma fonte
-de cor do `apps/web` (ADR 0181) — e só aponta os `--ifm-*` do Infima para os
-tokens: escuro preto, claro branco, primary terracota (`--accent`), realce de
-código pelos `--syntax-*`. Nenhum hex é copiado. As fontes ficam as de sistema
-de propósito: o site não carrega as famílias que os `--font-*` nomeiam.
-`scripts/docs/contraste-do-site.spec.ts` resolve os `--ifm-*` de texto até hex
-nos dois temas e reprova abaixo de 4,5:1 contra o fundo (e reprova como CEGO
-se nada resolver).
+O `scripts/docs/site/assets/site.css` usa só `var(--token)` de
+`design/tokens.css` — a mesma fonte de cor do `apps/web` (ADR 0181): escuro
+preto, claro branco, acento terracota, realce de código pelos `--syntax-*`.
+Nenhum hex é copiado. `scripts/docs/contraste-do-site.spec.ts` resolve os
+tokens de texto até hex nos dois temas e reprova abaixo de 4,5:1 contra o
+fundo (e reprova como CEGO se nada resolver).
 
 A exceção é o índice da raiz (`/brabo/`, escrito por `scripts/docs/landing.mjs`):
 ele é HTML avulso no Pages, não alcança o `tokens.css` e por isso COPIA os
@@ -902,24 +885,28 @@ valores, nos dois temas pela preferência do sistema. A cópia é amarrada por
 `scripts/docs/landing.spec.ts`, que resolve os tokens e reprova o valor que
 divergir — ela já ficou petróleo uma vez depois do ADR 0181.
 
-### O gerador do site que substitui o Docusaurus (em construção) {#site-generator}
+### O gerador do site (ADR 0253) {#site-generator}
 
-O [ADR 0253](../adr/0253-o-site-de-docs-deixa-o-docusaurus.md) tira o site do
-Docusaurus. Enquanto a troca não acontece, o gerador novo roda AO LADO: `pnpm
-docs:site` escreve `build/docs-site/` (ignorado pelo git), com as mesmas URLs e
-âncoras do site publicado, e o Docusaurus e o CI seguem como estão. O núcleo
-mora em `scripts/docs/site/`: `paginas.mjs` descobre as páginas de cada idioma
-(a tradução onde existe, a fonte pt-BR no resto, então o link nunca sai do
-idioma), `render.mjs` converte o Markdown (âncora `{#id}`, admonições, Mermaid,
-realce com shiki, link `.md` para URL relativa) e `navegacao.mjs` porta a barra
-lateral, com os ADRs agrupados por `docs/adr/temas.yml`. O caminho das
-traduções é uma constante só (`CAMINHO_DAS_TRADUCOES`).
+O [ADR 0253](../adr/0253-o-site-de-docs-deixa-o-docusaurus.md) tirou o site do
+Docusaurus. `pnpm docs:build` roda `docs:site` (escreve `build/docs-site/`,
+ignorado pelo git, com as mesmas URLs e âncoras do site anterior) e
+`docs:site:check` (checador de links e âncoras, locale duplicado e faixa de
+tradução). O núcleo mora em `scripts/docs/site/`: `paginas.mjs` descobre as
+páginas de cada idioma (a tradução onde existe, a fonte pt-BR no resto, então o
+link nunca sai do idioma), `render.mjs` converte o Markdown (âncora `{#id}`,
+admonições, Mermaid, realce com shiki, link `.md` para URL relativa),
+`navegacao.mjs` porta a barra lateral, com os ADRs agrupados por
+`docs/adr/temas.yml`, `layout.mjs` desenha a moldura e `openapi.mjs` gera a
+referência da API. O caminho das traduções é uma constante só
+(`CAMINHO_DAS_TRADUCOES`, `docs/i18n/<locale>/`). `website/` guarda só a árvore
+isolada do Redoc.
 
 ## Rodando na sua máquina {#running-it-on-your-machine}
 
-`website/` tem `pnpm-lock.yaml` próprio desde o [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
-o `pnpm install` da raiz não o alcança mais, então a primeira vez (ou
-depois que o lockfile dele muda) precisa de um passo a mais:
+`website/` guarda só a árvore do Redoc e tem `pnpm-lock.yaml` próprio desde o
+[ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) — o `pnpm install` da
+raiz não o alcança, então a primeira vez (ou depois que o lockfile dele muda)
+precisa de um passo a mais:
 
 ```bash
 cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes
@@ -927,8 +914,8 @@ cd website && pnpm install && cd ..  # only the first time, or when website/pnpm
 pnpm docs:check      # validates the map + checks generated content is up to date
 pnpm docs:generate   # regenerates
 pnpm docs:drift      # simulates the PR check (origin/dev...HEAD)
-pnpm docs:build      # the build CI runs — pnpm --dir website build under the hood
-pnpm docs:start      # local server, with hot reload
+pnpm docs:build      # the build CI runs — generates build/docs-site and checks links
+pnpm docs:start      # builds and serves on http://localhost:3000
 
 # does the API reference render? needs the build above, and isn't part
 # of docs:check because that one doesn't build the site

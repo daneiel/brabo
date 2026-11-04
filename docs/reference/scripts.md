@@ -37,10 +37,10 @@ Fonte: o `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm engine:migrate` | `cd apps/engine && mix ecto.migrate` |
 | `pnpm e2e` | `pnpm --dir e2e test` |
 | `pnpm e2e:navegadores` | `pnpm --dir e2e navegadores` |
-| `pnpm docs:start` | `pnpm --dir website start` |
-| `pnpm docs:build` | `pnpm --dir website build` |
-| `pnpm docs:serve` | `pnpm --dir website serve` |
-| `pnpm docs:clear` | `pnpm --dir website clear` |
+| `pnpm docs:start` | `pnpm docs:site && pnpm docs:serve` |
+| `pnpm docs:build` | `pnpm docs:site && pnpm docs:site:check` |
+| `pnpm docs:serve` | `python3 -m http.server 3000 -d build/docs-site` |
+| `pnpm docs:clear` | `rm -rf build/docs-site` |
 | `pnpm docs:site` | `node scripts/docs/site/build.mjs` |
 | `pnpm docs:site:check` | `node scripts/docs/site/links.mjs && node scripts/docs/links-do-locale.mjs build/docs-site && node scripts/docs/faixa-de-traducao-check.mjs build/docs-site` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
@@ -138,21 +138,6 @@ Fonte: o `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm --filter @brabo/docker-port typecheck` | `tsc --noEmit` |
 | `pnpm --filter @brabo/docker-port lint` | `oxlint --deny-warnings src vitest.config.ts` |
 
-## website — `website/package.json`
-
-| comando | executa |
-|---|---|
-| `pnpm --dir website docusaurus` | `docusaurus` |
-| `pnpm --dir website start` | `docusaurus start` |
-| `pnpm --dir website build` | `docusaurus build` |
-| `pnpm --dir website swizzle` | `docusaurus swizzle` |
-| `pnpm --dir website deploy` | `docusaurus deploy` |
-| `pnpm --dir website clear` | `docusaurus clear` |
-| `pnpm --dir website serve` | `docusaurus serve` |
-| `pnpm --dir website write-translations` | `docusaurus write-translations` |
-| `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
-| `pnpm --dir website typecheck` | `tsc` |
-
 ## e2e — `e2e/package.json`
 
 | comando | executa |
@@ -204,4 +189,4 @@ Fonte: o `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-139 comandos no total. Alvo do Makefile sem a anotação `## descrição` não aparece aqui — anote-o na fonte.
+129 comandos no total. Alvo do Makefile sem a anotação `## descrição` não aparece aqui — anote-o na fonte.

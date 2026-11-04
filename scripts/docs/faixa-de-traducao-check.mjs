@@ -12,7 +12,7 @@
  *   - uma página com `idioma_original: en` (fonte ainda em inglês, AT-564) tem a
  *     faixa na raiz pt-BR e no fallback de outro locale, e NÃO no `en`.
  *
- * As páginas são escolhidas pelo `website/src/data/traducao.json` e pela
+ * As páginas são escolhidas pelo `docs/i18n/traducao.json` e pela
  * árvore de tradução, não fixadas: o lote que traduzir a página-exemplo não
  * quebra a guarda. ESCOPO: não abre navegador.
  */
@@ -22,10 +22,10 @@ import { fileURLToPath } from 'node:url';
 import { idiomaOriginal } from './faixa-de-traducao.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'website/build');
+const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'build/docs-site');
 const MARCA = 'data-faixa-de-traducao';
-const DADOS = JSON.parse(readFileSync(join(RAIZ, 'website/src/data/traducao.json'), 'utf8'));
-const TRADUZIDAS_EN = join(RAIZ, 'website/i18n/en/docusaurus-plugin-content-docs/current');
+const DADOS = JSON.parse(readFileSync(join(RAIZ, 'docs/i18n/traducao.json'), 'utf8'));
+const TRADUZIDAS_EN = join(RAIZ, 'docs/i18n/en');
 
 /** Rota simples: sem `id`/`slug` no frontmatter, a rota é o caminho sem extensão. */
 function rotaSimples(arquivo) {
@@ -51,7 +51,7 @@ const docs = (dir, base = '') =>
 
 const fonte = join(RAIZ, 'docs');
 const LOCALES = ['en', 'ru', 'zh-Hans'];
-const traduzidasEm = (loc) => join(RAIZ, 'website/i18n', loc, 'docusaurus-plugin-content-docs/current');
+const traduzidasEm = (loc) => join(RAIZ, 'docs/i18n', loc);
 const emIngles = (rel) => idiomaOriginal(readFileSync(join(fonte, rel), 'utf8')) === 'en';
 // `reference/` entra desde a AT-564 (ADR 0219); a página ainda em inglês tem caso próprio.
 const daFonte = (rel) => rotaSimples(join(fonte, rel)) && !emIngles(rel);

@@ -3,9 +3,9 @@
 [Português](README.md) · **English** · [Русский](README.ru.md) · [简体中文](README.zh-Hans.md)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="website/static/img/logo.svg" />
-  <source media="(prefers-color-scheme: light)" srcset="website/static/img/logo.svg" />
-  <img src="website/static/img/logo.svg" alt="Brabo logo" width="96" />
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.svg" />
+  <img src="docs/assets/logo.svg" alt="Brabo logo" width="96" />
 </picture>
 
 <h1>Brabo</h1>

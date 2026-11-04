@@ -1180,7 +1180,7 @@ function verificarVersaoAnunciada() {
 function gerarParidadeDeTraducao() {
   const { docs, ui, api } = medirDoRepositorio(RAIZ);
   escrever('docs/reference/paridade-de-traducao.md', relatorioDeParidade(docs, ui, AVISO, api) + '\n');
-  escrever('website/src/data/traducao.json', dadosDaFaixa(docs));
+  escrever('docs/i18n/traducao.json', dadosDaFaixa(docs));
 }
 
 // ADR 0220: órfã ou entrada inválida no catálogo da API reprova; faltando só avisa.
@@ -1190,9 +1190,9 @@ function verificarCatalogosDaApi() {
     const { orfas, invalidas, faltando } = aplicarCatalogo(spec, lerCatalogo(RAIZ, loc));
     if (orfas.length + invalidas.length > 0) {
       pendencias.push(`catálogo da API (${loc})`);
-      console.log(`  DESATUAL. website/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
+      console.log(`  DESATUAL. docs/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
     } else {
-      console.log(`  ok        website/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
+      console.log(`  ok        docs/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
     }
   }
 }

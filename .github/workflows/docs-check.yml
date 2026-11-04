@@ -76,10 +76,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `website/` NÃO é mais membro do workspace da raiz (ADR 0117) — tem
-      # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
-      # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
-      # abaixo falharia por `node_modules` ausente.
+      # `website/` NÃO é membro do workspace da raiz (ADR 0117) — guarda só a
+      # árvore do Redoc, com `pnpm-lock.yaml` PRÓPRIO, e o install acima não o
+      # alcança. Sem este passo, a página da API do `pnpm docs:build` falharia.
       - name: Instalar dependências do website
         working-directory: website
         run: pnpm install --frozen-lockfile
@@ -236,17 +235,9 @@ jobs:
 
           node scripts/docs/drift.mjs "origin/$BASE_REF...HEAD"
 
-      - name: Cache do Rspack
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-        with:
-          path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
-          restore-keys: |
-            rspack-${{ runner.os }}-${{ hashFiles('website/pnpm-lock.yaml') }}-
-            rspack-${{ runner.os }}-
-
-      # onBrokenLinks / onBrokenAnchors / onBrokenMarkdownLinks são 'throw':
-      # link quebrado e MDX inválido reprovam aqui, não viram 404 em produção.
+      # O gerador próprio (AT-662, ADR 0253) e o checador de links
+      # (`scripts/docs/site/links.mjs`, no `docs:build`): link ou âncora
+      # quebrados reprovam aqui, não viram 404 em produção.
       #
       # Este é o ÚNICO build de site em PR. O `docs-deploy.yml` fazia o mesmo e
       # perdeu o gatilho de `pull_request`: mesmo comando, mesmo veredito, duas
@@ -255,9 +246,9 @@ jobs:
         run: pnpm docs:build
 
       # BUILD VERDE NÃO É PÁGINA QUE RENDERIZA (lição do ADR 0033, que custou
-      # as releases v1.0.0 e v1.0.1). Desde o ADR 0206 a referência é UMA
-      # página Redoc com SSR; este passo afirma, no HTML do build, o título da
-      # spec e uma seção por operação, nos dois idiomas. Precisa vir DEPOIS do
+      # as releases v1.0.0 e v1.0.1). Desde o ADR 0253 a referência é uma página
+      # Redoc por tag (SSR); este passo afirma, no HTML do build, o título da
+      # spec e uma seção por operação, nos quatro idiomas. Precisa vir DEPOIS do
       # build, porque é o build que ele inspeciona.
       #
       # Localmente: `pnpm docs:build && node scripts/docs/api-render-check.mjs`.

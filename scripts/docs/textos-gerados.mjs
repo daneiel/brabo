@@ -1,14 +1,14 @@
 /**
  * Textos fixos que `generate.mjs` escreve nos blocos gerados e em `scripts.md`,
  * por locale (ADR 0219, D1). A fonte é pt-BR; as cópias em
- * `website/i18n/<locale>/` recebem o bloco no idioma delas. Chave faltando num
+ * `docs/i18n/<locale>/` recebem o bloco no idioma delas. Chave faltando num
  * locale reprova em `textos-gerados.spec.ts`.
  */
 export const LOCALES_GERADOS = ['en', 'ru', 'zh-Hans'];
 
 /** Onde mora a cópia traduzida de `docs/<rel>`. */
 export const copiaDoLocale = (locale, rel) =>
-  `website/i18n/${locale}/docusaurus-plugin-content-docs/current/${rel.replace(/^docs\//, '')}`;
+  `docs/i18n/${locale}/${rel.replace(/^docs\//, '')}`;
 
 /** Chaves que um locale não tem (ou tem a mais), comparado à fonte pt-BR. Vazio = em dia. */
 export function chavesFaltando(textos) {

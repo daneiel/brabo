@@ -555,7 +555,7 @@ um provider: cada linha leva `descobertos`, `reencontrados`,
 (`infra` | `modelo`) e `detalhe`. Provider pulado **não desativa nada**:
 "não sei o que há lá" não é "não há nada lá"
 ([RN-043](../business-rules/custo.md#rn-043)). O corpo completo está no
-[OpenAPI gerado](/reference/api/) sob a tag `internal`.
+[OpenAPI gerado](api/internal.html) sob a tag `internal`.
 
 Duas coisas que esta rota **não** faz, e que já foram diferentes:
 
@@ -1752,14 +1752,14 @@ agente específico ou a todos os agentes `idle` de um módulo. Ver
 ## Onde mora o contrato
 
 Desde a FASE 7b existe **OpenAPI** para a direção engine → api: as 32 rotas
-abaixo estão na [referência gerada](/reference/api/), sob a tag `internal`, com
+abaixo estão na [referência gerada](api/internal.html), sob a tag `internal`, com
 corpo de requisição, corpo de resposta e códigos de erro. O documento é gerado
 a partir do código por `pnpm docs:generate` e o `docs:check` reprova quando ele
 fica desatualizado.
 
 | lado | fonte |
 |---|---|
-| rotas da api | o [OpenAPI gerado](/reference/api/) (contrato) e [`security-surface.md`](../security-surface.md) (exposição) |
+| rotas da api | o [OpenAPI gerado](api/internal.html) (contrato) e [`security-surface.md`](../security-surface.md) (exposição) |
 | rotas do engine | `apps/engine/lib/engine_web/router.ex` |
 | tipos compartilhados | `packages/shared/src/index.ts` (só api ↔ web) |
 | cliente do engine | `apps/engine/lib/engine/sessions/engine_api_client.ex` |

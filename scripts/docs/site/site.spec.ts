@@ -20,7 +20,7 @@ function repo() {
   w('docs/adr/temas.yml', 'temas:\n  - id: docs\n    titulo: Documentação\n    descricao: x\nadrs:\n  "0001": docs\n');
   w('docs/missions/m.md', '# fora');
   w('docs/_parcial.md', '# fora');
-  w('website/i18n/en/docusaurus-plugin-content-docs/current/adr/0001-x.md', '# ADR 0001 — x (en)\n\n## Decisão {#decisao}\n\n[home](../intro.md)\n');
+  w('docs/i18n/en/adr/0001-x.md', '# ADR 0001 — x (en)\n\n## Decisão {#decisao}\n\n[home](../intro.md)\n');
   return raiz;
 }
 
