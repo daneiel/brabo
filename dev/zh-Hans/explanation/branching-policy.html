@@ -1,205 +1,240 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/branching-policy" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>分支与版本策略 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/branching-policy /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="分支与版本策略 | Brabo"/><meta data-rh=true name=description content="dev → qa → main 的阶梯、分支分类法、谁从哪里诞生，以及为什么策略是机械化的而不是约定的。"/><meta data-rh=true property=og:description content="dev → qa → main 的阶梯、分支分类法、谁从哪里诞生，以及为什么策略是机械化的而不是约定的。"/><meta data-rh=true name=keywords content=分支,gitflow,晋升,hotfix,版本,发布 /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/branching-policy /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/branching-policy hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/branching-policy hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/branching-policy hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/branching-policy hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/branching-policy hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/branching-policy","name":"分支策略","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.21f5d709.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.d26f403e.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.729afbca.js defer></script></head><body><svg style="display: none;"><defs>
-<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
-</defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>运维手册</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>架构决策（ADR）</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>简体中文</a><ul class=dropdown__menu><li><a href=/brabo/dev/explanation/branching-policy target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/explanation/branching-policy target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/explanation/branching-policy target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/explanation/branching-policy target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>配置</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>事件</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>权限</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>制品</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git 提供方</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>内部 API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>脚本与命令</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>仓库规则集</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>翻译一致性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB 登记册</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>流程与流水线</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>可观测性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/modelo-de-time><span class=linkLabel_CzBh>团队模型与交付物流程</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>验证与测量</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>阶段历史</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=categoryLinkLabel_jKch>本地化</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>技术笔记</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class=breadcrumbs__item><span class=breadcrumbs__link>流程与流水线</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>分支策略</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">译文日期 2026-10-15；原文此后已有更改。</div><div class="theme-doc-markdown markdown"><header><h1>分支与版本策略</h1></header>
+<!doctype html>
+<html lang="zh-Hans" data-locale="zh-Hans" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分支与版本策略 | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="菜单">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="搜索" aria-label="搜索" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="语言"><option value="../../explanation/branching-policy.html">pt-BR</option><option value="../../en/explanation/branching-policy.html">en</option><option value="../../ru/explanation/branching-policy.html">ru</option><option value="../../zh-Hans/explanation/branching-policy.html" selected>zh-Hans</option></select>
+<select data-seletor aria-label="环境"><option value="../../../dev/zh-Hans/explanation/branching-policy.html" selected>dev</option><option value="../../../prd/zh-Hans/explanation/branching-policy.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="切换主题">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 从这里开始</h2><ul><li><a href="../index.html">简介</a></li><li><a href="../getting-started.html">快速开始</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">从零到交付物</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ 架构</h2><ul><li><a href="../architecture.html">架构</a></li><li><a href="../adr.html">决策（ADR）</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — GitProvider 规范化契约的形态</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — GitProvider 错误的规范化</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — 远程 provider 的重试策略</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — 用户 git 凭据的登记</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — 幂等且可恢复的 Gitflow bootstrap</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — 分支保护：provider 之间的分歧与审批矩阵</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — 机制化的分支策略</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — 采纳现有仓库，以及作为关口的计划</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — engine 在远程仓库上工作</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — 流水线合并的告警获得接收方，以及 `dev` 的规则</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — QA 处于测试阶段时，`dev` → `qa` 自动晋升</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — agent 的 harness：确定性的上下文组装</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — 会话的类型是创建时的数据，而执行仍然是事件</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — 一致的传输限制与有效的压缩窗口</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — 点击在**接受**命令时响应，轮次经由通道继续</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — 回答的语言存放在三个地方——账户、会话和项目——采用开放的 BCP-47 列表，绝不放在 `users.locale` 中</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — 循环向 Jev 询问用哪个工具，用户的模型只看到剩下的菜单</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — 已结束的会话可以重新打开：终止状态的专属出口，通向 `active`，带新事件</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — 在轮次进行中到达的消息进入持久化队列，并在轮次结束时被读取</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — harness 中的对话式 Criativo agent + handoff 的基础</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — PO agent、backlog（epics/stories/tasks）与可追溯性</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Arquiteto agent：通过真实 PR 的 ADR、module_map 和交叉验证</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent 与实时团队面板（Fase 4a 收尾）</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — 真正的 Psicólogo：ToolLoop、带证据的假设与成本分诊</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese：熟练度画像、指令补丁与闭环</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — 阶段 4b 的收尾（第 1 次会话）：能送达的证据、能显示的成本、能在 kill 之后存活的分析</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — 阶段 4b 的收尾（第 2 次会话）：能工作的目录、能区分谁拒绝的去重，以及能在一轮之后存活的队列</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — agent 的层级：领域、lead 与委派</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — 由用户拥有权限的故事晋升</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead 作为区域，以及由用户授权的并行</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Arquiteto 的 C4 图</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — 有条件地合并 handoff 的接受与执行的启用</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — 角色流作为声明式登记（fluxo.yml）</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — Dev Lead 的计划挂起轮次以等待审批</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer 作为对话式 agent 加入</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff：代码就绪，自动触发处于休眠</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` 和 `delivery-metricas` 成为报表脚本</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — `dbre` 角色变成两个脚本：迁移 linter 和备份报告</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Dev Lead → dev 的委派成为数据，`parecerArtifactId` 被重新定义</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — 向任选 agent 的手动 handoff 复用&quot;提供 + 接受&quot;，绝不引入第三种 handoff 状态</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — handoff 提议获得生命周期：每个目标一个待处理，以及 `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — 已归档的故事：一列，而不是状态机中的一个状态</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — PR 的 gate：QAAgent 和 SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — 解锁 QA 与 SecOps 的 gate：在工作树上运行 gitleaks、经过校验的意见书，以及文本形式的 tool call</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — 阶段 4a 的收尾：真正做校验的 infra gate，以及说真话的面板</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — gate 作为声明式登记</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — gate agent 等待审批，就像 dev 那样等待</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — gate 在重启后存活</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA 策略和 AppSec 作为第二个**时刻**，而不是新 agent</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` 作为基于 `rate_limit_hits` 的报告脚本</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — gate `necessidade-validada` 由单独的人工确认关闭，而不是由 Criativo 自我验证</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — 为 QA Automação agent 的语义判断建立回归用例 golden-set</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — 停滞超过 2 小时的 gate 周期会被搁置，只有人工操作才能恢复</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — 悬而未决的问题成为待解决的待办</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — 项目的决定传达到 dev 和 QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — dev agent 的基础设施：worktree、git 执行器和合并锁</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — 真正的 DevAgent：ToolLoop、按 task 的预算与阻塞纪律</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — 工作区初始化锁、dev agent 的 Monitor 以及上限继承</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent 作为永久的执行模式</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — 解锁真实的 DevAgent：写入、终端、按模块的 ADR 和按项目的预算</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — dev agent 的按事件重新调度，以及熔断器</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — dogfooding 之后的可运维性：Fase 12 的收尾</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — event log 中的决定，以及 gate 的顺序</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — dev agent 在循环中途等待审批</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — 终端策略中的路径范围</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — 修订 ADR 0065：外部效果的边界不再是 `deny`，而是绝对上限</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — 自动模式放行路径范围，而且只有它放行</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — 自动驾驶：自动模式批准一切（上限除外），作用域与真实执行目录比较，&quot;始终允许&quot;记录动词 + 子命令</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — 自动模式放行 push 和 PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — 可读的 workspace 文件夹名称</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — 项目选择代码存放在哪里：用户目录还是托管目录</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` 取三个值，由 runner 负责验证时 workspace 以 `unverified` 诞生</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — 通过 Runner 浏览本地文件夹</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — 在 `runner` 模式下，项目在点击“Navegar pasta...”时诞生，而不只是在确认时</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — 转换已有项目的 `execution_mode`：dev agent 活动时拒绝，迁移 `permissions.json`，退役容器行</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — 挂载项目的唯一 base，按同一路径挂载</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — 挂载 workspace 的验证推迟到实体化时进行</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — 在 bootstrap 中经同意设定的 base，以及 `mounted` 作为本地默认值</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — 每个项目一个容器：边界不再是策略</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — 容器生命周期：状态表，没有编排器</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — 终端标签页获得生命周期的真实使用者，而不是终端</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Docker 端口，以及选定实现的打包证明</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — dev agent 在项目的真实容器**内部**执行，终端在其中获得一个自动批准的下限</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` 在用户的机器上启动项目容器</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — dev agent 只在容器之后</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — broker 的第二个根，以及选择它的可辨识定位符</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — 项目容器以文件夹所有者身份运行，由 api 测量</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra 在接受 handoff 时启动容器，由服务器执行这一步并预置自主度，并由它交接给 Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra 继承 Arquiteto 声明的网络</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — 本地 runner：通过带一次性 ticket 的 Phoenix 通道在用户机器上执行</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — 给 runner 的 Personal Access Token（`brb_…`），按构造限定到一条路由</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — 通过 `tsup` 和 `npm publish` 分发 `@brabo/runner`，版本只在 CI 中注入</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — 通过 `bun build --compile` 构建 `@brabo/runner` 的独立二进制，原生插件 `.node` 通过真实解压到临时目录的方式嵌入</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — 通过浏览器配置 runner：Ed25519 设备密钥作为 `runner-ticket` 的第二种凭据、GitHub Releases 的二进制代理，以及用 File System Access API 一键配置文件夹</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker 成为 `runner` 模式的真正前提</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — 一个本地 agent，在连接时声明能力</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — runner 中经同意的基础目录，以及通过通道创建文件夹</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — 机器级的设备密钥</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — runner 的独立二进制不再承诺 Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — runner 的独立二进制不再承诺 Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — 通过浏览器配置 runner 的流程退役，路径改为安装程序</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — engine 所缺的 CORS，以及端口作为契约的一部分</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — 凭据总是被加密；验证成为显式动作</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — api 中封闭的 CSP，以及约束在根内的项目范围</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — 签署 git OAuth `state` 的密钥没有默认值</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — 社交登录（GitHub/GitLab），修订 ADR 0031/0032 的 backlog</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — `MailSender` 中的真实 SMTP，置于显式开关之后</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — `project_members` 中的两道降级上限，覆盖关系保留</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — 自我降级上限同样适用于移除项目成员</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — workspace 成员的移除诞生，由同一条款保护</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — 仪表盘的货币：暂用 USD，按 workspace 的手动汇率推迟</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — 活目录、模型生命周期与可审计的价格</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — 在基础之上的六个 LLM provider，Fase 9b 终于关闭</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — 按 workspace 的模型策展</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — 已证明的能力维度；“用来做什么”是策展</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — 同一笔花费的两种受众：owner 的账单与成员的消耗</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — 模型级联中的领域范围，以及全局的 agent 绑定</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — LLMProvider 合约中的 embedding</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` 重新成为花费维度，约束改由类型承担</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — 按能力的模型排名，不编造评分</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — 按区域的预算是叠加的，与项目/会话并列——不是级联，也不是新表</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — 在开发引导中检测原生 Ollama：只问一次，持久化到 `.env`，把 compose 的服务放到 profile 之后</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — 从 Hugging Face 拉取模型：独立的表、两步确认以及官方发布者 allowlist——绝不使用 `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — 路由偏好住在模型 binding 中，随它一起传递，并在计量中冻结</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — provider 返回的真实成本成为计量的数字</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — 故事与规则的语义重复通过带阈值的 embedding 提醒，花费进入计量</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — chunk 表：向量与 `tsvector` 在同一行</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — 混合搜索：权重、阈值，以及什么算引用</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG：混合搜索的独立标签页，不重命名“Chat”</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j 作为知识图谱和 prompt 模板，驱动放在 api 中</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — 面向 agent 的 `rag_search`，以及启动时确保存在的 Ollama 模型</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — 关系记忆作为事件日志的投影；在不触碰 GenServer 的情况下使用模板</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — 附加的本地目录成为 `chunks.scope = 'local'`，由**浏览器**读取，绝不是主机路径</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — RAG 搜索的遥测是**表**，权重冻结在行中</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — RAG 命中率的 golden-set，以及 gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — 重新启用的 Anamnese：没有主体就不运行，被接受的假设成为画像事实</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — 忠实于设计的认证界面，以及三种无法加载的字体</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — 代码的读取面，受约束且有预算</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — 可切换的主题，以及 CSP 下的启动</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — 界面框架，以及标签页注册表刻意偏离 handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — 为仪表盘的“N 个 agent 在线”直接读取 engine 的 schema</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType`（以及将来的类型）由 OpenAPI 契约生成，而不是手工复制</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` 拆分为五个机械式 PR，并事先声明</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — 轮次通道的状态分组抽取到 `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — 把 `ProjectSettingsTab.tsx` 拆分为每个分区一个文件，置于一个 barrel 之后</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — 项目页面通过垂直轨道导航，代码标签页不再自行折叠侧边栏</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — 深色主题变为中性黑，对比度债务结束</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — 用 `motion` 做文本动画</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — 只有一种导航：侧边栏吸收项目轨道</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — 阶段 5（第 1 次会话）：生产镜像、compose.prod、CI 与冒烟测试</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — 阶段 5（第 2 次会话）：使用 Kustomize 部署 Kubernetes、队列指标与本地 overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — 阶段 5（第 3 次会话）：优雅关闭、OpenTelemetry、指标、日志与仪表盘</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — 备份/还原、api 加固、暴露面与发布</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — 没有 collector 的 trace，以及日志中跨层的路径</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — 本地 Compose 中的可观测性：指标和日志，没有 trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — 一行安装程序，带可选来源和标记文件</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — 针对 compose 的卷备份与恢复</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — 第一个账户在终端中诞生，本地 agent 启动时即已配对</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — 安装程序的 compose 随它一起传送，作为已签名的 asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — 本地 overlay 的 S3 目标不再是 MinIO，改为 SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — 开发用 compose 改名为 `brabo-dev`，开发环境拒绝在安装旁边启动</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — engine 升级到 Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint 与生成的 CI 管道的验证</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — 每个正式 tag 都把镜像发布到 GHCR，生产 overlay 按 digest 固定</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — 针对生产 compose 的浏览器 E2E，放在 workspace 之外的包中</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — schema 按领域聚合拆分，置于一个 barrel 之后</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — `pnpm audit` 反复超时是承担的风险；发现问题仍然失败</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — 已发布工件的签名</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — 第三方镜像的 tag 住在引用**之内**，位于 digest 之前</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — 文档的持续同步</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — API 参考由代码产出，表格测试对元数据提出要求</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — 按阶梯发布的文档，位于 Pages 的子目录中</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — 按阶梯对称发布，以及一个供选择的根</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — 发布路径命名的是环境，而不是分支</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` 拥有自己的 lockfile，脱离产品的 `pnpm audit`</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — API 参考变成一个 Redoc 页面</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — 四种语言，以 pt-BR 作为**来源**和默认：文档与界面提供葡萄牙语、英语、俄语和简体中文</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — 每个 ADR 都命名为“ADR NNNN — 标题”</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — 参考文档纳入翻译</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — API 页面按目录翻译</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 规则</h2><ul><li><a href="../business-rules.html">业务规则</a></li><li><a href="../business-rules/custo.html">成本与计量</a></li><li><a href="../business-rules/autenticacao.html">认证</a></li></ul></section><section><h2>📖 参考</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">api 的暴露面</a></li><li><span>API 参考</span></li></ul></section><section><h2>💡 解释</h2><ul><li><span>流程与流水线</span><ul><li><a href="../explanation/documentation-workflow.html">文档同步</a></li><li><a href="../explanation/branching-policy.html" aria-current="page">分支策略</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">CI 的供应链</a></li><li><a href="../explanation/gates.html">gates，以及如何测量它们</a></li><li><a href="../explanation/observability.html">可观测性</a></li><li><a href="../explanation/modelo-de-time.html">团队模型与交付物流程</a></li></ul></li><li><span>验证与测量</span><ul><li><a href="../explanation/primeiro-dogfooding.html">第一次 dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">真实执行（hello world）</a></li><li><a href="../explanation/achados-execucao-real.html">流水线真实执行中的发现</a></li><li><a href="../explanation/validacao-fase-12.html">Fase 12 的验证</a></li><li><a href="../explanation/validacao-real.html">真实验证（13b）</a></li><li><a href="../explanation/aceite-providers.html">provider 的验收</a></li><li><a href="../explanation/medicao-do-idioma.html">语言启发式的测量</a></li><li><a href="../explanation/medicao-do-jev.html">Jev 工具路由器的测量</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">审计：fluxo.yml × 代码（v3，ADR 0085）</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">视觉审计：Rodada 29 之前与之后</a></li></ul></li><li><span>阶段历史</span><ul><li><a href="../explanation/historico-de-fases.html">阶段历史</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — 用户的目录</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — 一行命令安装</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30——机器的本地智能体</a></li><li><a href="../explanation/backlog.html">已分类的 backlog</a></li></ul></li><li><span>本地化</span><ul><li><a href="../explanation/localizacao.html">本地化</a></li><li><a href="../explanation/localizacao-en.html">本地化——英语（en）</a></li><li><a href="../explanation/localizacao-ru.html">本地化——俄语（ru）</a></li><li><a href="../explanation/localizacao-zh-hans.html">本地化——简体中文（zh-Hans）</a></li></ul></li><li><span>技术笔记</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI——未采用</a></li></ul></li></ul></section><section><h2>🛠️ 运维</h2><ul><li><a href="../runbook.html">运维手册</a></li></ul></section><section><h2>📚 词汇</h2><ul><li><a href="../glossary.html">术语表</a></li></ul></section><section><h2>🤝 贡献</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">如何贡献</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">在哪里求助</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">报告漏洞</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="branch-and-versioning-policy">分支与版本策略</h1>
 <p>本页是策略的<strong>来源</strong>。执行它的 workflow 都由此派生——如果某个机制与这里写的不一致，错的是
 机制。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=why-mechanize-it>为什么要机械化<a href=#why-mechanize-it class=hash-link aria-label=为什么要机械化的直接链接 title=为什么要机械化的直接链接 translate=no>​</a></h2>
+<h2 id="why-mechanize-it">为什么要机械化</h2>
 <p>在会议上约定的分支策略只能活到第一个周五晚上。匆忙不是恶意：而是规则存在于人的脑子里，而
 压力下的脑子会为短期优化。</p>
 <p>因此这里的策略<strong>不请求合作</strong>——它由 CI 强制执行。不是出于不信任，而是因为依赖个人纪律的规则
 在事故中活不下来，而恰恰是在事故中它最重要。</p>
 <p>我们有意接受的两个后果：</p>
 <ul>
-<li class=""><strong>PR 变得更官僚。</strong> 分支名错了就让检查失败。这是代价。</li>
-<li class=""><strong>错误消息必须能教人。</strong> 只说"无效"的检查会训练人们绕过它。每个错误都引用规则、收到了
+<li><strong>PR 变得更官僚。</strong> 分支名错了就让检查失败。这是代价。</li>
+<li><strong>错误消息必须能教人。</strong> 只说&quot;无效&quot;的检查会训练人们绕过它。每个错误都引用规则、收到了
 什么以及正确的示例。</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-ladder>阶梯<a href=#the-ladder class=hash-link aria-label=阶梯的直接链接 title=阶梯的直接链接 translate=no>​</a></h2>
+<h2 id="the-ladder">阶梯</h2>
 <p>三个永久分支，<strong>每个环境一个</strong>。代码一次上一级。</p>
-<!-- -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>分支<th>环境<th>在这里意味着什么<tbody><tr><td><code>dev</code><td>开发<td>已集成，经 CI 测试<tr><td><code>qa</code><td>预发布验收<td>正在进行功能验证<tr><td><code>main</code><td>生产<td>正在线上运行的</table>
+<pre class="mermaid" data-mermaid>flowchart LR
+  D[dev&lt;br/&gt;desenvolvimento] --&gt;|promoção| Q[qa&lt;br/&gt;homologação]
+  Q --&gt;|promoção| M[main&lt;br/&gt;produção]
+  M -.-&gt;|retropropagação| Q
+  Q -.-&gt;|retropropagação| D
+</pre>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>分支</th>
+<th>环境</th>
+<th>在这里意味着什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dev</code></td>
+<td>开发</td>
+<td>已集成，经 CI 测试</td>
+</tr>
+<tr>
+<td><code>qa</code></td>
+<td>预发布验收</td>
+<td>正在进行功能验证</td>
+</tr>
+<tr>
+<td><code>main</code></td>
+<td>生产</td>
+<td>正在线上运行的</td>
+</tr>
+</tbody>
+</table></div>
 <p>曾经有第四级 <code>rc</code>（预生产），位于 <code>qa</code> 和 <code>main</code> 之间。它被移除了：只有一个维护者且周期很短，
-多出来的一级要花一整次晋升和一个环境来区分"已验证"和"几乎就绪"——这个区分不划算。<code>qa</code> 成为
+多出来的一级要花一整次晋升和一个环境来区分&quot;已验证&quot;和&quot;几乎就绪&quot;——这个区分不划算。<code>qa</code> 成为
 进入生产之前唯一的闸门。</p>
 <p>这次移除花了一段时间才完全落地。<code>pr-police</code> 立即开始以三级运作，但 <strong>Gitflow 的 bootstrap</strong>
 继续创建 <code>rc</code>、保护 <code>rc</code>，并向用户的仓库提交一份教授四级阶梯的 <code>branching-policy.md</code>——产品
-向使用它的人记录了一个它自己早已放弃的策略。这是<a class="" href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding>第一轮 dogfooding</a>
-的第 3 个发现，之后被关闭（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-029>RN-029</a>）。</p>
+向使用它的人记录了一个它自己早已放弃的策略。这是<a href="primeiro-dogfooding.html">第一轮 dogfooding</a>
+的第 3 个发现，之后被关闭（<a href="../business-rules.html#rn-029">RN-029</a>）。</p>
 <p>有两个松散的端头被故意保留，原因各不相同：值 <code>create_rc_branch</code> 仍在数据库的 <code>bootstrap_step</code>
 枚举中（已执行的 bootstrap 有带它的行），而 <code>rc</code> 仍在<strong>受保护合并</strong>的列表中——见
-<a class="" href=/brabo/dev/zh-Hans/reference/permissions>permissions.md</a> 中的说明。</p>
+<a href="../reference/permissions.html">permissions.md</a> 中的说明。</p>
 <p><strong>任何一级都不能跳过。</strong> <code>dev → main</code> 不存在，即使在紧急情况下也不存在——紧急情况有自己的路径
 （<code>hotfix</code>，见下），它也遵守阶梯，只是从顶部开始。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=taxonomy>分类法<a href=#taxonomy class=hash-link aria-label=分类法的直接链接 title=分类法的直接链接 translate=no>​</a></h2>
+<h2 id="taxonomy">分类法</h2>
 <p>每个分支都是 <code>funcao/descritivo</code>，由 <code>^.{0,30}/\S{0,32}$</code> 验证——功能最多 30 个字符，描述最多
 32 个，没有空格。</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">✅ feature/pr-police          ✅ bugfix/rate-limit-off-by-one</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">✅ hotfix/vaza-token          ✅ docs/politica-de-branches</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">❌ minha-branch               (sem função)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">❌ ci/build-paralelo          (`ci` não está na lista; use `chore`)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">❌ fix/algo                   (`fix` não está na lista; use `bugfix`)</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>✅ feature/pr-police          ✅ bugfix/rate-limit-off-by-one
+✅ hotfix/vaza-token          ✅ docs/politica-de-branches
+
+❌ minha-branch               (sem função)
+❌ ci/build-paralelo          (`ci` não está na lista; use `chore`)
+❌ fix/algo                   (`fix` não está na lista; use `bugfix`)
+</code></pre>
 <p>仅有正则还不够：功能必须在<strong>封闭列表</strong>中。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=whos-born-where>谁从哪里诞生<a href=#whos-born-where class=hash-link aria-label=谁从哪里诞生的直接链接 title=谁从哪里诞生的直接链接 translate=no>​</a></h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>功能<th>诞生于<th>PR 指向<th>用于<tbody><tr><td><code>breaking</code><td><code>dev</code><td><code>dev</code><td>不兼容的变更<tr><td><code>feature</code><td><code>dev</code><td><code>dev</code><td>新功能<tr><td><code>bugfix</code><td><code>dev</code><td><code>dev</code><td>普通修复<tr><td><code>perf</code><td><code>dev</code><td><code>dev</code><td>性能<tr><td><code>refactor</code><td><code>dev</code><td><code>dev</code><td>不改变行为的重构<tr><td><code>chore</code><td><code>dev</code><td><code>dev</code><td>维护、工具、CI<tr><td><code>docs</code><td><code>dev</code><td><code>dev</code><td>文档<tr><td><code>test</code><td><code>dev</code><td><code>dev</code><td>覆盖率<tr><td><code>hotfix</code><td><code>main</code><td><code>main</code><td>生产事故</table>
+<h3 id="whos-born-where">谁从哪里诞生</h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>诞生于</th>
+<th>PR 指向</th>
+<th>用于</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>breaking</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>不兼容的变更</td>
+</tr>
+<tr>
+<td><code>feature</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>新功能</td>
+</tr>
+<tr>
+<td><code>bugfix</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>普通修复</td>
+</tr>
+<tr>
+<td><code>perf</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>性能</td>
+</tr>
+<tr>
+<td><code>refactor</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>不改变行为的重构</td>
+</tr>
+<tr>
+<td><code>chore</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>维护、工具、CI</td>
+</tr>
+<tr>
+<td><code>docs</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>文档</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td><code>dev</code></td>
+<td><code>dev</code></td>
+<td>覆盖率</td>
+</tr>
+<tr>
+<td><code>hotfix</code></td>
+<td><code>main</code></td>
+<td><code>main</code></td>
+<td>生产事故</td>
+</tr>
+</tbody>
+</table></div>
 <p>在<strong>预发布验收</strong>中发现的修复没有自己的前缀：它变成从 <code>dev</code> 出发的 <code>bugfix/</code> 并沿阶梯上升。曾经
 有一个用于预生产的 <code>rcfix/</code>，它随 <code>rc</code> 级一起移除了——没有来源分支的前缀是个陷阱。</p>
 <p>来源不是建议——它<strong>通过 merge-base 验证</strong>。从 <code>dev</code> 诞生的 <code>hotfix</code> 会带上 <code>dev</code> 中所有尚未
 验证的东西；在事故中把这些匆忙推到生产，正是灾难发生的方式。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-fix-born-high-goes-back-down>在高处诞生的修复会向下传播<a href=#a-fix-born-high-goes-back-down class=hash-link aria-label=在高处诞生的修复会向下传播的直接链接 title=在高处诞生的修复会向下传播的直接链接 translate=no>​</a></h3>
+<h3 id="a-fix-born-high-goes-back-down">在高处诞生的修复会向下传播</h3>
 <p><code>hotfix</code> 直接进入问题出现的那一级。这让下面的级别<strong>过时</strong>——修复存在于 <code>main</code> 而不在 <code>dev</code>。</p>
-<p>因此每个在高处诞生的修复都会产生一次<strong>反向传播</strong>：<code>main → qa → dev</code>，链式地、按顺序。在它完成之前，受影响的级别保持锁定——见<a href=#the-back-merge-gate class="">反向传播闸门</a>。</p>
+<p>因此每个在高处诞生的修复都会产生一次<strong>反向传播</strong>：<code>main → qa → dev</code>，链式地、按顺序。在它完成之前，受影响的级别保持锁定——见<a href="#the-back-merge-gate">反向传播闸门</a>。</p>
 <p>一个 hotfix 的完整链条是<strong>三个 PR</strong>：hotfix 加两次反向传播。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=pr-families>PR 家族<a href=#pr-families class=hash-link aria-label="PR 家族的直接链接" title="PR 家族的直接链接" translate=no>​</a></h2>
+<h2 id="pr-families">PR 家族</h2>
 <p>每个 PR 都会自动获得一个家族标签：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>家族<th>何时<th>示例<tbody><tr><td><code>trabalho</code><td>一个工作功能 → <code>dev</code><td><code>feature/pr-police</code> → <code>dev</code><tr><td><code>correcao-alta</code><td><code>hotfix</code> → <code>main</code><td><code>hotfix/vaza-token</code> → <code>main</code><tr><td><code>promocao</code><td>相邻级别，向上<td><code>dev</code> → <code>qa</code><tr><td><code>retropropagacao</code><td>相邻级别，向下<td><code>main</code> → <code>qa</code></table>
-<p>标签不是装饰：正是它让人无需在 git 里考古就能回答"这个季度我们有多少次 hotfix？"。</p>
-<p><a id=push-direto-é-bloqueado class=anchorTargetStickyNavbar_PEh0></a></p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=direct-push-is-blocked>直接推送被阻止<a href=#direct-push-is-blocked class=hash-link aria-label=直接推送被阻止的直接链接 title=直接推送被阻止的直接链接 translate=no>​</a></h2>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>家族</th>
+<th>何时</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trabalho</code></td>
+<td>一个工作功能 → <code>dev</code></td>
+<td><code>feature/pr-police</code> → <code>dev</code></td>
+</tr>
+<tr>
+<td><code>correcao-alta</code></td>
+<td><code>hotfix</code> → <code>main</code></td>
+<td><code>hotfix/vaza-token</code> → <code>main</code></td>
+</tr>
+<tr>
+<td><code>promocao</code></td>
+<td>相邻级别，向上</td>
+<td><code>dev</code> → <code>qa</code></td>
+</tr>
+<tr>
+<td><code>retropropagacao</code></td>
+<td>相邻级别，向下</td>
+<td><code>main</code> → <code>qa</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>标签不是装饰：正是它让人无需在 git 里考古就能回答&quot;这个季度我们有多少次 hotfix？&quot;。</p>
+<p><a id="push-direto-é-bloqueado"></a></p>
+<h2 id="direct-push-is-blocked">直接推送被阻止</h2>
 <p>三个永久分支都不接受直接推送。每个变更都通过 PR 进入。这是<strong>唯一的门</strong>——它恰好有三个例外，
 全部来自机器人，全部写在这里，因为没有记录的例外会变成先例：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>例外<th>谁<th>为什么<tbody><tr><td>tags <code>v*</code><td><code>brabo-release[bot]</code><td>版本诞生于 workflow，绝不手工<tr><td><code>main</code> 中的 <code>.release/gate.json</code><td><code>brabo-release[bot]</code><td>闸门在锁定和解锁时需要写入自己<tr><td><code>gh-pages</code> 分支<td><code>github-actions[bot]</code><td>按级别发布文档需要一棵可变的树（<a class="" href=/brabo/dev/zh-Hans/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>）</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>例外</th>
+<th>谁</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tags <code>v*</code></td>
+<td><code>brabo-release[bot]</code></td>
+<td>版本诞生于 workflow，绝不手工</td>
+</tr>
+<tr>
+<td><code>main</code> 中的 <code>.release/gate.json</code></td>
+<td><code>brabo-release[bot]</code></td>
+<td>闸门在锁定和解锁时需要写入自己</td>
+</tr>
+<tr>
+<td><code>gh-pages</code> 分支</td>
+<td><code>github-actions[bot]</code></td>
+<td>按级别发布文档需要一棵可变的树（<a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034</a>）</td>
+</tr>
+</tbody>
+</table></div>
 <p><strong>第三个是三者中最容易接受的，值得说明为什么，以免它为困难的那些开先例。</strong> <code>gh-pages</code> <strong>不是
 代码分支</strong>：其中没有任何东西是源，一切都由 <code>docs/</code> 和 <code>website/</code> 生成，把它整个删掉也不会丢失
 任何东西——下一次推送会重建它。生成的网站不可能有审阅者，每次发布一个 PR 将是没有读者的仪式。
@@ -211,62 +246,62 @@
 的例外换成某个面板上不可见的状态。机器人的提交留在 <code>git log</code> 中，带有日期和内容。</p>
 <p><code>tag-release</code> <strong>按内容</strong>识别这个提交（它只触碰 <code>.release/</code>），绝不按作者或消息：谁写了它是可以
 验证的，谁<em>声称</em>写了它则不是。</p>
-<p>确切的配置在 <a class="" href=/brabo/dev/zh-Hans/reference/rulesets>Rulesets</a> 中，应用它是手动步骤——仓库对来源做版本控制，
+<p>确切的配置在 <a href="../reference/rulesets.html">Rulesets</a> 中，应用它是手动步骤——仓库对来源做版本控制，
 GitHub 接收应用。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=merged-branches-get-archived>已合并的分支会被归档<a href=#merged-branches-get-archived class=hash-link aria-label=已合并的分支会被归档的直接链接 title=已合并的分支会被归档的直接链接 translate=no>​</a></h2>
+<h2 id="merged-branches-get-archived">已合并的分支会被归档</h2>
 <p>每个 PR 已被合并的分支会在<strong>合并 7 天后</strong>离开分支列表——机械地，由 <code>archive-merged-branch.yml</code>
 完成，它每天运行一次（<code>schedule:</code>，加上 <code>workflow_dispatch</code>）并遍历仓库的所有分支（AT-557，
 负责人 2026-10-15 的决定）。在那之前分支保持原地，以便后续修正仍能在它之上进行。只有当以下
 各项都成立时，分支才会被归档：</p>
 <ul>
-<li class="">它不是下面排除的名称之一，也不来自 fork；</li>
-<li class="">没有以它为 head 的<strong>打开</strong>的 PR；</li>
-<li class="">有一个以它为 head 的 PR 在本仓库中被<strong>合并</strong>，且最近的那个是 7 天或更久之前合并的
+<li>它不是下面排除的名称之一，也不来自 fork；</li>
+<li>没有以它为 head 的<strong>打开</strong>的 PR；</li>
+<li>有一个以它为 head 的 PR 在本仓库中被<strong>合并</strong>，且最近的那个是 7 天或更久之前合并的
 （<code>DIAS_ATE_ARQUIVAR</code>）；</li>
-<li class="">分支的尖端仍是该 PR 的 <code>head.sha</code>——合并后又收到提交的分支会<strong>保留</strong>。</li>
+<li>分支的尖端仍是该 PR 的 <code>head.sha</code>——合并后又收到提交的分支会<strong>保留</strong>。</li>
 </ul>
 <p>从未有 PR 被合并的分支没有合并日期，<strong>永远</strong>不会被这个 job 归档；删除它仍是手动决定。job 的
 摘要列出归档了什么、保留了什么（带原因）以及什么失败了；一个分支的失败不会阻止其他分支，并让
 job 变红。</p>
-<p>"归档"是字面意思，不是删除的委婉说法：分支从 <code>refs/heads/&lt;nome></code> 变为 <code>refs/archive/&lt;nome></code>，
+<p>&quot;归档&quot;是字面意思，不是删除的委婉说法：分支从 <code>refs/heads/&lt;nome&gt;</code> 变为 <code>refs/archive/&lt;nome&gt;</code>，
 这是一个 GitHub 界面不会作为分支显示的命名空间。提交对象及其历史完全照旧留在仓库中——知道这个
 ref 的人可以恢复，用一条
-<code>git push origin refs/archive/&lt;name>:refs/heads/&lt;name></code> 就能把它带回来。</p>
+<code>git push origin refs/archive/&lt;name&gt;:refs/heads/&lt;name&gt;</code> 就能把它带回来。</p>
 <p>四个名称永远不会被归档，四者的原因相同：它们都不是可丢弃的功能工作。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>名称<th>为什么被排除<tbody><tr><td><code>dev</code>、<code>qa</code>、<code>main</code><td>三个永久分支——它们作为每个已合并的晋升 PR（<code>dev</code>→<code>qa</code>、<code>qa</code>→<code>main</code>）的 <code>head</code> 出现，这正是这个排除要捕获的情况<tr><td><code>gh-pages</code><td>文档网站的部署分支（见上面"直接推送被阻止"）——不是功能分支，删除 <code>refs/heads/gh-pages</code> 会把线上网站一起拖垮</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>为什么被排除</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dev</code>、<code>qa</code>、<code>main</code></td>
+<td>三个永久分支——它们作为每个已合并的晋升 PR（<code>dev</code>→<code>qa</code>、<code>qa</code>→<code>main</code>）的 <code>head</code> 出现，这正是这个排除要捕获的情况</td>
+</tr>
+<tr>
+<td><code>gh-pages</code></td>
+<td>文档网站的部署分支（见上面&quot;直接推送被阻止&quot;）——不是功能分支，删除 <code>refs/heads/gh-pages</code> 会把线上网站一起拖垮</td>
+</tr>
+</tbody>
+</table></div>
 <p>第五个条件不是名称，而是边界：head 分支位于 <strong>fork</strong> 中的 PR
 （<code>head.repo.full_name != base.repo.full_name</code>）永远不会被触碰。workflow 的 <code>GITHUB_TOKEN</code> 的
 范围是本仓库——它没有任何理由去改写别人仓库里的 ref。</p>
 <p>决定本身——哪四个名称被排除，以及 fork 检查——是一个经过测试的纯函数
-（<a href=https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts target=_blank rel="noopener noreferrer" class=""><code>scripts/ci/archive-branch.ts</code></a>），
+（<a href="https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts"><code>scripts/ci/archive-branch.ts</code></a>），
 而不是内联 shell：这是这个机制中出错真正值得测试的部分——7 天的资格也是（<code>aptaParaArquivar</code>，
 同一文件）。然后同一个脚本调用 GitHub API：创建 <code>refs/archive/</code> ref（或在该名称之前已被归档时
 强制更新它），读回它并确认它指向分支的 SHA，然后才删除 <code>refs/heads/</code>——这样一次失败永远不会在
 没有留下归档副本的情况下拖垮一个分支。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=bots-skip-the-ladder>机器人跳过阶梯<a href=#bots-skip-the-ladder class=hash-link aria-label=机器人跳过阶梯的直接链接 title=机器人跳过阶梯的直接链接 translate=no>​</a></h2>
+<h2 id="bots-skip-the-ladder">机器人跳过阶梯</h2>
 <p>由 <code>dependabot[bot]</code> 和 <code>github-actions[bot]</code> 打开的 PR <strong>免于</strong>名称、来源和目标的验证。</p>
 <p>原因很实际：Dependabot 把分支命名为 <code>dependabot/npm_and_yarn/brace-expansion-5.0.8</code>，没有办法
 教它分类法。拒绝它意味着每次安全警报都要手工重命名分支——恰恰在需要快速的流程上增加摩擦。</p>
 <p>教学式的消息教不了机器人。豁免是按<strong>作者</strong>，不是按前缀，以免有人把一个分支命名为
 <code>dependabot/</code> 来把它当作漏洞。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=dependabot-branches-are-allowed-with-no-character-limit>Dependabot 的分支被允许，没有字符限制<a href=#dependabot-branches-are-allowed-with-no-character-limit class=hash-link aria-label="Dependabot 的分支被允许，没有字符限制的直接链接" title="Dependabot 的分支被允许，没有字符限制的直接链接" translate=no>​</a></h3>
+<h3 id="dependabot-branches-are-allowed-with-no-character-limit">Dependabot 的分支被允许，没有字符限制</h3>
 <p>除了机器人的通用豁免之外，策略还明确点名了 Dependabot 的分支：<strong><code>dependabot/…</code> 是允许的分支名，
 没有字符标准</strong>——没有 30/32 的限制，斜杠数量不限。本仓库中的真实名称：
 <code>dependabot/npm_and_yarn/npm_and_yarn-582a9020a7</code>、
@@ -278,21 +313,21 @@ ref 的人可以恢复，用一条
 <code>dependabot</code>）。一个把分支命名为 <code>dependabot/…</code> 的人类仍要经过完整的规则，并在
 <code>FUNCAO-DESCONHECIDA</code> 上失败，消息说明该前缀是保留的，而手工的依赖更新应该是 <code>chore/</code>。规则不
 检查目标：把安全 PR 从 <code>main</code> 带到 <code>dev</code> 是 <code>dependabot-para-dev.yml</code> 的工作（下一节）。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=dependabot-enters-through-dev>Dependabot 从 dev 进入<a href=#dependabot-enters-through-dev class=hash-link aria-label="Dependabot 从 dev 进入的直接链接" title="Dependabot 从 dev 进入的直接链接" translate=no>​</a></h2>
+<h2 id="dependabot-enters-through-dev">Dependabot 从 dev 进入</h2>
 <p>上面的豁免是关于分支的<strong>名称</strong>。<strong>目标</strong>不豁免：依赖更新与其他一切一样从 <code>dev</code> 进入，并通过
 <code>dev → qa → main</code> 的晋升到达 <code>main</code>。直接合并到 <code>main</code> 的依赖会跳过阶梯，并让 <code>main</code> 与工作
 发生的分支产生分歧。</p>
 <p>两个机制，因为 GitHub 对两种更新的处理方式不同：</p>
 <ul>
-<li class=""><strong>版本更新</strong>遵循 <code>.github/dependabot.yml</code> 中的 <code>target-branch: dev</code>。</li>
-<li class=""><strong>安全更新</strong>在仓库界面中开启，GitHub 总是针对<strong>默认</strong>分支（<code>main</code>）打开它们，忽略
+<li><strong>版本更新</strong>遵循 <code>.github/dependabot.yml</code> 中的 <code>target-branch: dev</code>。</li>
+<li><strong>安全更新</strong>在仓库界面中开启，GitHub 总是针对<strong>默认</strong>分支（<code>main</code>）打开它们，忽略
 <code>target-branch</code>。<code>.github/workflows/dependabot-para-dev.yml</code> 处理每个针对 <code>main</code> 打开的
 Dependabot PR，并做两件事之一，由一个经过测试的纯函数决定
-（<a href=https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-para-dev.ts target=_blank rel="noopener noreferrer" class=""><code>scripts/ci/dependabot-para-dev.ts</code></a>）：
+（<a href="https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-para-dev.ts"><code>scripts/ci/dependabot-para-dev.ts</code></a>）：
 <ul>
-<li class="">当 <code>dev</code> 的 lockfile 已经把 PR 的每个依赖都只解析为 <code>>=</code> 阈值的版本时，带着理由<strong>关闭</strong>
+<li>当 <code>dev</code> 的 lockfile 已经把 PR 的每个依赖都只解析为 <code>&gt;=</code> 阈值的版本时，带着理由<strong>关闭</strong>
 PR；</li>
-<li class="">在所有其他情况下把 PR <strong>重定向</strong>到 <code>dev</code>——低于阈值的版本、lockfile 中缺失的包、无法比较
+<li>在所有其他情况下把 PR <strong>重定向</strong>到 <code>dev</code>——低于阈值的版本、lockfile 中缺失的包、无法比较
 的版本、无法读取的正文。</li>
 </ul>
 </li>
@@ -315,7 +350,7 @@ PR；</li>
 <p><strong>已声明：</strong> 重定向之后，<code>dev</code> 的必需检查<strong>不会</strong>自行运行——<code>GITHUB_TOKEN</code> 创建的事件不会触发
 workflow，Dependabot 也不接受来自这个机器人的命令。有写权限的人评论 <code>@dependabot rebase</code>；
 workflow 的评论会在 PR 中说明这一点。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-pin-bump-justifies-itself>固定版本的更新自证合理<a href=#a-pin-bump-justifies-itself class=hash-link aria-label=固定版本的更新自证合理的直接链接 title=固定版本的更新自证合理的直接链接 translate=no>​</a></h3>
+<h3 id="a-pin-bump-justifies-itself">固定版本的更新自证合理</h3>
 <p>更新 action 的 Dependabot PR 会触及 workflow 文件，而文档漂移检查是按<strong>文件</strong>触发的：
 <code>release.yml</code> 由规则 <code>politica-de-branches</code> 监视，级别为 <code>block</code>。当整个 diff 是 <code>uses:</code> 的 SHA
 和旁边的版本注释时，这条规则没有什么可问的——PR #578 和 #580 是手工解锁的，由一个人类在正文中
@@ -323,19 +358,19 @@ workflow 的评论会在 PR 中说明这一点。</p>
 <p>自 AT-094 起<strong>机器人写这一行</strong>，而且只在这一类 PR 上。<code>Drift, gerados e build</code> job
 （<code>.github/workflows/docs-check.yml</code>）中的一个步骤，就在漂移检查之前，在漂移检查评估的同一区间上
 调用
-<a href=https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-justifica-pin.ts target=_blank rel="noopener noreferrer" class=""><code>scripts/ci/dependabot-justifica-pin.ts</code></a>。
+<a href="https://github.com/daneiel/brabo/blob/dev/scripts/ci/dependabot-justifica-pin.ts"><code>scripts/ci/dependabot-justifica-pin.ts</code></a>。
 当<strong>两件</strong>事都成立时它写下这一行：</p>
 <ul>
-<li class=""><strong>作者</strong>是 Dependabot（<code>ehBranchDoDependabot</code>：前缀 <code>dependabot/</code> <strong>和</strong>应用的登录名——单独的
+<li><strong>作者</strong>是 Dependabot（<code>ehBranchDoDependabot</code>：前缀 <code>dependabot/</code> <strong>和</strong>应用的登录名——单独的
 前缀会是给人类的一扇门）；</li>
-<li class=""><strong>diff</strong> 只是固定版本的更换：每个文件都是 <code>.github/workflows/</code> 或 <code>.github/actions/</code> 下的 YAML，
+<li><strong>diff</strong> 只是固定版本的更换：每个文件都是 <code>.github/workflows/</code> 或 <code>.github/actions/</code> 下的 YAML，
 原地修改（绝不是新建、删除、重命名或改变模式），每个更改的行都是一个
-<code>uses: &lt;action>@&lt;sha>  # &lt;version></code>，与另一个<strong>同一</strong> action、<strong>同一</strong>缩进的行配对，只改变
+<code>uses: &lt;action&gt;@&lt;sha&gt;  # &lt;version&gt;</code>，与另一个<strong>同一</strong> action、<strong>同一</strong>缩进的行配对，只改变
 SHA 和/或版本标记。</li>
 </ul>
 <p>其他任何东西——一个 job、一个触发器、一个 <code>with:</code>、一个 <code>package.json</code>、一个 lockfile、一个新的
-workflow、一个人类作者——都不会写入任何东西：docmap 照常评判。这条规则永远不会变成"机器人的 PR
-跳过 docmap"。这一行带有一个 HTML 标记（<code>&lt;!-- dependabot-justifica-pin --></code>），正是这个标记让它
+workflow、一个人类作者——都不会写入任何东西：docmap 照常评判。这条规则永远不会变成&quot;机器人的 PR
+跳过 docmap&quot;。这一行带有一个 HTML 标记（<code>&lt;!-- dependabot-justifica-pin --&gt;</code>），正是这个标记让它
 <strong>可逆</strong>：如果之后的推送加入了不是固定版本的东西，机器人的这一行会被<strong>删除</strong>。人类写的
 <code>docs-not-needed:</code> 永远不会被触碰，既不会被复制也不会被删除，而在 <code>edited</code> 中，步骤只在编辑者是
 机器人本身时才评估，因此删掉机器人那一行的人类胜出。</p>
@@ -345,98 +380,107 @@ workflow、一个人类作者——都不会写入任何东西：docmap 照常�
 的不会。</p>
 <p><strong>为什么是漂移 job 中的一个步骤而不是兄弟 workflow</strong>——三次测量：</p>
 <ul>
-<li class="">用 <code>GITHUB_TOKEN</code> 编辑正文不会触发 <code>edited</code>，因此单独的 workflow 会写入这一行而让必需检查保持
+<li>用 <code>GITHUB_TOKEN</code> 编辑正文不会触发 <code>edited</code>，因此单独的 workflow 会写入这一行而让必需检查保持
 红色；</li>
-<li class="">重新运行漂移 job 没有帮助：重新运行复用原始事件的<strong>载荷</strong>，带着旧的正文（执行 34898913072，
+<li>重新运行漂移 job 没有帮助：重新运行复用原始事件的<strong>载荷</strong>，带着旧的正文（执行 34898913072，
 第 2 次尝试，2026-09-17：正文已经有了这一行，<code>PR_BODY</code> 没有，漂移检查失败）；</li>
-<li class=""><code>pull_request_target</code>，在那里 token 无需询问即可写入，只运行<strong>默认</strong>分支的 workflow——在
+<li><code>pull_request_target</code>，在那里 token 无需询问即可写入，只运行<strong>默认</strong>分支的 workflow——在
 <code>pr-police.yml</code> 中测得的陷阱。</li>
 </ul>
 <p>在同一个 job 中，漂移检查按顺序从 <code>PR_BODY_FILE</code> 读取新的正文，没有竞争，也没有重新触发。如果
 编辑失败，不会写入任何文件，漂移检查读取事件的正文：fail-closed，PR 照旧被阻止。针对仓库历史上
 每一个 Dependabot PR 测量：<code>github_actions</code> 的十个（#561–#565、#577–#581）是纯粹的固定版本更换；
 <code>npm_and_yarn</code> 的那个（#553）不是。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=who-approves>谁来批准<a href=#who-approves class=hash-link aria-label=谁来批准的直接链接 title=谁来批准的直接链接 translate=no>​</a></h2>
+<h2 id="who-approves">谁来批准</h2>
 <p>审批要求有<strong>两种模式</strong>，由仓库变量 <code>APPROVAL_MODE</code> 选择。两者都已实现并测试；从一种切换到另一种
 <strong>只需改变量</strong>，无需触碰代码。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=solo-mode--what-applies-today><code>solo</code> 模式——目前适用的<a href=#solo-mode--what-applies-today class=hash-link aria-label=solo-mode--what-applies-today的直接链接 title=solo-mode--what-applies-today的直接链接 translate=no>​</a></h3>
+<h3 id="solo-mode--what-applies-today"><code>solo</code> 模式——目前适用的</h3>
 <p>项目只有<strong>一个维护者</strong>。完整的审批者阶梯预设了尚不存在的团队，而一条无法遵守的规则是在教人
 作弊。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>情况<th>要求<tbody><tr><td>第三方的 PR<td><strong>owner 的 1 次批准</strong><tr><td>owner 编写的 PR<td><strong>无需审查</strong>即通过检查</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第三方的 PR</td>
+<td><strong>owner 的 1 次批准</strong></td>
+</tr>
+<tr>
+<td>owner 编写的 PR</td>
+<td><strong>无需审查</strong>即通过检查</td>
+</tr>
+</tbody>
+</table></div>
 <p>第二行不是特权，而是 GitHub 的工作方式：<strong>没有人能通过界面批准自己的 PR</strong>。在一个 BDFL 项目中，
 <strong>owner 的手动合并就是批准</strong>——这是他深思熟虑的行为，在他选择点击按钮的那一刻。要求一个平台
 不允许的审查只会产生一个永久红色的检查。</p>
 <p>在这种模式下，<strong>不同的人</strong>这一要求被<strong>暂停</strong>，而且是有意暂停：只有一个维护者时，它在算术上是
 不可能的。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=community-mode--for-when-there-are-people><code>community</code> 模式——有人的时候用<a href=#community-mode--for-when-there-are-people class=hash-link aria-label=community-mode--for-when-there-are-people的直接链接 title=community-mode--for-when-there-are-people的直接链接 translate=no>​</a></h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>目标<th>要求<tbody><tr><td><code>dev</code><td>1 × devs<tr><td><code>qa</code><td>2 × devs<tr><td><code>main</code><td>1 × PO <strong>+</strong> 1 × 管理层</table>
+<h3 id="community-mode--for-when-there-are-people"><code>community</code> 模式——有人的时候用</h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dev</code></td>
+<td>1 × devs</td>
+</tr>
+<tr>
+<td><code>qa</code></td>
+<td>2 × devs</td>
+</tr>
+<tr>
+<td><code>main</code></td>
+<td>1 × PO <strong>+</strong> 1 × 管理层</td>
+</tr>
+</tbody>
+</table></div>
 <p>对 <code>main</code> 来说，<strong>不同的人</strong>——这个要求重新生效。对 <code>dev</code> 和 <code>qa</code> 来说区分是自动的：席位属于
 同一个角色，每个人只计一次审查。</p>
 <p>角色是仓库变量中的<strong>账号列表</strong>，不是 GitHub 的团队：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">APROVADORES_DEVS    = ana,bruno,carla</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">APROVADORES_PO      = paula</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">APROVADORES_GESTAO  = gustavo</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>APROVADORES_DEVS    = ana,bruno,carla
+APROVADORES_PO      = paula
+APROVADORES_GESTAO  = gustavo
+</code></pre>
 <p>团队本是显而易见的路径，但<strong>在这里行不通</strong>：它们只存在于组织内部，这个仓库属于一个用户，而
 <code>GITHUB_TOKEN</code> 即使在组织内部也无法读取团队成员关系——那需要一个带 <code>read:org</code> 的 PAT。用列表，
 <code>community</code> 模式今天就可以启用，切换确实只是一个变量。</p>
 <p>诚实的代价：保持列表更新是手工工作，离开项目的人在有人编辑变量之前会继续能够批准。如果项目
 变成一个有真正团队的组织，更换来源只是改一个函数——阶梯和不同的人这条规则都不会变。</p>
-<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=why-distinct-people-needs-more-than-counting>为什么"不同的人"需要的不只是计数<a href=#why-distinct-people-needs-more-than-counting class=hash-link aria-label='为什么"不同的人"需要的不只是计数的直接链接' title='为什么"不同的人"需要的不只是计数的直接链接' translate=no>​</a></h4>
+<h4 id="why-distinct-people-needs-more-than-counting">为什么&quot;不同的人&quot;需要的不只是计数</h4>
 <p>对 <code>main</code> 来说，如果检查只是按角色计算批准数，同时在<strong>两个列表</strong>（<code>po</code> 和 <code>gestao</code>）中的人可以
 独自填满两个席位。检查把它当作一个<strong>分配</strong>问题：是否存在一种由不同审批者填满所有席位的分配？</p>
 <p>这也避免了相反的错误。如果 <code>paula</code> 是 <code>po</code> 中唯一的人但也在 <code>gestao</code> 中，把 <code>gestao</code> 的席位给她
 会让 <code>po</code> 无人覆盖——即使另一个人本可以填上它。正确的分配是存在的，检查会找到它。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rules-common-to-both-modes>两种模式共同的规则<a href=#rules-common-to-both-modes class=hash-link aria-label=两种模式共同的规则的直接链接 title=两种模式共同的规则的直接链接 translate=no>​</a></h3>
+<h3 id="rules-common-to-both-modes">两种模式共同的规则</h3>
 <ul>
-<li class="">只计入<strong>最后一个提交上的 <code>APPROVED</code></strong> 审查。对旧提交的批准不算：被批准的不是要被合并的。</li>
-<li class="">检查的摘要显示<strong>当前模式、谁批准了以及还缺什么</strong>。只说"缺少批准"的检查会迫使人去猜。</li>
+<li>只计入<strong>最后一个提交上的 <code>APPROVED</code></strong> 审查。对旧提交的批准不算：被批准的不是要被合并的。</li>
+<li>检查的摘要显示<strong>当前模式、谁批准了以及还缺什么</strong>。只说&quot;缺少批准&quot;的检查会迫使人去猜。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=migrating-to-community-mode>迁移到 <code>community</code> 模式<a href=#migrating-to-community-mode class=hash-link aria-label=migrating-to-community-mode的直接链接 title=migrating-to-community-mode的直接链接 translate=no>​</a></h3>
+<h3 id="migrating-to-community-mode">迁移到 <code>community</code> 模式</h3>
 <p>在翻转任何变量之前的前提条件：</p>
 <ol>
-<li class=""><strong>每个角色都有真人。</strong> <code>main</code> 需要 PO <strong>和</strong>管理层；如果两个列表指向同一个人，任何指向
+<li><strong>每个角色都有真人。</strong> <code>main</code> 需要 PO <strong>和</strong>管理层；如果两个列表指向同一个人，任何指向
 <code>main</code> 的 PR 都永远不会通过——不同的人这条规则无法满足。<code>qa</code> 需要<strong>两个</strong>不同的 dev：只有
 一个名字的列表会阻止晋升。</li>
-<li class=""><strong>一个关于谁进入每个列表的标准</strong>，经过定义并写下来——谁进入、谁离开，以及依据什么。</li>
+<li><strong>一个关于谁进入每个列表的标准</strong>，经过定义并写下来——谁进入、谁离开，以及依据什么。</li>
 </ol>
 <p>切换步骤：</p>
-<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_PO     --body "paula"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_GESTAO --body "gustavo"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># last: with empty lists, community rejects everything</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APPROVAL_MODE --body community</span><br/></div></code></pre></div></div>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-token-function)">gh</span><span style="color:var(--shiki-token-string)"> variable</span><span style="color:var(--shiki-token-string)"> set</span><span style="color:var(--shiki-token-string)"> APROVADORES_DEVS</span><span style="color:var(--shiki-token-string)">   --body</span><span style="color:var(--shiki-token-string-expression)"> "ana,bruno,carla"</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">gh</span><span style="color:var(--shiki-token-string)"> variable</span><span style="color:var(--shiki-token-string)"> set</span><span style="color:var(--shiki-token-string)"> APROVADORES_PO</span><span style="color:var(--shiki-token-string)">     --body</span><span style="color:var(--shiki-token-string-expression)"> "paula"</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">gh</span><span style="color:var(--shiki-token-string)"> variable</span><span style="color:var(--shiki-token-string)"> set</span><span style="color:var(--shiki-token-string)"> APROVADORES_GESTAO</span><span style="color:var(--shiki-token-string)"> --body</span><span style="color:var(--shiki-token-string-expression)"> "gustavo"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:var(--shiki-token-comment)"># last: with empty lists, community rejects everything</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">gh</span><span style="color:var(--shiki-token-string)"> variable</span><span style="color:var(--shiki-token-string)"> set</span><span style="color:var(--shiki-token-string)"> APPROVAL_MODE</span><span style="color:var(--shiki-token-string)"> --body</span><span style="color:var(--shiki-token-string)"> community</span></span>
+<span class="line"></span></code></pre>
 <p>顺序很重要。在 <code>APPROVAL_MODE=community</code> 而列表仍为空时，每个 PR 都会变红并说明缺哪个变量——
 正确，但不必要地嘈杂。先把它们填好。</p>
 <p>要切换回来：<code>gh variable set APPROVAL_MODE --body solo</code>。</p>
@@ -445,58 +489,58 @@ workflow、一个人类作者——都不会写入任何东西：docmap 照常�
 <p>关于谁进入每个列表的标准——谁进入、谁离开，以及依据什么——在仓库根目录的 <code>GOVERNANCE.md</code> 中。
 本节仍然是<strong>机制</strong>的来源（阶梯、不同的人的要求、切换步骤）；<code>GOVERNANCE.md</code> 是谁填补每个角色的
 <strong>标准</strong>的来源。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=promotion>晋升<a href=#promotion class=hash-link aria-label=晋升的直接链接 title=晋升的直接链接 translate=no>​</a></h2>
+<h2 id="promotion">晋升</h2>
 <p>代码通过一个<strong>晋升 PR</strong> 上升一级，由 workflow <code>promote</code>（<code>workflow_dispatch</code>，输入：流水线的一对
 分支）打开。</p>
 <p>workflow <strong>不合并任何东西</strong>——它计算并打开 PR。合并仍是手动行为，与进入永久分支的每一项一样。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>步骤<th>内容<tbody><tr><td>1<td><strong>谁触发</strong>——在 <code>APPROVAL_MODE=solo</code> 下，只有<tr><td><code>OWNER_HANDLE</code>。任何其他执行者都失败，并说明谁可以<td><tr><td>2<td><strong>相邻的一对</strong>——<code>dev→qa</code> 和 <code>qa→main</code>。<code>dev→main</code> 被拒绝，<tr><td>并指向分级的路径<td><tr><td>3<td><strong>周期的版本</strong>——根据自上一个最终 tag 以来合并的 PR<tr><td>计算<td><tr><td>4<td><strong>打开的 PR</strong>——正文列出每个 PR、它的功能、它的影响以及<tr><td>提议的版本<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>谁触发</strong>——在 <code>APPROVAL_MODE=solo</code> 下，只有</td>
+</tr>
+<tr>
+<td><code>OWNER_HANDLE</code>。任何其他执行者都失败，并说明谁可以</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>相邻的一对</strong>——<code>dev→qa</code> 和 <code>qa→main</code>。<code>dev→main</code> 被拒绝，</td>
+</tr>
+<tr>
+<td>并指向分级的路径</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>周期的版本</strong>——根据自上一个最终 tag 以来合并的 PR</td>
+</tr>
+<tr>
+<td>计算</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>打开的 PR</strong>——正文列出每个 PR、它的功能、它的影响以及</td>
+</tr>
+<tr>
+<td>提议的版本</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>第 4 步的正文是一张 <strong>markdown 表格</strong>，而 PR 的标题是没有人能控制的文本——因此它在变成表格单元格
 之前会被转义（<code>celulaDeTabela</code>，在 <code>scripts/ci/promote.ts</code> 中）。转义 <code>|</code> 还不够——反斜杠必须
 <strong>先</strong>转义，否则一个在 <code>|</code> 之前以 <code>\</code> 结尾的标题会产生 <code>\\|</code>，GFM 把它读作一个被转义的反斜杠后跟
 一个列<strong>分隔符</strong>——这一行多出一个单元格，表格就坏了。这就是两次替换的顺序是结构性的原因，而
 <code>promote.spec.ts</code> 中的测试计算的是该行<strong>真实</strong>的分隔符，而不是比较整个字符串。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=automatic-promotion-to-qa>自动晋升到 qa（测试阶段）<a href=#automatic-promotion-to-qa class=hash-link aria-label="自动晋升到 qa（测试阶段）的直接链接" title="自动晋升到 qa（测试阶段）的直接链接" translate=no>​</a></h3>
+<h3 id="automatic-promotion-to-qa">自动晋升到 qa（测试阶段）</h3>
 <p>在 QA 处于<strong>测试阶段</strong>期间，<code>dev</code> → <code>qa</code> 会自行晋升（ADR 0217，负责人 10月15日的决定）。开关是
 仓库变量 <strong><code>QA_FASE_DE_TESTE</code></strong>（Settings → Variables）：<code>true</code> 开启；删除它或任何其他值则关闭，
 晋升回到上面的手动 workflow <code>promote</code>。</p>
@@ -507,7 +551,7 @@ workflow、一个人类作者——都不会写入任何东西：docmap 照常�
 <code>timed_out</code>（以及其他）结束时才用 merge commit 合并。任何失败都会停止晋升，job 的摘要会点名该
 检查及其链接。没有 <code>BRABO_BOT_TOKEN</code> 时 job 会明显地失败。一个周期中没有任何新东西的推送（一次
 晋升合并、一次反向传播、<code>dev</code> 已经与 <code>qa</code> 相同）是正常结果，不是失败：摘要中出现一个
-<code>::notice::</code> 和 "nada a promover: o ciclo está vazio"，退出码 0，没有 PR。在手动 <code>promote</code> 中，
+<code>::notice::</code> 和 &quot;nada a promover: o ciclo está vazio&quot;，退出码 0，没有 PR。在手动 <code>promote</code> 中，
 空周期仍然失败。</p>
 <p>审批阶梯<strong>只</strong>对这个 PR 免除 owner 的批准：<code>dev</code> → <code>qa</code> 这一对、变量已开启，且作者等于
 <code>BRABO_BOT_TOKEN</code> 的用户（用 <code>gh api user</code> 解析）。<code>qa</code> → <code>main</code> 以及其他每一对仍需要批准。</p>
@@ -516,55 +560,55 @@ workflow、一个人类作者——都不会写入任何东西：docmap 照常�
 在公告栏中显示这一点，自动 PR 的正文以这句话开头。每次自动晋升还会产生一个 <code>-qa.N</code> tag 并
 重新发布 <code>/brabo/qa/</code>。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-promotion-check>晋升检查<a href=#the-promotion-check class=hash-link aria-label=晋升检查的直接链接 title=晋升检查的直接链接 translate=no>​</a></h3>
+<h3 id="the-promotion-check">晋升检查</h3>
 <p>晋升 PR 要经过一个自己的检查，与 <code>pr-police</code> 分开。前者验证<strong>形式</strong>（名称、来源、目标）；这个验证
 <strong>状态</strong>：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>验证<th>为什么<tbody><tr><td><strong>干净的区间</strong><td>PR 的 head 是来源分支的尖端。如果<tr><td>有人在 PR 打开之后推送了东西，将被晋升的<td><tr><td>就不是那里的东西<td><tr><td><strong>上一级已盖章</strong><td>该提交带有下一阶段的 tag。<tr><td>没有它就晋升，是在晋升一个从未经过<td><tr><td>那里的东西<td><tr><td><strong>可以做 merge commit</strong><td>晋升是 <code>--no-ff</code>。squash<tr><td>会把下一级的提交压平，阶段的 tag 最终<td><tr><td>会指向一个不再存在的提交<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>验证</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>干净的区间</strong></td>
+<td>PR 的 head 是来源分支的尖端。如果</td>
+</tr>
+<tr>
+<td>有人在 PR 打开之后推送了东西，将被晋升的</td>
+<td></td>
+</tr>
+<tr>
+<td>就不是那里的东西</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>上一级已盖章</strong></td>
+<td>该提交带有下一阶段的 tag。</td>
+</tr>
+<tr>
+<td>没有它就晋升，是在晋升一个从未经过</td>
+<td></td>
+</tr>
+<tr>
+<td>那里的东西</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>可以做 merge commit</strong></td>
+<td>晋升是 <code>--no-ff</code>。squash</td>
+</tr>
+<tr>
+<td>会把下一级的提交压平，阶段的 tag 最终</td>
+<td></td>
+</tr>
+<tr>
+<td>会指向一个不再存在的提交</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>一个<strong>无法执行</strong>的验证算作失败，绝不算作通过——无法解析的 ref 是无知，不是许可。</p>
 <p>前两项验证由 <code>scripts/ci/promotion-check.spec.ts</code> 覆盖，与 <code>pr-police</code> 和 <code>approval-ladder</code> 的
 spec 精神相同。它固定的不是实现而是规则：每个目标要求哪个印章，以及印章必须是<strong>那个提交的</strong>——
@@ -573,63 +617,63 @@ spec 精神相同。它固定的不是实现而是规则：每个目标要求哪
 <p>例外是读取<strong>合并配置</strong>：workflow 的 token 合理地没有读取它的权限，而因此阻止每一次晋升会比想要
 避免的失败更糟。在那里，不可能变成<strong>警告</strong>，真正的保证位于 <code>tag-release</code>：合并之后，它确认提交有
 <strong>两个父提交</strong>。这不依赖任何权限，看的是既成事实而不是声明的意图。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=versioning>版本<a href=#versioning class=hash-link aria-label=版本的直接链接 title=版本的直接链接 translate=no>​</a></h2>
+<h2 id="versioning">版本</h2>
 <p>每个 tag 都诞生于 workflow，格式为 <code>vX.Y.Z-dev.N</code> / <code>-qa.N</code> / 最终。</p>
 <p><strong>版本存在于 TAG 中，而不是文件中。</strong> 没有人能直接提交到永久分支来提升 <code>package.json</code>，因此要求
 四个版本文件跟随会在每个周期强制一个 bump PR——这正是自动计算要消除的仪式。<code>release.yml</code> 把这些
 文件作为<strong>警告</strong>核对，并且只在最终 tag 时触发。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-final-tag-produces>最终 tag 产生什么<a href=#what-the-final-tag-produces class=hash-link aria-label="最终 tag 产生什么的直接链接" title="最终 tag 产生什么的直接链接" translate=no>​</a></h3>
+<h3 id="what-the-final-tag-produces">最终 tag 产生什么</h3>
 <p><code>release.yml</code> 是流水线的终点，它交付的东西是刻意朴素的：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>交付物<th>内容<tbody><tr><td>GitHub Release<td>带有由<tr><td><code>scripts/changelog.mjs</code> 从 CHANGELOG 生成的说明<td><tr><td>版本核对<td>四个版本化的文件，作为<strong>警告</strong><tr><td>五个生产镜像<td>构建以证明该 tag <strong>可构建</strong>——第五个，容器 broker，自 <a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a> 起<tr><td>写入其中三个的版本<td>作为 <code>ARG</code> 写入 api、<tr><td>web 和 broker——见下文<td><tr><td><strong>对五个已发布镜像的 Trivy</strong><td><strong>按 digest</strong>，从 registry，在签名<strong>之前</strong>——有修复的 HIGH/CRITICAL 会让发布失败；没有修复的在 job 摘要中报告，并作为 Release 的资产 <code>trivy-sem-correcao.md</code>（<a class="" href=/brabo/dev/zh-Hans/adr/0172-trivy-no-release-antes-de-assinar>ADR 0172</a>）<tr><td><strong>五个镜像的签名</strong><td><code>cosign</code> keyless，<strong>按 digest</strong>，<tr><td>在同一次执行中签名然后验证<td><tr><td>（<a class="" href=/brabo/dev/zh-Hans/adr/0149-assinatura-dos-artefatos-publicados>ADR 0149</a>）<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>交付物</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub Release</td>
+<td>带有由</td>
+</tr>
+<tr>
+<td><code>scripts/changelog.mjs</code> 从 CHANGELOG 生成的说明</td>
+<td></td>
+</tr>
+<tr>
+<td>版本核对</td>
+<td>四个版本化的文件，作为<strong>警告</strong></td>
+</tr>
+<tr>
+<td>五个生产镜像</td>
+<td>构建以证明该 tag <strong>可构建</strong>——第五个，容器 broker，自 <a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162</a> 起</td>
+</tr>
+<tr>
+<td>写入其中三个的版本</td>
+<td>作为 <code>ARG</code> 写入 api、</td>
+</tr>
+<tr>
+<td>web 和 broker——见下文</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>对五个已发布镜像的 Trivy</strong></td>
+<td><strong>按 digest</strong>，从 registry，在签名<strong>之前</strong>——有修复的 HIGH/CRITICAL 会让发布失败；没有修复的在 job 摘要中报告，并作为 Release 的资产 <code>trivy-sem-correcao.md</code>（<a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172</a>）</td>
+</tr>
+<tr>
+<td><strong>五个镜像的签名</strong></td>
+<td><code>cosign</code> keyless，<strong>按 digest</strong>，</td>
+</tr>
+<tr>
+<td>在同一次执行中签名然后验证</td>
+<td></td>
+</tr>
+<tr>
+<td>（<a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149</a>）</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>最后一行是最终 tag 在 FASE 29 中获得的，值得精确说明<strong>为什么按 digest</strong>：对 <code>:5.0.0</code> 签名只会
 证明签名那一刻 tag 所指向的东西，而 tag 是一个可移动的指针。digest 是 <code>.release/images.json</code> 已经
 记录、生产 overlay 已经应用的东西。</p>
@@ -643,33 +687,33 @@ spec 精神相同。它固定的不是实现而是规则：每个目标要求哪
 <p>runner 的二进制随后在 <code>build-runner-binaries.yml</code> 中到来，用<strong>一个</strong>已签名的 <code>checksums.txt</code>
 覆盖四个目标，而不是每个二进制一个签名：验证三个而忘了第四个是没人注意得到的失败模式，单一清单
 消除了它。</p>
-<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=the-version-lives-in-the-tag-and-the-release-is-what-carries-it-to-the-artifact>版本存在于 tag 中，而 release 是把它带到工件的东西<a href=#the-version-lives-in-the-tag-and-the-release-is-what-carries-it-to-the-artifact class=hash-link aria-label="版本存在于 tag 中，而 release 是把它带到工件的东西的直接链接" title="版本存在于 tag 中，而 release 是把它带到工件的东西的直接链接" translate=no>​</a></h4>
+<h4 id="the-version-lives-in-the-tag-and-the-release-is-what-carries-it-to-the-artifact">版本存在于 tag 中，而 release 是把它带到工件的东西</h4>
 <p>tag 是版本的来源，但镜像无法读取自己的 tag：容器不知道自己以什么名字发布，而 tag 可以移动。因此
 <code>release.yml</code> <strong>把版本传给构建</strong>——它是仓库中唯一这样做的地方。</p>
 <p><code>VERSION</code> 是 <code>docker-bake.hcl</code> 的一个变量，与 <code>TAG</code> 分开，默认值为 <code>dev</code>。目标 <code>api</code> 和 <code>broker</code>
 把它转换为 <code>BRABO_VERSION</code>，目标 <code>web</code> 转换为 <code>VITE_BRABO_VERSION</code>；每个 <code>Dockerfile.prod</code> 都把它
 声明为带同样默认值的 <code>ARG</code>。从那里它到达 api 的 span 的 <code>service.version</code>，以及 web 中认证界面的
-页脚（<a class="" href=/brabo/dev/zh-Hans/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas>ADR 0036</a>）。</p>
+页脚（<a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036</a>）。</p>
 <p>两个后果，两者都是有意的：</p>
 <ul>
-<li class=""><strong>只有 release 盖上版本。</strong> <code>ci.yml</code> 以 <code>TAG=prod</code> 使用同一个 bakefile 且不定义 <code>VERSION</code>，
+<li><strong>只有 release 盖上版本。</strong> <code>ci.yml</code> 以 <code>TAG=prod</code> 使用同一个 bakefile 且不定义 <code>VERSION</code>，
 因此它的镜像报告 <code>dev</code>。如果版本来自 <code>TAG</code>，每个 CI span 都会带着 <code>service.version=prod</code>，而
 它不是任何东西的版本。</li>
-<li class=""><strong>版本不是配置。</strong> 它是构建的 <code>ARG</code>，不是 ConfigMap 的键，因为它是工件的属性：
+<li><strong>版本不是配置。</strong> 它是构建的 <code>ARG</code>，不是 ConfigMap 的键，因为它是工件的属性：
 <code>brabo-web:1.1.2</code> 不应该能报告别的东西。URL 仍在运行时通过 <code>/config.js</code> 配置，因为它们是环境的
 属性（ADR 0024）。</li>
 </ul>
 <p>改动这条链就是改动策略：在 bakefile 或 <code>ARG</code> 中改 <code>VERSION</code> 的人需要同时改两边，否则版本会悄悄
 回到 <code>dev</code>——任何地方都没有错误，因为 <code>dev</code> 是一个有效值。</p>
 <p><strong>镜像没有发布</strong>——<code>push: false</code>。发布到 registry 尚未决定（生产 overlay 指向 <code>ghcr.io/OWNER/*</code>，
-一个标记），决定记录在 <a class="" href=/brabo/dev/zh-Hans/adr/0027-fase5-backup-hardening-release>ADR 0027</a> 中。构建而不发布
+一个标记），决定记录在 <a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027</a> 中。构建而不发布
 不是半吊子措施：它阻止了为一个无法编译的提交存在 tag。</p>
 <p>它们由 <code>ci.yml</code> 使用的同一个 <code>docker-bake.hcl</code> 并行构建。以前是四个顺序的 <code>docker build</code>——同样
 的裁决，每次发布多约 160 秒。</p>
 <p><strong>这里没有部署步骤，任何地方都没有。</strong> tag 是每个环境中<strong>本应</strong>有什么的记录，即使没有环境这也
 成立。一个从不运行的步骤会腐烂：没有人测试它，没有人注意到它坏了，等到它被打开的那天它就是错的。
 等有了环境，部署将是一个<strong>独立</strong>的 workflow，由 tag 触发。</p>
-<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=the-release-depends-on-the-pat-and-its-absence-has-already-cost-six>Release 依赖 PAT，而缺少它已经让六个 Release 落空<a href=#the-release-depends-on-the-pat-and-its-absence-has-already-cost-six class=hash-link aria-label="Release 依赖 PAT，而缺少它已经让六个 Release 落空的直接链接" title="Release 依赖 PAT，而缺少它已经让六个 Release 落空的直接链接" translate=no>​</a></h4>
+<h4 id="the-release-depends-on-the-pat-and-its-absence-has-already-cost-six">Release 依赖 PAT，而缺少它已经让六个 Release 落空</h4>
 <p><code>release.yml</code> 在推送最终 tag 时触发。但<strong>用 <code>GITHUB_TOKEN</code> 推送的 tag 不会触发 workflow</strong>——这是
 GitHub 的反递归规则。<code>tag-release</code> 使用 <code>secrets.BRABO_BOT_TOKEN || github.token</code>：没有 PAT，tag
 会诞生而 Release 不会出来。</p>
@@ -679,37 +723,37 @@ GitHub 的反递归规则。<code>tag-release</code> 使用 <code>secrets.BRABO_
 Release。在它之前，只有 <code>v0.1.0</code> 有 Release，而且是通过手动推送。<strong>PAT 无法挽回之前的六个</strong>——它
 只对新 tag 有效。</p>
 <p>这把两个容易混淆的问题分开：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>问题<th>修正<tbody><tr><td>Release 不会<strong>自己</strong>出来<td>配置<tr><td><code>BRABO_BOT_TOKEN</code><td><tr><td>一个没出来的 Release <strong>之后也出不来</strong><td><tr><td><code>release.yml</code> 的 <code>workflow_dispatch</code><td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>修正</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Release 不会<strong>自己</strong>出来</td>
+<td>配置</td>
+</tr>
+<tr>
+<td><code>BRABO_BOT_TOKEN</code></td>
+<td></td>
+</tr>
+<tr>
+<td>一个没出来的 Release <strong>之后也出不来</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>release.yml</code> 的 <code>workflow_dispatch</code></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>即使 PAT 就位，第二个问题仍会存在：任何 workflow 失败都会让 tag 永远成为孤儿，因为重新发布需要删除
 并重建 tag——为了修正其效果而改写记录。重新发布的是 release 的负责人，与 <code>promote</code> 的限制相同。
-步骤在 <a class="" href=/brabo/dev/zh-Hans/reference/rulesets#republishing-a-tag-that-was-orphaned>Rulesets</a> 中。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-changelog-comes-back-via-pr-and-why-not-by-push>CHANGELOG 通过 PR 回来，以及为什么不是推送<a href=#the-changelog-comes-back-via-pr-and-why-not-by-push class=hash-link aria-label="CHANGELOG 通过 PR 回来，以及为什么不是推送的直接链接" title="CHANGELOG 通过 PR 回来，以及为什么不是推送的直接链接" translate=no>​</a></h3>
-<p>Release 发布后，<code>release.yml</code> 向 <strong><code>dev</code></strong> 打开一个 PR <code>chore/changelog-&lt;tag></code>，带有 <code>CHANGELOG.md</code>
+步骤在 <a href="../reference/rulesets.html#republishing-a-tag-that-was-orphaned">Rulesets</a> 中。</p>
+<h3 id="the-changelog-comes-back-via-pr-and-why-not-by-push">CHANGELOG 通过 PR 回来，以及为什么不是推送</h3>
+<p>Release 发布后，<code>release.yml</code> 向 <strong><code>dev</code></strong> 打开一个 PR <code>chore/changelog-&lt;tag&gt;</code>，带有 <code>CHANGELOG.md</code>
 中版本的切分——并且在同一个提交中，带有写入版本的<strong>两个</strong>文件中以散文宣布的版本：<code>README.md</code> 和
 <code>docs/intro.md</code>，即已发布网站的第一页。改写两者的是 <code>scripts/ci/readme-version.ts</code>，它在写入任何
 一个之前先读取并替换全部：任何一个中缺少句子都会让整个发布失败，而不是让它只写了一半。</p>
@@ -726,9 +770,9 @@ Release。在它之前，只有 <code>v0.1.0</code> 有 Release，而且是通�
 区间</strong>——PR 的 head 将不再是来源的尖端。</p>
 <p><strong>接受的后果：</strong> <code>main</code> 的 <code>CHANGELOG.md</code> 落后一个周期。这不是信息丢失：说明的权威来源是
 <strong>GitHub Release</strong>，与 tag 在同一时刻发布，切分像其他任何变更一样在下一个周期到达。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=releaseimagesjson-rides-the-same-pr--and-adds-no-exception><code>.release/images.json</code> 搭乘同一个 PR——且不增加例外<a href=#releaseimagesjson-rides-the-same-pr--and-adds-no-exception class=hash-link aria-label=releaseimagesjson-rides-the-same-pr--and-adds-no-exception的直接链接 title=releaseimagesjson-rides-the-same-pr--and-adds-no-exception的直接链接 translate=no>​</a></h3>
-<p>自 <a class="" href=/brabo/dev/zh-Hans/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a> 起，<code>release.yml</code> 把生产镜像
-发布到 GHCR——自 <a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a> 起为五个——
+<h3 id="releaseimagesjson-rides-the-same-pr--and-adds-no-exception"><code>.release/images.json</code> 搭乘同一个 PR——且不增加例外</h3>
+<p>自 <a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119</a> 起，<code>release.yml</code> 把生产镜像
+发布到 GHCR——自 <a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162</a> 起为五个——
 并把该 tag 发布了什么<strong>按 digest</strong> 记录在 <code>.release/images.json</code> 中。安装器从那里读取五个；
 Kubernetes 的 overlay 应用它的基础声明的四个（按决定，没有 broker 的 Deployment）。</p>
 <p>显而易见的实现——机器人把 digest 写入 <code>deploy/k8s/overlays/prod/kustomization.yaml</code> 并推送——
@@ -737,40 +781,40 @@ Kubernetes 的 overlay 应用它的基础声明的四个（按决定，没有 br
 决定不属于 tag。</p>
 <p>所以这个文件走已经存在的两条路径。它是 <strong>GitHub Release 的资产</strong>，与说明在同一步骤中发布——权威
 副本，在 tag 存在的那一刻就可用——并通过 <code>git add</code> 进入上面描述的<strong>同一个 PR
-<code>chore/changelog-&lt;tag></code></strong>，这就是版本化副本到达 <code>dev</code> 并像其他任何变更一样沿阶梯上升的方式。与
+<code>chore/changelog-&lt;tag&gt;</code></strong>，这就是版本化副本到达 <code>dev</code> 并像其他任何变更一样沿阶梯上升的方式。与
 CHANGELOG 相同的接受后果，原因相同：<code>main</code> 的副本落后一个周期，在此期间 Release 的资产是可信的。</p>
 <blockquote>
 <p>在此之前，<strong>从来没有任何东西写入这个文件</strong>。生成器只以 <code>--stdout</code> 调用，用来组装 Release 的
-正文，而 <code>CHANGELOG.md</code> 在单一个 "Unreleased" 中积累了十二个版本——同时有六个 Release 以空
-正文发布，因为"上一个 tag"包含了该版本自己的预发布。</p>
+正文，而 <code>CHANGELOG.md</code> 在单一个 &quot;Unreleased&quot; 中积累了十二个版本——同时有六个 Release 以空
+正文发布，因为&quot;上一个 tag&quot;包含了该版本自己的预发布。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-cycles-version>周期的版本<a href=#the-cycles-version class=hash-link aria-label=周期的版本的直接链接 title=周期的版本的直接链接 translate=no>​</a></h3>
+<h3 id="the-cycles-version">周期的版本</h3>
 <p>来自自上一个最终 tag 以来合并的 PR 中的<strong>最大影响</strong>：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>分支的功能<th>影响<tbody><tr><td><code>breaking/</code><td>MAJOR<tr><td><code>feature/</code><td>MINOR<tr><td>其余所有<td>PATCH</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>分支的功能</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>breaking/</code></td>
+<td>MAJOR</td>
+</tr>
+<tr>
+<td><code>feature/</code></td>
+<td>MINOR</td>
+</tr>
+<tr>
+<td>其余所有</td>
+<td>PATCH</td>
+</tr>
+</tbody>
+</table></div>
 <p>十个 <code>docs</code> 中的一个 <code>breaking</code> 就让整个周期成为 MAJOR。而决定的是<strong>分支的功能</strong>，不是家族标签：
 <code>breaking/x</code> 和 <code>docs/y</code> 都在 <code>trabalho</code> 家族中。</p>
-<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=breaking-requires-the-marker-on-the-commit><code>breaking/</code> 要求提交上有标记<a href=#breaking-requires-the-marker-on-the-commit class=hash-link aria-label=breaking-requires-the-marker-on-the-commit的直接链接 title=breaking-requires-the-marker-on-the-commit的直接链接 translate=no>​</a></h4>
+<h4 id="breaking-requires-the-marker-on-the-commit"><code>breaking/</code> 要求提交上有标记</h4>
 <p><code>pr-police</code> 拒绝提交没有标记破坏的 <code>breaking/</code> PR——主题中的 <code>!</code>（<code>feat(api)!: …</code>）或正文中的
 <code>BREAKING CHANGE:</code>——也拒绝相反的情况：不是 <code>breaking/</code> 的分支上有被标记的提交。</p>
 <p>这条规则存在，是因为对同一个事实有<strong>两个机制</strong>，而它们原本是分开的：版本来自分支的<strong>功能</strong>（上表），
@@ -779,61 +823,61 @@ CHANGELOG 相同的接受后果，原因相同：<code>main</code> 的副本落�
 MAJOR——而 CHANGELOG 没有记录任何破坏，在十二个版本中的<strong>任何一个</strong>中都没有，因为历史中从来没有
 任何提交使用过这些标记。两半都能工作；信息只是从来没有从一边传到另一边。</p>
 <p>两个方向都重要，而第二个更糟：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>情况<th>曾经发生什么<tbody><tr><td>没有标记的 <code>breaking/</code><td>版本跳到 MAJOR 而<tr><td>changelog 不说什么坏了<td><tr><td><code>breaking/</code> 之外的标记<td>changelog 宣布破坏而<tr><td>版本是 PATCH——信任这个数字的人会在没有<td><tr><td>警告的情况下出问题<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>曾经发生什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>没有标记的 <code>breaking/</code></td>
+<td>版本跳到 MAJOR 而</td>
+</tr>
+<tr>
+<td>changelog 不说什么坏了</td>
+<td></td>
+</tr>
+<tr>
+<td><code>breaking/</code> 之外的标记</td>
+<td>changelog 宣布破坏而</td>
+</tr>
+<tr>
+<td>版本是 PATCH——信任这个数字的人会在没有</td>
+<td></td>
+</tr>
+<tr>
+<td>警告的情况下出问题</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>一个无法执行的验证（浅检出、未获取的 ref）<strong>不会失败</strong>：规则只在 <code>base..head</code> 区间可读时运行，与
 污染检查是同一教义。</p>
 <p>一个<strong>空</strong>周期——自上一个最终版本以来没有 PR——会带着消息失败，而不是生成 tag。指向与上一个相同
 提交的新 tag 会让版本历史撒谎。</p>
-<h4 class="anchor anchorTargetStickyNavbar_PEh0" id=where-the-cycles-prs-come-from>周期的 PR 从哪里来<a href=#where-the-cycles-prs-come-from class=hash-link aria-label="周期的 PR 从哪里来的直接链接" title="周期的 PR 从哪里来的直接链接" translate=no>​</a></h4>
+<h4 id="where-the-cycles-prs-come-from">周期的 PR 从哪里来</h4>
 <p>来自上一个最终 tag 与 <code>dev</code> 之间的 <code>git log</code>，读取提交主题中的 PR 编号。<strong>两种合并方式</strong>都需要被
 理解，因为编号落在不同的位置：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>方式<th>主题<tbody><tr><td>squash<td><code>feat(ci): faz coisa (#53)</code><tr><td>merge commit<td><code>Merge pull request #56 from daneiel/feature/x</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>主题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>squash</td>
+<td><code>feat(ci): faz coisa (#53)</code></td>
+</tr>
+<tr>
+<td>merge commit</td>
+<td><code>Merge pull request #56 from daneiel/feature/x</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>只读第一种曾是一个真实的 bug：区间的 <code>--no-merges</code> 恰好隐藏了 merge commit 中引用编号的那一行，
 整个周期看起来是空的——把 #56 合并到 <code>dev</code> 没有生成任何 tag。</p>
 <p><strong>晋升和反向传播不计入。</strong> 它们诞生于永久分支，它们携带的东西已经被计入或已经被发布。没有这个
@@ -841,148 +885,149 @@ MAJOR——而 CHANGELOG 没有记录任何破坏，在十二个版本中的<str
 <code>-dev.N</code> tag。</p>
 <p>有两个部件做这个发现，并且<strong>必须一致</strong>：<code>tag-release</code>，在合并时盖章；以及 <code>promote</code>，计算晋升 PR
 的版本。如果它们分歧，晋升 PR 宣布一个版本而 tag 带着另一个出来。两者使用同一个函数——逻辑的
-重复已经让一次晋升被拒为"空周期"，就在 <code>tag-release</code> 刚盖上 <code>-dev.2</code> 之后。</p>
+重复已经让一次晋升被拒为&quot;空周期&quot;，就在 <code>tag-release</code> 刚盖上 <code>-dev.2</code> 之后。</p>
 <blockquote>
 <p><strong><code>promote</code> 用</strong>默认<strong>分支的代码运行。</strong> 它是 <code>workflow_dispatch</code>（见
-<a class="" href=/brabo/dev/zh-Hans/reference/rulesets>Rulesets</a> 中的触发器表），因此在 <code>dev</code> 中修正计算<strong>不会</strong>修正触发，
+<a href="../reference/rulesets.html">Rulesets</a> 中的触发器表），因此在 <code>dev</code> 中修正计算<strong>不会</strong>修正触发，
 直到修正到达 <code>main</code>。在那之前，变通办法是已有文档的那个：用同一个脚本手动运行
 <code>node scripts/ci/promote.ts</code>。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-n><code>N</code><a href=#the-n class=hash-link aria-label=the-n的直接链接 title=the-n的直接链接 translate=no>​</a></h3>
+<h3 id="the-n"><code>N</code></h3>
 <p><code>N</code> 是该版本在该阶段已存在的 tag 数量加一。</p>
-<p>任何地方都不保存状态：<strong>tag 本身就是计数器</strong>。这就是"晋升、被拒、修正、再晋升"变成 <code>-qa.2</code> 而
+<p>任何地方都不保存状态：<strong>tag 本身就是计数器</strong>。这就是&quot;晋升、被拒、修正、再晋升&quot;变成 <code>-qa.2</code> 而
 无需任何人记录拒绝的原因——而这个数字最终说明了周期在通过之前转了多少圈。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-final-tags-anchor>最终 tag 的锚点<a href=#the-final-tags-anchor class=hash-link aria-label="最终 tag 的锚点的直接链接" title="最终 tag 的锚点的直接链接" translate=no>​</a></h3>
+<h3 id="the-final-tags-anchor">最终 tag 的锚点</h3>
 <p>只有当 <code>main</code> 中的东西<strong>恰好</strong>是经过 <code>qa</code> 的东西时，最终 tag 才会诞生。如果不是，workflow 会
 大声失败而不是发布。</p>
 <p>由于晋升是 <code>--no-ff</code>，合并<strong>创建一个新提交</strong>——<code>main</code> 的 sha 永远不会是 <code>qa</code> 的 sha。比较 sha 会
 是一个不可能通过的验证。比较的是两件事，合在一起它们更强：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>验证<th>保证什么<tbody><tr><td><code>-qa.N</code> 是 <code>main</code> 上提交的<strong>父提交</strong><td>进入的是<tr><td>那一个，而不是某个祖先<td><tr><td><strong>树</strong>完全相同<td>内容逐字节就是被<tr><td>验证的东西<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>验证</th>
+<th>保证什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-qa.N</code> 是 <code>main</code> 上提交的<strong>父提交</strong></td>
+<td>进入的是</td>
+</tr>
+<tr>
+<td>那一个，而不是某个祖先</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>树</strong>完全相同</td>
+<td>内容逐字节就是被</td>
+</tr>
+<tr>
+<td>验证的东西</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>第二个才是真正要紧的。如果合并的另一边带来了一个文件，树就会改变，验证就会失败——这正是锚点要
 捕获的情况。树相等比提交相等更强：它看的是内容，而不是身份。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=mains-two-paths><code>main</code> 的两条路径<a href=#mains-two-paths class=hash-link aria-label=mains-two-paths的直接链接 title=mains-two-paths的直接链接 translate=no>​</a></h3>
+<h3 id="mains-two-paths"><code>main</code> 的两条路径</h3>
 <p><code>main</code> 以两种方式接收合并，它们需要不同的版本。区分来自 merge commit 的<strong>第二个父提交</strong>——进入的
 那一边：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>第二个父提交<th>路径<th>版本<tbody><tr><td>一个 <code>-qa.N</code> 的提交<td>晋升<td>周期的版本，<strong>带锚点</strong><tr><td>其他任何东西<td>hotfix<td>上一个最终版本 <strong>+ PATCH</strong>，无锚点</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>第二个父提交</th>
+<th>路径</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一个 <code>-qa.N</code> 的提交</td>
+<td>晋升</td>
+<td>周期的版本，<strong>带锚点</strong></td>
+</tr>
+<tr>
+<td>其他任何东西</td>
+<td>hotfix</td>
+<td>上一个最终版本 <strong>+ PATCH</strong>，无锚点</td>
+</tr>
+</tbody>
+</table></div>
 <p>hotfix 诞生于 <code>main</code> 并且从不经过 <code>qa</code>。要求它有锚点就是要求不可能的事——而 PATCH tag 必须诞生，
 因为反向传播 PR 引用的正是它。</p>
 <p>一个 <code>-dev.N</code> 作为第二个父提交<strong>不</strong>算作晋升：从 <code>dev</code> 直接合并到 <code>main</code> 跳过了 <code>qa</code>，最终 tag
 会给没人验证过的代码盖章。</p>
 <p>大声失败而不是去猜的情况：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>情况<th>为什么<tbody><tr><td><code>main</code> 上只有一个父提交的合并<td>squash 抹去了<tr><td>进入的那一边；没有它就无法确定路径<td><tr><td>还没有已发布最终 tag 的 hotfix<td>PATCH 是在<tr><td>已发布的东西上的增量<td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>main</code> 上只有一个父提交的合并</td>
+<td>squash 抹去了</td>
+</tr>
+<tr>
+<td>进入的那一边；没有它就无法确定路径</td>
+<td></td>
+</tr>
+<tr>
+<td>还没有已发布最终 tag 的 hotfix</td>
+<td>PATCH 是在</td>
+</tr>
+<tr>
+<td>已发布的东西上的增量</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>以及两个<strong>不生成任何 tag</strong> 的情况，有意为之：闸门的提交（只触碰 <code>.release/</code>）和 <code>main → qa</code>/<code>dev</code>
 的反向传播，它携带的内容已经在 <code>main</code> 中。没有第二个出口，反向传播会在一个从未从 <code>dev</code> 晋升的
-提交上盖一个 <code>-qa.N</code>——一个说"这经过了 qa"的 tag 打在一个没有经过的东西上。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=theres-no-deploy>没有部署<a href=#theres-no-deploy class=hash-link aria-label=没有部署的直接链接 title=没有部署的直接链接 translate=no>​</a></h3>
+提交上盖一个 <code>-qa.N</code>——一个说&quot;这经过了 qa&quot;的 tag 打在一个没有经过的东西上。</p>
+<h3 id="theres-no-deploy">没有部署</h3>
 <p>workflow <strong>在 tag 处结束</strong>。没有环境，没有 GitHub Environments，没有部署步骤——连一个关闭的都
 没有。tag 是每个阶段中<em>本应</em>有什么的记录，它自己就站得住。</p>
 <p>一个从不运行的部署步骤是一个会腐烂的步骤：没有人测试它，没有人注意到它坏了，等到它被打开的那天
 它就是错的。等有了环境，部署将是一个独立的 workflow，<strong>由 tag</strong> 触发。</p>
 <p>要亲眼看看一个 tag 盖了什么章：</p>
-<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">make deploy-local TAG=v0.2.0-qa.1</span><br/></div></code></pre></div></div>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=squash-on-a-conveyor-merge-and-the-alarm-that-has-an-addressee>流水线合并上的 squash，以及有收件人的警报<a href=#squash-on-a-conveyor-merge-and-the-alarm-that-has-an-addressee class=hash-link aria-label="流水线合并上的 squash，以及有收件人的警报的直接链接" title="流水线合并上的 squash，以及有收件人的警报的直接链接" translate=no>​</a></h3>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-token-function)">make</span><span style="color:var(--shiki-token-string)"> deploy-local</span><span style="color:var(--shiki-token-string)"> TAG=v0.2.0-qa.1</span></span>
+<span class="line"></span></code></pre>
+<h3 id="squash-on-a-conveyor-merge-and-the-alarm-that-has-an-addressee">流水线合并上的 squash，以及有收件人的警报</h3>
 <p>晋升是 <code>--no-ff</code>，而这是被破坏最多的规则：<strong>三次</strong>（#367、#394、#464）。它值得一个独立的小节，
 因为损害在发生的那一刻是不可见的，只在一个周期之后才显现。</p>
 <p>squash 产生一个只有<strong>一个父提交</strong>的提交。在晋升中，第二个父提交是把两个级别绑在一起的唯一东西：
 没有它，<code>qa</code> 的历史不
 再包含 <code>dev</code> 的提交，阶段的 tag 指向一个已不在该历史中的提交，而且——人们实际遇到的症状——<strong>下一个
-晋升 PR 打开时带着处于"冲突"中的文件，而那根本不是冲突</strong>，只是丢失的祖先关系。通过选择任一边来
-合并这种"冲突"，正是内容在级别之间悄悄分歧的方式。</p>
+晋升 PR 打开时带着处于&quot;冲突&quot;中的文件，而那根本不是冲突</strong>，只是丢失的祖先关系。通过选择任一边来
+合并这种&quot;冲突&quot;，正是内容在级别之间悄悄分歧的方式。</p>
 <p><strong>在哪里强制执行，以及为什么不能更早。</strong> 合并方法是在点击时选择的，在 PR 的每个检查都已运行之后。
 没有任何合并前的检查能观察到它：<code>promotion-check</code> 最多读取仓库的<em>配置</em>，而且常常连这个权限都
 没有。起作用的验证看的是既成事实，在 <code>tag-release</code> 中（<code>conferirMergeDeEsteira</code>，
 <code>scripts/ci/version.ts</code>），而规则因分支而异，因为基础比率不同：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>分支<th>进入什么<th>规则<tbody><tr><td><code>qa</code>、<code>main</code><td>只有流水线流量<td>只有一个父提交总是缺陷<tr><td><code>dev</code><td>工作，整天，<strong>有意</strong>用 squash<td>只有当 PR 带来一条<strong>新边</strong>时才是缺陷——它的 head 是一个合并，其第二个父提交还不在基础中</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>分支</th>
+<th>进入什么</th>
+<th>规则</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>qa</code>、<code>main</code></td>
+<td>只有流水线流量</td>
+<td>只有一个父提交总是缺陷</td>
+</tr>
+<tr>
+<td><code>dev</code></td>
+<td>工作，整天，<strong>有意</strong>用 squash</td>
+<td>只有当 PR 带来一条<strong>新边</strong>时才是缺陷——它的 head 是一个合并，其第二个父提交还不在基础中</td>
+</tr>
+</tbody>
+</table></div>
 <p><code>dev</code> 的这个区分故意很窄。一个在合并前把 <code>dev</code> 拉入自身的工作 PR 也以一个合并作为 head——但它的
 第二个父提交已经在基础中，所以 squash 不会丢失任何东西。不能被 squash 的 PR 是那种<em>整个交付就是
 这条边</em>的，比如 #464：它的存在只是为了恢复祖先关系，被 squash 了，结果看起来已合并却什么都没交付。
@@ -996,152 +1041,173 @@ issue；没有渠道。因此 <code>tag-release</code> 现在有一个 <code>avi
 的警报，恰恰会在需要时沉默。</p>
 <p><strong>事后修正。</strong> 两边的内容都已经正确；缺少的是图中的一条边。一个使用 <code>ours</code> 策略的合并可以在不改
 一行的情况下恢复它：</p>
-<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">git checkout -b chore/reconciliar-&lt;algo> origin/dev</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">git merge -s ours origin/qa -m "chore: reconcilia ancestralidade"</span><br/></div></code></pre></div></div>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-token-function)">git</span><span style="color:var(--shiki-token-string)"> checkout</span><span style="color:var(--shiki-token-string)"> -b</span><span style="color:var(--shiki-token-string)"> chore/reconciliar-</span><span style="color:var(--shiki-token-keyword)">&#x3C;</span><span style="color:var(--shiki-token-string)">alg</span><span style="color:var(--shiki-foreground)">o</span><span style="color:var(--shiki-token-keyword)">></span><span style="color:var(--shiki-token-string)"> origin/dev</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">git</span><span style="color:var(--shiki-token-string)"> merge</span><span style="color:var(--shiki-token-string)"> -s</span><span style="color:var(--shiki-token-string)"> ours</span><span style="color:var(--shiki-token-string)"> origin/qa</span><span style="color:var(--shiki-token-string)"> -m</span><span style="color:var(--shiki-token-string-expression)"> "chore: reconcilia ancestralidade"</span></span>
+<span class="line"></span></code></pre>
 <p>而这个 PR <strong>也</strong>必须作为 merge commit 进入。squash 它在数学上保证行不通：修正<em>就是</em>第二个父提交。
 #464 正是这样失败的。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-back-merge-gate>反向传播闸门<a href=#the-back-merge-gate class=hash-link aria-label=反向传播闸门的直接链接 title=反向传播闸门的直接链接 translate=no>​</a></h2>
+<h2 id="the-back-merge-gate">反向传播闸门</h2>
 <p><code>hotfix</code> 解决了事故，又制造了一个新问题：修正在 <code>main</code> 中，而不在 <code>qa</code> 或 <code>dev</code> 中。如果有人在
 修正向下传播之前晋升 <code>dev → qa → main</code>，发布就会<strong>撤销 hotfix</strong>——没有冲突，没有警告，几个月后，
 而且没有人会把 bug 联系回那次合并。</p>
 <p>闸门通过锁定下面的级别直到修正向下传播来封住这个漏洞。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-state>状态<a href=#the-state class=hash-link aria-label=状态的直接链接 title=状态的直接链接 translate=no>​</a></h3>
+<h3 id="the-state">状态</h3>
 <p>闸门位于 <code>main</code> 上的 <code>.release/gate.json</code>：</p>
-<div class="language-json codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-json codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"versao"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token number" style=color:var(--syntax-number)>1</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"locked"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"qa"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"dev"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"awaiting"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"v0.2.1"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"order"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"qa"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"dev"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"historico"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"tag"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"v0.2.1"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"sha"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"…"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"em"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"…"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"prs"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"qa"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token number" style=color:var(--syntax-number)>60</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token property" style=color:var(--syntax-type)>"dev"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token number" style=color:var(--syntax-number)>61</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>字段<th>内容<tbody><tr><td><code>locked</code><td>不接受任何合并的分支<tr><td><code>awaiting</code><td>最近一次 hotfix 的 tag——干净时为 <code>null</code><tr><td><code>order</code><td>锁解除的顺序：总是从上到下<tr><td><code>historico</code><td>这一轮的每个 hotfix；链条闭合时清零</table>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-foreground)">{</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "versao"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-constant)"> 1</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "locked"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-foreground)"> [</span><span style="color:var(--shiki-token-string-expression)">"qa"</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-string-expression)"> "dev"</span><span style="color:var(--shiki-foreground)">]</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "awaiting"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "v0.2.1"</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "order"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-foreground)"> [</span><span style="color:var(--shiki-token-string-expression)">"qa"</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-string-expression)"> "dev"</span><span style="color:var(--shiki-foreground)">]</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "historico"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-foreground)"> [</span></span>
+<span class="line"><span style="color:var(--shiki-foreground)">    { </span><span style="color:var(--shiki-token-keyword)">"tag"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "v0.2.1"</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-keyword)"> "sha"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "…"</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-keyword)"> "em"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "…"</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-keyword)"> "prs"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-foreground)"> { </span><span style="color:var(--shiki-token-keyword)">"qa"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-constant)"> 60</span><span style="color:var(--shiki-token-punctuation)">,</span><span style="color:var(--shiki-token-keyword)"> "dev"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-constant)"> 61</span><span style="color:var(--shiki-foreground)"> } }</span></span>
+<span class="line"><span style="color:var(--shiki-foreground)">  ]</span></span>
+<span class="line"><span style="color:var(--shiki-foreground)">}</span></span>
+<span class="line"></span></code></pre>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>locked</code></td>
+<td>不接受任何合并的分支</td>
+</tr>
+<tr>
+<td><code>awaiting</code></td>
+<td>最近一次 hotfix 的 tag——干净时为 <code>null</code></td>
+</tr>
+<tr>
+<td><code>order</code></td>
+<td>锁解除的顺序：总是从上到下</td>
+</tr>
+<tr>
+<td><code>historico</code></td>
+<td>这一轮的每个 hotfix；链条闭合时清零</td>
+</tr>
+</tbody>
+</table></div>
 <p>它<strong>总是从 <code>main</code></strong> 读取，绝不从 PR 的分支读取：反向传播 PR 带着文件的一份副本，读取这份副本会
 恰好在链条每次合并都改变它的期间给出旧状态。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=what-happens-when-a-hotfix-merges>hotfix 被合并时会发生什么<a href=#what-happens-when-a-hotfix-merges class=hash-link aria-label="hotfix 被合并时会发生什么的直接链接" title="hotfix 被合并时会发生什么的直接链接" translate=no>​</a></h3>
+<h3 id="what-happens-when-a-hotfix-merges">hotfix 被合并时会发生什么</h3>
 <p>全部在同一个 workflow（<code>tag-release</code>）中，按此顺序——顺序很重要，因为 PR 需要引用 tag：</p>
 <ol>
-<li class=""><strong>PATCH</strong> tag 正常诞生（<code>v0.2.0</code> + hotfix → <code>v0.2.1</code>）；</li>
-<li class="">打开<strong>两个反向传播 PR</strong>：<code>main → qa</code> 和 <code>main → dev</code>；</li>
-<li class=""><code>.release/gate.json</code> 被写入 <code>main</code>，锁定 <code>qa</code> 和 <code>dev</code>。</li>
+<li><strong>PATCH</strong> tag 正常诞生（<code>v0.2.0</code> + hotfix → <code>v0.2.1</code>）；</li>
+<li>打开<strong>两个反向传播 PR</strong>：<code>main → qa</code> 和 <code>main → dev</code>；</li>
+<li><code>.release/gate.json</code> 被写入 <code>main</code>，锁定 <code>qa</code> 和 <code>dev</code>。</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=accumulation-comes-free>累积是免费的<a href=#accumulation-comes-free class=hash-link aria-label=累积是免费的的直接链接 title=累积是免费的的直接链接 translate=no>​</a></h3>
+<h3 id="accumulation-comes-free">累积是免费的</h3>
 <p>闸门活跃期间的第二次 hotfix <strong>不会打开新的 PR，也不会创建并行队列</strong>。<code>main → qa</code> 和 <code>main → dev</code>
 的 PR 已经打开，并携带 <code>main</code> 中的一切——包括新的 hotfix。闸门只是在 <code>historico</code> 中追加条目并重申
 锁定。一个已经解锁的分支会<strong>再次锁定</strong>，因为现在有新的内容需要向下传播。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-check-on-every-pr>检查，在每个 PR 上<a href=#the-check-on-every-pr class=hash-link aria-label="检查，在每个 PR 上的直接链接" title="检查，在每个 PR 上的直接链接" translate=no>​</a></h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>情况<th>裁决<tbody><tr><td><code>locked</code> 为空<td>✓ 通过<tr><td><code>main</code> → 仍被锁定的第一级<td>✓ 是那一级的反向传播<tr><td><code>main</code> → 顺序不对的级别<td>✗ "destrave <code>qa</code> antes de <code>dev</code>"<tr><td>任何指向被锁定分支的 PR<td>✗ 带着解决它的<tr><td>PR 的链接<td><tr><td><code>hotfix/</code> → <code>main</code><td>✓ <code>main</code> 永远不会被锁定</table>
-<p>闸门活跃期间指向 <code>dev</code> 的 <code>bugfix/</code> 会被<strong>阻止</strong>。诱惑是认为"这是修复，所以应该通过"：不行。它
+<h3 id="the-check-on-every-pr">检查，在每个 PR 上</h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>裁决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>locked</code> 为空</td>
+<td>✓ 通过</td>
+</tr>
+<tr>
+<td><code>main</code> → 仍被锁定的第一级</td>
+<td>✓ 是那一级的反向传播</td>
+</tr>
+<tr>
+<td><code>main</code> → 顺序不对的级别</td>
+<td>✗ &quot;destrave <code>qa</code> antes de <code>dev</code>&quot;</td>
+</tr>
+<tr>
+<td>任何指向被锁定分支的 PR</td>
+<td>✗ 带着解决它的</td>
+</tr>
+<tr>
+<td>PR 的链接</td>
+<td></td>
+</tr>
+<tr>
+<td><code>hotfix/</code> → <code>main</code></td>
+<td>✓ <code>main</code> 永远不会被锁定</td>
+</tr>
+</tbody>
+</table></div>
+<p>闸门活跃期间指向 <code>dev</code> 的 <code>bugfix/</code> 会被<strong>阻止</strong>。诱惑是认为&quot;这是修复，所以应该通过&quot;：不行。它
 诞生于 <code>dev</code>，不携带 hotfix，不解决锁定，只是在漏洞之上堆更多的工作。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-order-isnt-bureaucracy>顺序不是官僚主义<a href=#the-order-isnt-bureaucracy class=hash-link aria-label=顺序不是官僚主义的直接链接 title=顺序不是官僚主义的直接链接 translate=no>​</a></h3>
+<h3 id="the-order-isnt-bureaucracy">顺序不是官僚主义</h3>
 <p>在 <code>qa</code> 之前解锁 <code>dev</code> 会让中间那一级没有修正——这正是闸门要封住的漏洞。最后一次解锁会清空
 <code>awaiting</code> 并清零历史。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-lock-is-checked-not-just-declared>锁定是被核对的，而不只是被声明的<a href=#the-lock-is-checked-not-just-declared class=hash-link aria-label=锁定是被核对的，而不只是被声明的的直接链接 title=锁定是被核对的，而不只是被声明的的直接链接 translate=no>​</a></h3>
+<h3 id="the-lock-is-checked-not-just-declared">锁定是被核对的，而不只是被声明的</h3>
 <p><code>locked</code> 是<strong>意图的记录</strong>；真相是包含关系。在评估之前，检查会询问 git hotfix 的提交是否<strong>已经</strong>在
 每个被锁定的分支中，并丢弃现实已经满足的锁。</p>
 <p>这不是吹毛求疵：它是对一个真实陷阱的修正。反向传播 PR 把 <code>gate.json</code> 带到 <code>qa</code> 和 <code>dev</code>；几个月
 后，一次 <code>qa → main</code> 的晋升可能把这份旧副本带回上面。没有核对，一个幽灵锁会在 <code>main</code> 上重新出现，
 而背后没有任何 hotfix——也没有任何东西能解锁它，因为没有待处理的反向传播。仓库将永远被卡住。</p>
 <p><strong>核对失败会保持锁定。</strong> 未知不是许可。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-policy-doesnt-solve>策略不解决的问题<a href=#what-the-policy-doesnt-solve class=hash-link aria-label=策略不解决的问题的直接链接 title=策略不解决的问题的直接链接 translate=no>​</a></h2>
+<h2 id="what-the-policy-doesnt-solve">策略不解决的问题</h2>
 <p><strong>它不阻止坏代码。</strong> 它保证代码经过了各级，而不是保证代码是好的。那是审查、测试以及 QA/SecOps 的
 gates 的工作。</p>
-<p><strong>它不取代事故期间的判断。</strong> 它提供一条快速而安全的路径（<code>hotfix</code>），使没有人需要在"遵守规则"和
-"立即修正"之间选择。如果策略在事故期间碍事，问题在策略——事后开一个 issue，不要在期间作弊。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=roles>角色<a href=#roles class=hash-link aria-label=角色的直接链接 title=角色的直接链接 translate=no>​</a></h2>
+<p><strong>它不取代事故期间的判断。</strong> 它提供一条快速而安全的路径（<code>hotfix</code>），使没有人需要在&quot;遵守规则&quot;和
+&quot;立即修正&quot;之间选择。如果策略在事故期间碍事，问题在策略——事后开一个 issue，不要在期间作弊。</p>
+<h2 id="roles">角色</h2>
 <p>在 <code>APPROVAL_MODE=solo</code> 期间，下面两个角色由 <strong>owner</strong> 担任。这不是疏忽造成的集中——这是一种写下来
 而不是保持隐含的承认：一个只有一个维护者的项目没有人可以委派。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>角色<th>谁<th>做什么<tbody><tr><td><strong>release 负责人</strong><td>owner<td>唯一被授权触发<tr><td><code>promote</code> 的人<td><td><tr><td><strong>hotfix 值班</strong><td>owner<td>在事故期间批准合并到<tr><td><code>main</code><td><td></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>谁</th>
+<th>做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>release 负责人</strong></td>
+<td>owner</td>
+<td>唯一被授权触发</td>
+</tr>
+<tr>
+<td><code>promote</code> 的人</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>hotfix 值班</strong></td>
+<td>owner</td>
+<td>在事故期间批准合并到</td>
+</tr>
+<tr>
+<td><code>main</code></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
 <p>这两项指派<strong>在迁移到 <code>community</code> 时重新开放</strong>。在那里，值班重新成为一个真正的问题：阶梯将要求
 <code>main</code> 有一个 PO + 一个管理者，而当两人都在睡觉时，需要有人能在凌晨 3 点采取行动。这个 B 计划必须
 是<strong>要求映射中一个有记录的例外</strong>——包括谁可以行使它、事后记录什么——绝不是非正式的变通。</p>
-<hr/>
+<hr>
 <blockquote>
 <p><strong>TODO(humano):</strong> esta página foi reconstruída a partir do <code>CLAUDE.md</code>,
 não da apresentação original da política. Se a apresentação disser algo
 que não está aqui — SLA de retropropagação, papéis nomeados, uma política
 de branches obsoleta —, confira e complete.</p>
 </blockquote>
-<hr/>
+<hr>
 <p><sub>流水线于 2026-07-27 端到端演练：<code>v0.2.0-dev.1</code> → <code>-dev.2</code> → <code>-qa.1</code> → <code>-qa.2</code> → 最终版本，
-在两次 <code>qa</code> 盖章之间安排了一次拒绝，以证明 <code>N</code> 会自行计数。</sub></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/branching-policy.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T21:04:59.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/documentation-workflow><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>文档同步</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>CI 的供应链</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#why-mechanize-it class="table-of-contents__link toc-highlight">为什么要机械化</a><li><a href=#the-ladder class="table-of-contents__link toc-highlight">阶梯</a><li><a href=#taxonomy class="table-of-contents__link toc-highlight">分类法</a><ul><li><a href=#whos-born-where class="table-of-contents__link toc-highlight">谁从哪里诞生</a><li><a href=#a-fix-born-high-goes-back-down class="table-of-contents__link toc-highlight">在高处诞生的修复会向下传播</a></ul><li><a href=#pr-families class="table-of-contents__link toc-highlight">PR 家族</a><li><a href=#direct-push-is-blocked class="table-of-contents__link toc-highlight">直接推送被阻止</a><li><a href=#merged-branches-get-archived class="table-of-contents__link toc-highlight">已合并的分支会被归档</a><li><a href=#bots-skip-the-ladder class="table-of-contents__link toc-highlight">机器人跳过阶梯</a><ul><li><a href=#dependabot-branches-are-allowed-with-no-character-limit class="table-of-contents__link toc-highlight">Dependabot 的分支被允许，没有字符限制</a></ul><li><a href=#dependabot-enters-through-dev class="table-of-contents__link toc-highlight">Dependabot 从 dev 进入</a><ul><li><a href=#a-pin-bump-justifies-itself class="table-of-contents__link toc-highlight">固定版本的更新自证合理</a></ul><li><a href=#who-approves class="table-of-contents__link toc-highlight">谁来批准</a><ul><li><a href=#solo-mode--what-applies-today class="table-of-contents__link toc-highlight"><code>solo</code> 模式——目前适用的</a><li><a href=#community-mode--for-when-there-are-people class="table-of-contents__link toc-highlight"><code>community</code> 模式——有人的时候用</a><li><a href=#rules-common-to-both-modes class="table-of-contents__link toc-highlight">两种模式共同的规则</a><li><a href=#migrating-to-community-mode class="table-of-contents__link toc-highlight">迁移到 <code>community</code> 模式</a></ul><li><a href=#promotion class="table-of-contents__link toc-highlight">晋升</a><ul><li><a href=#automatic-promotion-to-qa class="table-of-contents__link toc-highlight">自动晋升到 qa（测试阶段）</a><li><a href=#the-promotion-check class="table-of-contents__link toc-highlight">晋升检查</a></ul><li><a href=#versioning class="table-of-contents__link toc-highlight">版本</a><ul><li><a href=#what-the-final-tag-produces class="table-of-contents__link toc-highlight">最终 tag 产生什么</a><li><a href=#the-changelog-comes-back-via-pr-and-why-not-by-push class="table-of-contents__link toc-highlight">CHANGELOG 通过 PR 回来，以及为什么不是推送</a><li><a href=#releaseimagesjson-rides-the-same-pr--and-adds-no-exception class="table-of-contents__link toc-highlight"><code>.release/images.json</code> 搭乘同一个 PR——且不增加例外</a><li><a href=#the-cycles-version class="table-of-contents__link toc-highlight">周期的版本</a><li><a href=#the-n class="table-of-contents__link toc-highlight"><code>N</code></a><li><a href=#the-final-tags-anchor class="table-of-contents__link toc-highlight">最终 tag 的锚点</a><li><a href=#mains-two-paths class="table-of-contents__link toc-highlight"><code>main</code> 的两条路径</a><li><a href=#theres-no-deploy class="table-of-contents__link toc-highlight">没有部署</a><li><a href=#squash-on-a-conveyor-merge-and-the-alarm-that-has-an-addressee class="table-of-contents__link toc-highlight">流水线合并上的 squash，以及有收件人的警报</a></ul><li><a href=#the-back-merge-gate class="table-of-contents__link toc-highlight">反向传播闸门</a><ul><li><a href=#the-state class="table-of-contents__link toc-highlight">状态</a><li><a href=#what-happens-when-a-hotfix-merges class="table-of-contents__link toc-highlight">hotfix 被合并时会发生什么</a><li><a href=#accumulation-comes-free class="table-of-contents__link toc-highlight">累积是免费的</a><li><a href=#the-check-on-every-pr class="table-of-contents__link toc-highlight">检查，在每个 PR 上</a><li><a href=#the-order-isnt-bureaucracy class="table-of-contents__link toc-highlight">顺序不是官僚主义</a><li><a href=#the-lock-is-checked-not-just-declared class="table-of-contents__link toc-highlight">锁定是被核对的，而不只是被声明的</a></ul><li><a href=#what-the-policy-doesnt-solve class="table-of-contents__link toc-highlight">策略不解决的问题</a><li><a href=#roles class="table-of-contents__link toc-highlight">角色</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>运维手册</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://ko-fi.com/daneiel target=_blank rel="noopener noreferrer" class=footer__link-item>请我喝咖啡 (Ko-fi)<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+在两次 <code>qa</code> 盖章之间安排了一次拒绝，以证明 <code>N</code> 会自行计数。</sub></p>
+<nav class="site-pager"><a href="../explanation/documentation-workflow.html"></a><a href="../explanation/cadeia-de-suprimentos-do-ci.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/explanation/branching-policy.md">编辑此页</a><span>更新于 2026-11-04T15:21:46-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>本页内容</h2><ul><li class="n2"><a href="#why-mechanize-it">为什么要机械化</a></li><li class="n2"><a href="#the-ladder">阶梯</a></li><li class="n2"><a href="#taxonomy">分类法</a></li><li class="n3"><a href="#whos-born-where">谁从哪里诞生</a></li><li class="n3"><a href="#a-fix-born-high-goes-back-down">在高处诞生的修复会向下传播</a></li><li class="n2"><a href="#pr-families">PR 家族</a></li><li class="n2"><a href="#direct-push-is-blocked">直接推送被阻止</a></li><li class="n2"><a href="#merged-branches-get-archived">已合并的分支会被归档</a></li><li class="n2"><a href="#bots-skip-the-ladder">机器人跳过阶梯</a></li><li class="n3"><a href="#dependabot-branches-are-allowed-with-no-character-limit">Dependabot 的分支被允许，没有字符限制</a></li><li class="n2"><a href="#dependabot-enters-through-dev">Dependabot 从 dev 进入</a></li><li class="n3"><a href="#a-pin-bump-justifies-itself">固定版本的更新自证合理</a></li><li class="n2"><a href="#who-approves">谁来批准</a></li><li class="n3"><a href="#solo-mode--what-applies-today">solo 模式——目前适用的</a></li><li class="n3"><a href="#community-mode--for-when-there-are-people">community 模式——有人的时候用</a></li><li class="n3"><a href="#rules-common-to-both-modes">两种模式共同的规则</a></li><li class="n3"><a href="#migrating-to-community-mode">迁移到 community 模式</a></li><li class="n2"><a href="#promotion">晋升</a></li><li class="n3"><a href="#automatic-promotion-to-qa">自动晋升到 qa（测试阶段）</a></li><li class="n3"><a href="#the-promotion-check">晋升检查</a></li><li class="n2"><a href="#versioning">版本</a></li><li class="n3"><a href="#what-the-final-tag-produces">最终 tag 产生什么</a></li><li class="n3"><a href="#the-changelog-comes-back-via-pr-and-why-not-by-push">CHANGELOG 通过 PR 回来，以及为什么不是推送</a></li><li class="n3"><a href="#releaseimagesjson-rides-the-same-pr--and-adds-no-exception">.release/images.json 搭乘同一个 PR——且不增加例外</a></li><li class="n3"><a href="#the-cycles-version">周期的版本</a></li><li class="n3"><a href="#the-n">N</a></li><li class="n3"><a href="#the-final-tags-anchor">最终 tag 的锚点</a></li><li class="n3"><a href="#mains-two-paths">main 的两条路径</a></li><li class="n3"><a href="#theres-no-deploy">没有部署</a></li><li class="n3"><a href="#squash-on-a-conveyor-merge-and-the-alarm-that-has-an-addressee">流水线合并上的 squash，以及有收件人的警报</a></li><li class="n2"><a href="#the-back-merge-gate">反向传播闸门</a></li><li class="n3"><a href="#the-state">状态</a></li><li class="n3"><a href="#what-happens-when-a-hotfix-merges">hotfix 被合并时会发生什么</a></li><li class="n3"><a href="#accumulation-comes-free">累积是免费的</a></li><li class="n3"><a href="#the-check-on-every-pr">检查，在每个 PR 上</a></li><li class="n3"><a href="#the-order-isnt-bureaucracy">顺序不是官僚主义</a></li><li class="n3"><a href="#the-lock-is-checked-not-just-declared">锁定是被核对的，而不只是被声明的</a></li><li class="n2"><a href="#what-the-policy-doesnt-solve">策略不解决的问题</a></li><li class="n2"><a href="#roles">角色</a></li></ul></aside>
+</div>
+<script src="../../assets/mermaid.min.js"></script>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-zh-Hans.json" data-base="../"></script></body>
+</html>

@@ -1,82 +1,106 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/documentation-workflow" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Como a documentação se mantém viva | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Como a documentação se mantém viva | Brabo"/><meta data-rh=true name=description content="O mecanismo que impede a documentação de apodrecer — o que cada peça faz, por que existe e o que fazer quando a checagem reclama injustamente."/><meta data-rh=true property=og:description content="O mecanismo que impede a documentação de apodrecer — o que cada peça faz, por que existe e o que fazer quando a checagem reclama injustamente."/><meta data-rh=true name=keywords content=documentation,drift,docmap,CI,generation /><link data-rh=true rel=icon href=/brabo/dev/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/documentation-workflow hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/documentation-workflow hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/explanation/documentation-workflow","name":"Sincronia da doc","position":1}]}</script><link rel=stylesheet href=/brabo/dev/assets/css/styles.21f5d709.css /><script src=/brabo/dev/assets/js/runtime~main.3b24dad0.js defer></script><script src=/brabo/dev/assets/js/main.3c731642.js defer></script></head><body><svg style="display: none;"><defs>
-<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
-</defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-73f")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/><div class=navbar__logo><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/dev/runbook>Manual de operação</a><a class="navbar__item navbar__link" href=/brabo/dev/adr>Decisões (ADRs)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Português (Brasil)</a><ul class=dropdown__menu><li><a href=/brabo/dev/explanation/documentation-workflow target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/explanation/documentation-workflow target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/explanation/documentation-workflow target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/explanation/documentation-workflow target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/><span class=linkLabel_CzBh>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/getting-started><span class=linkLabel_CzBh>Primeiros passos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>Do zero a um entregável</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/configuration><span class=linkLabel_CzBh>Configuração</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/events><span class=linkLabel_CzBh>Eventos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/permissions><span class=linkLabel_CzBh>Permissões</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/artifacts><span class=linkLabel_CzBh>Artefatos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/git-providers><span class=linkLabel_CzBh>Provedores de git</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/internal-api><span class=linkLabel_CzBh>API interna</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/scripts><span class=linkLabel_CzBh>Scripts e comandos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/rulesets><span class=linkLabel_CzBh>Rulesets do repositório</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/brb><span class=linkLabel_CzBh>Registro BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/api><span class=linkLabel_CzBh>Referência da API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/brabo/dev/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Processo e esteira</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/modelo-de-time><span class=linkLabel_CzBh>Modelo de time e fluxo de entregáveis</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Validações e medições</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>História das fases</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/explanation/localizacao><span class=categoryLinkLabel_jKch>Localização</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Notas técnicas</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/runbook><span class=linkLabel_CzBh>Manual de operação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/glossary><span class=linkLabel_CzBh>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/dev/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class=breadcrumbs__item><span class=breadcrumbs__link>Processo e esteira</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Sincronia da doc</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Nesta página</button></div><div class="theme-doc-markdown markdown"><header><h1>Como a documentação se mantém viva</h1></header>
+<!doctype html>
+<html lang="pt-BR" data-locale="pt-BR" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como a documentação se mantém viva | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../assets/tema.js"></script>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Menu">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Buscar" aria-label="Buscar" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Idioma"><option value="../explanation/documentation-workflow.html" selected>pt-BR</option><option value="../en/explanation/documentation-workflow.html">en</option><option value="../ru/explanation/documentation-workflow.html">ru</option><option value="../zh-Hans/explanation/documentation-workflow.html">zh-Hans</option></select>
+<select data-seletor aria-label="Ambiente"><option value="../../dev/explanation/documentation-workflow.html" selected>dev</option><option value="../../prd/explanation/documentation-workflow.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Alternar tema">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Comece aqui</h2><ul><li><a href="../index.html">Introdução</a></li><li><a href="../getting-started.html">Primeiros passos</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">Do zero a um entregável</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Arquitetura</h2><ul><li><a href="../architecture.html">Arquitetura</a></li><li><a href="../adr.html">Decisões (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Formato do contrato normalizado do GitProvider</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — Normalização de erros do GitProvider</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Política de retry para providers remotos</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Cadastro de credenciais de git do usuário</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Bootstrap de Gitflow idempotente e retomável</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Política de branches mecanizada</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Adoção de repositório existente, e o plano como portão</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — O engine trabalha em repositório remoto</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness de agentes: montagem determinística de contexto</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — O tipo da sessão é dado da criação, e a execução continua sendo evento</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Limites de transporte e janela efetiva de compactação coerentes</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — O Infra Lead conversa pelo composer, e antes o turno dele passa pelo `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — O idioma das respostas mora em três lugares — conta, sessão e projeto —, em lista aberta de BCP-47 e nunca no `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — O laço pergunta ao Jev qual ferramenta, e o modelo do usuário vê só o menu que sobra</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Reabrir sessão: as três decisões do dono, e `developer` reabre</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — A mensagem que chega com turno em curso entra numa fila persistida e é lida no fim do turno</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Agente Criativo conversacional no harness + fundação de handoffs</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Agente PO, backlog (epics/stories/tasks) e rastreabilidade</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Agente Arquiteto: ADRs via PR real, module_map e validação cruzada</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent e painel do time ao vivo (fechamento da Fase 4a)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Psicólogo real: ToolLoop, hipóteses com evidência e triagem de custo</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: perfil de proficiência, patches de instrução e loop fechado</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Fechamento da Fase 4b (sessão 1): evidência que chega, custo que aparece, análise que sobrevive ao kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Fechamento da Fase 4b (sessão 2): catálogo que funciona, dedup que distingue quem negou, e fila que sobrevive à rodada</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Hierarquia de agentes: áreas, leads e delegação</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Promoção de história com autoridade do usuário</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Diagrama C4 do Arquiteto</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Fusão condicional do aceite do handoff com a ativação de execução</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Fluxo de papéis como registro declarativo (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — O plano do Dev Lead suspende o turno para aprovação</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — O UX Designer entra como agente conversacional</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: código pronto, dormente para disparo automático</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` e `delivery-metricas` viram script de relatório</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` nasce como script de relatório sob demanda, não agente</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — O papel `dbre` vira dois scripts: linter de migration e relatório de backup</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — A delegação Dev Lead → dev vira dado, com `parecerArtifactId` redefinido</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Handoff manual a um agente à escolha reusa oferta+aceite, nunca um terceiro estado de handoff</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;: um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — O handoff do PO ao Arquiteto é aceito sem clique quando o backlog está coberto e o repositório é local</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Aprovar o plano do Dev Lead ativa a execução, e a tarefa ganha o módulo que ele atribui</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — A história arquivada: uma coluna, não um estado da máquina</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — O entregável roda na máquina do usuário pelo compose da Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates de PR: QAAgent e SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Destravar os gates de QA e SecOps: gitleaks na árvore, pareceres validados e tool call em texto</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Fechamento da Fase 4a: gate de infra que valida, e painel que diz a verdade</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates como registro declarativo</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — O agente de gate espera a aprovação, como o dev espera</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — O gate sobrevive ao restart</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-estratégia e AppSec como segundo MOMENTO, não agente novo</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` como script de relatório sobre `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — O gate `necessidade-validada` se fecha com confirmação humana separada, não com o Criativo se autovalidando</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set de casos de regressão para o julgamento semântico do agente de QA Automação</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — O plano de teste nasce depois da entrega do dev, e o gate `implementavel` passa a se julgar sobre a história e o `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Pergunta em aberto vira pendência a resolver</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — A decisão do projeto chega ao dev e ao QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Infraestrutura dos dev agents: worktrees, executores git e trava de merge</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — DevAgent real: ToolLoop, orçamento por task e disciplina de bloqueio</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Lock de inicialização do workspace, Monitor de dev agents e herança de teto</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent como modo de execução permanente</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Destravar o DevAgent real: escrita, terminal, ADR por módulo e orçamento por projeto</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Reagendamento por evento do dev agent, e o circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — A decisão no event log, e a ordem do gate</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — O dev agent espera a aprovação no meio do laço</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Escopo de caminho na política de terminal</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Revisão do ADR 0065: a fronteira de efeito externo deixa de ser `deny` e vira teto absoluto</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — O modo automático libera o escopo de caminho, e só ele</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e &quot;Sempre permitir&quot; grava verbo + subcomando</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — O modo automático libera push e PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Nome de pasta legível do workspace</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — O projeto escolhe onde o código mora: pasta do usuário ou pasta gerenciada</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` em três valores, e o workspace nasce `unverified` quando o runner é quem verifica</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Navegação de pasta local via o Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — No modo `runner`, o projeto nasce ao clicar em &quot;Navegar pasta...&quot;, não só na confirmação</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Converter o `execution_mode` de um projeto existente: recusar com dev agent ativo, realocar o `permissions.json`, aposentar a linha do container</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — A base única dos projetos montados, montada por identidade</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — A validação do workspace montado é adiada até a materialização</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — A base consentida no bootstrap, e `mounted` como padrão local</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Container por projeto: a fronteira deixa de ser política</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Ciclo de vida do container: tabela de estado, sem orquestrador</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — A porta de Docker, e a prova de empacotamento que escolheu a implementação</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — O broker de container: quem fala com o Docker do servidor, e por que ele não aceita especificação</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — O Arquiteto roteia módulos para infra: ele CANDIDATA, a Infra ELEGE</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — A Infra elege entre as candidatas do roteamento, e a eleição vira nova versão de `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents executam DENTRO do container real do projeto, e o terminal ganha um piso de auto-aprovação lá dentro</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — O portão da imagem do Arquiteto (RN-105) passa a valer nos três modos de execução</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Página global de containers: teto por carga no broker, e `container_remove` no teto absoluto</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — O `brabo-runner` sobe o container do projeto na máquina do usuário</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Agentes de dev só depois do container</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — A segunda raiz do broker, e o localizador discriminado que a escolhe</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — O container do projeto roda com o dono da pasta, medido pela api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada, e é ela quem entrega ao Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — O recurso mínimo do container é derivado do `module_map`: cada módulo declara o seu, e a Infra sobe com a soma</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — A Infra herda a rede que o Arquiteto declarou</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Runner local: execução na máquina do usuário por canal Phoenix com ticket de uso único</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) pro runner, escopado por construção a uma rota</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Distribuição do `@brabo/runner` via `tsup` e `npm publish`, versão injetada só em CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Binário standalone do `@brabo/runner` via `bun build --compile`, com o addon nativo `.node` embutido por extração real para um diretório temporário</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Configuração do runner pelo navegador: uma chave de dispositivo Ed25519 como segunda credencial do `runner-ticket`, um proxy do GitHub Releases para o binário e a File System Access API para uma pasta configurada com um clique</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker vira pré-requisito real do modo `runner`</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — Um agente local, capacidades declaradas na conexão</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — A base consentida no runner, e a criação de pasta pelo canal</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — A chave de dispositivo de máquina</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — O binário standalone do runner deixa de prometer o Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — O binário standalone do runner deixa de prometer o Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — O git credenciado roda no HOST do runner; o código roda no container</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — O fluxo do runner pelo navegador é aposentado, e o caminho é o instalador</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — O CORS que o engine não tinha, e a porta como parte do contrato</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Credencial sempre cifrada; verificação vira ação explícita</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — CSP fechado na api, e o escopo de projeto contido na raiz</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — A chave que assina o `state` do OAuth de git não tem default</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Login social (GitHub/GitLab), revisando o backlog dos ADRs 0031/0032</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — SMTP real no `MailSender`, atrás de um toggle explícito</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Dois tetos de rebaixamento em `project_members`, e a sobreposição fica</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — O teto de auto-movimento no upsert de workspace, e a auto-promoção que era brecha</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Seis providers de LLM sobre a base, e a Fase 9b finalmente fechada</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Curadoria de modelo por workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Facetas de capability provadas; &quot;para que serve&quot; é curadoria</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Duas audiências para o mesmo gasto: a fatura do owner e o consumo do membro</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Escopo de área na cascata de modelo, e o binding de agente global</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings no contrato de LLMProvider</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` volta a ser dimensão de gasto, e a contenção passa a ser do tipo</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Ranking de modelos por capacidade, sem nota inventada</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Orçamento por área é ADITIVO, ao lado de projeto/sessão — não uma cascata, e não uma tabela nova</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Detecção de Ollama nativo no bootstrap de dev: perguntar uma vez, persistir no `.env`, pôr os serviços do compose atrás de um profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull de modelo do Hugging Face: tabela própria, confirmação em dois passos e allowlist de publicadores oficiais — nunca `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — O custo real que o provider devolve vira o número do metering</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Tabela de chunks: vetor e `tsvector` na mesma linha</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Busca híbrida: pesos, limiar e o que é citação</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: aba própria de busca híbrida, sem renomear &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j como grafo de conhecimento e templates de prompt, driver na api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` para agentes e modelos Ollama garantidos no boot</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Memória relacional como projeção do event log; templates consumidos sem tocar GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Pasta local anexada vira `chunks.scope = 'local'`, lida pelo NAVEGADOR, nunca um caminho do host</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — A Anamnese religada: não roda sem sujeito, e a hipótese aceita vira fato do perfil</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — O contrato entre módulos vira artefato versionado do Arquiteto, e o dev agent o lê em vez do worktree alheio</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — O desvio do agente que a Anamnese observa vira sinal do produto, sem dado pessoal</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — A superfície de leitura de código, contida e com orçamento</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Tema alcançável, e o boot sob CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Moldura de tela, e o registro de abas diverge do handoff de propósito</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Leitura direta do schema do engine para o &quot;N agentes online&quot; do dashboard</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (e tipos futuros) gerados do contrato OpenAPI, não copiados à mão</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` dividido em cinco PRs mecânicos, declarados de antemão</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Agrupamento de estado do canal de turno extraído para `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` dividido em um arquivo por seção, atrás de um barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — A página do projeto navega por um trilho vertical, e a aba Código para de recolher a sidebar sozinha</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava só depois</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — O tema escuro vira preto neutro, e a dívida de contraste acaba</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Animação de texto com `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Uma navegação só: a sidebar absorve o trilho do projeto</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Fase 5 (sessão 1): imagens de produção, compose.prod, CI e teste de fumaça</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Fase 5 (sessão 2): deploy Kubernetes com Kustomize, métrica de fila e overlay local</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Fase 5 (sessão 3): graceful shutdown, OpenTelemetry, métricas, logs e dashboards</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, hardening da api, superfície exposta e release</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace sem coletor, e o caminho entre camadas no log</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Observabilidade no Compose local: métrica e log, sem trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — O instalador de uma linha, com fonte escolhida e marcador</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Backup e restore de volumes, contra compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — O compose do instalador viaja com ele, como asset assinado</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — A tela só oferece o modo que a instalação executa, e a instalação por Release não tem broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — O broker vira a quinta imagem publicada, e o instalador PERGUNTA se o liga</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — O destino S3 do overlay local deixa de ser o MinIO e passa a ser o SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — O engine sobe para Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint e a validação do pipeline de CI gerado</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Imagens publicadas no GHCR a cada tag final, e o overlay de produção preso por digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — E2E de navegador contra o compose de produção, num pacote fora do workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — O schema dividido por agregado de domínio, atrás de um barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Assinatura dos artefatos publicados</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Sincronização contínua da documentação</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — A referência de API sai do código, e o teste de tabela cobra os metadados</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Documentação publicada por degrau, em subdiretório do Pages</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Publicação simétrica por degrau, e uma raiz que escolhe</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — O caminho publicado nomeia o ambiente, não a branch</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` ganha lockfile próprio, fora do `pnpm audit` do produto</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — O índice de ADR por tema, com o tema fora do ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — A referência da API vira uma página Redoc</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Todo ADR se chama &quot;ADR NNNN — título&quot;</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — A referência entra na tradução</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — A página da API sai traduzida por catálogo</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 Regras</h2><ul><li><a href="../business-rules.html">Regras de negócio</a></li><li><a href="../business-rules/custo.html">Custo e metering</a></li><li><a href="../business-rules/autenticacao.html">Autenticação</a></li></ul></section><section><h2>📖 Referência</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Superfície exposta da api</a></li><li><span>Referência da API</span></li></ul></section><section><h2>💡 Explicação</h2><ul><li><span>Processo e esteira</span><ul><li><a href="../explanation/documentation-workflow.html" aria-current="page">Sincronia da doc</a></li><li><a href="../explanation/branching-policy.html">Política de branches</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">Cadeia de suprimentos do CI</a></li><li><a href="../explanation/gates.html">Os gates, e como eles são medidos</a></li><li><a href="../explanation/observability.html">Observabilidade</a></li><li><a href="../explanation/modelo-de-time.html">Modelo de time e fluxo de entregáveis</a></li></ul></li><li><span>Validações e medições</span><ul><li><a href="../explanation/primeiro-dogfooding.html">Primeiro dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Execução real (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Achados da execução real da esteira</a></li><li><a href="../explanation/validacao-fase-12.html">Validação da Fase 12</a></li><li><a href="../explanation/validacao-real.html">Validação real (13b)</a></li><li><a href="../explanation/aceite-providers.html">Aceite dos providers</a></li><li><a href="../explanation/medicao-do-idioma.html">Medição da heurística de idioma</a></li><li><a href="../explanation/medicao-do-jev.html">Medição do roteador de ferramentas Jev</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Auditoria: fluxo.yml × código (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Auditoria visual, antes e depois da Rodada 29</a></li></ul></li><li><span>História das fases</span><ul><li><a href="../explanation/historico-de-fases.html">Histórico de fases</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — pasta do usuário</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — instalação de uma linha</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — agente local da máquina</a></li><li><a href="../explanation/backlog.html">Backlog triado</a></li></ul></li><li><span>Localização</span><ul><li><a href="../explanation/localizacao.html">Localização</a></li><li><a href="../explanation/localizacao-en.html">Localização — inglês (en)</a></li><li><a href="../explanation/localizacao-ru.html">Localização — russo (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Localização — chinês simplificado (zh-Hans)</a></li></ul></li><li><span>Notas técnicas</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — não adotado</a></li></ul></li></ul></section><section><h2>🛠️ Operação</h2><ul><li><a href="../runbook.html">Manual de operação</a></li></ul></section><section><h2>📚 Vocabulário</h2><ul><li><a href="../glossary.html">Glossário</a></li></ul></section><section><h2>🤝 Contribuir</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Como contribuir</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Onde pedir ajuda</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Reportar vulnerabilidade</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="how-documentation-stays-alive">Como a documentação se mantém viva</h1>
 <p>Documentação não morre por falta de escrita inicial. Ela morre por
 <strong>drift</strong>: o código muda, a doc fica, e um dia alguém percebe que ela
 descreve um sistema que não existe mais. Desse ponto em diante ninguém
 confia em página nenhuma, inclusive nas que estão certas.</p>
 <p>Esta página explica o mecanismo que existe para evitar isso. Leia-a se
 o CI reclamou de você — e leia-a antes de desligar qualquer parte dele.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-principle-generate--verify--remember>O princípio: gerar > verificar > lembrar<a href=#the-principle-generate--verify--remember class=hash-link aria-label="Link direto para O princípio: gerar > verificar > lembrar" title="Link direto para O princípio: gerar > verificar > lembrar" translate=no>​</a></h2>
+<h2 id="the-principle-generate--verify--remember">O princípio: gerar &gt; verificar &gt; lembrar</h2>
 <p>Três níveis, em ordem decrescente de confiabilidade:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>nível<th>como funciona<th>quando usar<tbody><tr><td><strong>Gerar</strong><td>a doc sai do código; drift é impossível<td>a lista É o conteúdo<tr><td><strong>Verificar</strong><td>a doc é escrita à mão, o CI confere que está completa<td>a prosa importa mais que a lista<tr><td><strong>Lembrar</strong><td>o CI avisa quem abriu o PR<td>quando é preciso julgamento humano</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>nível</th>
+<th>como funciona</th>
+<th>quando usar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gerar</strong></td>
+<td>a doc sai do código; drift é impossível</td>
+<td>a lista É o conteúdo</td>
+</tr>
+<tr>
+<td><strong>Verificar</strong></td>
+<td>a doc é escrita à mão, o CI confere que está completa</td>
+<td>a prosa importa mais que a lista</td>
+</tr>
+<tr>
+<td><strong>Lembrar</strong></td>
+<td>o CI avisa quem abriu o PR</td>
+<td>quando é preciso julgamento humano</td>
+</tr>
+</tbody>
+</table></div>
 <p>O último nível é o mais fraco, e é por isso que ele é o último recurso.
 Um aviso que ninguém lê não protege nada.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-number-in-prose-is-a-verify-case>Número em prosa é caso de <em>verificar</em><a href=#a-number-in-prose-is-a-verify-case class=hash-link aria-label="Link direto para a-number-in-prose-is-a-verify-case" title="Link direto para a-number-in-prose-is-a-verify-case" translate=no>​</a></h3>
-<p>Um número no meio de uma frase — "os 30 ADRs", "o próximo é <code>0031</code>" —
+<h3 id="a-number-in-prose-is-a-verify-case">Número em prosa é caso de <em>verificar</em></h3>
+<p>Um número no meio de uma frase — &quot;os 30 ADRs&quot;, &quot;o próximo é <code>0031</code>&quot; —
 não é gerável: ele mora dentro do texto, e trocá-lo por um marcador
 deixaria a prosa da fonte ilegível. Mas ele é <strong>verificável</strong>, e é aí
 que deve morar.</p>
 <p>Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado
-dizia "28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é
-0030" com o 0030 já feito. Nada quebrou, nenhuma checagem reclamou — só
+dizia &quot;28 deles&quot; e &quot;as 29 decisões&quot; quando já eram 30, e &quot;o próximo é
+0030&quot; com o 0030 já feito. Nada quebrou, nenhuma checagem reclamou — só
 ficou errado.</p>
 <p><strong>A lista de números verificados cresceu depois que um terceiro caso
 provou o mesmo ponto.</strong> Uma revisão externa achou o README anunciando
-"as 158 RNs" quando havia 331 escritas — errado por mais do dobro, na
+&quot;as 158 RNs&quot; quando havia 331 escritas — errado por mais do dobro, na
 tabela que apresenta o repositório. Foi corrigido à mão (PR #412), o que
 só zera o relógio: a próxima RN o deixaria desatualizado de novo. Então
 a checagem deixou de cobrir só contagens de ADR e passou a cobrir
 <strong>três</strong> famílias, cada uma lida do ARTEFATO e nunca de outra prosa:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>número em prosa<th>fonte de verdade<tbody><tr><td>contagem de ADRs, número do próximo ADR<td>os arquivos em <code>docs/adr/</code><tr><td>contagem de RNs<td>os cabeçalhos <code>### RN-NNN</code> em <code>business-rules.md</code><tr><td>contagem de providers de LLM<td>os literais <code>capabilities</code> que <code>descobrirProviders()</code> encontra — a mesma fonte da tabela gerada em <code>llm-providers.md</code></table>
-<p>A de providers é escrita <strong>por extenso</strong> ("nove providers"), e a
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>número em prosa</th>
+<th>fonte de verdade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>contagem de ADRs, número do próximo ADR</td>
+<td>os arquivos em <code>docs/adr/</code></td>
+</tr>
+<tr>
+<td>contagem de RNs</td>
+<td>os cabeçalhos <code>### RN-NNN</code> em <code>business-rules.md</code></td>
+</tr>
+<tr>
+<td>contagem de providers de LLM</td>
+<td>os literais <code>capabilities</code> que <code>descobrirProviders()</code> encontra — a mesma fonte da tabela gerada em <code>llm-providers.md</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A de providers é escrita <strong>por extenso</strong> (&quot;nove providers&quot;), e a
 checagem compara com a palavra em vez de forçar a prosa a virar dígito:
 a checagem existe para proteger o texto, não para remodelá-lo.</p>
 <p><strong>Desde a AT-399 (2026-10-03) esses números também são reescritos.</strong> PRs
@@ -85,7 +109,7 @@ compartilhados à mão, e cada merge deixava os outros desatualizados: o
 guardião de docs falhou 8 de 30 execuções em três horas só por isso.
 Então <code>pnpm docs:generate</code> (modo de escrita) agora corrige no lugar o que
 a fonte determina — as contagens de ADR e RN acima, o número do próximo
-ADR (descartando uma linha duplicada "o próximo é" deixada por um merge),
+ADR (descartando uma linha duplicada &quot;o próximo é&quot; deixada por um merge),
 o recuo das entradas de <code>docs/adr/temas.yml</code> escritas na coluna 0 e a
 linha de uma referência com símbolo (abaixo). As funções puras moram em
 <code>scripts/docs/reescrita.mjs</code>, <code>refs-com-simbolo.mjs</code> (<code>novaLinha</code>,
@@ -107,7 +131,7 @@ direto (<code>shields.io/github/v/release</code>) e se atualiza sozinho — só 
 verifica o que não dá para gerar.</p>
 <p>E aconteceu <strong>uma vez por porta de entrada</strong>. <code>docs/intro.md</code> — a
 primeira página do site publicado, à qual nem todo mundo chega pelo
-README — continuou dizendo "Fases 1 a 5 concluídas, v0.1.0" enquanto o
+README — continuou dizendo &quot;Fases 1 a 5 concluídas, v0.1.0&quot; enquanto o
 produto estava na Fase 26. Conferir só o README nunca protegeu a segunda
 porta, então <code>verificarVersaoAnunciada</code> passou a receber os dois
 arquivos numa lista, e <code>scripts/ci/readme-version.ts</code> passou a escrever
@@ -115,8 +139,8 @@ nos dois no mesmo commit do CHANGELOG. As duas metades andam juntas de
 propósito: uma checagem que cobrasse o que o gerador não escreve faria
 todo release nascer vermelho num PR que o bot abre e ninguém consegue
 consertar.</p>
-<p>O padrão do <code>intro.md</code> exige a frase <strong>inteira</strong> — "Phases 1 through NN
-complete, version vX.Y.Z" — e não só a versão: as duas metades
+<p>O padrão do <code>intro.md</code> exige a frase <strong>inteira</strong> — &quot;Phases 1 through NN
+complete, version vX.Y.Z&quot; — e não só a versão: as duas metades
 envelhecem juntas, e casar só metade deixaria a contagem de fases
 mentindo ao lado de uma versão correta. A contagem de fases não é
 gerável daqui: o release sabe a versão, não a fase.</p>
@@ -133,9 +157,9 @@ esperado) quando a fonte de verdade é o diretório de ADRs,
 uma função própria ao lado delas, quando não é nenhum dos dois.</p>
 <p><strong>Contagens derivadas do código (AT-123).</strong> Uma varredura em 2026-09-25
 de <code>docs/</code>, <code>README.md</code>, <code>CONTRIBUTING.md</code>, <code>THIRD_PARTY_NOTICES.md</code> e
-<code>CLAUDE.md</code> achou cinco números já errados — "nove schemas" (onze),
-"doze operações" do contrato de git (quinze), "dez abas" (doze), "três
-imagens" construídas pelo CI (cinco), "Thirteen types" de
+<code>CLAUDE.md</code> achou cinco números já errados — &quot;nove schemas&quot; (onze),
+&quot;doze operações&quot; do contrato de git (quinze), &quot;dez abas&quot; (doze), &quot;três
+imagens&quot; construídas pelo CI (cinco), &quot;Thirteen types&quot; de
 <code>proposed_action</code> (vinte e um) — nenhum com checagem por trás. As
 contagens cuja fonte é um lugar do código agora moram em
 <code>scripts/docs/contagens-do-codigo.mjs</code>, chamado por
@@ -156,13 +180,13 @@ MUTAÇÃO em <code>contagens-do-codigo.spec.ts</code>: mude o artefato e não a 
 e ele tem de reprovar <code>DESATUAL</code>; remova a frase ou a fonte, e ele tem
 de reprovar <code>CEGO</code>.</p>
 <p>O que foi <strong>datado em vez de derivado</strong>, e por quê: as contagens de
-arquivos por app em <code>architecture.md</code> e as "seis rotas" do broker mudam
+arquivos por app em <code>architecture.md</code> e as &quot;seis rotas&quot; do broker mudam
 com quase todo PR ou são lidas de um <code>switch</code>, então uma checagem só
-acrescentaria ruído — elas levam "medido em 2026-09-25". Números que
-descrevem um invariante de desenho ("duas camadas", "três estados") ou
+acrescentaria ruído — elas levam &quot;medido em 2026-09-25&quot;. Números que
+descrevem um invariante de desenho (&quot;duas camadas&quot;, &quot;três estados&quot;) ou
 uma medição passada já datada no lugar (<code>THIRD_PARTY_NOTICES.md</code>, as
 transcrições de restauração do runbook) ficaram como estavam.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=line-references-with-a-symbol>Referências de linha com símbolo<a href=#line-references-with-a-symbol class=hash-link aria-label="Link direto para Referências de linha com símbolo" title="Link direto para Referências de linha com símbolo" translate=no>​</a></h3>
+<h3 id="line-references-with-a-symbol">Referências de linha com símbolo</h3>
 <p>Uma RN cita código por <code>caminho:linha</code>, e um número de linha envelhece
 toda vez que alguém edita o arquivo. A RN-547 citava
 <code>fechar_a_instalacao</code> em <code>install.sh:966</code> e <code>post_interno</code> em <code>:682</code>. Em
@@ -177,21 +201,23 @@ da linha, porém, a linha <em>pode</em> ser verificada. Esse é o único caso qu
 desligada no primeiro mês. Ela lê os três arquivos de RN
 (<code>business-rules.md</code>, <code>business-rules/custo.md</code>,
 <code>business-rules/autenticacao.md</code>) e pega só estas duas formas:</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">`&lt;path>:&lt;N>` (`&lt;symbol>`     explicit reference</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">`:&lt;N>` (`&lt;symbol>`           continuation — inherits the path</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>`&lt;path&gt;:&lt;N&gt;` (`&lt;symbol&gt;`     explicit reference
+`:&lt;N&gt;` (`&lt;symbol&gt;`           continuation — inherits the path
+</code></pre>
 <ul>
-<li class="">O símbolo tem de vir <strong>logo depois</strong> da referência, abrindo um
+<li>O símbolo tem de vir <strong>logo depois</strong> da referência, abrindo um
 parêntese e entre crases. Só espaço em branco pode ficar entre eles,
 inclusive uma quebra de linha.</li>
-<li class="">O símbolo tem de ser um <strong>identificador</strong>: <code>fechar_a_instalacao</code>,
+<li>O símbolo tem de ser um <strong>identificador</strong>: <code>fechar_a_instalacao</code>,
 <code>join/3</code>, <code>git_dir?</code>, <code>Engine.Runners.RunnerReadiness</code>, <code>decide()</code>.
 <code>MARCADOR_SCHEMA=3</code>, uma frase ou um caminho não é símbolo, e é
 pulado.</li>
-<li class=""><strong>Pares ambíguos são pulados</strong>: <code>:640</code>/<code>:647</code> (<code>a</code>/<code>b</code>), ou duas
+<li><strong>Pares ambíguos são pulados</strong>: <code>:640</code>/<code>:647</code> (<code>a</code>/<code>b</code>), ou duas
 referências antes de um símbolo. A checagem não tem como saber qual
 símbolo vai com qual linha.</li>
-<li class="">Uma continuação herda o último caminho explícito <strong>no mesmo item de
+<li>Uma continuação herda o último caminho explícito <strong>no mesmo item de
 lista</strong>. Uma linha em branco ou um novo <code>- </code> encerra o item.</li>
-<li class="">O caminho é resolvido a partir da raiz do repositório. Se não estiver
+<li>O caminho é resolvido a partir da raiz do repositório. Se não estiver
 lá, a checagem usa o <strong>único</strong> arquivo rastreado cujo caminho termina
 com ele. Se nenhum arquivo casar, ou mais de um casar, a referência é
 contada à parte como não resolvida.</li>
@@ -211,36 +237,36 @@ próxima pode ser uma chamada e não a definição — esse é o preço aceito
 por não editar números à mão através de PRs paralelos, e o diff do
 arquivo regenerado mostra cada movimento para revisão.</p>
 <p><strong>Medido em 2026-09-18</strong>, sobre todo <code>caminho:N</code> dos três arquivos:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th><th>contagem<tbody><tr><td>referências <code>…:N</code> no total<td>592<tr><td>casam com o padrão<td>187<tr><td>corretas (dentro de ±3)<td>116<tr><td>erradas<td>71<tr><td>caminho não resolvido<td>0</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th></th>
+<th>contagem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>referências <code>…:N</code> no total</td>
+<td>592</td>
+</tr>
+<tr>
+<td>casam com o padrão</td>
+<td>187</td>
+</tr>
+<tr>
+<td>corretas (dentro de ±3)</td>
+<td>116</td>
+</tr>
+<tr>
+<td>erradas</td>
+<td>71</td>
+</tr>
+<tr>
+<td>caminho não resolvido</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
 <p>Uma conferência por amostragem das 71 não achou falso positivo: cada
 referência que ela cobriu era drift real, uma renomeação ou um símbolo
 que mudou de arquivo. Alargar a janela para ±5 limparia só três delas.
@@ -288,17 +314,17 @@ somando um delta, e a janela ficou em ±3. Nenhuma era falso positivo do
 padrão, e nenhum símbolo faltava no arquivo dele. O que a passada achou
 além do drift de linha:</p>
 <ul>
-<li class=""><strong>Sobras de merge.</strong> Três itens tinham sido duplicados por resolução
+<li><strong>Sobras de merge.</strong> Três itens tinham sido duplicados por resolução
 de conflito, uma cópia com números mais antigos ao lado de uma com
 números mais novos (o <code>Where</code> da RN-120, o <code>Código</code> da RN-547 e a
 linha de <code>SessionPage.tsx</code> da RN-626). A cópia desatualizada foi
 removida, e é por isso que o total foi de 896 para <strong>883</strong>.</li>
-<li class=""><strong>Uma referência cujo assunto mudou (drift de estado, não de
+<li><strong>Uma referência cujo assunto mudou (drift de estado, não de
 linha).</strong> A RN-587 citava o teste de uma mensagem do <code>infra</code>; desde a
 RN-617 o Infra Lead conversa, e o teste agora usa <code>qa</code> como o agente
 do roster sem conversa. A referência agora diz isso. A regra da RN
 não mudou.</li>
-<li class="">Vizinhas não conferidas nos itens com o pior drift (RN-547, RN-567,
+<li>Vizinhas não conferidas nos itens com o pior drift (RN-547, RN-567,
 RN-587, RN-609, RN-663, RN-566) foram relidas na mesma passada onde
 o teste ou a cláusula que elas nomeiam pôde ser identificado.</li>
 </ul>
@@ -317,25 +343,25 @@ a linha mais próxima onde ele aparece, o que é uma pista, não uma
 correção). Não alargue a janela, e não estreite o padrão para fazer uma
 referência real sumir; estreite-o só por um falso positivo real, com o
 caso no spec.</p>
-<p>As traduções pt-BR dos três arquivos de RN sob <code>website/i18n/</code> <strong>não</strong>
+<p>As traduções pt-BR dos três arquivos de RN sob <code>docs/i18n/</code> <strong>não</strong>
 são conferidas. Elas têm poucas referências (23 casam com o padrão, 15
 delas erradas em 2026-10-01), e a tradução está atrás da fonte em inglês
 de todo modo; conferir uma cópia que ninguém mantém em dia reprovaria
 todo PR pelo atraso da tradução.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=every-rn-heading-carries-its-anchor>Todo cabeçalho de RN carrega sua âncora<a href=#every-rn-heading-carries-its-anchor class=hash-link aria-label="Link direto para Todo cabeçalho de RN carrega sua âncora" title="Link direto para Todo cabeçalho de RN carrega sua âncora" translate=no>​</a></h3>
+<h3 id="every-rn-heading-carries-its-anchor">Todo cabeçalho de RN carrega sua âncora</h3>
 <p>A âncora <code>{#rn-NNN}</code> num cabeçalho de RN é o contrato para links de
 fora: ela sobrevive a uma RN com título novo e a uma RN movida para
 outro arquivo. Em 2026-09-26 (AT-230) a <code>dev</code> tinha <strong>451</strong> cabeçalhos
 <code>### RN-</code> e <strong>449</strong> âncoras. A RN-305 e a RN-306 tinham sido escritas
 sem uma, em <code>business-rules.md</code> e na tradução pt-BR dele, e nada
 reprovou. O build do site não pega isso: sem âncora explícita o
-Docusaurus deriva o id do texto do cabeçalho e a página compila. O que
+o gerador deriva o id do texto do cabeçalho e a página compila. O que
 quebra é um link <code>#rn-305</code> que alguém escreve depois. A contagem de RNs
 também não pega, porque conta cabeçalhos, não âncoras.</p>
 <p><code>generate.mjs</code> agora confere isso (<code>verificarAncorasDeRn</code>, com a lógica
 em <code>scripts/docs/ancoras-de-rn.mjs</code>, provada por mutação em
 <code>ancoras-de-rn.spec.ts</code>). Todo cabeçalho, de qualquer nível, que
-<strong>começa</strong> com <code>RN-&lt;dígitos></code> tem de <strong>terminar</strong> em <code>{#rn-&lt;mesmos dígitos>}</code>, zeros à esquerda incluídos (<code>RN-001</code> → <code>rn-001</code>). Âncora
+<strong>começa</strong> com <code>RN-&lt;dígitos&gt;</code> tem de <strong>terminar</strong> em <code>{#rn-&lt;mesmos dígitos&gt;}</code>, zeros à esquerda incluídos (<code>RN-001</code> → <code>rn-001</code>). Âncora
 ausente e âncora com outro número ou nome reprovam as duas, uma linha
 por cabeçalho, com arquivo e linha. Zero cabeçalhos encontrados é
 <code>CEGO</code> e também reprova.</p>
@@ -346,20 +372,20 @@ acrescenta.</p>
 <p><strong>As traduções também são cobertas.</strong> Os arquivos são achados por glob:
 <code>docs/business-rules.md</code>, <code>docs/business-rules/*.md</code> (a fonte pt-BR,
 ADR 0216), e os mesmos dois caminhos sob
-<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code> para
+<code>docs/i18n/&lt;locale&gt;/</code> para
 cada locale traduzido em <code>LOCALES_TRADUZIDOS</code> (<code>en</code>, <code>ru</code>, <code>zh-Hans</code>).
 O site de um locale serve <code>business-rules#rn-305</code> a partir do arquivo
 traduzido, e uma tradução anterior tinha copiado o cabeçalho sem a
 âncora. A regra é por cabeçalho, então uma tradução parcial não é
 problema: uma RN que não foi traduzida cai na fonte pt-BR, que é
 conferida de qualquer modo.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-runbook-procedures-table>A tabela de procedimentos do runbook<a href=#the-runbook-procedures-table class=hash-link aria-label="Link direto para A tabela de procedimentos do runbook" title="Link direto para A tabela de procedimentos do runbook" translate=no>​</a></h3>
+<h3 id="the-runbook-procedures-table">A tabela de procedimentos do runbook</h3>
 <p>O runbook termina com uma tabela dos seus procedimentos de <strong>operação</strong>
 — <code>procedure | anchor | verification | schedule</code> — dizendo o que prova
 cada um e o que roda essa prova
-(<a class="" href=/brabo/dev/runbook#procedimentos-e-verificacao>Procedures and how each is verified</a>).
+(<a href="../runbook.html#procedimentos-e-verificacao">Procedures and how each is verified</a>).
 Ela existe por causa do critério de fechamento do EP-015: nenhuma linha
-com verificação vazia ou que diga "ver abaixo", e as provas que existem
+com verificação vazia ou que diga &quot;ver abaixo&quot;, e as provas que existem
 rodam por agenda, não de memória. Medido em 2026-09-25 (AT-129), a
 tabela de que o critério falava não existia no repositório: uma cópia
 de sete linhas morava nas notas do mantenedor, contra 28 procedimentos
@@ -371,21 +397,21 @@ célula continua afirmando.</p>
 <code>scripts/docs/procedimentos-do-runbook.mjs</code>, provada por mutação em
 <code>procedimentos-do-runbook.spec.ts</code>). Por linha, ela reprova quando:</p>
 <ul>
-<li class="">a célula <strong>anchor</strong> não tem link <code>(#id)</code>, ou o id não é um <code>{#id}</code>
+<li>a célula <strong>anchor</strong> não tem link <code>(#id)</code>, ou o id não é um <code>{#id}</code>
 explícito num cabeçalho do runbook — o mesmo contrato das âncoras de
 RN: uma seção com título novo não pode quebrar o link;</li>
-<li class="">a célula <strong>verification</strong> está vazia, diz "see below/above", nomeia
+<li>a célula <strong>verification</strong> está vazia, diz &quot;see below/above&quot;, nomeia
 um arquivo que não é rastreado pelo git ou um alvo <code>make</code> que o
 <code>Makefile</code> não tem, ou não nomeia nada conferível e não começa com
 <code>**None**</code> — a declaração explícita de que não existe prova;</li>
-<li class="">um segmento de <strong>schedule</strong> (eles são separados por <code>;</code>) não começa
+<li>um segmento de <strong>schedule</strong> (eles são separados por <code>;</code>) não começa
 com sua classe de gatilho — <code>weekly</code>/<code>daily</code>/<code>monthly</code>, <code>every PR</code>,
 <code>every tag</code> ou <code>manual</code> — ou um workflow que ele cita não existe ou
 não tem esse gatilho no <code>on:</code> lido (<code>schedule:</code>, <code>pull_request</code>,
 <code>push: tags</code>). Um segmento <code>manual</code> não pode citar workflow.</li>
 </ul>
 <p>A coluna se chama <code>schedule</code> e ainda aceita <code>every PR</code> e <code>every tag</code> de
-propósito. A pergunta do critério é "roda sem alguém lembrar?", e um
+propósito. A pergunta do critério é &quot;roda sem alguém lembrar?&quot;, e um
 spec que o <code>ci.yml</code> roda em todo pull request responde que sim;
 chamá-lo de <code>manual</code> seria errar no sentido oposto. O que a checagem
 garante é que a classe escrita é a que o workflow <strong>tem</strong>: <code>weekly</code>
@@ -399,14 +425,14 @@ quebrar depois (um spec renomeado, um workflow que perdeu a agenda) é
 culpa do PR que a quebrou, que é também o PR que pode consertá-la.</p>
 <p><strong>Só o runbook da fonte (<code>docs/runbook.md</code>) tem a tabela.</strong> A cópia
 pt-BR antiga dele estava atrás (AT-209) e saiu com o ADR 0216; uma
-tradução futura sob <code>website/i18n/&lt;locale>/</code> cai na regra <code>traducao</code> do
+tradução futura sob <code>docs/i18n/&lt;locale&gt;/</code> cai na regra <code>traducao</code> do
 docmap (<code>warn</code>) e não teria os dez ids explícitos que esta tabela
 acrescentou. Uma segunda cópia da tabela ali, sem conferência, seria
 exatamente a cópia que a tabela existe para substituir.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-adr-index-is-grouped-by-theme>O índice de ADR é agrupado por tema<a href=#the-adr-index-is-grouped-by-theme class=hash-link aria-label="Link direto para O índice de ADR é agrupado por tema" title="Link direto para O índice de ADR é agrupado por tema" translate=no>​</a></h3>
+<h3 id="the-adr-index-is-grouped-by-theme">O índice de ADR é agrupado por tema</h3>
 <p>O índice de ADR era agrupado por fase. Quando as fases acabaram, a
 última seção virou o índice: medido em 2026-10-01, 148 das 191 linhas
-moravam sob <code>## Phase 12</code>. O <a class="" href=/brabo/dev/adr/0202-o-indice-de-adr-por-tema>ADR 0202</a>
+moravam sob <code>## Phase 12</code>. O <a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202</a>
 o agrupa por <strong>tema</strong>, e põe o tema <strong>fora</strong> do ADR — um ADR aceito
 nunca é editado, nem para ganhar uma chave <code>tema:</code> no frontmatter.</p>
 <p>O tema mora em <code>docs/adr/temas.yml</code>, ao lado do índice: <code>temas:</code> é a
@@ -414,7 +440,7 @@ lista fechada e ordenada (<code>id</code>, <code>titulo</code>, <code>descricao<
 cada número de ADR para UM tema. O índice é <strong>conferido, não gerado</strong> —
 as descrições de uma linha são curadas e nenhum script as escreve, o
 mesmo motivo que <code>verificarIndiceAdr</code> dá — e cada tema é uma seção
-<code>## &lt;titulo> {#tema-&lt;id>}</code>, na ordem da lista, com as linhas em ordem
+<code>## &lt;titulo&gt; {#tema-&lt;id&gt;}</code>, na ordem da lista, com as linhas em ordem
 numérica.</p>
 <p><code>generate.mjs</code> o confere (<code>verificarTemasDeAdr</code>, logo depois de
 <code>verificarIndiceAdr</code>; lógica em <code>scripts/docs/temas-de-adr.mjs</code>,
@@ -430,13 +456,24 @@ fase) é <code>CEGO</code> e reprova.</p>
 <p><strong>Severidade: <code>block</code></strong>, como a tabela do runbook: nasceu com todo ADR
 classificado, então o que a quebrar depois é um ADR novo cujo PR
 esqueceu a linha dele em <code>temas.yml</code> — o PR que pode consertá-la. As
-traduções do índice moram sob <code>website/i18n/&lt;locale>/</code> e não são
+traduções do índice moram sob <code>docs/i18n/&lt;locale&gt;/</code> e não são
 conferidas; a regra <code>traducao</code> avisa, como sempre.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-pieces>As peças<a href=#the-pieces class=hash-link aria-label="Link direto para As peças" title="Link direto para As peças" translate=no>​</a></h2>
-<!-- -->
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docsdocmapyml--the-map><code>docs/.docmap.yml</code> — o mapa<a href=#docsdocmapyml--the-map class=hash-link aria-label="Link direto para docsdocmapyml--the-map" title="Link direto para docsdocmapyml--the-map" translate=no>​</a></h3>
+<h2 id="the-pieces">As peças</h2>
+<pre class="mermaid" data-mermaid>flowchart TD
+  A[docs/.docmap.yml&lt;br/&gt;mapa código → doc] --&gt; B[docmap.mjs&lt;br/&gt;valida o mapa]
+  A --&gt; C[drift.mjs&lt;br/&gt;cobra no PR]
+  D[código] --&gt; E[generate.mjs&lt;br/&gt;gera e verifica]
+  E --&gt; F[docs/]
+  C --&gt; G[docs-check.yml&lt;br/&gt;guardião do PR]
+  B --&gt; G
+  E --&gt; G
+  F --&gt; H[docs-build&lt;br/&gt;link quebrado reprova]
+  H --&gt; G
+  A --&gt; I[audit.mjs&lt;br/&gt;mensal: docs velhas]
+</pre>
+<h3 id="docsdocmapyml--the-map"><code>docs/.docmap.yml</code> — o mapa</h3>
 <p>Liga caminhos de código aos documentos que dependem deles. É a única
-fonte que diz "quem mexe nisto precisa revisar aquilo".</p>
+fonte que diz &quot;quem mexe nisto precisa revisar aquilo&quot;.</p>
 <p>Duas severidades: <code>block</code> reprova o PR, <code>warn</code> só comenta. E um
 atributo <code>generated: true</code>, que marca os documentos que saem do gerador.</p>
 <p>Uma regra que cobra o que não faz sentido ensina as pessoas a recorrer
@@ -451,18 +488,18 @@ repositório — todo arquivo de <code>scripts/ci/</code> cujo docblock de abert
 cita <code>branching-policy.md</code>, mais o spec dele — e reprova se a regra
 divergir. Um script novo de política declara sua fonte no cabeçalho,
 como os outros, e o spec faz o resto.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docmapmjs--validates-the-map><code>docmap.mjs</code> — valida o mapa<a href=#docmapmjs--validates-the-map class=hash-link aria-label="Link direto para docmapmjs--validates-the-map" title="Link direto para docmapmjs--validates-the-map" translate=no>​</a></h3>
+<h3 id="docmapmjs--validates-the-map"><code>docmap.mjs</code> — valida o mapa</h3>
 <p>Roda antes de todo o resto, porque um mapa quebrado faz o resto mentir.
 Reprova se:</p>
 <ul>
-<li class=""><strong>um glob não casa com arquivo nenhum</strong> — uma regra morta. Ela nunca
+<li><strong>um glob não casa com arquivo nenhum</strong> — uma regra morta. Ela nunca
 dispara, e dá a impressão de uma cobertura que não existe. É o defeito
 mais silencioso que um docmap pode ter, e foi encontrado em 8 globs
 quando o validador entrou.</li>
-<li class="">um documento para o qual o mapa aponta não existe</li>
-<li class="">há id duplicado ou <code>severity</code> inválida</li>
+<li>um documento para o qual o mapa aponta não existe</li>
+<li>há id duplicado ou <code>severity</code> inválida</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=generatemjs--generates-and-verifies><code>generate.mjs</code> — gera e verifica<a href=#generatemjs--generates-and-verifies class=hash-link aria-label="Link direto para generatemjs--generates-and-verifies" title="Link direto para generatemjs--generates-and-verifies" translate=no>​</a></h3>
+<h3 id="generatemjs--generates-and-verifies"><code>generate.mjs</code> — gera e verifica</h3>
 <p>Dois modos de saída:</p>
 <p><strong>Arquivo inteiro</strong> — <code>docs/reference/scripts.md</code>. Não há prosa a
 preservar: a lista de comandos é o conteúdo. Ela vem do <code>package.json</code>
@@ -471,10 +508,10 @@ declarada em <code>gerarScripts</code>, incluindo os dois pacotes fora do
 workspace (<code>website/</code>, <code>e2e/</code>, rodados com <code>--dir</code>), e um <code>package.json</code>
 ausente ou que não parseia reprova a geração nomeando-o — antes ele
 descartava o pacote em silêncio (AT-224).</p>
-<p><strong>Bloco marcado</strong> — o trecho entre <code>&lt;!-- BEGIN:GENERATED:&lt;id> --></code> e
-<code>&lt;!-- END:GENERATED:&lt;id> --></code> dentro de um arquivo escrito à mão. É o
-caso de <code>configuration.md</code> e <code>events.md</code>: ali, a prosa ("o que quebra
-quando esta variável está errada") vale muito mais que a lista, mas a
+<p><strong>Bloco marcado</strong> — o trecho entre <code>&lt;!-- BEGIN:GENERATED:&lt;id&gt; --&gt;</code> e
+<code>&lt;!-- END:GENERATED:&lt;id&gt; --&gt;</code> dentro de um arquivo escrito à mão. É o
+caso de <code>configuration.md</code> e <code>events.md</code>: ali, a prosa (&quot;o que quebra
+quando esta variável está errada&quot;) vale muito mais que a lista, mas a
 <strong>lista</strong> precisa estar completa. O bloco é o inventário; o texto em
 volta é a explicação.</p>
 <p>O inventário marca com ⚠️ o que aparece no código e <strong>não</strong> tem
@@ -515,8 +552,8 @@ arquivo que a lê e a seção de <code>configuration.md</code> onde a descriçã
 e é provada por mutação em <code>inventario-de-env.spec.ts</code>: uma variável
 nova sem descrição reprova, a mesma com descrição passa.</p>
 <p>Um <code>**TODO(humano):**</code> na linha que cita a variável <strong>conta como
-descrição</strong> e não reprova: a regra de docs é "nunca inventar; sem
-informação, TODO(humano)", e um portão que reprovasse o TODO empurraria
+descrição</strong> e não reprova: a regra de docs é &quot;nunca inventar; sem
+informação, TODO(humano)&quot;, e um portão que reprovasse o TODO empurraria
 quem não sabe o que a variável faz a inventar uma frase para ficar
 verde. O TODO é uma lacuna <strong>declarada</strong>, com a pergunta escrita onde a
 resposta vai; o ⚠️ é uma lacuna <strong>silenciosa</strong>. O <code>--check</code> ainda lista
@@ -525,8 +562,8 @@ O inventário de eventos em <code>events.md</code> mantém seu ⚠️ como lacun
 visível — a decisão cobriu só o inventário de ambiente.</p>
 <p><code>--check</code> não escreve nada e reprova se qualquer coisa fosse ficar
 diferente. É o modo do CI.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=driftmjs--enforces-it-in-the-pr><code>drift.mjs</code> — cobra no PR<a href=#driftmjs--enforces-it-in-the-pr class=hash-link aria-label="Link direto para driftmjs--enforces-it-in-the-pr" title="Link direto para driftmjs--enforces-it-in-the-pr" translate=no>​</a></h3>
-<p>Cruza <code>git diff --name-only &lt;base>...HEAD</code> com o mapa. Para toda regra
+<h3 id="driftmjs--enforces-it-in-the-pr"><code>drift.mjs</code> — cobra no PR</h3>
+<p>Cruza <code>git diff --name-only &lt;base&gt;...HEAD</code> com o mapa. Para toda regra
 disparada cujo documento não foi tocado: <code>block</code> reprova, <code>warn</code>
 comenta.</p>
 <p>Num PR do Dependabot cujo diff é só troca de pin de action, um passo
@@ -540,176 +577,164 @@ quando é um humano (a remoção da linha por ele vence). Não tem como
 entrar em laço: edições de corpo feitas com o token do workflow não
 disparam <code>edited</code>. A falha fica fechada: se a escrita falha, o drift lê
 o corpo do evento e o PR continua bloqueado.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=auditmjs--the-monthly-audit><code>audit.mjs</code> — a auditoria mensal<a href=#auditmjs--the-monthly-audit class=hash-link aria-label="Link direto para auditmjs--the-monthly-audit" title="Link direto para auditmjs--the-monthly-audit" translate=no>​</a></h3>
+<h3 id="auditmjs--the-monthly-audit"><code>audit.mjs</code> — a auditoria mensal</h3>
 <p>A checagem de drift pega uma doc que ficou <strong>errada</strong> num PR. A
 auditoria pega uma doc que ficou <strong>velha</strong> sem ninguém mexer nela — o
 que é mais difícil de notar. Ela relata:</p>
 <ul>
-<li class="">páginas sem alteração há meses cujo código correspondente mudou desde
+<li>páginas sem alteração há meses cujo código correspondente mudou desde
 então</li>
-<li class="">itens <code>TODO(human)</code> pendentes</li>
-<li class="">referências <code>arquivo:linha</code> que não resolvem mais</li>
-<li class="">ADRs em status <code>proposed</code> há mais de 60 dias</li>
+<li>itens <code>TODO(human)</code> pendentes</li>
+<li>referências <code>arquivo:linha</code> que não resolvem mais</li>
+<li>ADRs em status <code>proposed</code> há mais de 60 dias</li>
 </ul>
 <p>Sempre na <strong>mesma</strong> issue, atualizada no lugar. Uma issue nova todo mês
 vira spam, e spam é desligado. O workflow cria o próprio rótulo <code>docs</code>
 (<code>gh label create --force</code>, idempotente) antes de abrir a issue, e
 <code>scripts/ci/rotulos-dos-workflows.spec.ts</code> reprova todo <code>--label</code> sem esse
 create no mesmo arquivo.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-site-build>O build do site<a href=#the-site-build class=hash-link aria-label="Link direto para O build do site" title="Link direto para O build do site" translate=no>​</a></h3>
+<h3 id="the-site-build">O build do site</h3>
 <p><code>onBrokenLinks</code>, <code>onBrokenAnchors</code> e <code>onBrokenMarkdownLinks</code> estão em
 <code>throw</code>. Mover um arquivo sem corrigir quem aponta para ele quebra o CI
 em vez de virar um 404 em produção. É o mecanismo mais barato do
 conjunto inteiro.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-new-page-needs-to-be-added-to-sidebarsts-by-hand>Página nova precisa entrar à mão no <code>sidebars.ts</code><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class=hash-link aria-label="Link direto para a-new-page-needs-to-be-added-to-sidebarsts-by-hand" title="Link direto para a-new-page-needs-to-be-added-to-sidebarsts-by-hand" translate=no>​</a></h3>
+<h3 id="a-new-page-needs-to-be-added-to-sidebarsts-by-hand">Página nova precisa entrar à mão em <code>navegacao.mjs</code></h3>
 <p>O conteúdo Markdown mora em <code>docs/</code>, mas o <strong>roteamento</strong> mora em
-<code>website/sidebars.ts</code> — e as seções dele enumeram os itens um a um, em
-vez de varrer o diretório. Criar um arquivo em <code>docs/</code> sem acrescentá-lo
-lá produz uma página que existe, é servida por URL direta e <strong>não
-aparece na navegação</strong>.</p>
-<p>O build <strong>não</strong> reprova por isso: uma página órfã não é um link
-quebrado. É uma conferência visual, e é o único passo do mecanismo sem
-rede de segurança — depois do <code>pnpm docs:build</code>, abra a barra lateral e
-confirme que a página está lá.</p>
-<p>A exceção são os ADRs: o grupo "Decisões (ADR)" é <strong>derivado</strong> a cada
-build de <code>docs/adr/temas.yml</code> e dos arquivos em <code>docs/adr/</code> — uma
-subcategoria por tema, na ordem da lista, com os ADRs em ordem numérica
-(AT-560). ADR novo entra no grupo do tema dele sem tocar no
-<code>sidebars.ts</code>. Se o parser não achar tema nenhum, ADR mapeado nenhum ou
-um ADR sem tema (que o <code>docs:check</code> já reprova), o build quebra com erro
-nomeado em vez de desenhar uma lateral errada. A Explicação é enumerada à mão em
-cinco grupos por assunto, e página nova ali ainda entra pelo caminho
-acima.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=api-render-checkmjs--a-green-build-isnt-a-page-that-renders><code>api-render-check.mjs</code> — build verde não é página que renderiza<a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class=hash-link aria-label="Link direto para api-render-checkmjs--a-green-build-isnt-a-page-that-renders" title="Link direto para api-render-checkmjs--a-green-build-isnt-a-page-that-renders" translate=no>​</a></h3>
+<code>scripts/docs/site/navegacao.mjs</code> (o porte do antigo <code>sidebars.ts</code>) — e as
+seções dele enumeram os itens um a um, em vez de varrer o diretório. Criar um
+arquivo em <code>docs/</code> sem acrescentá-lo lá produz uma página que existe, é servida
+por URL direta e <strong>não aparece na navegação</strong>.</p>
+<p>O build <strong>não</strong> reprova por isso: uma página órfã não é um link quebrado. É uma
+conferência visual — depois do <code>pnpm docs:build</code>, abra a barra lateral e confirme
+que a página está lá.</p>
+<p>A exceção são os ADRs: o grupo &quot;Decisões (ADR)&quot; é <strong>derivado</strong> a cada build de
+<code>docs/adr/temas.yml</code> e dos arquivos em <code>docs/adr/</code> — uma subcategoria por tema,
+na ordem da lista, com os ADRs em ordem numérica (AT-560). ADR novo entra no
+grupo do tema dele sem tocar na navegação. Se o parser não achar tema nenhum,
+ADR mapeado nenhum ou um ADR sem tema (que o <code>docs:check</code> já reprova), o build
+quebra com erro nomeado em vez de desenhar uma lateral errada. A Explicação é
+enumerada à mão em cinco grupos por assunto, e página nova ali ainda entra pelo
+caminho acima.</p>
+<h3 id="api-render-checkmjs--a-green-build-isnt-a-page-that-renders"><code>api-render-check.mjs</code> — build verde não é página que renderiza</h3>
 <p>Esta peça existe por causa de uma lição cara: <strong>as 117 páginas de
 operação da referência da API foram ao ar mortas nas releases <code>v1.0.0</code>
 e <code>v1.0.1</code></strong>, e nenhuma checagem pegou.</p>
-<p>A configuração do Docusaurus não declarava <code>docItemComponent: '@theme/ApiItem'</code>, então o Docusaurus usou o <code>@theme/DocItem</code> padrão.
-<code>ApiItem</code> é o único lugar do <code>docusaurus-theme-openapi-docs</code> que monta o
-<code>&lt;Provider></code> do redux, e o <code>@theme/ApiExplorer/MethodEndpoint</code> que cada
-<code>.api.mdx</code> importa lê esse store com <code>useSelector</code>. Sem o invólucro, o
-contexto é nulo — e o error boundary trocava a página inteira por
-<em>"This page crashed."</em></p>
+<p>A configuração do Docusaurus não declarava <code>docItemComponent: '@theme/ApiItem'</code>, e o <code>ApiItem</code> é o único lugar do plugin de OpenAPI que
+montava o <code>&lt;Provider&gt;</code> do redux. Sem o invólucro, o contexto era nulo — e o
+error boundary trocava a página inteira por <em>&quot;This page crashed.&quot;</em></p>
 <p>O modo de falha é o que importa aqui, porque ele derrota todas as outras
 peças deste mecanismo:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>etapa<th>resultado<tbody><tr><td>MDX compila<td>✅ os componentes do tema existem e resolvem<tr><td>SSR renderiza<td>✅ o HTML servido tem o conteúdo da rota<tr><td><code>pnpm docs:build</code><td>✅ <strong>verde</strong><tr><td>hidratação no navegador<td>❌ a página é apagada</table>
-<p>Em outras palavras: <strong>"o build passou" nunca foi prova de que a página
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>etapa</th>
+<th>resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MDX compila</td>
+<td>✅ os componentes do tema existem e resolvem</td>
+</tr>
+<tr>
+<td>SSR renderiza</td>
+<td>✅ o HTML servido tem o conteúdo da rota</td>
+</tr>
+<tr>
+<td><code>pnpm docs:build</code></td>
+<td>✅ <strong>verde</strong></td>
+</tr>
+<tr>
+<td>hidratação no navegador</td>
+<td>❌ a página é apagada</td>
+</tr>
+</tbody>
+</table></div>
+<p>Em outras palavras: <strong>&quot;o build passou&quot; nunca foi prova de que a página
 funciona.</strong></p>
-<p>Desde o ADR 0206 esse plugin saiu: a referência é <strong>uma página Redoc</strong>
-(redocusaurus, renderizada no servidor) em <code>/reference/api/</code>, e não há
-<code>ApiItem</code> para esquecer. A lição fica, então a guarda fica também:
-<code>api-render-check.mjs</code> roda depois do <code>docs:build</code> e afirma, nos dois
-locales, que <code>reference/api.html</code> existe, carrega o <code>info.title</code> do spec
-e contém uma seção renderizada no servidor por operação de
-<code>docs/reference/openapi.json</code> (o <code>data-section-id=tag/&lt;tag>/operation/&lt;id></code>
-do Redoc).</p>
-<p>Ela pega a página sumindo, renderizando vazia ou perdendo operações —
-não uma falha de hidratação, que exigiria um navegador headless.</p>
+<p>Desde o ADR 0206 esse plugin saiu e, desde o ADR 0253, a referência é uma
+página <strong>Redoc 3 por tag</strong>, gerada por SSR no build (<code>scripts/docs/site/openapi.mjs</code>,
+<code>disableTelemetry: true</code>, sem hidratação no navegador): <code>reference/api.html</code> é o
+índice das tags e cada tag fica em <code>reference/api/&lt;tag&gt;.html#&lt;operationId&gt;</code>. A
+lição fica, então a guarda fica também: <code>api-render-check.mjs</code> roda depois do
+<code>docs:build</code> e afirma, nos quatro locales, que as páginas existem, carregam o
+<code>info.title</code> do spec e somam uma seção renderizada por operação de
+<code>docs/reference/openapi.json</code> (263 hoje, contadas por página).</p>
+<p>Ela pega a página sumindo, renderizando vazia ou perdendo operações.</p>
 <p>O mesmo episódio produziu a regra <code>site-e-publicacao</code> do mapa:
 <code>website/**</code> não era coberto por regra nenhuma, e mudar a configuração
-do site não cobrava documentação.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=four-locales-with-pt-br-as-the-source-adr-0216>Quatro locales, com pt-BR como fonte (ADR 0216)<a href=#four-locales-with-pt-br-as-the-source-adr-0216 class=hash-link aria-label="Link direto para Quatro locales, com pt-BR como fonte (ADR 0216)" title="Link direto para Quatro locales, com pt-BR como fonte (ADR 0216)" translate=no>​</a></h3>
+do site não cobrava documentação (hoje a regra cobre também <code>scripts/docs/site/**</code>).</p>
+<h3 id="four-locales-with-pt-br-as-the-source-adr-0216">Quatro locales, com pt-BR como fonte (ADR 0216)</h3>
 <p><code>docs/</code> é a árvore <strong>pt-BR</strong>, a fonte e o locale padrão
 (<code>defaultLocale: 'pt-BR'</code>, servido na raiz de cada ambiente). Os locales
-traduzidos são <code>en</code>, <code>ru</code> e <code>zh-Hans</code>, sob
-<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code>, com os
-rótulos do tema em <code>website/i18n/&lt;locale>/docusaurus-theme-classic/</code> e
-os rótulos da barra lateral em
-<code>.../docusaurus-plugin-content-docs/current.json</code>. Uma página sem
-tradução num locale é servida a partir da fonte pt-BR no mesmo slug. A
-busca local indexa <code>pt</code>, <code>en</code>, <code>ru</code> e <code>zh</code>. Páginas cuja cópia pt-BR
-antiga estava desatualizada ficam em <code>docs/</code> no idioma em que estão até
-o lote delas.</p>
-<p>O site em inglês saiu da raiz para <code>/brabo/&lt;environment>/en/…</code>, e links
-antigos para <code>/brabo/&lt;environment>/pt-BR/…</code> são reescritos pelo
+traduzidos são <code>en</code>, <code>ru</code> e <code>zh-Hans</code>, sob <code>docs/i18n/&lt;locale&gt;/</code> (o gerador
+NÃO trata essa pasta como página da fonte pt-BR), com os rótulos da barra lateral
+em <code>docs/i18n/&lt;locale&gt;/current.json</code> e os textos da moldura no próprio gerador
+(<code>scripts/docs/site/layout.mjs</code>). Uma página sem tradução num locale é servida a
+partir da fonte pt-BR no mesmo slug. A busca é por substring, com um índice por
+idioma carregado só quando a pessoa busca. Páginas cuja cópia pt-BR antiga estava
+desatualizada ficam em <code>docs/</code> no idioma em que estão até o lote delas.</p>
+<p>O site em inglês saiu da raiz para <code>/brabo/&lt;environment&gt;/en/…</code>, e links
+antigos para <code>/brabo/&lt;environment&gt;/pt-BR/…</code> são reescritos pelo
 <code>404.html</code> da raiz (<code>scripts/docs/landing.mjs</code>) para
-<code>/brabo/&lt;environment>/…</code>, no mesmo molde de <code>/main/</code> → <code>/prd/</code> (ADR
+<code>/brabo/&lt;environment&gt;/…</code>, no mesmo molde de <code>/main/</code> → <code>/prd/</code> (ADR
 0073).</p>
 <p>A regra <code>traducao</code> do docmap (era <code>traducao-pt-br</code>) vigia a fonte e
-aponta para <code>website/i18n/</code>. Ela é <code>warn</code> e nunca <code>block</code>: exigir
+aponta para <code>docs/i18n/</code>. Ela é <code>warn</code> e nunca <code>block</code>: exigir
 tradução em todo PR de doc custaria três traduções por mudança.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550>A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)<a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class=hash-link aria-label="Link direto para A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)" title="Link direto para A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)" translate=no>​</a></h3>
+<h3 id="translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550">A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)</h3>
 <p>O que segura o atraso é medição, não o docmap.
 <code>scripts/docs/paridade-de-traducao.mjs</code> (provado por mutação no spec ao
 lado) roda dentro do <code>pnpm docs:generate</code> e escreve dois arquivos:
 <code>docs/reference/paridade-de-traducao.md</code> (<code>generated: true</code>) e
-<code>website/src/data/traducao.json</code>. Por locale ele conta páginas e
+<code>docs/i18n/traducao.json</code>. Por locale ele conta páginas e
 caracteres traduzidos sobre a fonte (<code>docs/</code> inteiro, <code>reference/</code> incluído desde o ADR 0219, menos o próprio relatório e o <code>openapi.json</code>),
 e divide as páginas traduzidas em <strong>em dia</strong>, <strong>desatualizadas</strong> e <strong>sem
-proveniência</strong>. A proveniência é o <code>traducao_de: &lt;SHA></code> no frontmatter
+proveniência</strong>. A proveniência é o <code>traducao_de: &lt;SHA&gt;</code> no frontmatter
 da página traduzida, o último commit da fonte que ela traduz. Uma página
 está desatualizada quando a fonte tem um commit com COMMIT DATE
 posterior a esse SHA, quando a fonte tem alterações não commitadas, ou
 quando o SHA não existe. Ele nunca usa o relógio, então o <code>--check</code> dá a
 mesma resposta antes e depois do commit que toca a fonte. Para a UI ele
-compara as chaves de cada namespace em <code>apps/web/src/locales/&lt;l>/</code> com o
+compara as chaves de cada namespace em <code>apps/web/src/locales/&lt;l&gt;/</code> com o
 pt-BR, e exige toda forma de plural que o <code>Intl.PluralRules</code> dá àquele
 locale. O <code>--check</code> reprova quando qualquer um dos dois arquivos está
 desatualizado.</p>
-<p>A faixa é um swizzle de wrap de <code>@theme/DocItem/Content</code>
-(<code>website/src/theme/DocItem/Content/index.tsx</code>). Fora do pt-BR, uma
-página cujo <code>metadata.source</code> está sob <code>@site/docs/</code> é o fallback pt-BR
-e diz isso; uma página traduzida que o <code>traducao.json</code> marca como
-desatualizada mostra a data da tradução e diz que o original mudou. Os
-textos moram no <code>code.json</code> de cada locale.
+<p>A faixa é desenhada pelo <code>layout.mjs</code>. Fora do pt-BR, uma página servida do
+fallback pt-BR diz isso, e uma página traduzida que o <code>traducao.json</code> marca como
+desatualizada mostra a data da tradução e diz que o original mudou.
 <code>scripts/docs/faixa-de-traducao-check.mjs</code> roda depois do
 <code>pnpm docs:build</code> e confere o HTML estático: uma página de fallback tem a
 faixa (a amostra vem do primeiro locale, <code>en</code>, <code>ru</code> ou <code>zh-Hans</code>, que ainda
 tenha página sem tradução; com todos completos não há fallback a conferir),
 enquanto a mesma página na raiz e uma página traduzida para <code>en</code> que não está
 desatualizada não têm. As regras para quem
-traduz estão em <a class="" href=/brabo/dev/explanation/localizacao>Localização</a>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-api-page-is-translated-by-catalog-adr-0220>A página da API sai traduzida por catálogo (ADR 0220)<a href=#the-api-page-is-translated-by-catalog-adr-0220 class=hash-link aria-label="Link direto para A página da API sai traduzida por catálogo (ADR 0220)" title="Link direto para A página da API sai traduzida por catálogo (ADR 0220)" translate=no>​</a></h3>
+traduz estão em <a href="localizacao.html">Localização</a>.</p>
+<h3 id="the-api-page-is-translated-by-catalog-adr-0220">A página da API sai traduzida por catálogo (ADR 0220)</h3>
 <p>A fonte das descrições da página Redoc continua sendo o texto dos decorators
 da api, quase todo em inglês. Cada locale tem um catálogo
-<code>website/i18n/&lt;locale>/openapi-textos.json</code>, chaveado pelo sha1 (12 hex) do
-texto da fonte, com <code>fonte</code> e <code>traducao</code>. O <code>docusaurus.config.ts</code> lê
-<code>DOCUSAURUS_CURRENT_LOCALE</code>, aplica o catálogo com
-<code>scripts/docs/openapi-por-locale.mjs</code> (função pura, provada por mutação no
-spec ao lado) e grava a spec do locale em <code>website/.openapi/</code>, fora do git.
+<code>docs/i18n/&lt;locale&gt;/openapi-textos.json</code>, chaveado pelo sha1 (12 hex) do
+texto da fonte, com <code>fonte</code> e <code>traducao</code>. O gerador do site aplica o catálogo
+com <code>scripts/docs/openapi-por-locale.mjs</code> (função pura, provada por mutação no
+spec ao lado) e grava a spec do locale em <code>reference/openapi.json</code> do build.
 Texto sem tradução fica o da fonte; o <code>en</code> só traduz os textos que estão em
-pt-BR. Os 18 rótulos que o Redoc aceita em <code>labels</code> são traduzidos; os demais
-textos fixos dele ficam em inglês. O <code>docs:check</code> reprova chave órfã (o texto
+pt-BR. Com o Redoc 3 (ADR 0253) a interface do Redoc fica toda em inglês: o 3.x
+removeu a opção <code>labels</code>. Só o texto do spec é traduzido. O <code>docs:check</code> reprova chave órfã (o texto
 saiu da api) e entrada inválida (fonte que não bate com o hash, ou número de
 trechos <code>`…`</code> diferente); faltando só avisa, e a paridade conta numa seção
-própria. <code>pnpm docs:openapi-textos &lt;locale></code> acrescenta ao catálogo as chaves
-que faltam, com <code>traducao: ""</code>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check><code>links-do-locale.mjs</code> — link reescrito escapa da checagem de link quebrado<a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class=hash-link aria-label="Link direto para links-do-localemjs--a-rewritten-link-skips-the-broken-link-check" title="Link direto para links-do-localemjs--a-rewritten-link-skips-the-broken-link-check" translate=no>​</a></h3>
-<p>O hook <code>markdown.hooks.onBrokenMarkdownLinks</code> em
-<code>website/docusaurus.config.ts</code> reescreve links que quebram só por causa
-de uma lacuna de tradução conhecida (<code>reference/</code>, <code>adr/</code>,
-<code>explanation/</code>) para <code>pathname://</code>. Essa é a saída de emergência oficial
-do Docusaurus, e escapar é o objetivo: <strong>um link <code>pathname://</code> nunca
-mais é conferido</strong>, então uma reescrita errada não consegue reprovar o
-build.</p>
+própria. <code>pnpm docs:openapi-textos &lt;locale&gt;</code> acrescenta ao catálogo as chaves
+que faltam, com <code>traducao: &quot;&quot;</code>.</p>
+<h3 id="links-do-localemjs--a-rewritten-link-skips-the-broken-link-check"><code>links-do-locale.mjs</code> — link reescrito escapa da checagem de link quebrado</h3>
+<p>Era o hook <code>markdown.hooks.onBrokenMarkdownLinks</code> do Docusaurus que reescrevia
+links quebrados por lacuna de tradução para <code>pathname://</code>, a saída de emergência
+que <strong>nunca mais é conferida</strong>. Com o gerador próprio (ADR 0253) essa reescrita
+desapareceu: cada locale é montado com o conjunto inteiro de páginas (tradução
+ou fallback no mesmo slug), e o checador de links do <code>docs:build</code> confere todo
+<code>href</code> e toda âncora. A guarda de locale duplicado fica, como histórico da
+lição:</p>
 <p>Uma reprovou, para o site pt-BR inteiro (AT-221). A reescrita devolvia
-<code>pathname:///pt-BR/&lt;slug></code>, mas <code>pathname://</code> não é um caminho absoluto
-no domínio — o <code>&lt;Link></code> o passa por <code>useBaseUrl</code>, e o baseUrl do build
+<code>pathname:///pt-BR/&lt;slug&gt;</code>, mas <code>pathname://</code> não é um caminho absoluto
+no domínio — o <code>&lt;Link&gt;</code> o passa por <code>useBaseUrl</code>, e o baseUrl do build
 pt-BR já é <code>/brabo/prd/pt-BR/</code>. Todo link reescrito saía como
 <code>/brabo/prd/pt-BR/pt-BR/...</code>: 441 hrefs em 56 páginas, todos 404, com o
 <code>docs:build</code> verde.</p>
@@ -739,59 +764,59 @@ lacuna valer, inclusive de uma fonte dentro de <code>adr/</code>, <code>referenc
 <code>explanation/</code>; um slug errado reprova o <code>docs:build</code> em todo locale.</p>
 <p>O que a guarda ainda <strong>não</strong> pega: um link que não é de ADR, de dentro
 de uma das zonas de lacuna, cujo destino não existe no repositório.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-one-site-per-rung>Publicação, um site por degrau<a href=#publishing-one-site-per-rung class=hash-link aria-label="Link direto para Publicação, um site por degrau" title="Link direto para Publicação, um site por degrau" translate=no>​</a></h3>
+<h3 id="publishing-one-site-per-rung">Publicação, um site por degrau</h3>
 <p>Cada branch permanente publica no seu próprio lugar do mesmo GitHub
 Pages:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>branch<th>URL<th>indexado por buscadores<tbody><tr><td>— (índice)<td><code>https://daneiel.github.io/brabo/</code><td>❌<tr><td><code>main</code><td><code>https://daneiel.github.io/brabo/prd/</code><td>✅<tr><td><code>dev</code><td><code>https://daneiel.github.io/brabo/dev/</code><td>❌</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>branch</th>
+<th>URL</th>
+<th>indexado por buscadores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>— (índice)</td>
+<td><code>https://daneiel.github.io/brabo/</code></td>
+<td>❌</td>
+</tr>
+<tr>
+<td><code>main</code></td>
+<td><code>https://daneiel.github.io/brabo/prd/</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>dev</code></td>
+<td><code>https://daneiel.github.io/brabo/dev/</code></td>
+<td>❌</td>
+</tr>
+</tbody>
+</table></div>
 <p>Os dois são <strong>simétricos</strong> (a <code>qa</code> foi aposentada, ADR 0235) desde o
-<a class="" href=/brabo/dev/adr/0071-publicacao-simetrica-por-degrau>ADR 0071</a>; a raiz é
+<a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071</a>; a raiz é
 uma página gerada que lista os três com a versão carimbada de cada um,
 e todo site tem um seletor no topo para trocar de degrau. Antes disso, a
 <code>main</code> publicava na raiz, e esse caso especial obrigava o workflow a
 preservar <code>/dev/</code> e <code>/qa/</code> num caminho que só rodava um terço das vezes.</p>
 <p><strong>O caminho não é o nome da branch.</strong>
-O <a class="" href=/brabo/dev/adr/0073-o-caminho-publicado-nomeia-o-ambiente>ADR 0073</a>
+O <a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073</a>
 separou os dois: o endereço nomeia o <strong>ambiente</strong> para quem lê, e
 <code>main</code> é vocabulário de quem commita. É por isso que a <code>main</code> publica
 em <code>/prd/</code>; <code>qa</code> e <code>dev</code> coincidem por acaso, não por regra. O mapa
-branch→caminho existe num ponto por processo — o passo "qual degrau, e
-onde publica" do workflow, a tabela <code>DEGRAUS</code> em <code>docusaurus.config.ts</code>
+branch→caminho existe num ponto por processo — o passo &quot;qual degrau, e
+onde publica&quot; do workflow, a tabela <code>DEGRAUS</code> em <code>scripts/docs/site/layout.mjs</code>
 e a de <code>landing.mjs</code> — e todo o resto deriva dele.</p>
 <p>Duas consequências que vale lembrar antes de mexer nisso:</p>
 <ul>
-<li class=""><strong><code>/brabo/main/</code> era publicado, e não é mais.</strong> Como a árvore é
+<li><strong><code>/brabo/main/</code> era publicado, e não é mais.</strong> Como a árvore é
 montada e empurrada com <code>keep_files: false</code>, o diretório some. O que
 preserva os links salvos é o <code>404.html</code> da raiz, que <strong>reescreve</strong> o
-prefixo (<code>/brabo/main/&lt;algo></code> → <code>/brabo/prd/&lt;algo></code>) como caso
+prefixo (<code>/brabo/main/&lt;algo&gt;</code> → <code>/brabo/prd/&lt;algo&gt;</code>) como caso
 próprio, separado do redirecionamento genérico — que produziria
-<code>/brabo/prd/main/&lt;algo></code>. A guarda contra laço só cobre caminhos que
+<code>/brabo/prd/main/&lt;algo&gt;</code>. A guarda contra laço só cobre caminhos que
 existem (<code>prd|qa|dev</code>).</li>
-<li class=""><strong><code>/prd/</code> foi semeado a partir de <code>gh-pages:main</code></strong> na transição,
+<li><strong><code>/prd/</code> foi semeado a partir de <code>gh-pages:main</code></strong> na transição,
 pelo mesmo motivo por que o ADR 0071 semeou <code>/main/</code> a partir da raiz
 antiga: sem isso, <code>/brabo/prd/</code> responderia 404 entre o primeiro push
 da <code>dev</code> e a próxima promoção para a <code>main</code>. A semente é
@@ -803,17 +828,17 @@ texto cru.</li>
 <p>Isso fecha uma lacuna da esteira: entre um merge na <code>dev</code> e a promoção
 final, ler a documentação daquele estado exigia clonar o repositório. O
 <code>docs-check</code> constrói o site em todo PR mas <strong>descarta o build</strong> — o
-veredito dele é "constrói sem links quebrados", nunca "mora em algum
-lugar que eu possa abrir". E foi exatamente essa lacuna entre escrever e
+veredito dele é &quot;constrói sem links quebrados&quot;, nunca &quot;mora em algum
+lugar que eu possa abrir&quot;. E foi exatamente essa lacuna entre escrever e
 olhar que deixou a referência da API ir ao ar quebrada por duas
 releases.</p>
 <p>Três detalhes que não são óbvios e já custaram um bug cada:</p>
 <ul>
-<li class=""><strong><code>baseUrl</code> vem de <code>DOCS_BASE_URL</code></strong>, com o valor de produção como
-padrão. Ele entra em toda URL de asset: um site em <code>/brabo/dev/</code> com
-<code>baseUrl: '/brabo/'</code> carrega o HTML e mais nada, e a página fica
-<em>quebrada sem erro</em>.</li>
-<li class=""><strong>O degrau é declarado em <code>DOCS_BRANCH</code>, não deduzido do <code>baseUrl</code>.</strong>
+<li><strong>Os assets são RELATIVOS</strong> (ADR 0253): o gerador não precisa do <code>baseUrl</code>
+do degrau, e o mesmo build serve em <code>/brabo/dev/</code>, em <code>/brabo/prd/</code> ou
+aberto do disco. No Docusaurus um <code>baseUrl</code> errado (<code>DOCS_BASE_URL</code>) deixava
+a página <em>quebrada sem erro</em>; o <code>docs:build</code> agora checa todo <code>href</code>/<code>src</code>.</li>
+<li><strong>O degrau é declarado em <code>DOCS_BRANCH</code>, não deduzido do <code>baseUrl</code>.</strong>
 Antes era <code>BASE_URL === '/brabo/'</code>, e funcionava enquanto a <code>main</code>
 era a única na raiz. Com os três sob um subdiretório, essa comparação
 vira falsa também para a <code>main</code>, e o efeito seria <code>noIndex</code> na
@@ -821,92 +846,104 @@ documentação REAL — fora do Google, calado, com o CI verde, porque
 nada no build reprova por subindexação. O ADR 0073 é exatamente o
 cenário para o qual essa separação foi construída: o caminho mudou
 para <code>/prd/</code> e <code>E_PRODUCAO</code> não precisou saber.</li>
-<li class=""><strong><code>noIndex</code> fora da <code>main</code> exige <code>forceIgnoreNoIndex</code> na busca.</strong>
-O <code>@easyops-cn/docusaurus-search-local</code> descarta toda página com
-<code>&lt;meta name="robots" content="noindex"></code>, então as duas salvaguardas
-se anulariam: os degraus publicariam com a busca morta, um índice de
-666 bytes, <em>"No results"</em> para tudo. <code>noIndex</code> fala com buscadores
-<strong>externos</strong>; <code>forceIgnoreNoIndex</code> fala com o índice <strong>local</strong>.</li>
-<li class=""><strong>A <code>main</code> monta a árvore antes de publicar</strong>, trazendo <code>/dev/</code> e
+<li><strong><code>noindex</code> fora da <code>main</code></strong> vai no <code>&lt;meta name=&quot;robots&quot;&gt;</code> de cada página
+e fala com buscadores <strong>externos</strong>; a busca do site é o índice local por
+idioma e não o lê, então as duas salvaguardas não se anulam.</li>
+<li><strong>A <code>main</code> monta a árvore antes de publicar</strong>, trazendo <code>/dev/</code> e
 <code>/qa/</code> de volta. <code>keep_files: true</code> seria mais simples e estaria
 errado: nunca removeria nada, e uma página apagada do repositório
 ficaria publicada para sempre.</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-is-two-workflows-and-only-one-is-ours>Publicar são DOIS workflows, e só um é nosso<a href=#publishing-is-two-workflows-and-only-one-is-ours class=hash-link aria-label="Link direto para Publicar são DOIS workflows, e só um é nosso" title="Link direto para Publicar são DOIS workflows, e só um é nosso" translate=no>​</a></h3>
+<h3 id="publishing-is-two-workflows-and-only-one-is-ours">Publicar são DOIS workflows, e só um é nosso</h3>
 <p>Isto engana quem procura o deploy na aba Actions:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>ordem<th>workflow<th>onde mora<th>o que faz<tbody><tr><td>1<td><strong><code>Documentação</code></strong> (<code>docs-deploy.yml</code>)<td><code>.github/workflows/</code><td>constrói o site e <strong>commita no <code>gh-pages</code></strong><tr><td>2<td><strong><code>pages build and deployment</code></strong><td><code>dynamic/pages/</code> — <strong>gerado pelo GitHub</strong><td>lê o <code>gh-pages</code> e <strong>o serve</strong></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>ordem</th>
+<th>workflow</th>
+<th>onde mora</th>
+<th>o que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong><code>Documentação</code></strong> (<code>docs-deploy.yml</code>)</td>
+<td><code>.github/workflows/</code></td>
+<td>constrói o site e <strong>commita no <code>gh-pages</code></strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong><code>pages build and deployment</code></strong></td>
+<td><code>dynamic/pages/</code> — <strong>gerado pelo GitHub</strong></td>
+<td>lê o <code>gh-pages</code> e <strong>o serve</strong></td>
+</tr>
+</tbody>
+</table></div>
 <p>O segundo não está no repositório e não aparece na lista de workflows
 versionados; o GitHub o cria sozinho quando a fonte do Pages é uma
 branch. O nosso workflow termina no commit — ele <strong>não</strong> publica no
-Pages, embora o job dele ainda se chame "Publish to GitHub Pages".</p>
+Pages, embora o job dele ainda se chame &quot;Publish to GitHub Pages&quot;.</p>
 <blockquote>
 <p><strong>Consequência prática:</strong> o site pode estar velho mesmo com
 <code>Documentação</code> verde. Se o <code>build_type</code> do Pages não for
 <code>legacy</code>/<code>gh-pages</code>, o commit acontece e ninguém o serve — e nada no
 CI fica vermelho. A conferência é <code>gh api repos/daneiel/brabo/pages</code>,
-registrada em <a class="" href=/brabo/dev/reference/rulesets>Rulesets</a>.</p>
+registrada em <a href="../reference/rulesets.html">Rulesets</a>.</p>
 </blockquote>
 <p>O desenho inteiro, com as alternativas descartadas, está no
-<a class="" href=/brabo/dev/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=site-colors-come-from-the-product>As cores do site vêm do produto<a href=#site-colors-come-from-the-product class=hash-link aria-label="Link direto para As cores do site vêm do produto" title="Link direto para As cores do site vêm do produto" translate=no>​</a></h2>
-<p>O <code>website/src/css/custom.css</code> IMPORTA <code>design/tokens.css</code> — a mesma fonte
-de cor do <code>apps/web</code> (ADR 0181) — e só aponta os <code>--ifm-*</code> do Infima para os
-tokens: escuro preto, claro branco, primary terracota (<code>--accent</code>), realce de
-código pelos <code>--syntax-*</code>. Nenhum hex é copiado. As fontes ficam as de sistema
-de propósito: o site não carrega as famílias que os <code>--font-*</code> nomeiam.
-<code>scripts/docs/contraste-do-site.spec.ts</code> resolve os <code>--ifm-*</code> de texto até hex
-nos dois temas e reprova abaixo de 4,5:1 contra o fundo (e reprova como CEGO
-se nada resolver).</p>
+<a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034</a>.</p>
+<h2 id="site-colors-come-from-the-product">As cores do site vêm do produto</h2>
+<p>O <code>scripts/docs/site/assets/site.css</code> usa só <code>var(--token)</code> de
+<code>design/tokens.css</code> — a mesma fonte de cor do <code>apps/web</code> (ADR 0181): escuro
+preto, claro branco, acento terracota, realce de código pelos <code>--syntax-*</code>.
+Nenhum hex é copiado. <code>scripts/docs/contraste-do-site.spec.ts</code> resolve os
+tokens de texto até hex nos dois temas e reprova abaixo de 4,5:1 contra o
+fundo (e reprova como CEGO se nada resolver).</p>
 <p>A exceção é o índice da raiz (<code>/brabo/</code>, escrito por <code>scripts/docs/landing.mjs</code>):
 ele é HTML avulso no Pages, não alcança o <code>tokens.css</code> e por isso COPIA os
 valores, nos dois temas pela preferência do sistema. A cópia é amarrada por
 <code>scripts/docs/landing.spec.ts</code>, que resolve os tokens e reprova o valor que
 divergir — ela já ficou petróleo uma vez depois do ADR 0181.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=site-generator>O gerador do site que substitui o Docusaurus (em construção)<a href=#site-generator class=hash-link aria-label="Link direto para O gerador do site que substitui o Docusaurus (em construção)" title="Link direto para O gerador do site que substitui o Docusaurus (em construção)" translate=no>​</a></h3>
-<p>O <a class="" href=/brabo/dev/adr/0253-o-site-de-docs-deixa-o-docusaurus>ADR 0253</a> tira o site do
-Docusaurus. Enquanto a troca não acontece, o gerador novo roda AO LADO: <code>pnpm docs:site</code> escreve <code>build/docs-site/</code> (ignorado pelo git), com as mesmas URLs e
-âncoras do site publicado, e o Docusaurus e o CI seguem como estão. O núcleo
-mora em <code>scripts/docs/site/</code>: <code>paginas.mjs</code> descobre as páginas de cada idioma
-(a tradução onde existe, a fonte pt-BR no resto, então o link nunca sai do
-idioma), <code>render.mjs</code> converte o Markdown (âncora <code>{#id}</code>, admonições, Mermaid,
-realce com shiki, link <code>.md</code> para URL relativa) e <code>navegacao.mjs</code> porta a barra
-lateral, com os ADRs agrupados por <code>docs/adr/temas.yml</code>. O caminho das
-traduções é uma constante só (<code>CAMINHO_DAS_TRADUCOES</code>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it-on-your-machine>Rodando na sua máquina<a href=#running-it-on-your-machine class=hash-link aria-label="Link direto para Rodando na sua máquina" title="Link direto para Rodando na sua máquina" translate=no>​</a></h2>
-<p><code>website/</code> tem <code>pnpm-lock.yaml</code> próprio desde o <a class="" href=/brabo/dev/adr/0117-lockfile-proprio-para-o-website>ADR 0117</a> —
-o <code>pnpm install</code> da raiz não o alcança mais, então a primeira vez (ou
-depois que o lockfile dele muda) precisa de um passo a mais:</p>
-<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">pnpm docs:check      # validates the map + checks generated content is up to date</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">pnpm docs:generate   # regenerates</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">pnpm docs:drift      # simulates the PR check (origin/dev...HEAD)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">pnpm docs:build      # the build CI runs — pnpm --dir website build under the hood</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">pnpm docs:start      # local server, with hot reload</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># does the API reference render? needs the build above, and isn't part</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># of docs:check because that one doesn't build the site</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">node scripts/docs/api-render-check.mjs</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">node scripts/docs/links-do-locale.mjs   # no href with a doubled locale prefix (AT-221)</span><br/></div></code></pre></div></div>
+<h3 id="site-generator">O gerador do site (ADR 0253)</h3>
+<p>O <a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253</a> tirou o site do
+Docusaurus. <code>pnpm docs:build</code> roda <code>docs:site</code> (escreve <code>build/docs-site/</code>,
+ignorado pelo git, com as mesmas URLs e âncoras do site anterior) e
+<code>docs:site:check</code> (checador de links e âncoras, locale duplicado e faixa de
+tradução). O núcleo mora em <code>scripts/docs/site/</code>: <code>paginas.mjs</code> descobre as
+páginas de cada idioma (a tradução onde existe, a fonte pt-BR no resto, então o
+link nunca sai do idioma), <code>render.mjs</code> converte o Markdown (âncora <code>{#id}</code>,
+admonições, Mermaid, realce com shiki, link <code>.md</code> para URL relativa),
+<code>navegacao.mjs</code> porta a barra lateral, com os ADRs agrupados por
+<code>docs/adr/temas.yml</code>, <code>layout.mjs</code> desenha a moldura e <code>openapi.mjs</code> gera a
+referência da API. O caminho das traduções é uma constante só
+(<code>CAMINHO_DAS_TRADUCOES</code>, <code>docs/i18n/&lt;locale&gt;/</code>). <code>website/</code> guarda só a árvore
+isolada do Redoc.</p>
+<h2 id="running-it-on-your-machine">Rodando na sua máquina</h2>
+<p><code>website/</code> guarda só a árvore do Redoc e tem <code>pnpm-lock.yaml</code> próprio desde o
+<a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117</a> — o <code>pnpm install</code> da
+raiz não o alcança, então a primeira vez (ou depois que o lockfile dele muda)
+precisa de um passo a mais:</p>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-token-function)">cd</span><span style="color:var(--shiki-token-string)"> website</span><span style="color:var(--shiki-token-punctuation)"> &#x26;&#x26;</span><span style="color:var(--shiki-token-function)"> pnpm</span><span style="color:var(--shiki-token-string)"> install</span><span style="color:var(--shiki-token-punctuation)"> &#x26;&#x26;</span><span style="color:var(--shiki-token-function)"> cd</span><span style="color:var(--shiki-token-string)"> ..</span><span style="color:var(--shiki-token-comment)">  # only the first time, or when website/pnpm-lock.yaml changes</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:var(--shiki-token-function)">pnpm</span><span style="color:var(--shiki-token-string)"> docs:check</span><span style="color:var(--shiki-token-comment)">      # validates the map + checks generated content is up to date</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">pnpm</span><span style="color:var(--shiki-token-string)"> docs:generate</span><span style="color:var(--shiki-token-comment)">   # regenerates</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">pnpm</span><span style="color:var(--shiki-token-string)"> docs:drift</span><span style="color:var(--shiki-token-comment)">      # simulates the PR check (origin/dev...HEAD)</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">pnpm</span><span style="color:var(--shiki-token-string)"> docs:build</span><span style="color:var(--shiki-token-comment)">      # the build CI runs — generates build/docs-site and checks links</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">pnpm</span><span style="color:var(--shiki-token-string)"> docs:start</span><span style="color:var(--shiki-token-comment)">      # builds and serves on http://localhost:3000</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:var(--shiki-token-comment)"># does the API reference render? needs the build above, and isn't part</span></span>
+<span class="line"><span style="color:var(--shiki-token-comment)"># of docs:check because that one doesn't build the site</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">node</span><span style="color:var(--shiki-token-string)"> scripts/docs/api-render-check.mjs</span></span>
+<span class="line"><span style="color:var(--shiki-token-function)">node</span><span style="color:var(--shiki-token-string)"> scripts/docs/links-do-locale.mjs</span><span style="color:var(--shiki-token-comment)">   # no href with a doubled locale prefix (AT-221)</span></span>
+<span class="line"></span></code></pre>
 <p>Ou, se você está no Claude Code, <code>/sync-docs</code> roda o ciclo inteiro e
 entrega um relatório do que mudou, do que virou <code>TODO(human)</code> e do que
 foi deliberadamente <strong>deixado</strong> sem mudar.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=conjunction-by-default-disjunction-when-the-doc-was-split>Conjunção por padrão, disjunção quando a doc foi partida<a href=#conjunction-by-default-disjunction-when-the-doc-was-split class=hash-link aria-label="Link direto para Conjunção por padrão, disjunção quando a doc foi partida" title="Link direto para Conjunção por padrão, disjunção quando a doc foi partida" translate=no>​</a></h3>
+<h3 id="conjunction-by-default-disjunction-when-the-doc-was-split">Conjunção por padrão, disjunção quando a doc foi partida</h3>
 <p>A lista <code>docs:</code> de uma regra é uma <strong>conjunção</strong>: todo documento listado
 tem de mudar, senão a regra dispara. É o padrão certo — é o que torna
-cobrável "mudou o gate, atualize a doc do gate E as regras".</p>
+cobrável &quot;mudou o gate, atualize a doc do gate E as regras&quot;.</p>
 <p>Ele ficou errado exatamente uma vez, e a correção é <code>docs_alternativos:</code>,
 uma <strong>disjunção</strong>: qualquer um dos documentos listados satisfaz a regra.
 Ela existe porque <code>business-rules.md</code> foi partido por tamanho (Custo e
@@ -920,13 +957,15 @@ a checagem.</p>
 <p><code>docmap.mjs</code> valida as duas listas do mesmo jeito: um caminho que não
 existe é o mesmo erro silencioso de um glob morto — uma alternativa com
 erro de digitação nunca poderia satisfazer a regra, e ninguém veria.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-check-complains-unfairly>Quando a checagem reclama injustamente<a href=#when-the-check-complains-unfairly class=hash-link aria-label="Link direto para Quando a checagem reclama injustamente" title="Link direto para Quando a checagem reclama injustamente" translate=no>​</a></h2>
+<h2 id="when-the-check-complains-unfairly">Quando a checagem reclama injustamente</h2>
 <p>Ela vai reclamar injustamente às vezes. Uma refatoração que renomeia
 variáveis internas dispara <code>dominio-e-regras</code> sem mudar regra de negócio
 nenhuma. Isso é esperado: o mapa funciona por caminho de arquivo, não
 por semântica.</p>
 <p>Há <strong>duas</strong> saídas, e as duas exigem alguém explicando por quê:</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">PR label:      docs-not-needed</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">or in the body: docs-not-needed: internal refactor, no RN changed</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>PR label:      docs-not-needed
+or in the body: docs-not-needed: internal refactor, no RN changed
+</code></pre>
 <p>Use sem culpa quando couber. A saída de emergência existe <strong>de
 propósito</strong>: sem uma saída legítima, o hábito que se forma é trapacear
 — um commit cosmético na doc só para a checagem passar. Aí o mecanismo
@@ -936,7 +975,7 @@ do Dependabot cujo diff não é nada além de trocas de pin de action (o
 SHA do <code>uses:</code> e o comentário de versão dele). Um passo logo antes do
 drift escreve a linha, marcada como do bot, e o drift continua lendo só
 a linha — ver
-<a class="" href=/brabo/dev/explanation/branching-policy#a-pin-bump-justifies-itself>A pin bump justifies itself</a>.
+<a href="branching-policy.html#a-pin-bump-justifies-itself">A pin bump justifies itself</a>.
 Como editar o corpo com o <code>GITHUB_TOKEN</code> não dispara evento <code>edited</code>, e
 uma reexecução reusa o payload original, o drift lê o corpo de
 <code>PR_BODY_FILE</code> quando esse passo o reescreveu, e do evento caso
@@ -945,38 +984,38 @@ contrário.</p>
 você a usou três vezes na mesma semana para a mesma regra, a regra é o
 problema: ajuste o glob em <code>docs/.docmap.yml</code>, ou baixe a severidade de
 <code>block</code> para <code>warn</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-mechanism-itself-is-wrong>Quando o próprio mecanismo está errado<a href=#when-the-mechanism-itself-is-wrong class=hash-link aria-label="Link direto para Quando o próprio mecanismo está errado" title="Link direto para Quando o próprio mecanismo está errado" translate=no>​</a></h2>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>sintoma<th>correção<tbody><tr><td>a regra dispara numa mudança irrelevante<td>glob largo demais — estreite o <code>watch</code><tr><td>a regra nunca dispara<td>glob morto — o <code>pnpm docs:check</code> o aponta<tr><td>o conteúdo gerado está sempre desatualizado no CI<td>alguém o editou à mão; corrija o gerador ou a fonte<tr><td>o build quebra num <code>{</code> ou num HTML solto<td><code>.md</code> é CommonMark; se precisar de componente React, renomeie para <code>.mdx</code><tr><td>a auditoria relata a si mesma<td>acrescente o arquivo à lista <code>META</code> em <code>audit.mjs</code></table>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-this-mechanism-doesnt-do>O que este mecanismo não faz<a href=#what-this-mechanism-doesnt-do class=hash-link aria-label="Link direto para O que este mecanismo não faz" title="Link direto para O que este mecanismo não faz" translate=no>​</a></h2>
+<h2 id="when-the-mechanism-itself-is-wrong">Quando o próprio mecanismo está errado</h2>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>sintoma</th>
+<th>correção</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a regra dispara numa mudança irrelevante</td>
+<td>glob largo demais — estreite o <code>watch</code></td>
+</tr>
+<tr>
+<td>a regra nunca dispara</td>
+<td>glob morto — o <code>pnpm docs:check</code> o aponta</td>
+</tr>
+<tr>
+<td>o conteúdo gerado está sempre desatualizado no CI</td>
+<td>alguém o editou à mão; corrija o gerador ou a fonte</td>
+</tr>
+<tr>
+<td>o build quebra num <code>{</code> ou num HTML solto</td>
+<td><code>.md</code> é CommonMark; se precisar de componente React, renomeie para <code>.mdx</code></td>
+</tr>
+<tr>
+<td>a auditoria relata a si mesma</td>
+<td>acrescente o arquivo à lista <code>META</code> em <code>audit.mjs</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="what-this-mechanism-doesnt-do">O que este mecanismo não faz</h2>
 <p><strong>Ele não confere se o texto está correto.</strong> Ele confere se o texto foi
 <em>revisado</em> quando o código mudou, e se as listas estão completas. Uma
 frase factualmente errada que ninguém tocou passa em toda checagem — é
@@ -992,4 +1031,14 @@ da observabilidade (<code>tracing.ts</code>, <code>infrastructure/observability/
 alguma regra. Entregar só o que o CI cobra é como as duas frases sobre
 <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> ficaram erradas por meses. Quando você
 mudar código, varra <code>docs/</code> procurando o que a mudança tornou falso —
-inclusive o que ninguém pediu para você olhar.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/documentation-workflow.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-11-04T15:07:00.000Z itemprop=dateModified>4 de nov. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/security-surface><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>Superfície exposta da api</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/explanation/branching-policy><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Política de branches</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-principle-generate--verify--remember class="table-of-contents__link toc-highlight">O princípio: gerar > verificar > lembrar</a><ul><li><a href=#a-number-in-prose-is-a-verify-case class="table-of-contents__link toc-highlight">Número em prosa é caso de <em>verificar</em></a><li><a href=#line-references-with-a-symbol class="table-of-contents__link toc-highlight">Referências de linha com símbolo</a><li><a href=#every-rn-heading-carries-its-anchor class="table-of-contents__link toc-highlight">Todo cabeçalho de RN carrega sua âncora</a><li><a href=#the-runbook-procedures-table class="table-of-contents__link toc-highlight">A tabela de procedimentos do runbook</a><li><a href=#the-adr-index-is-grouped-by-theme class="table-of-contents__link toc-highlight">O índice de ADR é agrupado por tema</a></ul><li><a href=#the-pieces class="table-of-contents__link toc-highlight">As peças</a><ul><li><a href=#docsdocmapyml--the-map class="table-of-contents__link toc-highlight"><code>docs/.docmap.yml</code> — o mapa</a><li><a href=#docmapmjs--validates-the-map class="table-of-contents__link toc-highlight"><code>docmap.mjs</code> — valida o mapa</a><li><a href=#generatemjs--generates-and-verifies class="table-of-contents__link toc-highlight"><code>generate.mjs</code> — gera e verifica</a><li><a href=#driftmjs--enforces-it-in-the-pr class="table-of-contents__link toc-highlight"><code>drift.mjs</code> — cobra no PR</a><li><a href=#auditmjs--the-monthly-audit class="table-of-contents__link toc-highlight"><code>audit.mjs</code> — a auditoria mensal</a><li><a href=#the-site-build class="table-of-contents__link toc-highlight">O build do site</a><li><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class="table-of-contents__link toc-highlight">Página nova precisa entrar à mão no <code>sidebars.ts</code></a><li><a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class="table-of-contents__link toc-highlight"><code>api-render-check.mjs</code> — build verde não é página que renderiza</a><li><a href=#four-locales-with-pt-br-as-the-source-adr-0216 class="table-of-contents__link toc-highlight">Quatro locales, com pt-BR como fonte (ADR 0216)</a><li><a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class="table-of-contents__link toc-highlight">A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)</a><li><a href=#the-api-page-is-translated-by-catalog-adr-0220 class="table-of-contents__link toc-highlight">A página da API sai traduzida por catálogo (ADR 0220)</a><li><a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class="table-of-contents__link toc-highlight"><code>links-do-locale.mjs</code> — link reescrito escapa da checagem de link quebrado</a><li><a href=#publishing-one-site-per-rung class="table-of-contents__link toc-highlight">Publicação, um site por degrau</a><li><a href=#publishing-is-two-workflows-and-only-one-is-ours class="table-of-contents__link toc-highlight">Publicar são DOIS workflows, e só um é nosso</a></ul><li><a href=#site-colors-come-from-the-product class="table-of-contents__link toc-highlight">As cores do site vêm do produto</a><ul><li><a href=#site-generator class="table-of-contents__link toc-highlight">O gerador do site que substitui o Docusaurus (em construção)</a></ul><li><a href=#running-it-on-your-machine class="table-of-contents__link toc-highlight">Rodando na sua máquina</a><ul><li><a href=#conjunction-by-default-disjunction-when-the-doc-was-split class="table-of-contents__link toc-highlight">Conjunção por padrão, disjunção quando a doc foi partida</a></ul><li><a href=#when-the-check-complains-unfairly class="table-of-contents__link toc-highlight">Quando a checagem reclama injustamente</a><li><a href=#when-the-mechanism-itself-is-wrong class="table-of-contents__link toc-highlight">Quando o próprio mecanismo está errado</a><li><a href=#what-this-mechanism-doesnt-do class="table-of-contents__link toc-highlight">O que este mecanismo não faz</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/runbook>Manual de operação</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://ko-fi.com/daneiel target=_blank rel="noopener noreferrer" class=footer__link-item>Me pague um café (Ko-fi)<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+inclusive o que ninguém pediu para você olhar.</p>
+<nav class="site-pager"><a href="../explanation/branching-policy.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/explanation/documentation-workflow.md">Editar esta página</a><span>Atualizado em 2026-11-04T14:34:32-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>Nesta página</h2><ul><li class="n2"><a href="#the-principle-generate--verify--remember">O princípio: gerar &gt; verificar &gt; lembrar</a></li><li class="n3"><a href="#a-number-in-prose-is-a-verify-case">Número em prosa é caso de verificar</a></li><li class="n3"><a href="#line-references-with-a-symbol">Referências de linha com símbolo</a></li><li class="n3"><a href="#every-rn-heading-carries-its-anchor">Todo cabeçalho de RN carrega sua âncora</a></li><li class="n3"><a href="#the-runbook-procedures-table">A tabela de procedimentos do runbook</a></li><li class="n3"><a href="#the-adr-index-is-grouped-by-theme">O índice de ADR é agrupado por tema</a></li><li class="n2"><a href="#the-pieces">As peças</a></li><li class="n3"><a href="#docsdocmapyml--the-map">docs/.docmap.yml — o mapa</a></li><li class="n3"><a href="#docmapmjs--validates-the-map">docmap.mjs — valida o mapa</a></li><li class="n3"><a href="#generatemjs--generates-and-verifies">generate.mjs — gera e verifica</a></li><li class="n3"><a href="#driftmjs--enforces-it-in-the-pr">drift.mjs — cobra no PR</a></li><li class="n3"><a href="#auditmjs--the-monthly-audit">audit.mjs — a auditoria mensal</a></li><li class="n3"><a href="#the-site-build">O build do site</a></li><li class="n3"><a href="#a-new-page-needs-to-be-added-to-sidebarsts-by-hand">Página nova precisa entrar à mão em navegacao.mjs</a></li><li class="n3"><a href="#api-render-checkmjs--a-green-build-isnt-a-page-that-renders">api-render-check.mjs — build verde não é página que renderiza</a></li><li class="n3"><a href="#four-locales-with-pt-br-as-the-source-adr-0216">Quatro locales, com pt-BR como fonte (ADR 0216)</a></li><li class="n3"><a href="#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550">A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)</a></li><li class="n3"><a href="#the-api-page-is-translated-by-catalog-adr-0220">A página da API sai traduzida por catálogo (ADR 0220)</a></li><li class="n3"><a href="#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check">links-do-locale.mjs — link reescrito escapa da checagem de link quebrado</a></li><li class="n3"><a href="#publishing-one-site-per-rung">Publicação, um site por degrau</a></li><li class="n3"><a href="#publishing-is-two-workflows-and-only-one-is-ours">Publicar são DOIS workflows, e só um é nosso</a></li><li class="n2"><a href="#site-colors-come-from-the-product">As cores do site vêm do produto</a></li><li class="n3"><a href="#site-generator">O gerador do site (ADR 0253)</a></li><li class="n2"><a href="#running-it-on-your-machine">Rodando na sua máquina</a></li><li class="n3"><a href="#conjunction-by-default-disjunction-when-the-doc-was-split">Conjunção por padrão, disjunção quando a doc foi partida</a></li><li class="n2"><a href="#when-the-check-complains-unfairly">Quando a checagem reclama injustamente</a></li><li class="n2"><a href="#when-the-mechanism-itself-is-wrong">Quando o próprio mecanismo está errado</a></li><li class="n2"><a href="#what-this-mechanism-doesnt-do">O que este mecanismo não faz</a></li></ul></aside>
+</div>
+<script src="../assets/mermaid.min.js"></script>
+<script src="../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-pt-BR.json" data-base="../"></script></body>
+</html>

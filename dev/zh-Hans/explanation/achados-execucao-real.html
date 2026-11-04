@@ -1,29 +1,53 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/achados-execucao-real" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>流水线真实执行中的发现 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/achados-execucao-real /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="流水线真实执行中的发现 | Brabo"/><meta data-rh=true name=description content="在 2026-08-05 通过浏览器引导的一次执行会话中调研，使用 API 模型（非本地）和真实的 git provider。这是"/><meta data-rh=true property=og:description content="在 2026-08-05 通过浏览器引导的一次执行会话中调研，使用 API 模型（非本地）和真实的 git provider。这是"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/achados-execucao-real /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/achados-execucao-real hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/achados-execucao-real hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/achados-execucao-real hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/achados-execucao-real hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/achados-execucao-real hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/achados-execucao-real","name":"流水线真实执行中的发现","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.21f5d709.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.d26f403e.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.729afbca.js defer></script></head><body><svg style="display: none;"><defs>
-<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
-</defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>运维手册</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>架构决策（ADR）</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>简体中文</a><ul class=dropdown__menu><li><a href=/brabo/dev/explanation/achados-execucao-real target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/explanation/achados-execucao-real target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/explanation/achados-execucao-real target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/explanation/achados-execucao-real target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>配置</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>事件</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>权限</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>制品</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git 提供方</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>内部 API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>脚本与命令</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>仓库规则集</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>翻译一致性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB 登记册</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>流程与流水线</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>可观测性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/modelo-de-time><span class=linkLabel_CzBh>团队模型与交付物流程</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>验证与测量</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>第一次 dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>真实执行（hello world）</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>流水线真实执行中的发现</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Fase 12 的验证</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>真实验证（13b）</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>provider 的验收</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>语言启发式的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Jev 工具路由器的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>审计：fluxo.yml × 代码（v3，ADR 0085）</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>视觉审计：Rodada 29 之前与之后</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>阶段历史</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=categoryLinkLabel_jKch>本地化</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>技术笔记</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class=breadcrumbs__item><span class=breadcrumbs__link>验证与测量</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>流水线真实执行中的发现</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>流水线真实执行中的发现</h1></header>
+<!doctype html>
+<html lang="zh-Hans" data-locale="zh-Hans" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>流水线真实执行中的发现 | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="菜单">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="搜索" aria-label="搜索" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="语言"><option value="../../explanation/achados-execucao-real.html">pt-BR</option><option value="../../en/explanation/achados-execucao-real.html">en</option><option value="../../ru/explanation/achados-execucao-real.html">ru</option><option value="../../zh-Hans/explanation/achados-execucao-real.html" selected>zh-Hans</option></select>
+<select data-seletor aria-label="环境"><option value="../../../dev/zh-Hans/explanation/achados-execucao-real.html" selected>dev</option><option value="../../../prd/zh-Hans/explanation/achados-execucao-real.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="切换主题">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 从这里开始</h2><ul><li><a href="../index.html">简介</a></li><li><a href="../getting-started.html">快速开始</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">从零到交付物</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ 架构</h2><ul><li><a href="../architecture.html">架构</a></li><li><a href="../adr.html">决策（ADR）</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — GitProvider 规范化契约的形态</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — GitProvider 错误的规范化</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — 远程 provider 的重试策略</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — 用户 git 凭据的登记</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — 幂等且可恢复的 Gitflow bootstrap</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — 分支保护：provider 之间的分歧与审批矩阵</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — 机制化的分支策略</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — 采纳现有仓库，以及作为关口的计划</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — engine 在远程仓库上工作</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — 流水线合并的告警获得接收方，以及 `dev` 的规则</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — QA 处于测试阶段时，`dev` → `qa` 自动晋升</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — agent 的 harness：确定性的上下文组装</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — 会话的类型是创建时的数据，而执行仍然是事件</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — 一致的传输限制与有效的压缩窗口</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — 点击在**接受**命令时响应，轮次经由通道继续</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — 回答的语言存放在三个地方——账户、会话和项目——采用开放的 BCP-47 列表，绝不放在 `users.locale` 中</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — 循环向 Jev 询问用哪个工具，用户的模型只看到剩下的菜单</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — 已结束的会话可以重新打开：终止状态的专属出口，通向 `active`，带新事件</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — 在轮次进行中到达的消息进入持久化队列，并在轮次结束时被读取</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — harness 中的对话式 Criativo agent + handoff 的基础</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — PO agent、backlog（epics/stories/tasks）与可追溯性</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Arquiteto agent：通过真实 PR 的 ADR、module_map 和交叉验证</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent 与实时团队面板（Fase 4a 收尾）</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — 真正的 Psicólogo：ToolLoop、带证据的假设与成本分诊</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese：熟练度画像、指令补丁与闭环</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — 阶段 4b 的收尾（第 1 次会话）：能送达的证据、能显示的成本、能在 kill 之后存活的分析</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — 阶段 4b 的收尾（第 2 次会话）：能工作的目录、能区分谁拒绝的去重，以及能在一轮之后存活的队列</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — agent 的层级：领域、lead 与委派</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — 由用户拥有权限的故事晋升</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead 作为区域，以及由用户授权的并行</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Arquiteto 的 C4 图</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — 有条件地合并 handoff 的接受与执行的启用</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — 角色流作为声明式登记（fluxo.yml）</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — Dev Lead 的计划挂起轮次以等待审批</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer 作为对话式 agent 加入</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff：代码就绪，自动触发处于休眠</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` 和 `delivery-metricas` 成为报表脚本</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — `dbre` 角色变成两个脚本：迁移 linter 和备份报告</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Dev Lead → dev 的委派成为数据，`parecerArtifactId` 被重新定义</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — 向任选 agent 的手动 handoff 复用&quot;提供 + 接受&quot;，绝不引入第三种 handoff 状态</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — handoff 提议获得生命周期：每个目标一个待处理，以及 `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — 已归档的故事：一列，而不是状态机中的一个状态</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — PR 的 gate：QAAgent 和 SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — 解锁 QA 与 SecOps 的 gate：在工作树上运行 gitleaks、经过校验的意见书，以及文本形式的 tool call</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — 阶段 4a 的收尾：真正做校验的 infra gate，以及说真话的面板</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — gate 作为声明式登记</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — gate agent 等待审批，就像 dev 那样等待</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — gate 在重启后存活</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA 策略和 AppSec 作为第二个**时刻**，而不是新 agent</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` 作为基于 `rate_limit_hits` 的报告脚本</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — gate `necessidade-validada` 由单独的人工确认关闭，而不是由 Criativo 自我验证</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — 为 QA Automação agent 的语义判断建立回归用例 golden-set</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — 停滞超过 2 小时的 gate 周期会被搁置，只有人工操作才能恢复</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — 悬而未决的问题成为待解决的待办</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — 项目的决定传达到 dev 和 QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — dev agent 的基础设施：worktree、git 执行器和合并锁</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — 真正的 DevAgent：ToolLoop、按 task 的预算与阻塞纪律</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — 工作区初始化锁、dev agent 的 Monitor 以及上限继承</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent 作为永久的执行模式</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — 解锁真实的 DevAgent：写入、终端、按模块的 ADR 和按项目的预算</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — dev agent 的按事件重新调度，以及熔断器</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — dogfooding 之后的可运维性：Fase 12 的收尾</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — event log 中的决定，以及 gate 的顺序</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — dev agent 在循环中途等待审批</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — 终端策略中的路径范围</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — 修订 ADR 0065：外部效果的边界不再是 `deny`，而是绝对上限</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — 自动模式放行路径范围，而且只有它放行</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — 自动驾驶：自动模式批准一切（上限除外），作用域与真实执行目录比较，&quot;始终允许&quot;记录动词 + 子命令</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — 自动模式放行 push 和 PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — 可读的 workspace 文件夹名称</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — 项目选择代码存放在哪里：用户目录还是托管目录</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` 取三个值，由 runner 负责验证时 workspace 以 `unverified` 诞生</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — 通过 Runner 浏览本地文件夹</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — 在 `runner` 模式下，项目在点击“Navegar pasta...”时诞生，而不只是在确认时</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — 转换已有项目的 `execution_mode`：dev agent 活动时拒绝，迁移 `permissions.json`，退役容器行</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — 挂载项目的唯一 base，按同一路径挂载</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — 挂载 workspace 的验证推迟到实体化时进行</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — 在 bootstrap 中经同意设定的 base，以及 `mounted` 作为本地默认值</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — 每个项目一个容器：边界不再是策略</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — 容器生命周期：状态表，没有编排器</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — 终端标签页获得生命周期的真实使用者，而不是终端</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Docker 端口，以及选定实现的打包证明</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — dev agent 在项目的真实容器**内部**执行，终端在其中获得一个自动批准的下限</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` 在用户的机器上启动项目容器</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — dev agent 只在容器之后</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — broker 的第二个根，以及选择它的可辨识定位符</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — 项目容器以文件夹所有者身份运行，由 api 测量</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra 在接受 handoff 时启动容器，由服务器执行这一步并预置自主度，并由它交接给 Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra 继承 Arquiteto 声明的网络</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — 本地 runner：通过带一次性 ticket 的 Phoenix 通道在用户机器上执行</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — 给 runner 的 Personal Access Token（`brb_…`），按构造限定到一条路由</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — 通过 `tsup` 和 `npm publish` 分发 `@brabo/runner`，版本只在 CI 中注入</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — 通过 `bun build --compile` 构建 `@brabo/runner` 的独立二进制，原生插件 `.node` 通过真实解压到临时目录的方式嵌入</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — 通过浏览器配置 runner：Ed25519 设备密钥作为 `runner-ticket` 的第二种凭据、GitHub Releases 的二进制代理，以及用 File System Access API 一键配置文件夹</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker 成为 `runner` 模式的真正前提</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — 一个本地 agent，在连接时声明能力</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — runner 中经同意的基础目录，以及通过通道创建文件夹</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — 机器级的设备密钥</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — runner 的独立二进制不再承诺 Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — runner 的独立二进制不再承诺 Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — 通过浏览器配置 runner 的流程退役，路径改为安装程序</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — engine 所缺的 CORS，以及端口作为契约的一部分</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — 凭据总是被加密；验证成为显式动作</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — api 中封闭的 CSP，以及约束在根内的项目范围</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — 签署 git OAuth `state` 的密钥没有默认值</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — 社交登录（GitHub/GitLab），修订 ADR 0031/0032 的 backlog</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — `MailSender` 中的真实 SMTP，置于显式开关之后</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — `project_members` 中的两道降级上限，覆盖关系保留</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — 自我降级上限同样适用于移除项目成员</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — workspace 成员的移除诞生，由同一条款保护</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — 仪表盘的货币：暂用 USD，按 workspace 的手动汇率推迟</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — 活目录、模型生命周期与可审计的价格</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — 在基础之上的六个 LLM provider，Fase 9b 终于关闭</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — 按 workspace 的模型策展</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — 已证明的能力维度；“用来做什么”是策展</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — 同一笔花费的两种受众：owner 的账单与成员的消耗</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — 模型级联中的领域范围，以及全局的 agent 绑定</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — LLMProvider 合约中的 embedding</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` 重新成为花费维度，约束改由类型承担</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — 按能力的模型排名，不编造评分</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — 按区域的预算是叠加的，与项目/会话并列——不是级联，也不是新表</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — 在开发引导中检测原生 Ollama：只问一次，持久化到 `.env`，把 compose 的服务放到 profile 之后</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — 从 Hugging Face 拉取模型：独立的表、两步确认以及官方发布者 allowlist——绝不使用 `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — 路由偏好住在模型 binding 中，随它一起传递，并在计量中冻结</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — provider 返回的真实成本成为计量的数字</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — 故事与规则的语义重复通过带阈值的 embedding 提醒，花费进入计量</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — chunk 表：向量与 `tsvector` 在同一行</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — 混合搜索：权重、阈值，以及什么算引用</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG：混合搜索的独立标签页，不重命名“Chat”</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j 作为知识图谱和 prompt 模板，驱动放在 api 中</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — 面向 agent 的 `rag_search`，以及启动时确保存在的 Ollama 模型</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — 关系记忆作为事件日志的投影；在不触碰 GenServer 的情况下使用模板</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — 附加的本地目录成为 `chunks.scope = 'local'`，由**浏览器**读取，绝不是主机路径</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — RAG 搜索的遥测是**表**，权重冻结在行中</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — RAG 命中率的 golden-set，以及 gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — 重新启用的 Anamnese：没有主体就不运行，被接受的假设成为画像事实</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — 忠实于设计的认证界面，以及三种无法加载的字体</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — 代码的读取面，受约束且有预算</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — 可切换的主题，以及 CSP 下的启动</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — 界面框架，以及标签页注册表刻意偏离 handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — 为仪表盘的“N 个 agent 在线”直接读取 engine 的 schema</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType`（以及将来的类型）由 OpenAPI 契约生成，而不是手工复制</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` 拆分为五个机械式 PR，并事先声明</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — 轮次通道的状态分组抽取到 `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — 把 `ProjectSettingsTab.tsx` 拆分为每个分区一个文件，置于一个 barrel 之后</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — 项目页面通过垂直轨道导航，代码标签页不再自行折叠侧边栏</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — 深色主题变为中性黑，对比度债务结束</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — 用 `motion` 做文本动画</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — 只有一种导航：侧边栏吸收项目轨道</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — 阶段 5（第 1 次会话）：生产镜像、compose.prod、CI 与冒烟测试</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — 阶段 5（第 2 次会话）：使用 Kustomize 部署 Kubernetes、队列指标与本地 overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — 阶段 5（第 3 次会话）：优雅关闭、OpenTelemetry、指标、日志与仪表盘</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — 备份/还原、api 加固、暴露面与发布</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — 没有 collector 的 trace，以及日志中跨层的路径</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — 本地 Compose 中的可观测性：指标和日志，没有 trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — 一行安装程序，带可选来源和标记文件</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — 针对 compose 的卷备份与恢复</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — 第一个账户在终端中诞生，本地 agent 启动时即已配对</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — 安装程序的 compose 随它一起传送，作为已签名的 asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — 本地 overlay 的 S3 目标不再是 MinIO，改为 SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — 开发用 compose 改名为 `brabo-dev`，开发环境拒绝在安装旁边启动</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — engine 升级到 Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint 与生成的 CI 管道的验证</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — 每个正式 tag 都把镜像发布到 GHCR，生产 overlay 按 digest 固定</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — 针对生产 compose 的浏览器 E2E，放在 workspace 之外的包中</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — schema 按领域聚合拆分，置于一个 barrel 之后</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — `pnpm audit` 反复超时是承担的风险；发现问题仍然失败</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — 已发布工件的签名</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — 第三方镜像的 tag 住在引用**之内**，位于 digest 之前</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — 文档的持续同步</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — API 参考由代码产出，表格测试对元数据提出要求</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — 按阶梯发布的文档，位于 Pages 的子目录中</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — 按阶梯对称发布，以及一个供选择的根</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — 发布路径命名的是环境，而不是分支</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` 拥有自己的 lockfile，脱离产品的 `pnpm audit`</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — API 参考变成一个 Redoc 页面</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — 四种语言，以 pt-BR 作为**来源**和默认：文档与界面提供葡萄牙语、英语、俄语和简体中文</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — 每个 ADR 都命名为“ADR NNNN — 标题”</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — 参考文档纳入翻译</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — API 页面按目录翻译</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 规则</h2><ul><li><a href="../business-rules.html">业务规则</a></li><li><a href="../business-rules/custo.html">成本与计量</a></li><li><a href="../business-rules/autenticacao.html">认证</a></li></ul></section><section><h2>📖 参考</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">api 的暴露面</a></li><li><span>API 参考</span></li></ul></section><section><h2>💡 解释</h2><ul><li><span>流程与流水线</span><ul><li><a href="../explanation/documentation-workflow.html">文档同步</a></li><li><a href="../explanation/branching-policy.html">分支策略</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">CI 的供应链</a></li><li><a href="../explanation/gates.html">gates，以及如何测量它们</a></li><li><a href="../explanation/observability.html">可观测性</a></li><li><a href="../explanation/modelo-de-time.html">团队模型与交付物流程</a></li></ul></li><li><span>验证与测量</span><ul><li><a href="../explanation/primeiro-dogfooding.html">第一次 dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">真实执行（hello world）</a></li><li><a href="../explanation/achados-execucao-real.html" aria-current="page">流水线真实执行中的发现</a></li><li><a href="../explanation/validacao-fase-12.html">Fase 12 的验证</a></li><li><a href="../explanation/validacao-real.html">真实验证（13b）</a></li><li><a href="../explanation/aceite-providers.html">provider 的验收</a></li><li><a href="../explanation/medicao-do-idioma.html">语言启发式的测量</a></li><li><a href="../explanation/medicao-do-jev.html">Jev 工具路由器的测量</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">审计：fluxo.yml × 代码（v3，ADR 0085）</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">视觉审计：Rodada 29 之前与之后</a></li></ul></li><li><span>阶段历史</span><ul><li><a href="../explanation/historico-de-fases.html">阶段历史</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — 用户的目录</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — 一行命令安装</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30——机器的本地智能体</a></li><li><a href="../explanation/backlog.html">已分类的 backlog</a></li></ul></li><li><span>本地化</span><ul><li><a href="../explanation/localizacao.html">本地化</a></li><li><a href="../explanation/localizacao-en.html">本地化——英语（en）</a></li><li><a href="../explanation/localizacao-ru.html">本地化——俄语（ru）</a></li><li><a href="../explanation/localizacao-zh-hans.html">本地化——简体中文（zh-Hans）</a></li></ul></li><li><span>技术笔记</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI——未采用</a></li></ul></li></ul></section><section><h2>🛠️ 运维</h2><ul><li><a href="../runbook.html">运维手册</a></li></ul></section><section><h2>📚 词汇</h2><ul><li><a href="../glossary.html">术语表</a></li></ul></section><section><h2>🤝 贡献</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">如何贡献</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">在哪里求助</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">报告漏洞</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="流水线真实执行中的发现">流水线真实执行中的发现</h1>
 <blockquote>
 <p>在 <strong>2026-08-05</strong> 通过浏览器引导的一次执行会话中调研，使用 API 模型（非本地）和真实的 git provider。这是
-FASE 13c 分类的输入：每个条目都有证明它的 arquivo:linha 或事件，没有一个是"顺带"修正的——已关闭的那些
+FASE 13c 分类的输入：每个条目都有证明它的 arquivo:linha 或事件，没有一个是&quot;顺带&quot;修正的——已关闭的那些
 都有命名的 PR。</p>
 </blockquote>
 <p>通过向导在 GitHub 上<strong>创建</strong>（而非采用）的项目。真实仓库：<code>daneiel/hello-api</code>，私有。向导的会话：
 <code>f15b0cc9</code>。健康的会话：<code>36abf7e7</code>。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=corrigidos-durante-a-execução-bloqueavam>执行期间修正的（曾阻塞）<a href=#corrigidos-durante-a-execução-bloqueavam class=hash-link aria-label=执行期间修正的（曾阻塞）的直接链接 title=执行期间修正的（曾阻塞）的直接链接 translate=no>​</a></h2>
+<h2 id="corrigidos-durante-a-execução-bloqueavam">执行期间修正的（曾阻塞）</h2>
 <ol>
-<li class=""><strong>测量器没有在测量</strong>（PR #136，已合并）——<code>db.execute</code> 被当作数组解构 + 智能体从事件的执行者而不是载荷中
+<li><strong>测量器没有在测量</strong>（PR #136，已合并）——<code>db.execute</code> 被当作数组解构 + 智能体从事件的执行者而不是载荷中
 读取。</li>
-<li class=""><strong><code>llm_turn_stream</code> 没有 <code>receive_timeout</code></strong>（PR #137，已合并）——落到了 Req 默认的 15 秒；4 个会话型
+<li><strong><code>llm_turn_stream</code> 没有 <code>receive_timeout</code></strong>（PR #137，已合并）——落到了 Req 默认的 15 秒；4 个会话型
 智能体只走这条路。</li>
-<li class=""><strong><code>ApprovalCard</code> 让会话界面崩溃</strong>（待提交）——web 的 <code>ActionType</code> 是后端的子集；对
+<li><strong><code>ApprovalCard</code> 让会话界面崩溃</strong>（待提交）——web 的 <code>ActionType</code> 是后端的子集；对
 <code>git_repo_create</code>/<code>git_branch_create</code>/<code>git_branch_protect</code>，<code>ACTION_ICON[actionType]</code> → <code>undefined</code>，而这
-正是<strong>每个</strong>在 provider 上创建的项目都会生成的。"通用回退"只存在于注释中。它只是没有出现在<strong>采用</strong>的项目
+正是<strong>每个</strong>在 provider 上创建的项目都会生成的。&quot;通用回退&quot;只存在于注释中。它只是没有出现在<strong>采用</strong>的项目
 中（没有 bootstrap）。</li>
 </ol>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=abertos--para-a-triagem-da-13c>未关闭的——供 13c 分类<a href=#abertos--para-a-triagem-da-13c class=hash-link aria-label="未关闭的——供 13c 分类的直接链接" title="未关闭的——供 13c 分类的直接链接" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave>A. 配置阶段的会话诞生时在 engine 中没有进程（严重）<a href=#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave class=hash-link aria-label="A. 配置阶段的会话诞生时在 engine 中没有进程（严重）的直接链接" title="A. 配置阶段的会话诞生时在 engine 中没有进程（严重）的直接链接" translate=no>​</a></h3>
+<h2 id="abertos--para-a-triagem-da-13c">未关闭的——供 13c 分类</h2>
+<h3 id="a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave">A. 配置阶段的会话诞生时在 engine 中没有进程（严重）</h3>
 <blockquote>
-<p><strong>已关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-067>RN-067</a>。下面引用的四个调用点改为通过
+<p><strong>已关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-067">RN-067</a>。下面引用的四个调用点改为通过
 <code>CreateSessionUseCase</code> 创建会话（<code>provision-repository:119</code> 和 <code>:125</code>、<code>adopt-repository</code>、
 <code>activate-execution</code>），而规则声明它是创建会话的<strong>唯一</strong>地方。之所以保留记录，是因为下面的对比证明是让缺陷
 变得可见的东西。</p>
@@ -31,95 +55,95 @@ FASE 13c 分类的输入：每个条目都有证明它的 arquivo:linha 或事�
 <p><code>CreateSessionUseCase</code> 是唯一在 outbox 中发出 <code>session.created</code> 的地方。以下这些直接在仓库中创建会话，跳过了
 它：</p>
 <ul>
-<li class=""><code>apps/api/src/application/use-cases/git/provision-repository.use-case.ts:112</code> 和 <code>:121</code></li>
-<li class=""><code>apps/api/src/application/use-cases/git/adopt-repository.use-case.ts:176</code></li>
-<li class=""><code>apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:156</code>
+<li><code>apps/api/src/application/use-cases/git/provision-repository.use-case.ts:112</code> 和 <code>:121</code></li>
+<li><code>apps/api/src/application/use-cases/git/adopt-repository.use-case.ts:176</code></li>
+<li><code>apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:156</code>
 ← 这就是 DEV AGENTS 运行的会话</li>
 </ul>
 <p>效果：engine 永远不知道会话存在 → 永远的 <code>REFUSED JOIN</code>，没有通道，没有实时更新，没有心跳，会话<strong>永远不会
 关闭</strong>（永远保持 <code>active</code>）。UI 只在控制台中抱怨。</p>
 <p>对比证明：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>会话<th><code>session.created</code><th><code>engine.session_states</code><th>通道<tbody><tr><td>向导 <code>f15b0cc9</code><td>否<td>空<td><code>REFUSED JOIN</code><tr><td>正常路由 <code>36abf7e7</code><td>是<td><code>active</code><td><code>JOINED</code></table>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=b-modelo-de-start-decisão-do-usuário>B. 启动模型（用户的决定）<a href=#b-modelo-de-start-decisão-do-usuário class=hash-link aria-label="B. 启动模型（用户的决定）的直接链接" title="B. 启动模型（用户的决定）的直接链接" translate=no>​</a></h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>会话</th>
+<th><code>session.created</code></th>
+<th><code>engine.session_states</code></th>
+<th>通道</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>向导 <code>f15b0cc9</code></td>
+<td>否</td>
+<td>空</td>
+<td><code>REFUSED JOIN</code></td>
+</tr>
+<tr>
+<td>正常路由 <code>36abf7e7</code></td>
+<td>是</td>
+<td><code>active</code></td>
+<td><code>JOINED</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="b-modelo-de-start-decisão-do-usuário">B. 启动模型（用户的决定）</h3>
 <p>会话总是诞生在 workspace 的默认值上（<code>llama3.2:1b</code>，本地）——ADR 0020 在语义步骤中禁止本地 7B/1B，在两个会话中
 都必须手工更换。请求：可配置的启动模型，在这个场景下继承 <strong>Criativo</strong> 的模型，因为它总是项目的入口。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário>C. 说话的是模型，而不是智能体（缺陷，由用户指出）<a href=#c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário class=hash-link aria-label="C. 说话的是模型，而不是智能体（缺陷，由用户指出）的直接链接" title="C. 说话的是模型，而不是智能体（缺陷，由用户指出）的直接链接" translate=no>​</a></h3>
-<p>实时传输的气泡带着<strong>模型</strong>的名字作为标签（"DeepSeek V4 Flash Latest"）；只有当持久化的事件到达时，智能体
+<h3 id="c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário">C. 说话的是模型，而不是智能体（缺陷，由用户指出）</h3>
+<p>实时传输的气泡带着<strong>模型</strong>的名字作为标签（&quot;DeepSeek V4 Flash Latest&quot;）；只有当持久化的事件到达时，智能体
 （<code>po</code>）才出现。效果：错误的名字先出现，消息在屏幕上<strong>重复</strong>（流的气泡 + 事件的气泡）。流没有与持久化的事件
 对账。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=d-passo-impossível-trava-o-wizard-sem-saída>D. 不可能的步骤把向导卡住而没有出路<a href=#d-passo-impossível-trava-o-wizard-sem-saída class=hash-link aria-label="D. 不可能的步骤把向导卡住而没有出路的直接链接" title="D. 不可能的步骤把向导卡住而没有出路的直接链接" translate=no>​</a></h3>
+<h3 id="d-passo-impossível-trava-o-wizard-sem-saída">D. 不可能的步骤把向导卡住而没有出路</h3>
 <p><code>Proteger branches</code> 在免费计划的私有仓库上失败——向导本身事先就<strong>提醒</strong>了这一点。但之后提供的唯一操作是
-"重试"，它总是会失败。缺少确认并继续的方式。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=e-preview-do-repositório-mente>E. 仓库预览在撒谎<a href=#e-preview-do-repositório-mente class=hash-link aria-label="E. 仓库预览在撒谎的直接链接" title="E. 仓库预览在撒谎的直接链接" translate=no>​</a></h3>
+&quot;重试&quot;，它总是会失败。缺少确认并继续的方式。</p>
+<h3 id="e-preview-do-repositório-mente">E. 仓库预览在撒谎</h3>
 <p><code>apps/web/src/routes/NewProjectWizard.tsx:331</code> 有硬编码的 <code>repo: brabo/{slug}</code>。真正的 owner 来自 PAT
 （<code>createForAuthenticatedUser</code>），也就是 <code>daneiel/hello-api</code>。这个错误一直到达<strong>确认</strong>界面。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=f-wizard-anuncia-rc>F. 向导宣布了 <code>rc</code><a href=#f-wizard-anuncia-rc class=hash-link aria-label=f-wizard-anuncia-rc的直接链接 title=f-wizard-anuncia-rc的直接链接 translate=no>​</a></h3>
-<p>"Política de branches" 步骤把 <code>rc</code> 列在永久分支中，并在级联中列出 <code>rc ← qa</code>。现行策略只有
+<h3 id="f-wizard-anuncia-rc">F. 向导宣布了 <code>rc</code></h3>
+<p>&quot;Política de branches&quot; 步骤把 <code>rc</code> 列在永久分支中，并在级联中列出 <code>rc ← qa</code>。现行策略只有
 <code>dev</code>/<code>qa</code>/<code>main</code>；<code>rc</code> 的回归在 ADR 0030 的 backlog 中。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=g-convite-do-criativo-não-aparece-em-projeto-criado>G. Criativo 的邀请在已创建的项目中不出现<a href=#g-convite-do-criativo-não-aparece-em-projeto-criado class=hash-link aria-label="G. Criativo 的邀请在已创建的项目中不出现的直接链接" title="G. Criativo 的邀请在已创建的项目中不出现的直接链接" translate=no>​</a></h3>
-<p>空状态 "A vez é sua" 只在对话流为空时渲染。在已创建的项目中，对话流已经有 bootstrap 的卡片，因此用户收不到
+<h3 id="g-convite-do-criativo-não-aparece-em-projeto-criado">G. Criativo 的邀请在已创建的项目中不出现</h3>
+<p>空状态 &quot;A vez é sua&quot; 只在对话流为空时渲染。在已创建的项目中，对话流已经有 bootstrap 的卡片，因此用户收不到
 任何邀请。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=h-feed-de-atividade-genérico>H. 通用的活动信息流<a href=#h-feed-de-atividade-genérico class=hash-link aria-label="H. 通用的活动信息流的直接链接" title="H. 通用的活动信息流的直接链接" translate=no>​</a></h3>
-<p>bootstrap 的 10 个事件全部显示为 "atividade em system"，而不说明发生了什么。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=i-card-de-ação-mostra-o-modelo-atual-da-sessão>I. 动作卡片显示会话的<strong>当前</strong>模型<a href=#i-card-de-ação-mostra-o-modelo-atual-da-sessão class=hash-link aria-label=i-card-de-ação-mostra-o-modelo-atual-da-sessão的直接链接 title=i-card-de-ação-mostra-o-modelo-atual-da-sessão的直接链接 translate=no>​</a></h3>
+<h3 id="h-feed-de-atividade-genérico">H. 通用的活动信息流</h3>
+<p>bootstrap 的 10 个事件全部显示为 &quot;atividade em system&quot;，而不说明发生了什么。</p>
+<h3 id="i-card-de-ação-mostra-o-modelo-atual-da-sessão">I. 动作卡片显示会话的<strong>当前</strong>模型</h3>
 <p>更换会话的模型会追溯地改写旧动作卡片的标签。<code>token_usage</code> 冻结了正确的价格；只是界面的问题。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=j-psicólogo-roda-em-sessão-vazia>J. Psicólogo 在空会话中运行<a href=#j-psicólogo-roda-em-sessão-vazia class=hash-link aria-label="J. Psicólogo 在空会话中运行的直接链接" title="J. Psicólogo 在空会话中运行的直接链接" translate=no>​</a></h3>
+<h3 id="j-psicólogo-roda-em-sessão-vazia">J. Psicólogo 在空会话中运行</h3>
 <blockquote>
-<p><strong>已关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-079>RN-079</a>。分析只在有<strong>可分析</strong>的事件时才运行，而
-"可分析"排除了 bootstrap 的机器步骤和分析者自己的痕迹——没有第二个排除，第一次分析就会让会话永远显得有内容。
+<p><strong>已关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-079">RN-079</a>。分析只在有<strong>可分析</strong>的事件时才运行，而
+&quot;可分析&quot;排除了 bootstrap 的机器步骤和分析者自己的痕迹——没有第二个排除，第一次分析就会让会话永远显得有内容。
 没有材料时，发出 <code>psychologist.analysis_skipped</code>，不花任何钱。发现中的会话被复现为测试（14 个事件，没有一个
 可分析）。
 在刚打开的会话 <code>b2fceb9e</code> 中：它收到了上一个会话的假设和新会话的日志（空的），试图引用不存在的 <code>seq 60-78</code>，
 证据被拒绝 2 次后放弃了（<code>psychologist.analysis_failed</code>）。验证拦住了编造——但在没有事件的会话上运行分析是白白
 花钱。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=k-regra-de-negócio-duplicada-não-é-deduplicada>K. 重复的业务规则没有去重<a href=#k-regra-de-negócio-duplicada-não-é-deduplicada class=hash-link aria-label="K. 重复的业务规则没有去重的直接链接" title="K. 重复的业务规则没有去重的直接链接" translate=no>​</a></h3>
+<h3 id="k-regra-de-negócio-duplicada-não-é-deduplicada">K. 重复的业务规则没有去重</h3>
 <blockquote>
-<p><strong>部分关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-080>RN-080</a>。<strong>完全</strong>重复（标题相同，忽略大小写、
+<p><strong>部分关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-080">RN-080</a>。<strong>完全</strong>重复（标题相同，忽略大小写、
 重音和空格）在发出时被拒绝，范围是项目——它正是在会话之间产生的。<strong>语义</strong>重复仍未关闭并如此声明：把
-"Saudação com nome" 与 "Quem chama pode se identificar" 区分开是判断，不是 <code>if</code>。
-在同一个项目中运行两次 Criativo 留下了 10 条规则，5 条孤立（"descoberta — sem história"）。这是我的剧本造成的
+&quot;Saudação com nome&quot; 与 &quot;Quem chama pode se identificar&quot; 区分开是判断，不是 <code>if</code>。
+在同一个项目中运行两次 Criativo 留下了 10 条规则，5 条孤立（&quot;descoberta — sem história&quot;）。这是我的剧本造成的
 效果，不是产品的，但它表明既没有去重也没有提醒。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=l-botão-do-rodapé-fica-obsoleto>L. 底部按钮变得过时<a href=#l-botão-do-rodapé-fica-obsoleto class=hash-link aria-label="L. 底部按钮变得过时的直接链接" title="L. 底部按钮变得过时的直接链接" translate=no>​</a></h3>
-<p>在对话流已经交给 PO 之后，它仍然是 "Estou pronto para produzir"。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=funcionou-como-projetado-registrar-também>按设计工作的（也要记录）<a href=#funcionou-como-projetado-registrar-também class=hash-link aria-label=按设计工作的（也要记录）的直接链接 title=按设计工作的（也要记录）的直接链接 translate=no>​</a></h2>
+<h3 id="l-botão-do-rodapé-fica-obsoleto">L. 底部按钮变得过时</h3>
+<p>在对话流已经交给 PO 之后，它仍然是 &quot;Estou pronto para produzir&quot;。</p>
+<h2 id="funcionou-como-projetado-registrar-também">按设计工作的（也要记录）</h2>
 <ul>
-<li class="">RN-059：持久的 <code>agent.error</code>，带 <code>origem: infra</code>，智能体在对话流中说话并回到 <code>idle</code>（在 15 秒超时中看到
+<li>RN-059：持久的 <code>agent.error</code>，带 <code>origem: infra</code>，智能体在对话流中说话并回到 <code>idle</code>（在 15 秒超时中看到
 2 次）。</li>
-<li class="">Psicólogo 的证据验证拒绝了编造的事件 id。</li>
-<li class="">GitHub 上的 Gitflow bootstrap：5 步中 4 步，真实仓库带有 <code>main</code>/<code>dev</code>/<code>qa</code>。</li>
-<li class="">proposed_action 管道：bootstrap 的 6 个动作，由策略自动批准。</li>
-<li class="">12c：手动晋升作为默认，<code>story_promotion_proposed</code> 作为提议。</li>
-<li class="">规则 ↔ 用户故事的可追溯性，区分已覆盖和未覆盖。</li>
-<li class="">bootstrap 的实时进度，失败时显示 GitHub 的消息。</li>
+<li>Psicólogo 的证据验证拒绝了编造的事件 id。</li>
+<li>GitHub 上的 Gitflow bootstrap：5 步中 4 步，真实仓库带有 <code>main</code>/<code>dev</code>/<code>qa</code>。</li>
+<li>proposed_action 管道：bootstrap 的 6 个动作，由策略自动批准。</li>
+<li>12c：手动晋升作为默认，<code>story_promotion_proposed</code> 作为提议。</li>
+<li>规则 ↔ 用户故事的可追溯性，区分已覆盖和未覆盖。</li>
+<li>bootstrap 的实时进度，失败时显示 GitHub 的消息。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada>M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）<a href=#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada class=hash-link aria-label="M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）的直接链接" title="M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）的直接链接" translate=no>​</a></h3>
+<h3 id="m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada">M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）</h3>
 <blockquote>
-<p><strong>已关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-066>RN-066</a>，并在本页最后一节中在生产中得到确认：
+<p><strong>已关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-066">RN-066</a>，并在本页最后一节中在生产中得到确认：
 <code>assign_story_modules</code> 调用 4 次而不是 18 次，零个编造的名字，1 个 module_map 而不是 4 个。</p>
 </blockquote>
 <p>会话 <code>36abf7e7</code>，seq 80-131。Arquiteto 发出了映射（模块 <code>saudacao</code> 和 <code>api_http</code>），然后<strong>无法重新读取它</strong>。
@@ -128,105 +152,110 @@ FASE 13c 分类的输入：每个条目都有证明它的 arquivo:linha 或事�
 <code>saudacao</code>（碰巧猜中）、<code>app</code>、<code>server</code>、<code>publico</code>、<code>public-api</code>、<code>api-publica</code>……</p>
 <p>用它自己的话说（seq 94、99、124）：</p>
 <blockquote>
-<p>"os nomes que tentei (<code>api</code>, <code>core</code>) não batem. Vou <strong>descobrir os nomes
-válidos testando candidatos plausíveis</strong>"
-"Preciso <strong>descobrir os nomes reais</strong> dos 2 módulos. Vou <strong>testar candidatos
-adicionais</strong>."</p>
+<p>&quot;os nomes que tentei (<code>api</code>, <code>core</code>) não batem. Vou <strong>descobrir os nomes
+válidos testando candidatos plausíveis</strong>&quot;
+&quot;Preciso <strong>descobrir os nomes reais</strong> dos 2 módulos. Vou <strong>testar candidatos
+adicionais</strong>.&quot;</p>
 </blockquote>
 <p>三个后果，按严重程度排列：</p>
 <ol>
-<li class=""><strong>错误的数据，被宣称为正确。</strong> 4 个用户故事都落在 <code>["saudacao"]</code> 上，包括 ENDPOINT 的那个。<code>api_http</code> 没有
-任何用户故事。而结果（seq 130）断言："Todas as 4 histórias foram vinculadas com sucesso aos módulos."
+<li><strong>错误的数据，被宣称为正确。</strong> 4 个用户故事都落在 <code>[&quot;saudacao&quot;]</code> 上，包括 ENDPOINT 的那个。<code>api_http</code> 没有
+任何用户故事。而结果（seq 130）断言：&quot;Todas as 4 histórias foram vinculadas com sucesso aos módulos.&quot;
 日志以一个自信的谎言结束。</li>
-<li class=""><strong>破坏下游的执行。</strong> <code>activate-execution</code> 为每个<strong>模块</strong>启动一个 dev agent。一切都在 <code>saudacao</code> 中时，模块
+<li><strong>破坏下游的执行。</strong> <code>activate-execution</code> 为每个<strong>模块</strong>启动一个 dev agent。一切都在 <code>saudacao</code> 中时，模块
 <code>api_http</code> 收不到智能体，设计的架构也不是将要构建的那个。</li>
-<li class=""><strong><code>assign_story_modules</code> 没有记录任何 <code>tool.result</code>。</strong> 整个循环在 event log 中不可见——只能从重复的
+<li><strong><code>assign_story_modules</code> 没有记录任何 <code>tool.result</code>。</strong> 整个循环在 event log 中不可见——只能从重复的
 <code>tool.call</code> 推断。</li>
 </ol>
 <p>循环的成本：Arquiteto 的 9 次 LLM 调用，27.804 输入 / 8.012 输出。会话总计：7.271 micros（US$ 0,007）——便宜
 只是因为它是 flash 模型。</p>
 <p>module_map 的循环（PR #135）是这个问题的<strong>症状</strong>：Arquiteto 重新发出映射，正是为了试图固定它无法读取的名称。
 #135 关闭了数据损坏；盲目仍然存在。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05>执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05<a href=#execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05 class=hash-link aria-label="执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05的直接链接" title="执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05的直接链接" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b>N. 执行那一半只在 <code>local</code> provider 下工作（P1，阻塞 13b）<a href=#n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b class=hash-link aria-label=n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b的直接链接 title=n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b的直接链接 translate=no>​</a></h3>
+<h2 id="execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05">执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05</h2>
+<h3 id="n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b">N. 执行那一半只在 <code>local</code> provider 下工作（P1，阻塞 13b）</h3>
 <p><code>Engine.Projects.ProjectRepository.get_local_repo_path/1</code> 对任何不是 <code>local</code> 的 provider 返回
-<code>{:error, {:unsupported_provider, "github"}}</code>。这在 moduledoc 中被记录为范围削减：</p>
+<code>{:error, {:unsupported_provider, &quot;github&quot;}}</code>。这在 moduledoc 中被记录为范围削减：</p>
 <blockquote>
-<p>"Só suporta o provider 'local' (github/gitlab remotos ficam fora de escopo do
-executor de terminal por ora)"
+<p>&quot;Só suporta o provider 'local' (github/gitlab remotos ficam fora de escopo do
+executor de terminal por ora)&quot;
 — <code>apps/engine/lib/engine/projects/project_repository.ex:25-27</code></p>
 </blockquote>
 <p>五个调用点依赖它：</p>
 <ul>
-<li class=""><code>lib/engine/dev/worktree_manager.ex:20</code>——dev agent 的 worktree</li>
-<li class=""><code>lib/engine/actions/terminal_executor.ex:39</code>——命令执行</li>
-<li class=""><code>lib/engine/gates/diff.ex:17</code>——QA 和 SecOps 读取的 diff</li>
-<li class=""><code>lib/engine/harness/project_context.ex:30</code>——项目上下文</li>
+<li><code>lib/engine/dev/worktree_manager.ex:20</code>——dev agent 的 worktree</li>
+<li><code>lib/engine/actions/terminal_executor.ex:39</code>——命令执行</li>
+<li><code>lib/engine/gates/diff.ex:17</code>——QA 和 SecOps 读取的 diff</li>
+<li><code>lib/engine/harness/project_context.ex:30</code>——项目上下文</li>
 </ul>
 <p>观察到的效果：我在 GitHub 项目上激活了执行，3 个 dev agent 启动了，各领取了一个 task，然后 3 个在同一秒内以
 <code>falha ao preparar o worktree</code> 被阻塞。</p>
 <p>不对称是关键：<strong>api</strong> 通过 HTTP 与 GitHub 对话（是它创建了仓库、提交了模板并创建了 dev/qa）。<strong>engine</strong> 在
 文件系统上工作，只认识本地 bare repo。因此 GitHub 上的项目完成了<strong>会话</strong>那一半（Criativo、PO、Arquiteto）和
 bootstrap，但没有完成<strong>构建</strong>那一半。</p>
-<p>对 FASE 13b 的后果：CLAUDE.md 的剧本（"projeto ADOTADO do fork via GithubProvider remoto, DevAgent real, dev
-implementa → PR remota → gates"）<strong>今天无法执行</strong>。这不是顺带的 bug：支持远程需要克隆、engine 内部的凭据和
+<p>对 FASE 13b 的后果：CLAUDE.md 的剧本（&quot;projeto ADOTADO do fork via GithubProvider remoto, DevAgent real, dev
+implementa → PR remota → gates&quot;）<strong>今天无法执行</strong>。这不是顺带的 bug：支持远程需要克隆、engine 内部的凭据和
 推送——是一个带 ADR 的功能。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b>O. dev agent 诞生在本地模型上（与发现 B 同根）<a href=#o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b class=hash-link aria-label="O. dev agent 诞生在本地模型上（与发现 B 同根）的直接链接" title="O. dev agent 诞生在本地模型上（与发现 B 同根）的直接链接" translate=no>​</a></h3>
+<h3 id="o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b">O. dev agent 诞生在本地模型上（与发现 B 同根）</h3>
 <p>三个 dev agent 以 <code>Llama 3.2 1B (local)</code> 启动，继承自 workspace 的默认值。ADR 0020 在语义步骤中禁止小型本地
 模型，而写代码的 dev agent 是存在的最昂贵的语义步骤。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=p-evento-de-bloqueio-sem-origem>P. 没有来源的阻塞事件<a href=#p-evento-de-bloqueio-sem-origem class=hash-link aria-label="P. 没有来源的阻塞事件的直接链接" title="P. 没有来源的阻塞事件的直接链接" translate=no>​</a></h3>
-<p><code>{"origin": null, "reason": "falha ao preparar o worktree", "diagnosis": "{:unsupported_provider, \"github\"}"}</code>。CLAUDE.md 要求每个失败结果都记录<strong>来源</strong>（infra | modelo | código |
+<h3 id="p-evento-de-bloqueio-sem-origem">P. 没有来源的阻塞事件</h3>
+<p><code>{&quot;origin&quot;: null, &quot;reason&quot;: &quot;falha ao preparar o worktree&quot;, &quot;diagnosis&quot;: &quot;{:unsupported_provider, \&quot;github\&quot;}&quot;}</code>。CLAUDE.md 要求每个失败结果都记录<strong>来源</strong>（infra | modelo | código |
 política）。这里是 <code>código</code>（产品的已知限制），而它是 <code>null</code>。诊断救了场，但规则没有被遵守。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=q-agenterror-com-origem-indeterminada>Q. 带"不确定来源"的 <code>agent.error</code><a href=#q-agenterror-com-origem-indeterminada class=hash-link aria-label=q-agenterror-com-origem-indeterminada的直接链接 title=q-agenterror-com-origem-indeterminada的直接链接 translate=no>​</a></h3>
+<h3 id="q-agenterror-com-origem-indeterminada">Q. 带&quot;不确定来源&quot;的 <code>agent.error</code></h3>
 <p>在 Criativo 中，轮次被中止：对话流显示 <code>falha · origem indeterminada</code>。RN-059 起了作用（持久的错误，智能体
-说话了，干净的恢复），但"不确定"不是四种来源之一——它是 ADR 0020 禁止的排除法诊断。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=r-po-gerou-histórias-sobrepostas>R. PO 生成了重叠的用户故事<a href=#r-po-gerou-histórias-sobrepostas class=hash-link aria-label="R. PO 生成了重叠的用户故事的直接链接" title="R. PO 生成了重叠的用户故事的直接链接" translate=no>​</a></h3>
+说话了，干净的恢复），但&quot;不确定&quot;不是四种来源之一——它是 ADR 0020 禁止的排除法诊断。</p>
+<h3 id="r-po-gerou-histórias-sobrepostas">R. PO 生成了重叠的用户故事</h3>
 <blockquote>
-<p><strong>部分关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-081>RN-081</a>。标题相同的被拒绝；对其引用的规则不增加
+<p><strong>部分关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-081">RN-081</a>。标题相同的被拒绝；对其引用的规则不增加
 覆盖的用户故事变成 <code>backlog.story_overlap_warned</code>，是提醒而不是阻止。<strong>这个发现中确切的那一对仍然通过</strong>——
 同一端点的不同标题和理由，没有任何机械的东西把它们联系起来。有一个测试断言这个限制，使它可见而不是隐含。
-"Endpoint público de saudação determinística" 和 "Endpoint público GET /hello que responde saudação
-imediata" 覆盖同一个端点。没有去重也没有提醒。</p>
+&quot;Endpoint público de saudação determinística&quot; 和 &quot;Endpoint público GET /hello que responde saudação
+imediata&quot; 覆盖同一个端点。没有去重也没有提醒。</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06>hello-limpo 的执行（项目 <code>9c7c84f0</code>，会话 <code>1f94de49</code>）——2026-08-06<a href=#execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06 class=hash-link aria-label=execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06的直接链接 title=execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06的直接链接 translate=no>​</a></h2>
+<h2 id="execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06">hello-limpo 的执行（项目 <code>9c7c84f0</code>，会话 <code>1f94de49</code>）——2026-08-06</h2>
 <p>真实的 dev agent，通过 OpenRouter 的 DeepSeek V4 Flash，审批管道开启，每个动作都手工决定。task 是
-"Expor rota GET pública /api/saudacao"。它从未开始：<strong>18 个轮次，292.211 个输入 token，US$ 0,0275，零行代码
+&quot;Expor rota GET pública /api/saudacao&quot;。它从未开始：<strong>18 个轮次，292.211 个输入 token，US$ 0,0275，零行代码
 被写下</strong>，这一轮以 provider 的错误结束。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1>S. 累积的上下文超出 provider 的限制并<strong>杀死</strong>执行（P1）<a href=#s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1 class=hash-link aria-label=s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1的直接链接 title=s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1的直接链接 translate=no>​</a></h3>
+<h3 id="s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1">S. 累积的上下文超出 provider 的限制并<strong>杀死</strong>执行（P1）</h3>
 <p>在第 18 个轮次，对模型的调用返回
-<code>{413, %{"message" => "request entity too large", "statusCode" => 413}}</code>，<code>ToolLoop</code> 无法继续，task 被阻塞
+<code>{413, %{&quot;message&quot; =&gt; &quot;request entity too large&quot;, &quot;statusCode&quot; =&gt; 413}}</code>，<code>ToolLoop</code> 无法继续，task 被阻塞
 （<code>dev.blocked</code>、<code>artifact.task_blocked</code>，seq 151–152）。</p>
 <p>原因是机械的且累积的：每个终端命令都把完整输出倒进循环的历史中，而历史随之后的<strong>每一个</strong>轮次一起传送。
 <code>token_usage</code> 中记录的最大<strong>成功</strong>请求是 28.993 个输入 token；失败的那个根本没有记录用量。溢出的是<strong>请求的
 字节大小</strong>，而不是上下文窗口——一个输出很长的 <code>find</code> 或 <code>git ls-files</code> 按字节计比按有用 token 计重得多。</p>
-<p>这与 <a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> 直接相关，从一个 ADR 没有预见的角度：
+<p>这与 <a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055</a> 直接相关，从一个 ADR 没有预见的角度：
 审批阶梯不仅让执行更昂贵，它还<strong>杀死</strong>执行。每次向用户提问都会推动智能体再执行一个探索性命令，其输出永远进入
 历史。这场赛跑在第一行代码被写下之前就以 413 结束。</p>
 <p>分类需要决定的是修复归谁——<code>ContextManager</code>（按大小而不只是按时间压缩或截断工具输出）、终端执行器（每次输出的
 字节上限，带截断标记），还是两者。目前路径上的任何地方都没有上限。</p>
 <ul>
-<li class=""><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>session_events</code> seq 150–152；执行者 <code>dev-http-api</code> 的 <code>token_usage</code>。</li>
+<li><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>session_events</code> seq 150–152；执行者 <code>dev-http-api</code> 的 <code>token_usage</code>。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q>T. 故障来源仍在四种之外（P 和 Q 的复发）<a href=#t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q class=hash-link aria-label="T. 故障来源仍在四种之外（P 和 Q 的复发）的直接链接" title="T. 故障来源仍在四种之外（P 和 Q 的复发）的直接链接" translate=no>​</a></h3>
+<h3 id="t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q">T. 故障来源仍在四种之外（P 和 Q 的复发）</h3>
 <p>发现 S 的 <code>dev.blocked</code> 记录了：</p>
-<div class="language-json codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-json codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"origem"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"indeterminada"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"reason"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"parou sem concluir nem reportar bloqueio"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"diagnosis"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"falha na chamada ao modelo: {413, %{\"message\" => \"request entity too large\", \"statusCode\" => 413}}"</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
-<p>这不是新发现：它是同一条规则被违反的<strong>第三次</strong>，因此作为复发而不是单独条目记录。<a href=#p-evento-de-bloqueio-sem-origem class="">P</a>
-在一个 <code>dev.blocked</code> 中抓到了 <code>origin: null</code>；<a href=#q-agenterror-com-origem-indeterminada class="">Q</a> 在一个 <code>agent.error</code>
-中抓到了 <code>"indeterminada"</code>。这里两者相遇：阻塞事件，值为 <code>"indeterminada"</code>。</p>
+<pre class="shiki brabo" style="background-color:var(--shiki-background);color:var(--shiki-foreground)" tabindex="0"><code><span class="line"><span style="color:var(--shiki-foreground)">{</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "origem"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "indeterminada"</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "reason"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "parou sem concluir nem reportar bloqueio"</span><span style="color:var(--shiki-token-punctuation)">,</span></span>
+<span class="line"><span style="color:var(--shiki-token-keyword)">  "diagnosis"</span><span style="color:var(--shiki-token-punctuation)">:</span><span style="color:var(--shiki-token-string-expression)"> "falha na chamada ao modelo: {413, %{\"message\" => \"request entity too large\", \"statusCode\" => 413}}"</span></span>
+<span class="line"><span style="color:var(--shiki-foreground)">}</span></span>
+<span class="line"></span></code></pre>
+<p>这不是新发现：它是同一条规则被违反的<strong>第三次</strong>，因此作为复发而不是单独条目记录。<a href="#p-evento-de-bloqueio-sem-origem">P</a>
+在一个 <code>dev.blocked</code> 中抓到了 <code>origin: null</code>；<a href="#q-agenterror-com-origem-indeterminada">Q</a> 在一个 <code>agent.error</code>
+中抓到了 <code>&quot;indeterminada&quot;</code>。这里两者相遇：阻塞事件，值为 <code>&quot;indeterminada&quot;</code>。</p>
 <p>这次出现增加了什么、使这个案例比之前的更有力：<strong>来源是可以轻易推导的</strong>。provider 的一个已知 HTTP 状态就是
 <code>modelo</code>，没有任何歧义——<code>diagnosis</code> 字段本身就在 <code>origem</code> 放弃的同一行中说出了它。这不是边界情况，而是错误
 路径没有看自己刚刚写下的东西。</p>
-<p><code>reason</code> 也在撒谎："parou sem concluir nem reportar bloqueio" 描述的是沉默，而发生的是一次原因已识别的失败。
+<p><code>reason</code> 也在撒谎：&quot;parou sem concluir nem reportar bloqueio&quot; 描述的是沉默，而发生的是一次原因已识别的失败。
 只在面板上读 <code>reason</code> 的人会得出模型迷路了的结论。</p>
 <ul>
-<li class=""><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>session_events</code> seq 151。</li>
-<li class=""><strong>被违反的规则：</strong> CLAUDE.md（"todo desfecho de falha registra a ORIGEM —
-infra | modelo | código | política — nunca diagnóstico por eliminação"），来源于
-<a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a>。</li>
+<li><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>session_events</code> seq 151。</li>
+<li><strong>被违反的规则：</strong> CLAUDE.md（&quot;todo desfecho de falha registra a ORIGEM —
+infra | modelo | código | política — nunca diagnóstico por eliminação&quot;），来源于
+<a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020</a>。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1>U. 终端执行器没有项目边界（P1）<a href=#u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1 class=hash-link aria-label="U. 终端执行器没有项目边界（P1）的直接链接" title="U. 终端执行器没有项目边界（P1）的直接链接" translate=no>​</a></h3>
+<h3 id="u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1">U. 终端执行器没有项目边界（P1）</h3>
 <p>在执行动作的容器内部，<code>/workspace</code> 是 <strong>Brabo 自己的 monorepo</strong>——不是项目的 worktree，后者位于
-<code>/data/project-workspaces/&lt;projectId>/.worktrees/&lt;agentId></code>。</p>
+<code>/data/project-workspaces/&lt;projectId&gt;/.worktrees/&lt;agentId&gt;</code>。</p>
 <p><code>hello-limpo</code> 的 dev agent 在那里花了好几个轮次，以为那是它的项目：读了 <code>apps/engine/mix.exs</code>，甚至提议
 <code>cat lib/engine/actions/git_executor.ex</code> 和 <code>sed -n '1,120p' lib/engine/dev/context_builder.ex</code>——正在执行它的
 平台的 git 执行器和上下文构建器。</p>
@@ -235,67 +264,67 @@ infra | modelo | código | política — nunca diagnóstico por eliminação"）
 <code>git remote -v</code> 和 <code>git log</code>。这被手工拒绝了。</p>
 <p>这一切都不是模型的恶意：它在寻找自己的项目，而文件系统不告诉它项目在哪里结束。在多租户部署中，同样的命令会
 读取另一个客户的仓库。</p>
-<p><a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> 设计了其中的<strong>策略</strong>那一半，并明确说明它
+<p><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055</a> 设计了其中的<strong>策略</strong>那一半，并明确说明它
 不解决另一半：路径范围依赖于规则判断正确，缺少的是<strong>隔离</strong>——按项目的挂载，或按项目的容器。这个发现就是 ADR
 声明为未决的那一半。</p>
 <ul>
-<li class=""><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>proposed_actions</code> <code>d1bfeda3</code>（被拒绝）和 <code>56374def</code>（被批准，列出了另一个
+<li><strong>证据：</strong> 会话 <code>1f94de49</code> 的 <code>proposed_actions</code> <code>d1bfeda3</code>（被拒绝）和 <code>56374def</code>（被批准，列出了另一个
 项目）。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=v-sessão-consta-closed-enquanto-a-execução-continua-p2>V. 执行仍在继续时会话显示为 <code>closed</code>（P2）<a href=#v-sessão-consta-closed-enquanto-a-execução-continua-p2 class=hash-link aria-label=v-sessão-consta-closed-enquanto-a-execução-continua-p2的直接链接 title=v-sessão-consta-closed-enquanto-a-execução-continua-p2的直接链接 translate=no>​</a></h3>
+<h3 id="v-sessão-consta-closed-enquanto-a-execução-continua-p2">V. 执行仍在继续时会话显示为 <code>closed</code>（P2）</h3>
 <p><code>1f94de49</code> 的 <code>sessions.status</code> 自 <strong>23:34:42</strong> 起就是 <code>closed</code>，即诞生三十秒后。执行一直持续到 <strong>00:56</strong>——
 智能体工作了一个多小时，提议动作并花费 token，而数据库认为这个会话已经结束。</p>
-<p>两边同时不一致：UI 显示 "Sessão closed — não é possível enviar mensagens"，<strong>并且</strong>渲染审批卡片，而它们正常
+<p>两边同时不一致：UI 显示 &quot;Sessão closed — não é possível enviar mensagens&quot;，<strong>并且</strong>渲染审批卡片，而它们正常
 工作。在已关闭的会话中批准会真的执行命令。</p>
 <p>这违背了 CLAUDE.md 声明的状态机（<code>created → active → closing → closed | closed_abnormally</code>）：<code>closed</code> 应该是
-终止状态。它还毒害了任何按会话的测量——持续时间、成本以及"有多少会话顺利结束"读取的是一个不描述实际发生情况
+终止状态。它还毒害了任何按会话的测量——持续时间、成本以及&quot;有多少会话顺利结束&quot;读取的是一个不描述实际发生情况
 的状态。</p>
 <p>我没有调查是谁写入了 <code>closed</code> 以及为什么；那是处理它的阶段的工作，不是分类的工作。</p>
 <ul>
-<li class=""><strong>证据：</strong> <code>sessions.updated_at</code> = 23:34:42，<code>status = closed</code>；同一会话的 <code>session_events</code> 一直到 seq 152，
+<li><strong>证据：</strong> <code>sessions.updated_at</code> = 23:34:42，<code>status = closed</code>；同一会话的 <code>session_events</code> 一直到 seq 152，
 在 00:56:46。</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=confirmado-em-produção-nesta-rodada>本轮在生产中确认的<a href=#confirmado-em-produção-nesta-rodada class=hash-link aria-label=本轮在生产中确认的的直接链接 title=本轮在生产中确认的的直接链接 translate=no>​</a></h2>
+<h2 id="confirmado-em-produção-nesta-rodada">本轮在生产中确认的</h2>
 <ul>
-<li class=""><strong>RN-066</strong>（Arquiteto 的盲目）：<code>assign_story_modules</code> 调用 4 次而不是 18 次，零个编造的名字，1 个
+<li><strong>RN-066</strong>（Arquiteto 的盲目）：<code>assign_story_modules</code> 调用 4 次而不是 18 次，零个编造的名字，1 个
 module_map 而不是 4 个，每个用户故事都在语义正确的模块中。会话成本从 7.271 降到 3.259 micros。</li>
-<li class=""><strong>RN-067</strong>（没有进程的会话）：执行会话 <code>dbb84ce8</code> 出现在 <code>sessions</code> <strong>和</strong> <code>engine.session_states</code> 中——之前
+<li><strong>RN-067</strong>（没有进程的会话）：执行会话 <code>dbb84ce8</code> 出现在 <code>sessions</code> <strong>和</strong> <code>engine.session_states</code> 中——之前
 <code>activate-execution</code> 的会话生来就是孤儿。</li>
 </ul>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execução-da-validação-da-fase-12--2026-08-07>Fase 12 验证的执行——2026-08-07<a href=#execução-da-validação-da-fase-12--2026-08-07 class=hash-link aria-label="Fase 12 验证的执行——2026-08-07的直接链接" title="Fase 12 验证的执行——2026-08-07的直接链接" translate=no>​</a></h2>
+<h2 id="execução-da-validação-da-fase-12--2026-08-07">Fase 12 验证的执行——2026-08-07</h2>
 <p><code>pnpm --filter api validacao:fase-12</code> 的第一次真实运行，即待办 13a.1。标准闭合了（退出码 <code>0</code>），但只是在四次
-修正之后——三次在<strong>工具</strong>中，一次在<strong>产品</strong>中。工具的那些在 <a class="" href=/brabo/dev/zh-Hans/explanation/validacao-fase-12>validacao-fase-12.md</a> 中
+修正之后——三次在<strong>工具</strong>中，一次在<strong>产品</strong>中。工具的那些在 <a href="validacao-fase-12.html">validacao-fase-12.md</a> 中
 叙述；这是产品的那一次。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado>W. 模块队列清空时 dev agent <strong>死掉</strong>（P1）——已关闭<a href=#w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado class=hash-link aria-label=w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado的直接链接 title=w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado的直接链接 translate=no>​</a></h3>
+<h3 id="w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado">W. 模块队列清空时 dev agent <strong>死掉</strong>（P1）——已关闭</h3>
 <p>队列为空时，<code>POST /internal/sessions/:id/tasks/claim</code> 以 <code>content-length: 0</code> 返回 <code>201</code>。用例返回 <code>null</code>，但
-NestJS 把它序列化为<strong>空</strong>正文——<code>Req</code> 交付 <code>""</code>，而它不是 <code>nil</code>。</p>
-<p><code>AgentIo.try_claim/2</code> 匹配到找到 task 的子句并调用 <code>run_task("")</code>，在 <code>Map.get("", "id", nil)</code> 上抛出
+NestJS 把它序列化为<strong>空</strong>正文——<code>Req</code> 交付 <code>&quot;&quot;</code>，而它不是 <code>nil</code>。</p>
+<p><code>AgentIo.try_claim/2</code> 匹配到找到 task 的子句并调用 <code>run_task(&quot;&quot;)</code>，在 <code>Map.get(&quot;&quot;, &quot;id&quot;, nil)</code> 上抛出
 <code>BadMapError</code>。由于服务器是 <code>restart: :temporary</code>，智能体彻底死掉，<code>Monitor</code> 紧随其后删除状态行。</p>
 <p><strong>这对真实的 dev agent 也成立</strong>，不只是 Noop：<code>try_claim/2</code> 位于共享的 <code>AgentIo</code> 中。而它在最常见的结果——
 队列耗尽——时触发。效果恰好与 Fase 12b 交付的相反：不是受监督、可由事件唤醒的 <code>dev.idle</code>，而是死掉的进程。</p>
 <p>测试套件从未抓到，因为假实现正确地返回 <code>nil</code>。<strong>只有真实执行才会暴露</strong>——这字面上就是本阶段的论点。</p>
 <blockquote>
 <p><strong>已关闭</strong>——在边界处修正（<code>EngineApiClient.claim_task/4</code> 规范化空正文），并在契约中守护
-（<code>AgentIo.try_claim/2</code> 把 <code>""</code> 与 <code>nil</code> 一起接受），没有改动路由的 HTTP 状态。FASE 13 冻结的例外由用户
+（<code>AgentIo.try_claim/2</code> 把 <code>&quot;&quot;</code> 与 <code>nil</code> 一起接受），没有改动路由的 HTTP 状态。FASE 13 冻结的例外由用户
 授权，理由与阶段 F 相同：没有它就无法进行测量。经变异验证。</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execução-real-com-github-remoto-fase-13b--2026-08-07>针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07<a href=#execução-real-com-github-remoto-fase-13b--2026-08-07 class=hash-link aria-label="针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07的直接链接" title="针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07的直接链接" translate=no>​</a></h2>
+<h2 id="execução-real-com-github-remoto-fase-13b--2026-08-07">针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07</h2>
 <p>第一次针对真实远程仓库（<code>daneiel/test</code>）的执行，使用真实 dev agent 和 <code>openai/gpt-5-mini</code>。直到晋升的链条完整
-通过了；dev agent 没有。细节和测量在 <a class="" href=/brabo/dev/zh-Hans/explanation/validacao-real>validacao-real.md</a> 中。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1>X. dev agent 在空仓库中烧掉迭代上限（P1）<a href=#x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1 class=hash-link aria-label="X. dev agent 在空仓库中烧掉迭代上限（P1）的直接链接" title="X. dev agent 在空仓库中烧掉迭代上限（P1）的直接链接" translate=no>​</a></h3>
-<p>在一个刚配置的仓库中的 task <em>"Expor GET /saudacao"</em>——只有 Gitflow 的模板，没有代码。智能体把八次迭代都花在
-<code>search_workspace</code>/<code>read_file</code> 上寻找"项目在哪里"，<strong>从未运行过命令，也从未写过文件</strong>。阻塞：
+通过了；dev agent 没有。细节和测量在 <a href="validacao-real.html">validacao-real.md</a> 中。</p>
+<h3 id="x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1">X. dev agent 在空仓库中烧掉迭代上限（P1）</h3>
+<p>在一个刚配置的仓库中的 task <em>&quot;Expor GET /saudacao&quot;</em>——只有 Gitflow 的模板，没有代码。智能体把八次迭代都花在
+<code>search_workspace</code>/<code>read_file</code> 上寻找&quot;项目在哪里&quot;，<strong>从未运行过命令，也从未写过文件</strong>。阻塞：
 <code>limite de iterações atingido</code>，来源 <code>modelo</code>，诊断 <code>(nenhum terminal rodado)</code>。</p>
 <p>来源 <code>modelo</code> 在技术上是对的，在实践上毫无用处：模型并没有判断错误，它根本没走到判断那一步。成本：8 次调用，
 205 个输出 token。</p>
 <p>这是 dev agent 从绝对零开始的<strong>第一个</strong>场景——所有测试和演示都从有代码的 workspace 开始。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado>Y. <code>search_workspace</code> 不区分"空"与"没找到"——已关闭<a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado class=hash-link aria-label=y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado的直接链接 title=y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado的直接链接 translate=no>​</a></h3>
-<p>前五次调用返回 <code>nenhum resultado</code>，智能体把它理解为"再仔细找找"，而不是"这里什么都没有"。它是发现 X 中可以
+<h3 id="y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado">Y. <code>search_workspace</code> 不区分&quot;空&quot;与&quot;没找到&quot;——已关闭</h3>
+<p>前五次调用返回 <code>nenhum resultado</code>，智能体把它理解为&quot;再仔细找找&quot;，而不是&quot;这里什么都没有&quot;。它是发现 X 中可以
 着手的那一块。</p>
 <blockquote>
-<p><strong>已关闭</strong>——工具开始对不同的情况作出不同的回答。没有任何文件的 workspace 返回 <em>"o workspace
+<p><strong>已关闭</strong>——工具开始对不同的情况作出不同的回答。没有任何文件的 workspace 返回 <em>&quot;o workspace
 está VAZIO […] CRIE os arquivos necessários (write_file) em vez de continuar
-procurando"</em>；有文件的 workspace 返回计数，说明搜索工作了，只是这个词没有出现。</p>
+procurando&quot;</em>；有文件的 workspace 返回计数，说明搜索工作了，只是这个词没有出现。</p>
 <p><strong>修正是这句话，不是上限。</strong> 智能体不需要更多迭代——它需要知道没有可找的东西。而发现中的情况（只有
 bootstrap 的 <code>.github/</code> 和 <code>docs/</code>）<strong>不是</strong>空的：有一个测试断言在那里正确的答案是计数，而不是创建的指示。</p>
 <p><strong>新的执行做了，而 X <strong>没有</strong>关闭。</strong> 同样的结果——<code>limite de iterações atingido</code>，8 次调用，没有 PR。
@@ -304,24 +333,24 @@ bootstrap 的 <code>.github/</code> 和 <code>docs/</code>）<strong>不是</str
 <p><strong>上限才是原因。</strong> 用 <code>TOOL_LOOP_MAX_ITERATIONS=25</code>，dev agent 进行了探索，写了<strong>三个</strong>文件并运行了
 <code>npm test</code>——并停在 <code>dev.awaiting_approval</code>，而不是阻塞。8 的上限是为会话型智能体而生的，不适合需要在行动
 之前理解仓库的 dev agent（<code>apps/engine/config/runtime.exs:100</code>）。</p>
-<p>X 不再是"探索时烧掉上限"，而变成**"上限对这个智能体来说是错的"<strong>。产品修复</strong>不是**提高全局默认值——
+<p>X 不再是&quot;探索时烧掉上限&quot;，而变成**&quot;上限对这个智能体来说是错的&quot;<strong>。产品修复</strong>不是**提高全局默认值——
 Criativo 对话不需要 25 次迭代。它是按智能体类型的上限，这是产品决定：留在分类中。</p>
-<p><strong>在 FASE 14d 关闭</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-085>RN-085</a>）。上限在 <code>Engine.Harness.Iteracoes</code> 中
-改为按类型：对话者 <code>8</code>，dev agent 和 QA 子智能体 <code>60</code>。谁能提高的标准不是"工作量大"——而是下面有
+<p><strong>在 FASE 14d 关闭</strong>（<a href="../business-rules/custo.html#rn-085">RN-085</a>）。上限在 <code>Engine.Harness.Iteracoes</code> 中
+改为按类型：对话者 <code>8</code>，dev agent 和 QA 子智能体 <code>60</code>。谁能提高的标准不是&quot;工作量大&quot;——而是下面有
 <code>token_budget_micros</code> 控制花费，这就是为什么 <code>infra-workflows</code> 使用重型工具却<strong>保持 8</strong>：它在没有预算的
 情况下运行，对它来说上限是唯一存在的锁。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho>Z. 终端允许列表管辖<strong>动词</strong>；范围只保护<strong>路径</strong><a href=#z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho class=hash-link aria-label=z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho的直接链接 title=z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho的直接链接 translate=no>​</a></h3>
-<p>上限解决后，执行开始停在终端审批上。2026-08-06 的请求是 <em>"permita sempre comandos desde que seja na pasta do
-projeto"</em>；ADR 0055 交付了一个<strong>上限</strong>（文件夹之外永远不自动批准），而动词仍由封闭列表管辖。</p>
+<h3 id="z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho">Z. 终端允许列表管辖<strong>动词</strong>；范围只保护<strong>路径</strong></h3>
+<p>上限解决后，执行开始停在终端审批上。2026-08-06 的请求是 <em>&quot;permita sempre comandos desde que seja na pasta do
+projeto&quot;</em>；ADR 0055 交付了一个<strong>上限</strong>（文件夹之外永远不自动批准），而动词仍由封闭列表管辖。</p>
 <p>放行 <code>npm</code>/<code>pnpm</code>/<code>node</code>/<code>npx</code> 还不够：智能体运行了 <code>ls -la</code>。每个新动词都落入 <code>require_approval</code>。</p>
 <p>这不是 ADR 0055 的缺陷，它从未承诺晋升动词——这是所请求与所交付之间的缺口，它让阶梯继续存在。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=funcionou-como-projetado-registrar-também-1>按设计工作的（也要记录）<a href=#funcionou-como-projetado-registrar-também-1 class=hash-link aria-label=按设计工作的（也要记录）的直接链接 title=按设计工作的（也要记录）的直接链接 translate=no>​</a></h3>
+<h3 id="funcionou-como-projetado-registrar-também-1">按设计工作的（也要记录）</h3>
 <p><strong>Psicólogo 自己作出了诊断</strong>，在重型层级，阅读失败执行的 event log——并以比脚本的任何断言都更高的精度说出了
 两个原因：缺少终端的 <code>tool.call</code>，以及 <code>search_workspace</code> 误导了智能体。产品的内省是有效的。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1>AA. 自动批准的 <code>pr_open</code> 没有凭据，在远程上总是失败（P1）<a href=#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1 class=hash-link aria-label=aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1的直接链接 title=aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1的直接链接 translate=no>​</a></h3>
+<h3 id="aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1">AA. 自动批准的 <code>pr_open</code> 没有凭据，在远程上总是失败（P1）</h3>
 <blockquote>
-<p><strong>已关闭</strong>——成为了 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-082>RN-082</a>。api 改为按 workspace 的 OWNER 解析 git
+<p><strong>已关闭</strong>——成为了 <a href="../business-rules/custo.html#rn-082">RN-082</a>。api 改为按 workspace 的 OWNER 解析 git
 凭据，复用与 RN-058 相同的解析器，而不是重新实现这条规则。经变异验证。</p>
 </blockquote>
 <p>在 13b 的第 5 次执行中发现，这是链条第一次到达 PR。</p>
@@ -329,120 +358,125 @@ projeto"</em>；ADR 0055 交付了一个<strong>上限</strong>（文件夹之�
 （<code>execute-git-action.use-case.ts:100</code>）。当策略自动批准时，没有人决定：<code>decided_by</code> 保持 NULL，
 <code>accessToken</code> 保持 <code>undefined</code>，GitHub 回应 <code>Requires authentication</code>。</p>
 <p>同一次运行中的对比就是证明：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>动作<th>谁执行<th>凭据<th>结果<tbody><tr><td><code>git_push</code><td><strong>engine</strong><td>从 owner 注入（<code>git_auth.ex</code>，RN-076）<td>✅ executed<tr><td><code>pr_open</code><td><strong>api</strong><td><code>action.decidedBy</code> → NULL<td>❌ failed</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>动作</th>
+<th>谁执行</th>
+<th>凭据</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>git_push</code></td>
+<td><strong>engine</strong></td>
+<td>从 owner 注入（<code>git_auth.ex</code>，RN-076）</td>
+<td>✅ executed</td>
+</tr>
+<tr>
+<td><code>pr_open</code></td>
+<td><strong>api</strong></td>
+<td><code>action.decidedBy</code> → NULL</td>
+<td>❌ failed</td>
+</tr>
+</tbody>
+</table></div>
 <p>推送到达了 GitHub——分支 <code>feature/task-d4b36a5b</code> 存在于远程。失败的只是打开 PR 的 REST 调用。</p>
-<p>这与 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-058>RN-058</a> 为 LLM 修正的是同一类（"智能体花的密钥是 OWNER 的"）：api 的
-git 路径仍按"谁决定的"而不是"workspace 是谁的"来解析。</p>
+<p>这与 <a href="../business-rules/custo.html#rn-058">RN-058</a> 为 LLM 修正的是同一类（&quot;智能体花的密钥是 OWNER 的&quot;）：api 的
+git 路径仍按&quot;谁决定的&quot;而不是&quot;workspace 是谁的&quot;来解析。</p>
 <p><strong>实际后果：</strong> 在配置了自治的情况下——这正是阶段 F 要使之可行的模式——没有任何 dev agent 能在远程 provider
 上打开 PR。这条路径只有在人类点击每个 PR 时才工作，而这正是被宣布不可行的阶梯。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1>AB. <strong>GATE</strong> 智能体不会等待审批——变成 <code>infra</code> 失败（P1）<a href=#ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1 class=hash-link aria-label=ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1的直接链接 title=ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1的直接链接 translate=no>​</a></h3>
+<h3 id="ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1">AB. <strong>GATE</strong> 智能体不会等待审批——变成 <code>infra</code> 失败（P1）</h3>
 <blockquote>
-<p><strong>已关闭</strong>——<a class="" href=/brabo/dev/zh-Hans/adr/0057-o-gate-espera-a-aprovacao>ADR 0057</a>。gate 智能体现在会<strong>挂起</strong>并恢复，就像
+<p><strong>已关闭</strong>——<a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057</a>。gate 智能体现在会<strong>挂起</strong>并恢复，就像
 自 ADR 0052 起的 dev agent：子智能体返回带有整个 <code>ctx</code> 的 <code>{:awaiting, ...}</code>，<code>QaLeadServer</code> 保存进行中的
 状态，为子智能体订阅 <code>Wake</code>，并在决定到达时从停下的地方继续该领域。</p>
 <p>待处理期间，该领域<strong>不</strong>合并、不发出裁决，也不阻塞 task——它在等待。拒绝也会恢复，用原因代替结果。</p>
 <p>声明的限制：在等待中途重启会丢失循环，因为 <code>pendente</code> 存在于 lead 的内存中。当 task 回到周期时，gate 由
 <code>Dispatcher</code> 重新运行。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1>AC. 重定向（<code>2>/dev/null</code>）让任何命令都无法批准（P1）<a href=#ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1 class=hash-link aria-label=ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1的直接链接 title=ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1的直接链接 translate=no>​</a></h3>
+<h3 id="ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1">AC. 重定向（<code>2&gt;/dev/null</code>）让任何命令都无法批准（P1）</h3>
 <blockquote>
 <p><strong>两个部件都已关闭。</strong></p>
 <ol>
-<li class=""><code>parseCommand</code> 不再把 <code>></code>/<code>>></code>/<code>&lt;</code> 当作分隔符——它们不串联任何命令。目标仍然作为片段的<strong>词元</strong>保留，
-这是有意的：正是这样 <code>echo x > /etc/passwd</code> 仍被范围上限拦住。动词变得正确，而路径并没有因此放开。</li>
-<li class=""><code>/dev/null</code>、<code>/dev/stdin</code>、<code>/dev/stdout</code> 和 <code>/dev/stderr</code> 不再算作用户路径。列表就是这些，而<strong>不是</strong>
+<li><code>parseCommand</code> 不再把 <code>&gt;</code>/<code>&gt;&gt;</code>/<code>&lt;</code> 当作分隔符——它们不串联任何命令。目标仍然作为片段的<strong>词元</strong>保留，
+这是有意的：正是这样 <code>echo x &gt; /etc/passwd</code> 仍被范围上限拦住。动词变得正确，而路径并没有因此放开。</li>
+<li><code>/dev/null</code>、<code>/dev/stdin</code>、<code>/dev/stdout</code> 和 <code>/dev/stderr</code> 不再算作用户路径。列表就是这些，而<strong>不是</strong>
 整个 <code>/dev</code>——有一个测试断言 <code>/dev/sda</code> 仍在范围之外，因为放开 <code>/dev</code> 会把一个麻烦换成一个漏洞。</li>
 </ol>
 <p>在两个方向上经变异验证：放宽 <code>/dev</code> 会让磁盘的测试失败，关闭串联会让 11 个测试失败。</p>
 </blockquote>
 <p>在 13b 的第 7 次执行中发现，那是在把允许列表扩展到 25 个动词之后。QA 智能体运行了：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">ls -la && echo "---" && cat package.json 2>/dev/null; echo "---"; ls *.md 2>/dev/null</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>ls -la &amp;&amp; echo &quot;---&quot; &amp;&amp; cat package.json 2&gt;/dev/null; echo &quot;---&quot;; ls *.md 2&gt;/dev/null
+</code></pre>
 <p><strong>所有动词都已放行</strong>——<code>ls</code>、<code>echo</code>、<code>cat</code>。即便如此它还是变成了 <code>require_approval</code>。对这个命令运行纯函数：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">segmentos: [["ls","-la"],["echo","---"],["cat","package.json","2"],["/dev/null"],…]</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">tokens de caminho: ["/dev/null","/dev/null"]</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">no escopo? false</span><br/></div></code></pre></div></div>
-<p><code>parseCommand</code> 把 <code>></code> 当作片段分隔符，因此 <code>2>/dev/null</code> 变成<strong>一个独立的片段</strong>。这以两种独立的方式出错：</p>
+<pre class="codigo"><code>segmentos: [[&quot;ls&quot;,&quot;-la&quot;],[&quot;echo&quot;,&quot;---&quot;],[&quot;cat&quot;,&quot;package.json&quot;,&quot;2&quot;],[&quot;/dev/null&quot;],…]
+tokens de caminho: [&quot;/dev/null&quot;,&quot;/dev/null&quot;]
+no escopo? false
+</code></pre>
+<p><code>parseCommand</code> 把 <code>&gt;</code> 当作片段分隔符，因此 <code>2&gt;/dev/null</code> 变成<strong>一个独立的片段</strong>。这以两种独立的方式出错：</p>
 <ol>
-<li class="">片段 <code>/dev/null</code> 的"动词"就是 <code>/dev/null</code> 本身，它永远不会在 <code>allow</code> 中——而复合命令要求<strong>每个</strong>片段都被
+<li>片段 <code>/dev/null</code> 的&quot;动词&quot;就是 <code>/dev/null</code> 本身，它永远不会在 <code>allow</code> 中——而复合命令要求<strong>每个</strong>片段都被
 放行；</li>
-<li class=""><code>/dev/null</code> 是项目文件夹之外的<strong>绝对</strong>路径词元，因此 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-075>RN-075</a> 的上限
+<li><code>/dev/null</code> 是项目文件夹之外的<strong>绝对</strong>路径词元，因此 <a href="../business-rules/custo.html#rn-075">RN-075</a> 的上限
 把 <code>auto_approve</code> 降级。</li>
 </ol>
-<p><strong>影响很大，因为 <code>2>/dev/null</code> 是惯用法。</strong> 模型一直用它来静默预期的错误。实际上，任何带输出重定向的命令
+<p><strong>影响很大，因为 <code>2&gt;/dev/null</code> 是惯用法。</strong> 模型一直用它来静默预期的错误。实际上，任何带输出重定向的命令
 按策略都无法批准——只能靠人类点击通过。</p>
 <p>这不是列表中缺了一个动词：是命令的<strong>形式</strong>。扩展允许列表解决不了，第 7 次执行就是证明——放行了 25 个动词，
 还是卡住了。</p>
 <p>两个不同的部件需要分类：</p>
 <ul>
-<li class=""><code>command-matcher.ts</code> 中按 <code>></code> 的分段（预先存在的，而且有争议：重定向不像 <code>&&</code> 和 <code>|</code> 那样是命令的组合）；</li>
-<li class="">把 <code>/dev/null</code> 当作用户路径的范围上限（<code>path-scope.ts</code>，来自阶段 F）。</li>
+<li><code>command-matcher.ts</code> 中按 <code>&gt;</code> 的分段（预先存在的，而且有争议：重定向不像 <code>&amp;&amp;</code> 和 <code>|</code> 那样是命令的组合）；</li>
+<li>把 <code>/dev/null</code> 当作用户路径的范围上限（<code>path-scope.ts</code>，来自阶段 F）。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1>AD. 智能体把命令包在 <code>bash -lc</code> 里，而允许列表对此没有答案（P1）<a href=#ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1 class=hash-link aria-label=ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1的直接链接 title=ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1的直接链接 translate=no>​</a></h3>
+<h3 id="ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1">AD. 智能体把命令包在 <code>bash -lc</code> 里，而允许列表对此没有答案（P1）</h3>
 <p>13b 的第八次执行，发现 Y、AA、AB 和 AC 已经修正。dev agent 只做了<strong>一次</strong>工具调用：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">bash -lc npm test --silent</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code>bash -lc npm test --silent
+</code></pre>
 <p>动词是 <code>bash</code>。它不在 <code>allow</code> 中，变成了 <code>require_approval</code>。</p>
-<p><strong>拒绝是对的，而且它对很重要。</strong> 放行 <code>bash</code> 会让整个允许列表失效：<code>bash -lc &lt;qualquer coisa></code> 绕过动词检查，
+<p><strong>拒绝是对的，而且它对很重要。</strong> 放行 <code>bash</code> 会让整个允许列表失效：<code>bash -lc &lt;qualquer coisa&gt;</code> 绕过动词检查，
 包括内置的 <code>deny</code>。一个接受 <code>bash</code> 的允许列表就不是允许列表。</p>
 <p>但这闭合了第 6、7、8 次执行一直在构建的论证：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>执行<th>卡在哪里<th>我做了什么<tbody><tr><td>第 6 次<td><code>head</code> 不在列表中<td>扩展到 25 个动词<tr><td>第 7 次<td><code>2>/dev/null</code>（<strong>形式</strong>，不是动词）<td>修正了解析器和范围（AC）<tr><td>第 8 次<td><code>bash -lc</code>（<strong>调用方式</strong>）<td>—</table>
-<p>每一轮都揭示了一个新类别，没有一个是"缺了一个动词"。<strong>动词允许列表不收敛</strong>，面对一个自由选择如何调用它想
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>执行</th>
+<th>卡在哪里</th>
+<th>我做了什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 6 次</td>
+<td><code>head</code> 不在列表中</td>
+<td>扩展到 25 个动词</td>
+</tr>
+<tr>
+<td>第 7 次</td>
+<td><code>2&gt;/dev/null</code>（<strong>形式</strong>，不是动词）</td>
+<td>修正了解析器和范围（AC）</td>
+</tr>
+<tr>
+<td>第 8 次</td>
+<td><code>bash -lc</code>（<strong>调用方式</strong>）</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>每一轮都揭示了一个新类别，没有一个是&quot;缺了一个动词&quot;。<strong>动词允许列表不收敛</strong>，面对一个自由选择如何调用它想
 运行之物的智能体——而这三种形态（动词、形式、调用）是不同的空间，而不是一个列表中的点。</p>
 <p>这<strong>不</strong>意味着：允许列表是错的。它恰好做到了它承诺的，对 <code>bash</code> 的拒绝证明了边界有效。它做不到的是在没有人类
 干预的情况下使智能体自治成为可能。</p>
 <p>分类的两个方向，它们在性质上不同：</p>
 <ol>
-<li class=""><strong>可挂起的 gate 智能体</strong>（发现 AB，未关闭的那一半）。它不消除审批——它让智能体<strong>等待</strong>审批而不是死掉，然后
+<li><strong>可挂起的 gate 智能体</strong>（发现 AB，未关闭的那一半）。它不消除审批——它让智能体<strong>等待</strong>审批而不是死掉，然后
 用户的点击是解锁而不是失败。这是 ADR 0052 已经为 dev agent 打开的路径。</li>
-<li class=""><strong>按智能体画像的策略。</strong> 在隔离 worktree 中的 dev agent 与触碰用户 workspace 的智能体不同。目前两者使用同一个
+<li><strong>按智能体画像的策略。</strong> 在隔离 worktree 中的 dev agent 与触碰用户 workspace 的智能体不同。目前两者使用同一个
 <code>permissions.json</code>。这是需要 ADR 的产品决定。</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ae-o-agente-de-qa-tenta-consertar-o-código-que-julga-p2>AE. QA 智能体试图修复它所评判的代码（P2）<a href=#ae-o-agente-de-qa-tenta-consertar-o-código-que-julga-p2 class=hash-link aria-label="AE. QA 智能体试图修复它所评判的代码（P2）的直接链接" title="AE. QA 智能体试图修复它所评判的代码（P2）的直接链接" translate=no>​</a></h3>
+<h3 id="ae-o-agente-de-qa-tenta-consertar-o-código-que-julga-p2">AE. QA 智能体试图修复它所评判的代码（P2）</h3>
 <p>在 13b 的最后几次执行中，基于 LLM 的 gates 终于运行起来，QA 子智能体<strong>试图修正它正在评估的代码</strong>——违背了
 它自己的角色。评判者不修复：一个编辑它所分析之物的 gate 就不再是 gate，而变成又一个作者，裁决变成关于它自己的
 工作。</p>
@@ -451,43 +485,44 @@ git 路径仍按"谁决定的"而不是"workspace 是谁的"来解析。</p>
 （<code>apps/engine/lib/engine/gates/qa_tools.ex:10</code>）：<strong>不存在 <code>write_file</code></strong>。要写入，它必须经过 <code>terminal</code>——
 在那里它遇到两道出于其他原因早已存在的屏障：</p>
 <ol>
-<li class=""><strong>动词允许列表</strong>，管辖什么可以运行（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-075>RN-075</a> 以及发现 Z/AD）；</li>
-<li class=""><strong>路径范围上限</strong>，把项目文件夹之外的任何命令降级为 <code>require_approval</code>。</li>
+<li><strong>动词允许列表</strong>，管辖什么可以运行（<a href="../business-rules/custo.html#rn-075">RN-075</a> 以及发现 Z/AD）；</li>
+<li><strong>路径范围上限</strong>，把项目文件夹之外的任何命令降级为 <code>require_approval</code>。</li>
 </ol>
 <p>它们是<strong>独立</strong>的屏障：没有一个是为这种情况设计的，这就是为什么约束是可靠的——它不依赖于提示词说服模型。</p>
 <p><strong>为什么是 P2 而不是 P1。</strong> 没有任何东西泄漏：行为被尝试并被拦住了。发现记录的是<strong>提示词要求的与模型所做的
 之间的分歧</strong>，而这种分歧就是数据——它说明单靠指令守不住角色，守住它的是结构性的屏障。</p>
 <p><strong>没有测量的。</strong> 尝试了多少次、确切在哪次执行、用的什么命令：第 9 次和第 10 次执行没有在
-<a class="" href=/brabo/dev/zh-Hans/explanation/validacao-real>validacao-real.md</a> 中记录细节，该文件只覆盖到第八次。在没有这些数字的情况下记录发现是有意
+<a href="validacao-real.html">validacao-real.md</a> 中记录细节，该文件只覆盖到第八次。在没有这些数字的情况下记录发现是有意
 的——另一种选择是编造它们，而 Fase 10 的教训正是凭记忆记下的数字不作数。</p>
-<p><strong>分类的方向</strong>，与发现 AD 的"按智能体画像的策略"相同：gate 的正确工具与作者的不同。目前这种差异是通过遗漏获得
-的（QA 的注册表不包括 <code>write_file</code>），这有效，但在任何地方都没有被声明为保证——等哪天有人"为了方便"加上这个
+<p><strong>分类的方向</strong>，与发现 AD 的&quot;按智能体画像的策略&quot;相同：gate 的正确工具与作者的不同。目前这种差异是通过遗漏获得
+的（QA 的注册表不包括 <code>write_file</code>），这有效，但在任何地方都没有被声明为保证——等哪天有人&quot;为了方便&quot;加上这个
 工具，它就消失了。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execuções-com-dois-módulos--2026-08-08-e-2026-08-09><strong>两个</strong>模块的执行——2026-08-08 和 2026-08-09<a href=#execuções-com-dois-módulos--2026-08-08-e-2026-08-09 class=hash-link aria-label=execuções-com-dois-módulos--2026-08-08-e-2026-08-09的直接链接 title=execuções-com-dois-módulos--2026-08-08-e-2026-08-09的直接链接 translate=no>​</a></h2>
+<h2 id="execuções-com-dois-módulos--2026-08-08-e-2026-08-09"><strong>两个</strong>模块的执行——2026-08-08 和 2026-08-09</h2>
 <p>两个用户故事，一个在 <code>api</code>，一个在 <code>web</code>，两个 dev agent <strong>同时</strong>启动。这样运行很重要，因为
-<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-083>RN-083</a> 的并行上限只有在有真正独立的工作时才有意义——只有一个模块时，
+<a href="../business-rules/custo.html#rn-083">RN-083</a> 的并行上限只有在有真正独立的工作时才有意义——只有一个模块时，
 Dev Lead 拒绝并行化，而且理由充分。</p>
 <p>共三轮，它们的顺序就是论证：</p>
 <ol>
-<li class=""><strong>2026-08-08，出问题的那一轮。</strong> <code>dev-web</code> 领取了 task，并在<strong>第一个轮次之前</strong>死于
+<li><strong>2026-08-08，出问题的那一轮。</strong> <code>dev-web</code> 领取了 task，并在<strong>第一个轮次之前</strong>死于
 <code>fatal: not a git repository</code>：零 token 花费，task 被阻塞，智能体 <code>idle</code>。这就是下面的发现 AF。</li>
-<li class=""><strong>2026-08-08，紧接着修正之后。</strong> <code>dev-web</code> 从 <strong>0 次调用增加到 16 次</strong>，两个模块被并行实现。</li>
-<li class=""><strong>2026-08-09（项目 <code>9443f1f1</code>，会话 <code>94428b1f</code>），测量。</strong> 修正已就位的干净一轮，由 <code>medir:execucao</code> 完整
+<li><strong>2026-08-08，紧接着修正之后。</strong> <code>dev-web</code> 从 <strong>0 次调用增加到 16 次</strong>，两个模块被并行实现。</li>
+<li><strong>2026-08-09（项目 <code>9443f1f1</code>，会话 <code>94428b1f</code>），测量。</strong> 修正已就位的干净一轮，由 <code>medir:execucao</code> 完整
 提取：<strong>3m56s，33 次调用，&lt; US$ 0,01</strong>，没有 engine 重启，没有沉默的轮次，两个 gate（<code>qa</code> 和 <code>secops</code>）
 都批准了。它可作为两个模块执行的成本基线。</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=af-dois-dev-agents-subindo-juntos-corrompem-o-workspace-um-do-outro-p1>AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）<a href=#af-dois-dev-agents-subindo-juntos-corrompem-o-workspace-um-do-outro-p1 class=hash-link aria-label="AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）的直接链接" title="AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）的直接链接" translate=no>​</a></h3>
+<h3 id="af-dois-dev-agents-subindo-juntos-corrompem-o-workspace-um-do-outro-p1">AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）</h3>
 <p><code>Engine.Actions.Workspace.ensure!/4</code> 用 <code>:global.trans</code> 按项目串行化工作树的初始化——正是为了 N 个 dev agent
 在执行激活时启动的情况。锁是对的。<strong>决定是否值得去拿锁的守卫，不对。</strong></p>
 <p>没有锁的快速路径询问 <code>.git</code> 是否存在（<code>apps/engine/lib/engine/actions/workspace.ex:51</code>）。而
 <code>init_from_bare!</code> 以 <code>git init</code> 开始，它在<strong>第一行</strong>就创建了 <code>.git</code>——在 <code>fetch</code> 之前，也在 <code>checkout</code> 之前。
-在这个窗口到达的人读到"就绪"，跳过整个锁，并对一个只做了一半的仓库运行 <code>git worktree add</code>：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">fatal: not a git repository</span><br/></div></code></pre></div></div>
+在这个窗口到达的人读到&quot;就绪&quot;，跳过整个锁，并对一个只做了一半的仓库运行 <code>git worktree add</code>：</p>
+<pre class="codigo"><code>fatal: not a git repository
+</code></pre>
 <p><strong>为什么它穿过十次执行都没有出现。</strong> 只有当第二个智能体在初始化<em>期间</em>到达时窗口才存在，而激活只为每个模块启动
 一个智能体。<code>module_map</code> 中只有一个条目时从来没有第二个智能体。这个缺陷属于 Fase 14d（并行），需要第一次真正
 并行的执行才能显现。</p>
 <p><strong>修正</strong>是磁盘上的一个标记 <code>.brabo-workspace-pronto</code>，只在初始化<strong>结束</strong>时写入；快速路径改为询问它。锁没有换
-地方——改变的是"已经就绪"的标准，它现在只在真正就绪时才为真。在标记存在之前创建的 workspace 被<strong>采用并盖章</strong>，
+地方——改变的是&quot;已经就绪&quot;的标准，它现在只在真正就绪时才为真。在标记存在之前创建的 workspace 被<strong>采用并盖章</strong>，
 从不重新初始化：重新初始化会抹掉未提交的工作。</p>
 <p><strong>这教会了我们关于没抓到它的测试的什么。</strong> 已经有一个 8 个并发 <code>ensure/3</code> 的测试，而它<strong>在有 bug 时通过</strong>。
 8 个全部一起出发，都看到空目录，都去拿锁——窗口从未被演练。尝试按时间复现它也行不通：对本地 bare 而言 <code>fetch</code>
@@ -497,4 +532,13 @@ Dev Lead 拒绝并行化，而且理由充分。</p>
 <code>ensure!</code> 返回目录而从不写入标记——而断言要求的正是标记的缺失。另外两个测试守护迁移（标记之前的 workspace 不被
 重新初始化）以及两个并发 <code>ensure!</code> 的真实情况。</p>
 <p>这与 Fase 14d 自身三个缺口的模式相同，记录在那里：<strong>测试部件不等于测试通往它的路径。</strong> 这里部件（锁）是正确的
-并经过测试；做出错误决定的是通往它的路径。</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/achados-execucao-real.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T21:13:36.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>真实执行（hello world）</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Fase 12 的验证</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#corrigidos-durante-a-execução-bloqueavam class="table-of-contents__link toc-highlight">执行期间修正的（曾阻塞）</a><li><a href=#abertos--para-a-triagem-da-13c class="table-of-contents__link toc-highlight">未关闭的——供 13c 分类</a><ul><li><a href=#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave class="table-of-contents__link toc-highlight">A. 配置阶段的会话诞生时在 engine 中没有进程（严重）</a><li><a href=#b-modelo-de-start-decisão-do-usuário class="table-of-contents__link toc-highlight">B. 启动模型（用户的决定）</a><li><a href=#c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário class="table-of-contents__link toc-highlight">C. 说话的是模型，而不是智能体（缺陷，由用户指出）</a><li><a href=#d-passo-impossível-trava-o-wizard-sem-saída class="table-of-contents__link toc-highlight">D. 不可能的步骤把向导卡住而没有出路</a><li><a href=#e-preview-do-repositório-mente class="table-of-contents__link toc-highlight">E. 仓库预览在撒谎</a><li><a href=#f-wizard-anuncia-rc class="table-of-contents__link toc-highlight">F. 向导宣布了 <code>rc</code></a><li><a href=#g-convite-do-criativo-não-aparece-em-projeto-criado class="table-of-contents__link toc-highlight">G. Criativo 的邀请在已创建的项目中不出现</a><li><a href=#h-feed-de-atividade-genérico class="table-of-contents__link toc-highlight">H. 通用的活动信息流</a><li><a href=#i-card-de-ação-mostra-o-modelo-atual-da-sessão class="table-of-contents__link toc-highlight">I. 动作卡片显示会话的<strong>当前</strong>模型</a><li><a href=#j-psicólogo-roda-em-sessão-vazia class="table-of-contents__link toc-highlight">J. Psicólogo 在空会话中运行</a><li><a href=#k-regra-de-negócio-duplicada-não-é-deduplicada class="table-of-contents__link toc-highlight">K. 重复的业务规则没有去重</a><li><a href=#l-botão-do-rodapé-fica-obsoleto class="table-of-contents__link toc-highlight">L. 底部按钮变得过时</a></ul><li><a href=#funcionou-como-projetado-registrar-também class="table-of-contents__link toc-highlight">按设计工作的（也要记录）</a><ul><li><a href=#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada class="table-of-contents__link toc-highlight">M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）</a></ul><li><a href=#execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05 class="table-of-contents__link toc-highlight">执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05</a><ul><li><a href=#n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b class="table-of-contents__link toc-highlight">N. 执行那一半只在 <code>local</code> provider 下工作（P1，阻塞 13b）</a><li><a href=#o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b class="table-of-contents__link toc-highlight">O. dev agent 诞生在本地模型上（与发现 B 同根）</a><li><a href=#p-evento-de-bloqueio-sem-origem class="table-of-contents__link toc-highlight">P. 没有来源的阻塞事件</a><li><a href=#q-agenterror-com-origem-indeterminada class="table-of-contents__link toc-highlight">Q. 带"不确定来源"的 <code>agent.error</code></a><li><a href=#r-po-gerou-histórias-sobrepostas class="table-of-contents__link toc-highlight">R. PO 生成了重叠的用户故事</a></ul><li><a href=#execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06 class="table-of-contents__link toc-highlight">hello-limpo 的执行（项目 <code>9c7c84f0</code>，会话 <code>1f94de49</code>）——2026-08-06</a><ul><li><a href=#s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1 class="table-of-contents__link toc-highlight">S. 累积的上下文超出 provider 的限制并<strong>杀死</strong>执行（P1）</a><li><a href=#t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q class="table-of-contents__link toc-highlight">T. 故障来源仍在四种之外（P 和 Q 的复发）</a><li><a href=#u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1 class="table-of-contents__link toc-highlight">U. 终端执行器没有项目边界（P1）</a><li><a href=#v-sessão-consta-closed-enquanto-a-execução-continua-p2 class="table-of-contents__link toc-highlight">V. 执行仍在继续时会话显示为 <code>closed</code>（P2）</a></ul><li><a href=#confirmado-em-produção-nesta-rodada class="table-of-contents__link toc-highlight">本轮在生产中确认的</a><li><a href=#execução-da-validação-da-fase-12--2026-08-07 class="table-of-contents__link toc-highlight">Fase 12 验证的执行——2026-08-07</a><ul><li><a href=#w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado class="table-of-contents__link toc-highlight">W. 模块队列清空时 dev agent <strong>死掉</strong>（P1）——已关闭</a></ul><li><a href=#execução-real-com-github-remoto-fase-13b--2026-08-07 class="table-of-contents__link toc-highlight">针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07</a><ul><li><a href=#x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1 class="table-of-contents__link toc-highlight">X. dev agent 在空仓库中烧掉迭代上限（P1）</a><li><a href=#y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado class="table-of-contents__link toc-highlight">Y. <code>search_workspace</code> 不区分"空"与"没找到"——已关闭</a><li><a href=#z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho class="table-of-contents__link toc-highlight">Z. 终端允许列表管辖<strong>动词</strong>；范围只保护<strong>路径</strong></a><li><a href=#funcionou-como-projetado-registrar-também-1 class="table-of-contents__link toc-highlight">按设计工作的（也要记录）</a><li><a href=#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1 class="table-of-contents__link toc-highlight">AA. 自动批准的 <code>pr_open</code> 没有凭据，在远程上总是失败（P1）</a><li><a href=#ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1 class="table-of-contents__link toc-highlight">AB. <strong>GATE</strong> 智能体不会等待审批——变成 <code>infra</code> 失败（P1）</a><li><a href=#ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1 class="table-of-contents__link toc-highlight">AC. 重定向（<code>2>/dev/null</code>）让任何命令都无法批准（P1）</a><li><a href=#ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1 class="table-of-contents__link toc-highlight">AD. 智能体把命令包在 <code>bash -lc</code> 里，而允许列表对此没有答案（P1）</a><li><a href=#ae-o-agente-de-qa-tenta-consertar-o-código-que-julga-p2 class="table-of-contents__link toc-highlight">AE. QA 智能体试图修复它所评判的代码（P2）</a></ul><li><a href=#execuções-com-dois-módulos--2026-08-08-e-2026-08-09 class="table-of-contents__link toc-highlight"><strong>两个</strong>模块的执行——2026-08-08 和 2026-08-09</a><ul><li><a href=#af-dois-dev-agents-subindo-juntos-corrompem-o-workspace-um-do-outro-p1 class="table-of-contents__link toc-highlight">AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>运维手册</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://ko-fi.com/daneiel target=_blank rel="noopener noreferrer" class=footer__link-item>请我喝咖啡 (Ko-fi)<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+并经过测试；做出错误决定的是通往它的路径。</p>
+<nav class="site-pager"><a href="../explanation/execucao-real-hello-world.html"></a><a href="../explanation/validacao-fase-12.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/explanation/achados-execucao-real.md">编辑此页</a><span>更新于 2026-10-15T01:12:25-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>本页内容</h2><ul><li class="n2"><a href="#corrigidos-durante-a-execução-bloqueavam">执行期间修正的（曾阻塞）</a></li><li class="n2"><a href="#abertos--para-a-triagem-da-13c">未关闭的——供 13c 分类</a></li><li class="n3"><a href="#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave">A. 配置阶段的会话诞生时在 engine 中没有进程（严重）</a></li><li class="n3"><a href="#b-modelo-de-start-decisão-do-usuário">B. 启动模型（用户的决定）</a></li><li class="n3"><a href="#c-quem-fala-é-o-modelo-não-o-agente-defeito-apontado-pelo-usuário">C. 说话的是模型，而不是智能体（缺陷，由用户指出）</a></li><li class="n3"><a href="#d-passo-impossível-trava-o-wizard-sem-saída">D. 不可能的步骤把向导卡住而没有出路</a></li><li class="n3"><a href="#e-preview-do-repositório-mente">E. 仓库预览在撒谎</a></li><li class="n3"><a href="#f-wizard-anuncia-rc">F. 向导宣布了 rc</a></li><li class="n3"><a href="#g-convite-do-criativo-não-aparece-em-projeto-criado">G. Criativo 的邀请在已创建的项目中不出现</a></li><li class="n3"><a href="#h-feed-de-atividade-genérico">H. 通用的活动信息流</a></li><li class="n3"><a href="#i-card-de-ação-mostra-o-modelo-atual-da-sessão">I. 动作卡片显示会话的当前模型</a></li><li class="n3"><a href="#j-psicólogo-roda-em-sessão-vazia">J. Psicólogo 在空会话中运行</a></li><li class="n3"><a href="#k-regra-de-negócio-duplicada-não-é-deduplicada">K. 重复的业务规则没有去重</a></li><li class="n3"><a href="#l-botão-do-rodapé-fica-obsoleto">L. 底部按钮变得过时</a></li><li class="n2"><a href="#funcionou-como-projetado-registrar-também">按设计工作的（也要记录）</a></li><li class="n3"><a href="#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada">M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败）</a></li><li class="n2"><a href="#execução-projeto-17229425-sessão-de-execução-dbb84ce8--2026-08-05">执行（项目 17229425，执行会话 dbb84ce8）——2026-08-05</a></li><li class="n3"><a href="#n-a-metade-de-execução-só-funciona-com-provider-local-p1-bloqueia-a-13b">N. 执行那一半只在 local provider 下工作（P1，阻塞 13b）</a></li><li class="n3"><a href="#o-dev-agent-nasce-no-modelo-local-mesma-raiz-do-achado-b">O. dev agent 诞生在本地模型上（与发现 B 同根）</a></li><li class="n3"><a href="#p-evento-de-bloqueio-sem-origem">P. 没有来源的阻塞事件</a></li><li class="n3"><a href="#q-agenterror-com-origem-indeterminada">Q. 带&quot;不确定来源&quot;的 agent.error</a></li><li class="n3"><a href="#r-po-gerou-histórias-sobrepostas">R. PO 生成了重叠的用户故事</a></li><li class="n2"><a href="#execução-do-hello-limpo-projeto-9c7c84f0-sessão-1f94de49--2026-08-06">hello-limpo 的执行（项目 9c7c84f0，会话 1f94de49）——2026-08-06</a></li><li class="n3"><a href="#s-o-contexto-acumulado-estoura-o-limite-do-provider-e-mata-a-execução-p1">S. 累积的上下文超出 provider 的限制并杀死执行（P1）</a></li><li class="n3"><a href="#t-a-origem-da-falha-continua-fora-das-quatro-recorrência-de-p-e-q">T. 故障来源仍在四种之外（P 和 Q 的复发）</a></li><li class="n3"><a href="#u-o-executor-de-terminal-não-tem-fronteira-de-projeto-p1">U. 终端执行器没有项目边界（P1）</a></li><li class="n3"><a href="#v-sessão-consta-closed-enquanto-a-execução-continua-p2">V. 执行仍在继续时会话显示为 closed（P2）</a></li><li class="n2"><a href="#confirmado-em-produção-nesta-rodada">本轮在生产中确认的</a></li><li class="n2"><a href="#execução-da-validação-da-fase-12--2026-08-07">Fase 12 验证的执行——2026-08-07</a></li><li class="n3"><a href="#w-dev-agent-morre-quando-a-fila-do-módulo-esvazia-p1--fechado">W. 模块队列清空时 dev agent 死掉（P1）——已关闭</a></li><li class="n2"><a href="#execução-real-com-github-remoto-fase-13b--2026-08-07">针对远程 GitHub 的真实执行（FASE 13b）——2026-08-07</a></li><li class="n3"><a href="#x-o-dev-agent-queima-o-teto-de-iterações-em-repositório-vazio-p1">X. dev agent 在空仓库中烧掉迭代上限（P1）</a></li><li class="n3"><a href="#y-search_workspace-não-distingue-vazio-de-não-encontrei--fechado">Y. search_workspace 不区分&quot;空&quot;与&quot;没找到&quot;——已关闭</a></li><li class="n3"><a href="#z-o-allowlist-de-terminal-governa-o-verbo-o-escopo-protege-só-o-caminho">Z. 终端允许列表管辖动词；范围只保护路径</a></li><li class="n3"><a href="#funcionou-como-projetado-registrar-também-1">按设计工作的（也要记录）</a></li><li class="n3"><a href="#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1">AA. 自动批准的 pr_open 没有凭据，在远程上总是失败（P1）</a></li><li class="n3"><a href="#ab-o-agente-de-gate-não-sabe-esperar-aprovação--vira-falha-infra-p1">AB. GATE 智能体不会等待审批——变成 infra 失败（P1）</a></li><li class="n3"><a href="#ac-redirecionamento-2devnull-torna-qualquer-comando-inaprovável-p1">AC. 重定向（2&gt;/dev/null）让任何命令都无法批准（P1）</a></li><li class="n3"><a href="#ad-o-agente-embrulha-comandos-em-bash--lc-e-o-allowlist-não-tem-resposta-p1">AD. 智能体把命令包在 bash -lc 里，而允许列表对此没有答案（P1）</a></li><li class="n3"><a href="#ae-o-agente-de-qa-tenta-consertar-o-código-que-julga-p2">AE. QA 智能体试图修复它所评判的代码（P2）</a></li><li class="n2"><a href="#execuções-com-dois-módulos--2026-08-08-e-2026-08-09">两个模块的执行——2026-08-08 和 2026-08-09</a></li><li class="n3"><a href="#af-dois-dev-agents-subindo-juntos-corrompem-o-workspace-um-do-outro-p1">AF. 两个 dev agent 一起启动时会损坏彼此的 workspace（P1）</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-zh-Hans.json" data-base="../"></script></body>
+</html>

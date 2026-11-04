@@ -1,309 +1,349 @@
-<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/llm-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Providers LLM | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/ru/reference/llm-providers /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Providers LLM | Brabo"/><meta data-rh=true name=description content="Единый контракт, делающий Ollama, OpenAI и Anthropic взаимозаменяемыми, с capabilities по provider и по модели, синхронизацией каталога, жизненным циклом модели, нормализованными ошибками и потолком бездействия."/><meta data-rh=true property=og:description content="Единый контракт, делающий Ollama, OpenAI и Anthropic взаимозаменяемыми, с capabilities по provider и по модели, синхронизацией каталога, жизненным циклом модели, нормализованными ошибками и потолком бездействия."/><meta data-rh=true name=keywords content="LLM,provider,OpenAI,Anthropic,Ollama,capabilities,tool calling,streaming,каталог,цена"/><link data-rh=true rel=icon href=/brabo/dev/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/ru/reference/llm-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/llm-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/llm-providers hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/llm-providers hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/llm-providers hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/llm-providers hreflang=x-default /><link rel=stylesheet href=/brabo/dev/ru/assets/css/styles.21f5d709.css /><script src=/brabo/dev/ru/assets/js/runtime~main.c3ddd01e.js defer></script><script src=/brabo/dev/ru/assets/js/main.a542ffa9.js defer></script></head><body><svg style="display: none;"><defs>
-<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
-</defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-952")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/ru/><div class=navbar__logo><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a class="navbar__item navbar__link" href=/brabo/dev/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/llm-providers target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><main class="docMainContainer_ia8v docMainContainerEnhanced_VNLS"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">Перевод от 2026-10-16; оригинал с тех пор изменился.</div><div class="theme-doc-markdown markdown"><header><h1>Providers LLM</h1></header>
+<!doctype html>
+<html lang="ru" data-locale="ru" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Providers LLM | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Меню">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Поиск" aria-label="Поиск" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Язык"><option value="../../reference/llm-providers.html">pt-BR</option><option value="../../en/reference/llm-providers.html">en</option><option value="../../ru/reference/llm-providers.html" selected>ru</option><option value="../../zh-Hans/reference/llm-providers.html">zh-Hans</option></select>
+<select data-seletor aria-label="Среда"><option value="../../../dev/ru/reference/llm-providers.html" selected>dev</option><option value="../../../prd/ru/reference/llm-providers.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Сменить тему">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Начните здесь</h2><ul><li><a href="../index.html">Введение</a></li><li><a href="../getting-started.html">Первые шаги</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">С нуля до готового результата</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Архитектура</h2><ul><li><a href="../architecture.html">Архитектура</a></li><li><a href="../adr.html">Решения (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Формат нормализованного контракта GitProvider</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — Нормализация ошибок GitProvider</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Политика повторов для удалённых providers</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Регистрация git-учётных данных пользователя</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Идемпотентный и возобновляемый bootstrap Gitflow</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Защита веток: расхождение между providers и матрица одобрения</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Механизированная политика веток</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Усыновление существующего репозитория и план как шлюз</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — Engine работает в удалённом репозитории</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — Сигнал тревоги о merge конвейера получает адресата и правило для `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — Репозиторий рождается при принятии handoff Arquiteto, и исполнение без него не начинается</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Автоматическое продвижение `dev` → `qa`, пока QA находится в тестовой фазе</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness агентов: детерминированная сборка контекста</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, инструменты, ContextManager (harness с LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — Тип сессии — это данные создания, а выполнение остаётся событием</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Согласованные пределы транспорта и эффективное окно сжатия</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — Клик отвечает при ПРИНЯТИИ команды, а ход продолжается через канал</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — Язык ответов живёт в трёх местах — учётная запись, сессия и проект, — в открытом списке BCP-47 и никогда в `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — Цикл спрашивает Jev, какой инструмент, а модель пользователя видит только оставшееся меню</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — Закрытую сессию можно открыть снова: собственный выход из терминальных состояний, в `active`, с новым событием</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Повторное открытие сессии: три решения владельца, и `developer` открывает снова</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — Сообщение, пришедшее во время идущего хода, попадает в сохраняемую очередь и читается в конце хода</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Разговорный агент Criativo в harness + фундамент handoffs</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Агент PO, backlog (epics/stories/tasks) и прослеживаемость</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Агент Arquiteto: ADR через настоящую PR, module_map и перекрёстная валидация</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent и живая панель команды (закрытие Фазы 4a)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Настоящий Psicólogo: ToolLoop, гипотезы с доказательствами и сортировка по стоимости</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: профиль владения навыками, патчи инструкций и замкнутый цикл</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Закрытие Фазы 4b (сессия 1): доказательство, которое доходит, стоимость, которая видна, анализ, который переживает kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Закрытие Фазы 4b (сессия 2): работающий каталог, дедупликация, различающая, кто отказал, и очередь, переживающая раунд</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Иерархия агентов: области, leads и делегирование</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Продвижение истории с полномочиями пользователя</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead как область и параллелизм, разрешённый пользователем</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Диаграмма C4 Arquiteto</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Условное слияние принятия handoff с включением выполнения</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Поток ролей как декларативный реестр (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — План Dev Lead приостанавливает ход до одобрения</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer входит как разговорный агент</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: код готов, спящий для автоматического запуска</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` и `delivery-metricas` становятся скриптом отчёта</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` рождается как скрипт отчёта по требованию, а не агент</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — Роль `dbre` становится двумя скриптами: линтер миграций и отчёт о резервном копировании</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Делегирование Dev Lead → dev становится данными, с переопределённым `parecerArtifactId`</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Ручной handoff агенту по выбору переиспользует предложение+принятие, а не третье состояние handoff</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — Предложение handoff получает жизненный цикл: одно ожидающее на получателя и `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — «Estou pronto — a necessidade está validada»: один клик закрывает готовность, gate `necessidade-validada` и принятие PO</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — Handoff от PO к Arquiteto принимается без клика, когда backlog покрыт и репозиторий локальный</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Одобрение плана Dev Lead активирует выполнение, а задача получает модуль, который он назначает</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — Архивированная история: колонка, а не состояние машины</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — Результат работает на машине пользователя через compose от Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates PR: QAAgent и SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Разблокировать gates QA и SecOps: gitleaks по рабочему дереву, валидируемые заключения и tool call в тексте</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Закрытие Фазы 4a: gate infra, который проверяет, и панель, которая говорит правду</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates как декларативный реестр</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — Агент gate ждёт одобрения, как ждёт dev</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — Gate переживает перезапуск</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-стратегия и AppSec как второй МОМЕНТ, а не новый агент</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` как скрипт отчёта по `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — Gate `necessidade-validada` закрывается отдельным подтверждением человека, а не самопроверкой Criativo</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set регрессионных случаев для семантического суждения агента QA Automação</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — Golden-set QA начинает работать в CI, по расписанию и еженедельно</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — План тестирования рождается после сдачи dev, а gate `implementavel` начинает судить по истории и `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Цикл gate, простаивающий более 2 ч, паркуется, и возобновить его может лишь жест человека</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Открытый вопрос становится ожидающим решения пунктом</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — Решение проекта доходит до dev и QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Инфраструктура dev agents: worktrees, git-исполнители и замок merge</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — Настоящий DevAgent: ToolLoop, бюджет на task и дисциплина блокировки</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Блокировка инициализации workspace, Monitor dev agents и наследование пределов</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent как постоянный режим выполнения</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Разблокировать реальный DevAgent: запись, терминал, ADR по модулю и бюджет по проекту</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Перепланирование dev agent по событию и circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Эксплуатируемость после dogfooding: закрытие Фазы 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — Решение в event log и порядок gate</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — Dev agent ждёт одобрения посреди цикла</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Область пути в политике терминала</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Пересмотр ADR 0065: граница внешнего эффекта перестаёт быть `deny` и становится абсолютным пределом</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — Автоматический режим снимает область путей, и только он</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — Автопилот: автоматический режим одобряет всё, кроме потолков, область сравнивается с реальной папкой исполнения, а «Всегда разрешать» записывает глагол + подкоманду</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — Автоматический режим разрешает push и PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Читаемое имя папки workspace</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — Проект выбирает, где живёт код: папка пользователя или управляемая папка</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` с тремя значениями, и workspace рождается `unverified`, когда проверяет его runner</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Навигация по локальной папке через Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — В режиме `runner` проект рождается при клике на &quot;Navegar pasta...&quot;, а не только при подтверждении</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Конвертация `execution_mode` существующего проекта: отказ при активном dev agent, перемещение `permissions.json`, вывод из эксплуатации строки контейнера</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — Единая база монтируемых проектов, смонтированная по тождеству</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — Проверка смонтированного workspace откладывается до материализации</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — База, согласованная в bootstrap, и `mounted` как локальный режим по умолчанию</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Контейнер на проект: граница перестаёт быть политикой</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Жизненный цикл контейнера: таблица состояния, без оркестратора</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — Вкладка Terminal получает реального потребителя жизненного цикла, а не терминал</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Порт Docker и доказательство упаковки, которое выбрало реализацию</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — Broker контейнеров: кто говорит с Docker сервера и почему он не принимает спецификацию</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto направляет модули в инфраструктуру: он ВЫДВИГАЕТ кандидатов, Infra ВЫБИРАЕТ</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra выбирает среди кандидатов маршрутизации, и выбор становится новой версией `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents выполняются ВНУТРИ реального контейнера проекта, а terminal получает там нижнюю границу автоодобрения</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Шлюз образа от Arquiteto (RN-105) начинает действовать во всех трёх режимах выполнения</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Глобальная страница контейнеров: потолок на загрузку в broker и `container_remove` в абсолютном потолке</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` поднимает контейнер проекта на машине пользователя</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Агенты dev только после контейнера</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — Второй корень broker и дискриминированный локатор, который его выбирает</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — Контейнер проекта работает от владельца папки, измеренного api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra поднимает контейнер при принятии handoff, шагом сервера и с засеянной автономией, и именно она передаёт работу Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — Минимальный ресурс контейнера выводится из `module_map`: каждый модуль объявляет свой, а Infra поднимает с суммой</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra наследует сеть, объявленную Arquiteto</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Локальный runner: выполнение на машине пользователя через канал Phoenix с одноразовым тикетом</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) для runner, ограниченный по построению одним маршрутом</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Распространение `@brabo/runner` через `tsup` и `npm publish`, версия внедряется только в CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Автономный бинарник `@brabo/runner` через `bun build --compile`, со встроенным нативным аддоном `.node` через реальное извлечение во временный каталог</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Настройка runner через браузер: ключ устройства Ed25519 как вторая учётная запись `runner-ticket`, прокси GitHub Releases для бинарника и File System Access API для папки, настраиваемой одним кликом</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker становится реальным предусловием режима `runner`</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — Один локальный агент, возможности, объявляемые при подключении</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — Согласованная база в runner и создание папки через канал</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — Ключ устройства машины</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — Автономный бинарник runner перестаёт обещать Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — Автономный бинарник runner перестаёт обещать Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — Git с учётными данными выполняется на ХОСТЕ runner; код выполняется в контейнере</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — Отзыв нацелен на КЛЮЧ, а не на пару `{проект, пользователь}`</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — Поток runner через браузер выводится из употребления, путь — установщик</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Собственная аутентификация: argon2id, EdDSA и ротация refresh</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — Отказ от Keycloak: собственный эмитент, service token и сессия в cookie</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — CORS, которого не было у engine, и порт как часть контракта</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Учётные данные всегда зашифрованы; проверка становится явным действием</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — Закрытый CSP в api и область проекта, удержанная в корне</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — У ключа, подписывающего `state` git OAuth, нет значения по умолчанию</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Социальный вход (GitHub/GitLab), пересматривающий backlog ADR 0031/0032</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — Настоящий SMTP в `MailSender`, за явным переключателем</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Два потолка понижения в `project_members`, а перекрытие остаётся</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — Потолок самопонижения также при удалении участника проекта</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — Потолок самоперемещения в upsert workspace и самоповышение, которое было брешью</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — Id мастер-ключа, записанный в конверте, как наблюдаемость и никогда как полномочие</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — Удаление участника workspace рождается, защищённое тем же условием</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Валюта дашборда: пока USD, ручной курс по workspace отложен</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Живой каталог, жизненный цикл модели и проверяемая цена</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Шесть providers LLM поверх базы, и Фаза 9b наконец закрыта</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Курирование моделей по workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Доказанные грани capability; &quot;для чего годится&quot; — это курирование</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Две аудитории для одного и того же расхода: счёт owner и потребление участника</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Область как уровень каскада модели и глобальный binding агента</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings в контракте LLMProvider</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` снова становится измерением расходов, а сдерживание переходит к типу</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Рейтинг моделей по возможностям, без выдуманной оценки</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Бюджет по области АДДИТИВЕН, рядом с проектом/сессией — не каскад и не новая таблица</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Обнаружение нативного Ollama в dev bootstrap: спросить один раз, сохранить в `.env`, поставить сервисы compose за profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull модели из Hugging Face: собственная таблица, подтверждение в два шага и allowlist официальных издателей — никогда `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — Предпочтение маршрутизации живёт в binding модели, путешествует вместе с ним и замораживается в metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — Реальная стоимость, которую возвращает provider, становится числом metering</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — О семантическом дубликате истории и правила предупреждает embedding с порогом, а расход попадает в metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Таблица chunks: вектор и `tsvector` в одной строке</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Гибридный поиск: веса, порог и что такое цитата</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: собственная вкладка гибридного поиска, без переименования &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j как граф знаний и шаблоны prompt, драйвер в api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` для агентов и модели Ollama, гарантированные при загрузке</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Реляционная память как проекция event log; шаблоны потребляются без трогания GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Локальная папка, приложенная через браузер, становится `chunks.scope = 'local'`, читаемым БРАУЗЕРОМ, никогда путём хоста</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — Телеметрия поиска RAG — это ТАБЛИЦА, с весами, замороженными в строке</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set попаданий RAG и gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — Golden-set RAG начинает работать в CI, по расписанию — и остаётся `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Артефакты агентов, спроецированные в файлы, в папку `docs/`</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — Anamnese снова включена: не работает без субъекта, а принятая гипотеза становится фактом профиля</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — Контракт между модулями становится версионируемым артефактом Arquiteto, и dev agent читает его вместо чужого worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Отклонение агента, которое наблюдает Anamnese, становится сигналом продукта, без персональных данных</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Экраны аутентификации, верные дизайну, и три шрифта, которые не загружались</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — Поверхность чтения кода, ограниченная и с бюджетом</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Достижимая тема и загрузка под CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Рамка экрана, и реестр вкладок намеренно расходится с handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Прямое чтение схемы engine для &quot;N агентов онлайн&quot; на дашборде</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (и будущие типы) генерируются из контракта OpenAPI, а не копируются вручную</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx`, разделённый на пять механических PR, объявленных заранее</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Группировка состояния канала хода, извлечённая в `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` разделён на файл на раздел, за barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — Страница проекта навигируется вертикальной рейкой, а вкладка Código перестаёт сама сворачивать sidebar</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` меньше 1 000 строк, за десять механических PR, а замок — только после</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — Тёмная тема становится нейтрально-чёрной, и долг контраста заканчивается</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Анимация текста с `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Одна навигация: боковая панель поглощает рельс проекта</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Фаза 5 (сессия 1): production-образы, compose.prod, CI и smoke-тест</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Фаза 5 (сессия 2): деплой в Kubernetes с Kustomize, метрика очереди и локальный overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Фаза 5 (сессия 3): graceful shutdown, OpenTelemetry, метрики, логи и дашборды</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, усиление api, открытая поверхность и релиз</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace без коллектора и путь между слоями в логе</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Наблюдаемость в локальном Compose: метрики и журналы, без трассировки</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — Установщик одной строкой, с выбранным источником и маркером</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Резервное копирование и восстановление томов для compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: триггер, который упоминают десять документов и не создаёт ни один</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — Первая учётная запись рождается в терминале, а локальный агент поднимается сопряжённым</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — Compose установщика едет вместе с ним, как подписанный asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — Экран предлагает только тот режим, который выполняет установка, а у установки через Release нет broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — Broker становится пятым опубликованным образом, а установщик СПРАШИВАЕТ, включать ли его</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — Назначением S3 локального overlay перестаёт быть MinIO и становится SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — Dev-compose становится `brabo-dev`, и dev отказывается подниматься рядом с установкой</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — Engine переходит на Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint и валидация генерируемого конвейера CI</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Образы, публикуемые в GHCR с каждым финальным тегом, и production overlay, закреплённый по digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — Браузерный E2E против продакшен-compose, в пакете вне workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — Схема, разделённая по доменным агрегатам, за barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Повторяющийся timeout `pnpm audit` — принятый риск; находка по-прежнему отклоняет</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Подпись опубликованных артефактов</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Сторонний образ входит по digest, и lint проваливает того, кто забудет</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — Релиз сканирует Trivy то, что публикует, по digest, до подписи</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — Тег стороннего образа живёт ВНУТРИ ссылки, перед digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — Образ workflows берётся из compose, и Dependabot для образов включается</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Непрерывная синхронизация документации</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — Справочник API выводится из кода, а табличный тест требует метаданных</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Документация, публикуемая по ступеням, в подкаталоге Pages</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Симметричная публикация по ступеням и корень, который предлагает выбор</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — Публикуемый путь называет окружение, а не ветку</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` получает собственный lockfile, вне `pnpm audit` продукта</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — Индекс ADR по темам, с темой вне ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — Справочник API становится страницей Redoc</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Четыре языка, с pt-BR как ИСТОЧНИКОМ и языком по умолчанию: документация и интерфейс на португальском, английском, русском и упрощённом китайском</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Каждый ADR называется «ADR NNNN — заголовок»</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — Справочник входит в перевод</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — Страница API переводится по каталогу</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 Правила</h2><ul><li><a href="../business-rules.html">Бизнес-правила</a></li><li><a href="../business-rules/custo.html">Стоимость и metering</a></li><li><a href="../business-rules/autenticacao.html">Аутентификация</a></li></ul></section><section><h2>📖 Справочник</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Открытая поверхность api</a></li><li><span>Справочник API</span></li></ul></section><section><h2>💡 Пояснения</h2><ul><li><span>Процесс и конвейер</span><ul><li><a href="../explanation/documentation-workflow.html">Синхронизация документации</a></li><li><a href="../explanation/branching-policy.html">Политика веток</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">Цепочка поставок CI</a></li><li><a href="../explanation/gates.html">Gates и то, как они измеряются</a></li><li><a href="../explanation/observability.html">Наблюдаемость</a></li><li><a href="../explanation/modelo-de-time.html">Модель команды и поток результатов</a></li></ul></li><li><span>Проверки и измерения</span><ul><li><a href="../explanation/primeiro-dogfooding.html">Первый dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Реальное выполнение (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Находки реального прогона конвейера</a></li><li><a href="../explanation/validacao-fase-12.html">Проверка Фазы 12</a></li><li><a href="../explanation/validacao-real.html">Реальная валидация (13b)</a></li><li><a href="../explanation/aceite-providers.html">Приёмка providers</a></li><li><a href="../explanation/medicao-do-idioma.html">Измерение эвристики языка</a></li><li><a href="../explanation/medicao-do-jev.html">Измерение маршрутизатора инструментов Jev</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Аудит: fluxo.yml × код (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Визуальный аудит до и после Rodada 29</a></li></ul></li><li><span>История фаз</span><ul><li><a href="../explanation/historico-de-fases.html">История фаз</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">ФАЗА 28 — папка пользователя</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — установка одной строкой</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — локальный агент машины</a></li><li><a href="../explanation/backlog.html">Backlog после триажа</a></li></ul></li><li><span>Локализация</span><ul><li><a href="../explanation/localizacao.html">Локализация</a></li><li><a href="../explanation/localizacao-en.html">Локализация — английский (en)</a></li><li><a href="../explanation/localizacao-ru.html">Локализация — русский (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Локализация — упрощённый китайский (zh-Hans)</a></li></ul></li><li><span>Технические заметки</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — не принят</a></li></ul></li></ul></section><section><h2>🛠️ Эксплуатация</h2><ul><li><a href="../runbook.html">Руководство по эксплуатации</a></li></ul></section><section><h2>📚 Словарь</h2><ul><li><a href="../glossary.html">Глоссарий</a></li></ul></section><section><h2>🤝 Участие</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Как внести вклад</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Где попросить помощи</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Сообщить об уязвимости</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="providers-llm">Providers LLM</h1>
 <p>Каждый агент и каждый чат Brabo говорит с моделью через единый контракт.
 Вызывающий не знает, что на другой стороне: Ollama на диске, API OpenAI или
 API Anthropic, — и не должен знать.</p>
-<p>Решено в <a class="" href=/brabo/dev/ru/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>,
-с потолком бездействия, унаследованным от <a class="" href=/brabo/dev/ru/adr/0020-destravar-gates-qa-secops>ADR 0020</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=контракт>Контракт<a href=#контракт class=hash-link aria-label="Прямая ссылка на Контракт" title="Прямая ссылка на Контракт" translate=no>​</a></h2>
+<p>Решено в <a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041</a>,
+с потолком бездействия, унаследованным от <a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020</a>.</p>
+<h2 id="контракт">Контракт</h2>
 <p><code>LLMProvider</code> (<code>apps/api/src/application/ports/llm-provider.port.ts</code>) имеет одну
 ОБЯЗАТЕЛЬНУЮ операцию, и она всегда потоковая:</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>class</span><span class="token plain"> </span><span class="token class-name" style=color:var(--syntax-type)>LLMProvider</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> name</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> LLMProviderName</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> capabilities</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> LLMProviderCapabilities</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token function" style=color:var(--syntax-function)>chat</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    messages</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> ChatMessage</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    options</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> ChatOptions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> AsyncGenerator</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">ChatStreamChunk</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token doc-comment comment" style=color:var(--syntax-comment);font-style:italic>/** Only when `capabilities.listModels` (Phase 9c). */</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  listModels</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain">apiKey</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>string</span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>Promise</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">ModeloDoCatalogo</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token doc-comment comment" style=color:var(--syntax-comment);font-style:italic>/** Only when `capabilities.embeddings` (ADR 0075). */</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  embed</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    inputs</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>string</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    options</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> EmbeddingOptions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>Promise</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">EmbeddingResult</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-ts">abstract class LLMProvider {
+  abstract readonly name: LLMProviderName;
+  abstract readonly capabilities: LLMProviderCapabilities;
+  abstract chat(
+    messages: ChatMessage[],
+    options: ChatOptions,
+  ): AsyncGenerator&lt;ChatStreamChunk&gt;;
+
+  /** Only when `capabilities.listModels` (Phase 9c). */
+  listModels?(apiKey?: string): Promise&lt;ModeloDoCatalogo[]&gt;;
+  /** Only when `capabilities.embeddings` (ADR 0075). */
+  embed?(
+    inputs: readonly string[],
+    options: EmbeddingOptions,
+  ): Promise&lt;EmbeddingResult&gt;;
+}
+</code></pre>
 <p>Обе необязательные операции следуют одному <strong>двустороннему</strong> контракту: кто
 объявляет capability, реализует метод, а кто не объявляет — не выставляет его.
 Потребитель деградирует, проверяя capability, а не обнаруживая её по сбою.</p>
 <p>Отдельного метода для tool calling или подсчёта токенов нет: инструменты идут в
 <code>options.tools</code>, и всё возвращается тем же потоком, как один из четырёх типов
 <code>ChatStreamChunk</code>.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>chunk<th>когда<tbody><tr><td><code>text_delta</code><td>фрагмент сгенерированного текста<tr><td><code>tool_calls</code><td>модель запросила инструменты (один chunk, не инкрементальный)<tr><td><code>usage</code><td>подсчёт токенов с пометкой <code>estimated</code>; и, когда ответ это сообщает, реальная стоимость (<code>costMicros</code>), модель, которая обслужила (<code>resolvedModel</code>), id ответа (<code>generationId</code>) и ЧАСТИ подсчёта токенов из кэша/рассуждения (<code>cachedInputTokens</code>, <code>reasoningTokens</code>, RN-666) — <a class="" href=/brabo/dev/ru/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a><tr><td><code>error</code><td>сбой, классифицированный по <code>code</code> — <strong>никогда не исключение</strong></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>chunk</th>
+<th>когда</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text_delta</code></td>
+<td>фрагмент сгенерированного текста</td>
+</tr>
+<tr>
+<td><code>tool_calls</code></td>
+<td>модель запросила инструменты (один chunk, не инкрементальный)</td>
+</tr>
+<tr>
+<td><code>usage</code></td>
+<td>подсчёт токенов с пометкой <code>estimated</code>; и, когда ответ это сообщает, реальная стоимость (<code>costMicros</code>), модель, которая обслужила (<code>resolvedModel</code>), id ответа (<code>generationId</code>) и ЧАСТИ подсчёта токенов из кэша/рассуждения (<code>cachedInputTokens</code>, <code>reasoningTokens</code>, RN-666) — <a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188</a></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>сбой, классифицированный по <code>code</code> — <strong>никогда не исключение</strong></td>
+</tr>
+</tbody>
+</table></div>
 <p>Сбой становится chunk, а не исключением, потому что ход уже потратил токены:
 metering должен произойти, даже когда ответ не пришёл.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=capabilities-два-слоя>Capabilities: два слоя<a href=#capabilities-два-слоя class=hash-link aria-label="Прямая ссылка на Capabilities: два слоя" title="Прямая ссылка на Capabilities: два слоя" translate=no>​</a></h2>
+<h2 id="capabilities-два-слоя">Capabilities: два слоя</h2>
 <p><strong>Слой provider</strong> — потолок того, что умеет этот backend. <strong>Слой модели</strong> — то,
 что умеет эта строка таблицы <code>models</code>. Модель может быть беднее provider, но
 никогда не богаче.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>capability<th>где хранится<th>для чего<tbody><tr><td><code>streaming</code><td>provider + <code>models.supports_streaming</code><td>—<tr><td><code>toolCalling</code><td>provider + <code>models.supports_tool_calling</code><td>отклонять binding агента (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-040>RN-040</a>)<tr><td><code>listModels</code><td>только provider<td>включать/пропускать синхронизацию каталога (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-043>RN-043</a>)<tr><td><code>embeddings</code><td>provider + <code>supportsEmbeddings</code> в строке каталога<td>разрешать/отклонять вызов embedding (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-190>RN-190</a>)<tr><td><code>promptCaching</code><td>provider + фильтр модели в hook конфигурации (<code>anthropic/*</code> в OpenRouter)<td>помечать <code>cache_control</code> на стабильном префиксе (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-892>RN-892</a>); <code>true</code> только в OpenRouter, доказано smoke 2026-10-15<tr><td><code>context_length</code><td><code>models.context_window</code><td>бюджет контекста<tr><td><code>vision</code><td><code>models.supports_vision</code><td>фильтровать каталог (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-056>RN-056</a>)<tr><td><code>reasoning</code><td><code>models.supports_reasoning</code><td>то же<tr><td><code>image output</code><td><code>models.generates_image</code><td>то же</table>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=три-грани-модальности>Три грани модальности<a href=#три-грани-модальности class=hash-link aria-label="Прямая ссылка на Три грани модальности" title="Прямая ссылка на Три грани модальности" translate=no>​</a></h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>capability</th>
+<th>где хранится</th>
+<th>для чего</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>streaming</code></td>
+<td>provider + <code>models.supports_streaming</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>toolCalling</code></td>
+<td>provider + <code>models.supports_tool_calling</code></td>
+<td>отклонять binding агента (<a href="../business-rules/custo.html#rn-040">RN-040</a>)</td>
+</tr>
+<tr>
+<td><code>listModels</code></td>
+<td>только provider</td>
+<td>включать/пропускать синхронизацию каталога (<a href="../business-rules/custo.html#rn-043">RN-043</a>)</td>
+</tr>
+<tr>
+<td><code>embeddings</code></td>
+<td>provider + <code>supportsEmbeddings</code> в строке каталога</td>
+<td>разрешать/отклонять вызов embedding (<a href="../business-rules/custo.html#rn-190">RN-190</a>)</td>
+</tr>
+<tr>
+<td><code>promptCaching</code></td>
+<td>provider + фильтр модели в hook конфигурации (<code>anthropic/*</code> в OpenRouter)</td>
+<td>помечать <code>cache_control</code> на стабильном префиксе (<a href="../business-rules/custo.html#rn-892">RN-892</a>); <code>true</code> только в OpenRouter, доказано smoke 2026-10-15</td>
+</tr>
+<tr>
+<td><code>context_length</code></td>
+<td><code>models.context_window</code></td>
+<td>бюджет контекста</td>
+</tr>
+<tr>
+<td><code>vision</code></td>
+<td><code>models.supports_vision</code></td>
+<td>фильтровать каталог (<a href="../business-rules/custo.html#rn-056">RN-056</a>)</td>
+</tr>
+<tr>
+<td><code>reasoning</code></td>
+<td><code>models.supports_reasoning</code></td>
+<td>то же</td>
+</tr>
+<tr>
+<td><code>image output</code></td>
+<td><code>models.generates_image</code></td>
+<td>то же</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="три-грани-модальности">Три грани модальности</h3>
 <p><code>supports_vision</code>, <code>supports_reasoning</code> и <code>generates_image</code> — <strong>факт
 provider</strong>: они берутся из удалённого каталога при синхронизации, с тем же
 fallback, что и tool calling, — удалённое, затем локальное, затем <code>false</code>.
 Сегодня их публикует только OpenRouter:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>грань<th>откуда берётся в OpenRouter<th>в каталоге от 2026-08-04<tbody><tr><td><code>supports_vision</code><td><code>architecture.input_modalities</code> содержит <code>image</code><td>181 из 338<tr><td><code>generates_image</code><td><code>architecture.output_modalities</code> содержит <code>image</code><td>11 из 338<tr><td><code>supports_reasoning</code><td><code>supported_parameters</code> содержит <code>reasoning</code><td>213 из 338</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>грань</th>
+<th>откуда берётся в OpenRouter</th>
+<th>в каталоге от 2026-08-04</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>supports_vision</code></td>
+<td><code>architecture.input_modalities</code> содержит <code>image</code></td>
+<td>181 из 338</td>
+</tr>
+<tr>
+<td><code>generates_image</code></td>
+<td><code>architecture.output_modalities</code> содержит <code>image</code></td>
+<td>11 из 338</td>
+</tr>
+<tr>
+<td><code>supports_reasoning</code></td>
+<td><code>supported_parameters</code> содержит <code>reasoning</code></td>
+<td>213 из 338</td>
+</tr>
+</tbody>
+</table></div>
 <p>Принимать изображение и <strong>создавать</strong> изображение — разные оси: прочитать
 диаграмму и нарисовать её решают разные задачи.</p>
 <p>Парсер <strong>опускает</strong> поле, когда provider не объявляет модальность, и
 <code>undefined</code> сохраняет локальное значение при синхронизации — отсутствие
 объявления не есть объявление отсутствия. Поэтому экран использует грани только
 как положительный фильтр: <code>false</code> означает «provider не объявил», а не «модель
-не умеет» (<a class="" href=/brabo/dev/ru/adr/0051-facetas-de-capability-e-curadoria-por-uso>ADR 0051</a>).</p>
-<p>:::caution Это НЕ покрывает «лучше для кода»
-Ни один каталог provider не публикует, для чего модель хороша. Это кураторство
+не умеет» (<a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051</a>).</p>
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">Это НЕ покрывает «лучше для кода»</p>
+<p>Ни один каталог provider не публикует, для чего модель хороша. Это кураторство
 того, кто эксплуатирует систему, и оно хранится в <code>workspace_models.uses</code>, по
-workspace (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-057>RN-057</a>) — это не capability, и
-выводить её из имени модели было бы догадкой, переодетой в данные.
-:::</p>
-<!-- -->
+workspace (<a href="../business-rules/custo.html#rn-057">RN-057</a>) — это не capability, и
+выводить её из имени модели было бы догадкой, переодетой в данные.</p>
+</div>
+<!-- BEGIN:GENERATED:providers-capabilities -->
 <blockquote>
 <p>⚠️ Блок сгенерирован <code>pnpm docs:generate</code>. Не редактируйте вручную — следующая сборка его перезапишет.</p>
 </blockquote>
 <p>Прочитано из литералов <code>capabilities</code> в <code>apps/api/src/infrastructure/llm/</code> — провайдеров: <strong>11</strong>.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>провайдер<th>streaming<th>tool calling<th>list_models<th>embeddings<th>предпочтение маршрутизации<th>учётные данные<th>происхождение моделей<th>особенности кратко<th>источник<tbody><tr><td><code>9router</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync<td>URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities <code>false</code>; Usage corrigido; Token Saver desligado; Raciocínio redigido no OAuth do Claude; Camuflagem das ferramentas no OAuth do Claude; Qual upstream serviu<td><code>apps/api/src/infrastructure/llm/nine-router-provider.ts</code><tr><td><code>anthropic</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code><tr><td><code>bitdeer</code><td>да<td>да<td>нет<td>нет<td>нет<td>API-ключ<td>seed<td><code>Authorization: Bearer &lt;chave></code> CONFIRMADO; <code>GET /v1/models</code> existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada<td><code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code><tr><td><code>deepinfra</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync + seed<td>O catálogo é PÚBLICO — sem autenticação nenhuma; <code>stream_options.include_usage</code> confirmado como suportado; Erro no formato padrão<td><code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code><tr><td><code>nvidia-nim</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync + seed<td>Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; <code>stream_options.include_usage</code> não confirmado<td><code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code><tr><td><code>ollama</code><td>да<td>да<td>да<td>да<td>нет<td>нет (локально)<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code><tr><td><code>openai</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code><tr><td><code>opencode-zen</code><td>да<td>нет<td>нет<td>нет<td>нет<td>API-ключ<td>seed<td>Sem teste de conexão da credencial; Capabilities <code>false</code><td><code>apps/api/src/infrastructure/llm/opencode-zen-provider.ts</code><tr><td><code>openrouter</code><td>да<td>да<td>да<td>нет<td>да<td>API-ключ<td>sync<td>Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em <code>usage.cost</code>; Alias de roteamento livre (<code>~…</code>) é sincronizado mas não pode ser curado<td><code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code><tr><td><code>together</code><td>да<td>да<td>да<td>нет<td>нет<td>API-ключ<td>sync + seed<td>Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; <code>stream_options.include_usage</code> não confirmado; 429 leva <code>error_type: dynamic_request_limited | dynamic_token_limited</code><td><code>apps/api/src/infrastructure/llm/together-provider.ts</code><tr><td><code>vultr</code><td>да<td>да<td>нет<td>нет<td>нет<td>API-ключ<td>seed<td>Tool calling CONFIRMADO com exemplo real; Sufixo <code>-normalize</code><td><code>apps/api/src/infrastructure/llm/vultr-provider.ts</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>провайдер</th>
+<th>streaming</th>
+<th>tool calling</th>
+<th>list_models</th>
+<th>embeddings</th>
+<th>предпочтение маршрутизации</th>
+<th>учётные данные</th>
+<th>происхождение моделей</th>
+<th>особенности кратко</th>
+<th>источник</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>9router</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync</td>
+<td>URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities <code>false</code>; Usage corrigido; Token Saver desligado; Raciocínio redigido no OAuth do Claude; Camuflagem das ferramentas no OAuth do Claude; Qual upstream serviu</td>
+<td><code>apps/api/src/infrastructure/llm/nine-router-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>anthropic</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>bitdeer</code></td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>seed</td>
+<td><code>Authorization: Bearer &lt;chave&gt;</code> CONFIRMADO; <code>GET /v1/models</code> existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada</td>
+<td><code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>deepinfra</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync + seed</td>
+<td>O catálogo é PÚBLICO — sem autenticação nenhuma; <code>stream_options.include_usage</code> confirmado como suportado; Erro no formato padrão</td>
+<td><code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>nvidia-nim</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync + seed</td>
+<td>Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; <code>stream_options.include_usage</code> não confirmado</td>
+<td><code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>ollama</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет (локально)</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>openai</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>opencode-zen</code></td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>seed</td>
+<td>Sem teste de conexão da credencial; Capabilities <code>false</code></td>
+<td><code>apps/api/src/infrastructure/llm/opencode-zen-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>openrouter</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>да</td>
+<td>API-ключ</td>
+<td>sync</td>
+<td>Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em <code>usage.cost</code>; Alias de roteamento livre (<code>~…</code>) é sincronizado mas não pode ser curado</td>
+<td><code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>together</code></td>
+<td>да</td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>sync + seed</td>
+<td>Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; <code>stream_options.include_usage</code> não confirmado; 429 leva <code>error_type: dynamic_request_limited | dynamic_token_limited</code></td>
+<td><code>apps/api/src/infrastructure/llm/together-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>vultr</code></td>
+<td>да</td>
+<td>да</td>
+<td>нет</td>
+<td>нет</td>
+<td>нет</td>
+<td>API-ключ</td>
+<td>seed</td>
+<td>Tool calling CONFIRMADO com exemplo real; Sufixo <code>-normalize</code></td>
+<td><code>apps/api/src/infrastructure/llm/vultr-provider.ts</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>Провайдер без <code>list_models</code> ПРОПУСКАЕТСЯ синхронизацией каталога, с причиной
 в отчёте — это никогда не считается «каталог вернулся пустым».
 «Происхождение моделей»: <code>sync</code> находит сам, <code>seed</code> приходит только через
@@ -316,33 +356,33 @@ workspace (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-057>RN-057</a>
 «предпочтение маршрутизации» — возможность из ADR 0166 (хаб выбирает upstream
 по <code>price</code>, <code>throughput</code> или <code>latency</code>), по тому же правилу: <code>да</code> только после
 smoke-теста против реального API, вернувшего выбранный upstream.</p>
-<!-- -->
+<!-- END:GENERATED:providers-capabilities -->
 <p>Значение по умолчанию <code>supports_tool_calling</code> — <code>false</code>. Это намеренно: модель,
 обнаруженная автоматической синхронизацией (Фаза 9c), входит без обещания,
 которое никто не проверял. Модели seed объявляют capability явно, и migration
 <code>0026</code> делает тот же backfill в уже существовавших базах — нацеливаясь на семь
 строк seed, а не слепым <code>UPDATE</code> по таблице.</p>
-<p>:::caution Модель, добавленная вручную
-У <code>models</code> нет HTTP-endpoint для редактирования: модель добавляют через
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">Модель, добавленная вручную</p>
+<p>У <code>models</code> нет HTTP-endpoint для редактирования: модель добавляют через
 <code>seed.ts</code> или прямым SQL. В обоих случаях <strong>объявите
 <code>supports_tool_calling</code></strong>, если собираетесь привязать эту модель к агенту —
 значение по умолчанию <code>false</code> приводит к отклонению binding, в том числе когда
-на модель указывает <code>DEMO_QA_MODEL</code> в демонстрационных скриптах gate.
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=каталог-моделей-обнаружение-и-жизненный-цикл>Каталог моделей: обнаружение и жизненный цикл<a href=#каталог-моделей-обнаружение-и-жизненный-цикл class=hash-link aria-label="Прямая ссылка на Каталог моделей: обнаружение и жизненный цикл" title="Прямая ссылка на Каталог моделей: обнаружение и жизненный цикл" translate=no>​</a></h2>
+на модель указывает <code>DEMO_QA_MODEL</code> в демонстрационных скриптах gate.</p>
+</div>
+<h2 id="каталог-моделей-обнаружение-и-жизненный-цикл">Каталог моделей: обнаружение и жизненный цикл</h2>
 <p>Кто объявляет <code>listModels</code>, умеет перечислять собственный каталог. База
 совместимости реализует <code>GET /models</code> того диалекта, на котором она уже
 говорит, с парсингом, заменяемым через конфигурацию (<code>parseCatalogo</code>), — hub
 возвращает цену и окно в той же строке, и это не может стать <code>if</code> внутри
 стандартного парсинга.</p>
 <p><strong>Ollama и Anthropic теперь объявляют <code>true</code></strong> — backlog, который
-<a class="" href=/brabo/dev/ru/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a>
+<a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042</a>
 оставил открытым. Они объявляли <code>false</code> не из-за отсутствия endpoint, а потому
 что формат не был сверен с официальной документацией, а правило — не
 программировать против угаданного контракта. Оба формата были сверены до того,
 как была написана хоть одна строка кода:</p>
 <ul>
-<li class=""><strong>Anthropic</strong> — <code>GET /v1/models</code> возвращает
+<li><strong>Anthropic</strong> — <code>GET /v1/models</code> возвращает
 <code>{ data: [{ id, display_name, max_input_tokens, ... }], has_more, last_id }</code>,
 с пагинацией <strong>по курсору</strong> (не по offset): <code>last_id</code> становится <code>after_id</code>
 следующей страницы, с <code>limit</code> от 1 до 1000. Страницы обходит
@@ -350,52 +390,52 @@ smoke-теста против реального API, вернувшего вы�
 цикл курсора вручную значило бы переписывать код, поддерживаемый поставщиком.
 Цена <strong>не приходит</strong> в ответе, поэтому модель входит без цены, а не с
 выдуманной.</li>
-<li class=""><strong>Ollama</strong> — <code>GET /api/tags</code> возвращает <code>{ models: [{ name, model, size, ... }] }</code>
+<li><strong>Ollama</strong> — <code>GET /api/tags</code> возвращает <code>{ models: [{ name, model, size, ... }] }</code>
 на локальном хосте (<code>OLLAMA_HOST</code>, по умолчанию <code>http://localhost:11434</code>).
 Без цены, как и подобает локальному runtime.</li>
 </ul>
 <p>Оба БРОСАЮТ исключение при ошибке, как требует контракт: пустой список
 реконсиляция прочитала бы как «всё пропало» и сделала бы весь каталог
-недоступным (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-043>RN-043</a>).</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=две-независимые-оси-доступности>Две независимые оси доступности<a href=#две-независимые-оси-доступности class=hash-link aria-label="Прямая ссылка на Две независимые оси доступности" title="Прямая ссылка на Две независимые оси доступности" translate=no>​</a></h3>
+недоступным (<a href="../business-rules/custo.html#rn-043">RN-043</a>).</p>
+<h3 id="две-независимые-оси-доступности">Две независимые оси доступности</h3>
 <p>У модели два НЕЗАВИСИМЫХ состояния, и их смешение было дырой, которую закрыла
 Фаза 9c:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>где<th>кто пишет<th>что означает<tbody><tr><td><code>workspace_models.is_active</code><td><strong>owner этого workspace</strong>, через экран кураторства<td>появляется в селекторе и может получить новый binding<tr><td><code>models.availability</code><td><strong>синхронизация</strong>, сама<td><code>unavailable</code> = исчезла из каталога provider</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>где</th>
+<th>кто пишет</th>
+<th>что означает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>workspace_models.is_active</code></td>
+<td><strong>owner этого workspace</strong>, через экран кураторства</td>
+<td>появляется в селекторе и может получить новый binding</td>
+</tr>
+<tr>
+<td><code>models.availability</code></td>
+<td><strong>синхронизация</strong>, сама</td>
+<td><code>unavailable</code> = исчезла из каталога provider</td>
+</tr>
+</tbody>
+</table></div>
 <p>Модель может быть активной И недоступной одновременно — именно это наложение
 порождает предупреждение на экране. Когда provider возвращает её, выбор owner
 остаётся в силе: синхронизация никогда не включает обратно то, что кто-то
 намеренно выключил.</p>
 <p>Обе оси перестали жить в одной таблице в
-<a class="" href=/brabo/dev/ru/adr/0049-curadoria-de-modelo-por-workspace>ADR 0049</a>. Кураторство —
+<a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049</a>. Кураторство —
 <strong>по workspace</strong>: <code>models.is_active</code> была колонкой всей установки, и owner
 workspace A, включая модель, включал её и для B
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-052>RN-052</a>). В <code>models</code> осталось то, что
+(<a href="../business-rules/custo.html#rn-052">RN-052</a>). В <code>models</code> осталось то, что
 является фактом provider: имя, цена, capabilities и доступность, одинаковые для
 всех.</p>
 <p><strong>Отсутствие строки в <code>workspace_models</code> ЕСТЬ «выключено».</strong> Отдельного
 состояния «никогда не решалось» нет, и именно так RN-043 продолжает действовать
 без какой-либо колонки, которую синхронизация могла бы затереть.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=третья-ось-для-чего-workspace-использует-модель>Третья ось: для чего workspace использует модель<a href=#третья-ось-для-чего-workspace-использует-модель class=hash-link aria-label="Прямая ссылка на Третья ось: для чего workspace использует модель" title="Прямая ссылка на Третья ось: для чего workspace использует модель" translate=no>​</a></h3>
+<h3 id="третья-ось-для-чего-workspace-использует-модель">Третья ось: для чего workspace использует модель</h3>
 <p><code>workspace_models.uses</code> хранит кураторство ПО ИСПОЛЬЗОВАНИЮ — <code>codigo</code>,
 <code>documentacao</code>, <code>analise</code>, <code>imagem</code>, <code>conversa</code> — закрытый словарь в
 <code>apps/api/src/domain/llm/model-uses.ts</code>. Этого не публикует ни один каталог:
@@ -403,75 +443,75 @@ provider объявляет capability, но какая модель хорош�
 этой команды</strong>, выясняется только использованием.</p>
 <p>Она не смешивается с <code>is_active</code>:</p>
 <ul>
-<li class="">отметка использования <strong>не включает</strong> модель — новая строка рождается с явным
+<li>отметка использования <strong>не включает</strong> модель — новая строка рождается с явным
 <code>is_active = false</code>, вопреки DEFAULT <code>true</code> колонки;</li>
-<li class="">смена использования <strong>не выключает</strong> то, что было включено;</li>
-<li class="">список <strong>заменяет</strong> предыдущий (пустой список снимает все отметки).</li>
+<li>смена использования <strong>не выключает</strong> то, что было включено;</li>
+<li>список <strong>заменяет</strong> предыдущий (пустой список снимает все отметки).</li>
 </ul>
 <p>Маршрут: <code>POST /workspaces/:workspaceId/models/uses</code>, <code>owner</code>
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-057>RN-057</a>).</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=три-правила-реконсиляции>Три правила реконсиляции<a href=#три-правила-реконсиляции class=hash-link aria-label="Прямая ссылка на Три правила реконсиляции" title="Прямая ссылка на Три правила реконсиляции" translate=no>​</a></h3>
+(<a href="../business-rules/custo.html#rn-057">RN-057</a>).</p>
+<h3 id="три-правила-реконсиляции">Три правила реконсиляции</h3>
 <ol>
-<li class=""><strong>Новая модель входит НЕАКТИВНОЙ</strong> — без строки кураторства ни в одном
+<li><strong>Новая модель входит НЕАКТИВНОЙ</strong> — без строки кураторства ни в одном
 workspace. В каталоге сотни строк; вывалить их все активными сделало бы выбор
 невозможным и включило бы дорогую модель без чьего-либо решения.</li>
-<li class=""><strong>Исчезнувшая модель становится <code>unavailable</code>, никогда не удаляется.</strong>
+<li><strong>Исчезнувшая модель становится <code>unavailable</code>, никогда не удаляется.</strong>
 <code>model_bindings</code> и <code>token_usage</code> ссылаются на строку; удаление унесло бы с
 собой историю затрат.</li>
-<li class=""><strong>Сбой provider ничего не делает недоступным.</strong> 401 означает «не знаю, что
+<li><strong>Сбой provider ничего не делает недоступным.</strong> 401 означает «не знаю, что
 там есть», а не «там ничего нет» — пометить всё исчезнувшим из-за отозванного
 ключа разом обрушило бы каждый binding этого provider. Provider ПРОПУСКАЕТСЯ,
 с источником сбоя (<code>infra</code> | <code>modelo</code>) в отчёте.</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=и-два-правила-реконсиляции-цены>И два правила реконсиляции цены<a href=#и-два-правила-реконсиляции-цены class=hash-link aria-label="Прямая ссылка на И два правила реконсиляции цены" title="Прямая ссылка на И два правила реконсиляции цены" translate=no>​</a></h3>
-<ol start=4>
-<li class=""><strong><code>manual_pricing</code> побеждает удалённый каталог.</strong> Строка с такой пометкой
+<h3 id="и-два-правила-реконсиляции-цены">И два правила реконсиляции цены</h3>
+<ol start="4">
+<li><strong><code>manual_pricing</code> побеждает удалённый каталог.</strong> Строка с такой пометкой
 содержит число, которое кто-то ввёл по документации provider, и
 синхронизация его не трогает — даже когда каталог приносит собственную цену
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-051>RN-051</a>).</li>
-<li class=""><strong>Каждое изменение цены, сделанное синхронизацией, оставляет строку в
+(<a href="../business-rules/custo.html#rn-051">RN-051</a>).</li>
+<li><strong>Каждое изменение цены, сделанное синхронизацией, оставляет строку в
 <code>model_price_changes</code></strong>, с источником <code>sync</code> и пустым <code>changed_by</code>
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-044>RN-044</a>).</li>
+(<a href="../business-rules/custo.html#rn-044">RN-044</a>).</li>
 </ol>
 <p>НОВАЯ модель, обнаруженная синхронизацией, рождается с <code>manual_pricing = false</code>,
 когда каталог сообщил цену — источник синхронизация, и именно она поддерживает
 строку в актуальном состоянии. Обнаруженная БЕЗ цены, рождается с <code>true</code>: строка
 ждёт, что кто-то введёт цену, и пометка уже защищает это число от первого
 каталога, который случайно сообщит цену.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=каскад-перепроверяет-capability-при-спуске-по-уровням>Каскад перепроверяет capability при спуске по уровням<a href=#каскад-перепроверяет-capability-при-спуске-по-уровням class=hash-link aria-label="Прямая ссылка на Каскад перепроверяет capability при спуске по уровням" title="Прямая ссылка на Каскад перепроверяет capability при спуске по уровням" translate=no>​</a></h3>
+<h3 id="каскад-перепроверяет-capability-при-спуске-по-уровням">Каскад перепроверяет capability при спуске по уровням</h3>
 <p><code>resolveBinding</code> пропускает недоступного кандидата и следует приоритету. Когда
 ход несёт инструменты, он также пропускает того, кто не умеет tool calling, <strong>на
 каждом уровне</strong> — без этого fallback агента приземлился бы на модель только для
-чата и молча нарушил бы <a class="" href=/brabo/dev/ru/business-rules/custo#rn-040>RN-040</a>: сбой
+чата и молча нарушил бы <a href="../business-rules/custo.html#rn-040">RN-040</a>: сбой
 проявился бы позже, в ToolLoop, как «агент остановился сам». Пропущенное
 возвращается в <code>skipped</code>, и интерфейс это показывает.</p>
-<p>Приоритет — <code>session > agent > area > project > workspace</code>
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-020>RN-020</a>). <code>area</code> появилась в ФАЗЕ 23: это
+<p>Приоритет — <code>session &gt; agent &gt; area &gt; project &gt; workspace</code>
+(<a href="../business-rules/custo.html#rn-020">RN-020</a>). <code>area</code> появилась в ФАЗЕ 23: это
 УМОЛЧАНИЕ, которое разделяют lead и субагенты его области, а собственный binding
 агента — это расхождение, которое его перекрывает; он проходит ту же
 перепроверку capability выше, включая требование tool calling
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-102>RN-102</a>). Области <code>agent</code> и <code>area</code> стали
-ПО ПРОЕКТУ (составной <code>scope_id</code>, <code>&lt;projectId>:&lt;slug|chave></code>) — раньше <code>agent</code>
+(<a href="../business-rules/custo.html#rn-102">RN-102</a>). Области <code>agent</code> и <code>area</code> стали
+ПО ПРОЕКТУ (составной <code>scope_id</code>, <code>&lt;projectId&gt;:&lt;slug|chave&gt;</code>) — раньше <code>agent</code>
 был глобальным slug, и один binding действовал для всех проектов
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-103>RN-103</a>, <a class="" href=/brabo/dev/ru/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>).</p>
+(<a href="../business-rules/custo.html#rn-103">RN-103</a>, <a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064</a>).</p>
 <p>Субагент без значения ни на одном уровне (или только с глобальным умолчанием
 workspace) наследует РАЗРЕШЁННЫЙ binding lead своей области, и ответ несёт
 <code>herdadoDoLead</code> с именем lead; <code>appsec</code> наследует от <code>secops</code>, а <code>qa-estrategia</code>
-от <code>qa</code> (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-703>RN-703</a>).</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=кто-планирует-и-кто-выполняет>Кто планирует и кто выполняет<a href=#кто-планирует-и-кто-выполняет class=hash-link aria-label="Прямая ссылка на Кто планирует и кто выполняет" title="Прямая ссылка на Кто планирует и кто выполняет" translate=no>​</a></h3>
+от <code>qa</code> (<a href="../business-rules/custo.html#rn-703">RN-703</a>).</p>
+<h3 id="кто-планирует-и-кто-выполняет">Кто планирует и кто выполняет</h3>
 <p>Engine планирует (worker Oban, который перепланирует себя,
 <code>MODEL_SYNC_INTERVAL_SECONDS</code>, по умолчанию 6 ч), а api выполняет, потому что
 именно она хранит учётные данные и реестр providers. Кнопка «Обновить каталог»
 на экране кураторства вызывает <strong>тот же</strong> use case — двух реконсиляций, которые
 могли бы разойтись, нет.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=цена-действует-отныне-никогда-задним-числом>Цена: действует отныне, никогда задним числом<a href=#цена-действует-отныне-никогда-задним-числом class=hash-link aria-label="Прямая ссылка на Цена: действует отныне, никогда задним числом" title="Прямая ссылка на Цена: действует отныне, никогда задним числом" translate=no>​</a></h2>
+<h2 id="цена-действует-отныне-никогда-задним-числом">Цена: действует отныне, никогда задним числом</h2>
 <p><code>token_usage</code> хранит цену, давшую каждый <code>cost_micros</code>
 (<code>input_price_per_million_micros</code> и <code>output_price_per_million_micros</code>).
 Историческая стоимость была неизменной ещё до Фазы 9c; не хватало
 <strong>воспроизводимости</strong> — без записанной цены <code>tokens × цена = стоимость</code>
 перестало бы сходиться в тот момент, когда кто-то исправил бы таблицу.</p>
-<p>Начиная с <a class="" href=/brabo/dev/ru/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a>
-(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-665>RN-665</a>) цена каталога является числом
+<p>Начиная с <a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188</a>
+(<a href="../business-rules/custo.html#rn-665">RN-665</a>) цена каталога является числом
 только тогда, когда ответ не несёт реальной стоимости. Когда несёт (<code>usage.cost</code>
 OpenRouter), она и есть <code>cost_micros</code>, две колонки цены хранят НЕЯВНУЮ цену
 (<code>стоимость ÷ tokens</code>, помеченную <code>price_implicit</code>), а то, что взял бы каталог,
@@ -482,27 +522,31 @@ OpenRouter), она и есть <code>cost_micros</code>, две колонки 
 намеренно: восстановление «до» по предыдущей строке зависело бы от того, что ни
 одна запись не ускользнула от аудируемого пути, — а это ровно то, что аудит
 существует доказывать.</p>
-<p>:::caution Две записи ускользали
-Источник <code>sync</code> существовал в домене с Фазы 9c, и <strong>ни одна запись его не
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">Две записи ускользали</p>
+<p>Источник <code>sync</code> существовал в домене с Фазы 9c, и <strong>ни одна запись его не
 производила</strong>: синхронизация меняла цену через <code>upsert</code>, вне аудируемого пути.
 <code>seed.ts</code> делал то же — а он запускается против уже засеянной базы
 (<code>BRABO_FORCE_SEED=1</code> в <code>bootstrap.sh</code> k8s), так что исправление цены в seed
 молча меняло число. Оба теперь проходят аудит; seed переиспользует
 <code>UpdateModelPricingUseCase</code> вместо повторения логики и вызывает его <strong>до</strong>
 upsert — после него оба значения уже совпали бы, и аудит счёл бы, что делать
-нечего.
-:::</p>
-<p>:::note Это не событие outbox
-<code>model_price_changes</code> — собственная таблица, а не строка в <code>outbox_events</code>.
-<code>Engine.Outbox.Drain.run_once/0</code> фильтрует по <code>aggregate_type == "session"</code> —
+нечего.</p>
+</div>
+<div class="admonicao admonicao-note" data-admonicao="note"><p class="admonicao-titulo">Это не событие outbox</p>
+<p><code>model_price_changes</code> — собственная таблица, а не строка в <code>outbox_events</code>.
+<code>Engine.Outbox.Drain.run_once/0</code> фильтрует по <code>aggregate_type == &quot;session&quot;</code> —
 строка цены там навсегда осталась бы с пустым <code>processed_at</code> и загрязняла бы
-метрику задержки outbox. Это неизменяемый доменный журнал, как <code>session_events</code>.
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=embeddings>Embeddings<a href=#embeddings class=hash-link aria-label="Прямая ссылка на Embeddings" title="Прямая ссылка на Embeddings" translate=no>​</a></h2>
+метрику задержки outbox. Это неизменяемый доменный журнал, как <code>session_events</code>.</p>
+</div>
+<h2 id="embeddings">Embeddings</h2>
 <p>Вторая операция контракта (ADR 0075) и единственная, кроме <code>chat</code>, которая
 тратит токены. Существует только там, где <code>capabilities.embeddings</code> равно
 <code>true</code>.</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>const</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"> vectors</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> dimensions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> model</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> inputTokens</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> estimated </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token plain"> </span><span class="token operator" style=color:var(--syntax-operator)>=</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>await</span><span class="token plain"> provider</span><span class="token punctuation" style=color:var(--syntax-operator)>.</span><span class="token function" style=color:var(--syntax-function)>embed</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>'primeiro trecho'</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'segundo trecho'</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    model</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'nomic-embed-text'</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-ts">const { vectors, dimensions, model, inputTokens, estimated } =
+  await provider.embed(['primeiro trecho', 'segundo trecho'], {
+    model: 'nomic-embed-text',
+  });
+</code></pre>
 <p><strong>Это пакет, и порядок — часть контракта.</strong> Индекс получает N фрагментов сразу,
 и позиция — единственная связь между входом и вектором. Отсюда самая важная
 гарантия: <strong>один вектор на вход или ошибка</strong> — никогда не более короткий список.
@@ -513,182 +557,186 @@ upsert — после него оба значения уже совпали б�
 потому что ход уже потратил токены и metering должен произойти; здесь нечего
 сохранять — либо provider вернул векторы и взял плату, либо не вернул и не
 взял. Таксономия <code>code</code> точно та же, что в таблице ниже.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>диалект<th>endpoint<th>тело ответа<tbody><tr><td>база, совместимая с OpenAI<td><code>POST /embeddings</code><td><code>{ data: [{ index, embedding }], model, usage.prompt_tokens }</code><tr><td>Ollama<td><code>POST /api/embed</code><td><code>{ model, embeddings: number[][], prompt_eval_count }</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>диалект</th>
+<th>endpoint</th>
+<th>тело ответа</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>база, совместимая с OpenAI</td>
+<td><code>POST /embeddings</code></td>
+<td><code>{ data: [{ index, embedding }], model, usage.prompt_tokens }</code></td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td><code>POST /api/embed</code></td>
+<td><code>{ model, embeddings: number[][], prompt_eval_count }</code></td>
+</tr>
+</tbody>
+</table></div>
 <p><code>index</code> OpenAI — это связь с входом, и документация <strong>не обещает порядка</strong> —
 поэтому база сортирует по нему перед возвратом. Поле <code>dimensions</code> в
 <code>EmbeddingOptions</code> (уменьшить вектор) существует только в OpenAI; Ollama его
 игнорирует, а не падает, потому что там размерность определяется моделью, — и
 результат всегда объявляет РЕАЛЬНУЮ размерность того, что вернулось.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=кто-векторизует-сегодня>Кто векторизует сегодня<a href=#кто-векторизует-сегодня class=hash-link aria-label="Прямая ссылка на Кто векторизует сегодня" title="Прямая ссылка на Кто векторизует сегодня" translate=no>​</a></h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th><code>embeddings</code><th>почему<tbody><tr><td><code>ollama</code><td><strong>да</strong><td>доказано выполнением против daemon 0.32.1 (<code>nomic-embed-text</code>, 2 входа → 2 вектора по 768)<tr><td><code>anthropic</code><td>нет<td><strong>нет</strong> endpoint embedding — документация указывает на третью сторону, то есть другой provider<tr><td>остальные семь<td>нет<td>ни один smoke с учётными данными не доказал их endpoint (<a class="" href=/brabo/dev/ru/explanation/aceite-providers>приёмка</a>)</table>
+<h3 id="кто-векторизует-сегодня">Кто векторизует сегодня</h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th><code>embeddings</code></th>
+<th>почему</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ollama</code></td>
+<td><strong>да</strong></td>
+<td>доказано выполнением против daemon 0.32.1 (<code>nomic-embed-text</code>, 2 входа → 2 вектора по 768)</td>
+</tr>
+<tr>
+<td><code>anthropic</code></td>
+<td>нет</td>
+<td><strong>нет</strong> endpoint embedding — документация указывает на третью сторону, то есть другой provider</td>
+</tr>
+<tr>
+<td>остальные семь</td>
+<td>нет</td>
+<td>ни один smoke с учётными данными не доказал их endpoint (<a href="../explanation/aceite-providers.html">приёмка</a>)</td>
+</tr>
+</tbody>
+</table></div>
 <p>Объявлять по документации — то, что запрещает ADR 0043, и это стоило двух
 откатов вживую. ДИАЛЕКТ базы, однако, доказан: контрактный набор запускается
 второй раз поверх него с включённой capability — именно это делает дешёвым
 перевод provider в <code>true</code>, когда ключ появится.</p>
 <p>Ollama также единственный, кто публикует слой МОДЕЛИ: <code>/api/tags</code> приносит
-<code>capabilities: ["embedding"]</code> и <code>details.embedding_length</code> в каждой строке, и
+<code>capabilities: [&quot;embedding&quot;]</code> и <code>details.embedding_length</code> в каждой строке, и
 отсюда берутся <code>supportsEmbeddings</code> и <code>embeddingDimensions</code> в каталоге. Чат-модель,
 у которой просят embedding, получает <strong><code>501</code></strong> от daemon — причина, по которой
-проверка выполняется заранее (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-190>RN-190</a>).</p>
-<p>:::note Затраты пока не измеряются
-<code>embed</code> возвращает <code>inputTokens</code>/<code>estimated</code>, чтобы питать metering, и
+проверка выполняется заранее (<a href="../business-rules/custo.html#rn-190">RN-190</a>).</p>
+<div class="admonicao admonicao-note" data-admonicao="note"><p class="admonicao-titulo">Затраты пока не измеряются</p>
+<p><code>embed</code> возвращает <code>inputTokens</code>/<code>estimated</code>, чтобы питать metering, и
 <code>calculateCostMicros(input, 0, …)</code> уже работает (у embedding нет выхода в
 токенах). Не хватает структурного: <code>token_usage.session_id</code> — <strong>NOT NULL</strong>, а
 индексация репозитория не происходит внутри сессии. Объявленное ограничение в
-ADR 0075 — относится к волне, которая реализует потребителя.
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=нормализованные-ошибки>Нормализованные ошибки<a href=#нормализованные-ошибки class=hash-link aria-label="Прямая ссылка на Нормализованные ошибки" title="Прямая ссылка на Нормализованные ошибки" translate=no>​</a></h2>
+ADR 0075 — относится к волне, которая реализует потребителя.</p>
+</div>
+<h2 id="нормализованные-ошибки">Нормализованные ошибки</h2>
 <p>Никто ничего не решает, сопоставляя подстроку сообщения поставщика: решение
 принимается по <code>code</code> chunk. Классы находятся в
 <code>apps/api/src/domain/llm/llm-provider-errors.ts</code>.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>статус provider<th><code>code</code><th>означает<tbody><tr><td>401, 403<td><code>auth</code><td>ключ отсутствует, недействителен или без доступа к модели<tr><td>402<td><code>insufficient_credit</code><td>у аккаунта provider закончился кредит (RN-730)<tr><td>404<td><code>model_not_found</code><td>модели нет у этого provider<tr><td>429<td><code>rate_limit</code><td>превышена квота или пропускная способность<tr><td>413 или 400 с маркером контекста<td><code>context_length</code><td>prompt не помещается в окно<tr><td>—<td><code>timeout</code><td>provider <strong>молчал</strong> дольше потолка бездействия<tr><td>—<td><code>connection</code><td>до provider даже не дошло<tr><td>любой другой<td><code>upstream</code><td>сбой на другой стороне по иной причине</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>статус provider</th>
+<th><code>code</code></th>
+<th>означает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>401, 403</td>
+<td><code>auth</code></td>
+<td>ключ отсутствует, недействителен или без доступа к модели</td>
+</tr>
+<tr>
+<td>402</td>
+<td><code>insufficient_credit</code></td>
+<td>у аккаунта provider закончился кредит (RN-730)</td>
+</tr>
+<tr>
+<td>404</td>
+<td><code>model_not_found</code></td>
+<td>модели нет у этого provider</td>
+</tr>
+<tr>
+<td>429</td>
+<td><code>rate_limit</code></td>
+<td>превышена квота или пропускная способность</td>
+</tr>
+<tr>
+<td>413 или 400 с маркером контекста</td>
+<td><code>context_length</code></td>
+<td>prompt не помещается в окно</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>timeout</code></td>
+<td>provider <strong>молчал</strong> дольше потолка бездействия</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>connection</code></td>
+<td>до provider даже не дошло</td>
+</tr>
+<tr>
+<td>любой другой</td>
+<td><code>upstream</code></td>
+<td>сбой на другой стороне по иной причине</td>
+</tr>
+</tbody>
+</table></div>
 <p>400 становится <code>context_length</code> только когда тело несёт известный маркер
 (<code>context_length_exceeded</code> и варианты). Сопоставление по маркеру хрупко, поэтому
 413 — однозначный — идёт первым, а 400 без маркера падает в <code>upstream</code>, вместо
 того чтобы лгать о причине.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=inactivity-ceiling>Потолок бездействия<a href=#inactivity-ceiling class=hash-link aria-label="Прямая ссылка на Потолок бездействия" title="Прямая ссылка на Потолок бездействия" translate=no>​</a></h2>
+<h2 id="inactivity-ceiling">Потолок бездействия</h2>
 <p>Потолок касается не общей длительности, а <strong>молчания</strong>. Легитимный ход может
 длиться долго (модель обрабатывает тысячи токенов prompt до первого токена), но
 никогда не молчит. Это урок ADR 0020, где <code>fetch</code> сдавался на фиксированных
 300 с undici с непрозрачным «fetch failed», а агент записывал «модель
 остановилась» для запроса, на который так и не ответили.</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th>механизм<th>env<tbody><tr><td>Ollama<td>таймаут сокета <code>node:http</code><td><code>OLLAMA_REQUEST_TIMEOUT_MS</code><tr><td>база, совместимая с OpenAI<td>то же<td><code>LLM_REQUEST_TIMEOUT_MS</code><tr><td>Anthropic<td><code>withIdleTimeout</code> поверх потока SDK<td><code>LLM_REQUEST_TIMEOUT_MS</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th>механизм</th>
+<th>env</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ollama</td>
+<td>таймаут сокета <code>node:http</code></td>
+<td><code>OLLAMA_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+<tr>
+<td>база, совместимая с OpenAI</td>
+<td>то же</td>
+<td><code>LLM_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td><code>withIdleTimeout</code> поверх потока SDK</td>
+<td><code>LLM_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>У Ollama собственная env, потому что у локальной модели другой порядок
 задержки до первого токена.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=база-совместимая-с-openai>База, совместимая с OpenAI<a href=#база-совместимая-с-openai class=hash-link aria-label="Прямая ссылка на База, совместимая с OpenAI" title="Прямая ссылка на База, совместимая с OpenAI" translate=no>​</a></h2>
+<h2 id="база-совместимая-с-openai">База, совместимая с OpenAI</h2>
 <p><code>OpenAICompatibleProvider</code> реализует диалект <code>/chat/completions</code> один раз. От
 неё рождаются девять providers: OpenAI (первый экземпляр), OpenRouter (Фаза 11a,
 hub) и пять из Фазы 11b — NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr. Все
 меняют <code>baseUrl</code>, заголовок аутентификации и флаги — никогда парсинг
 (единственное исключение, оказавшееся необходимым, — собственный <code>parseCatalogo</code>
 каждого, когда capability равна <code>true</code>, — см. разделы по providers ниже).</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>interface</span><span class="token plain"> </span><span class="token class-name" style=color:var(--syntax-type)>OpenAICompatibleFlags</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  streamOptionsIncludeUsage</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>boolean</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  maxTokensField</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'max_tokens'</span><span class="token plain"> </span><span class="token operator" style=color:var(--syntax-operator)>|</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'max_completion_tokens'</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-ts">interface OpenAICompatibleFlags {
+  streamOptionsIncludeUsage: boolean;
+  maxTokensField: 'max_tokens' | 'max_completion_tokens';
+}
+</code></pre>
 <p>Поле потолка вывода идёт в КАЖДОМ вызове (RN-734): <code>options.maxTokens</code>, когда
 вызывающий его задаёт, иначе <code>MAX_TOKENS_PADRAO</code> (4096, то же умолчание, что у
 provider Anthropic). Без поля OpenRouter резервирует кредит на МАКСИМАЛЬНЫЙ
 вывод модели для каждого вызова в полёте и отвечает 402, даже когда реальный
 вызов уложился бы в баланс. Ответ, обрезанный этим потолком, пока не
-озвучивается: этот диалект не читает <code>finish_reason: "length"</code>.</p>
+озвучивается: этот диалект не читает <code>finish_reason: &quot;length&quot;</code>.</p>
 <p>Когда модель рассуждает (<code>models.supports_reasoning</code>) и конфигурация provider
 имеет <code>campoDeRaciocinioDesligado</code> (сегодня только OpenRouter), потолок вывода
 становится видимым выводом + <code>ORCAMENTO_DE_RACIOCINIO</code> (4096), потому что
@@ -697,113 +745,113 @@ provider Anthropic). Без поля OpenRouter резервирует кред�
 измерение 2026-10-10 (AT-467) показало, что <code>reasoning: { max_tokens }</code> ВКЛЮЧАЕТ
 рассуждение у <code>anthropic/claude-haiku-4.5</code> (74% вызовов, 2,8x стоимость) и
 ИГНОРИРУЕТСЯ <code>anthropic/claude-haiku-5.5</code> (1024 запрошено, 8192 потрачено).
-Исполнительные dev agents (<code>dev-&lt;modulo></code>, не <code>dev-lead</code>) получают
+Исполнительные dev agents (<code>dev-&lt;modulo&gt;</code>, не <code>dev-lead</code>) получают
 <code>reasoning: { enabled: false }</code> (RN-783, решение владельца): 0 из 8 ответов
 обрезано, -42% стоимости на Haiku 5.5. Подсказка грани «мышление» каталога
 моделей говорит об этом. Прямой provider Anthropic не отправляет <code>thinking</code>,
 поэтому там модель не рассуждает.</p>
 <p>Каждый флаг существует потому, что реальный provider расходится. Не добавляйте
 флаг без provider, которому он нужен.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=normalized-divergences>Нормализованные расхождения<a href=#normalized-divergences class=hash-link aria-label="Прямая ссылка на Нормализованные расхождения" title="Прямая ссылка на Нормализованные расхождения" translate=no>​</a></h2>
+<h2 id="normalized-divergences">Нормализованные расхождения</h2>
 <p>Три providers проходят один и тот же контракт, но диалекты не идентичны. То, что
 расходится, нормализуется, а не скрывается:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>предмет<th>Ollama<th>база совместимости<th>Anthropic<tbody><tr><td>формат<td>NDJSON<td>SSE <code>data:</code><td>SSE с именованными событиями<tr><td>транспорт<td><code>node:http</code><td><code>node:http</code><td>официальный SDK + <code>withIdleTimeout</code><tr><td>ids tool call<td>не присылает — генерируем мы<td>присылает; генерируем, если нет<td>присылает<tr><td>аргументы tool call<td>уже десериализованы<td>строка по частям, собирается по индексу<td><code>input_json_delta</code>, собирается SDK<tr><td>ответ без <code>usage</code><td>не выдаёт chunk<td>считает локально с <code>estimated: true</code><td><strong>невозможно</strong> — <code>usage</code> обязателен в <code>message_start</code><tr><td>роль <code>tool</code><td>отдельное сообщение<td><code>role: "tool"</code> + <code>tool_call_id</code><td>блок <code>tool_result</code> внутри хода <code>user</code><tr><td>ответ, обрезанный потолком вывода<td>не читается<td><code>finish_reason: "length"</code> → chunk <code>truncated</code><td><code>stop_reason: "max_tokens"</code> → chunk <code>truncated</code><tr><td><code>system</code> ПОСЛЕ <code>user</code>/<code>tool</code><td>остаётся на месте, последний элемент <code>messages</code><td>остаётся на месте, последний элемент <code>messages</code><td><strong>поднимается</strong>: добавляется к параметру <code>system</code> верхнего уровня (соединяется через <code>\n\n</code> после уже имеющегося prompt) и удаляется из <code>messages</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>предмет</th>
+<th>Ollama</th>
+<th>база совместимости</th>
+<th>Anthropic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>формат</td>
+<td>NDJSON</td>
+<td>SSE <code>data:</code></td>
+<td>SSE с именованными событиями</td>
+</tr>
+<tr>
+<td>транспорт</td>
+<td><code>node:http</code></td>
+<td><code>node:http</code></td>
+<td>официальный SDK + <code>withIdleTimeout</code></td>
+</tr>
+<tr>
+<td>ids tool call</td>
+<td>не присылает — генерируем мы</td>
+<td>присылает; генерируем, если нет</td>
+<td>присылает</td>
+</tr>
+<tr>
+<td>аргументы tool call</td>
+<td>уже десериализованы</td>
+<td>строка по частям, собирается по индексу</td>
+<td><code>input_json_delta</code>, собирается SDK</td>
+</tr>
+<tr>
+<td>ответ без <code>usage</code></td>
+<td>не выдаёт chunk</td>
+<td>считает локально с <code>estimated: true</code></td>
+<td><strong>невозможно</strong> — <code>usage</code> обязателен в <code>message_start</code></td>
+</tr>
+<tr>
+<td>роль <code>tool</code></td>
+<td>отдельное сообщение</td>
+<td><code>role: &quot;tool&quot;</code> + <code>tool_call_id</code></td>
+<td>блок <code>tool_result</code> внутри хода <code>user</code></td>
+</tr>
+<tr>
+<td>ответ, обрезанный потолком вывода</td>
+<td>не читается</td>
+<td><code>finish_reason: &quot;length&quot;</code> → chunk <code>truncated</code></td>
+<td><code>stop_reason: &quot;max_tokens&quot;</code> → chunk <code>truncated</code></td>
+</tr>
+<tr>
+<td><code>system</code> ПОСЛЕ <code>user</code>/<code>tool</code></td>
+<td>остаётся на месте, последний элемент <code>messages</code></td>
+<td>остаётся на месте, последний элемент <code>messages</code></td>
+<td><strong>поднимается</strong>: добавляется к параметру <code>system</code> верхнего уровня (соединяется через <code>\n\n</code> после уже имеющегося prompt) и удаляется из <code>messages</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>Строка Anthropic самая дорогая: результаты параллельных вызовов должны прийти в
 <strong>одном</strong> ходе <code>user</code>, поэтому последовательные сообщения <code>tool</code> группируются.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-system-message-at-the-end-of-the-conversation-at-161>Сообщение <code>system</code> в конце разговора (AT-161)<a href=#a-system-message-at-the-end-of-the-conversation-at-161 class=hash-link aria-label="Прямая ссылка на a-system-message-at-the-end-of-the-conversation-at-161" title="Прямая ссылка на a-system-message-at-the-end-of-the-conversation-at-161" translate=no>​</a></h3>
+<h3 id="a-system-message-at-the-end-of-the-conversation-at-161">Сообщение <code>system</code> в конце разговора (AT-161)</h3>
 <p>Строка позднего <code>system</code> существует, потому что ориентация по языку из AT-081
-предусматривает отправку <strong>одного</strong> эфемерного сообщения <code>role: "system"</code> в
+предусматривает отправку <strong>одного</strong> эфемерного сообщения <code>role: &quot;system&quot;</code> в
 КОНЕЦ списка в каждом вызове хода — после <code>user</code> в первом вызове, после <code>tool</code>
 в последующих. Контрактный набор отвечает для каждого из девяти providers, куда
 это сообщение попадает в <strong>сериализованном теле</strong>: каждый harness объявляет
 <code>posicaoDoSistemaTardio</code>, и контракт проверяет его в обеих позициях, а также то,
 что текст появляется ровно один раз и остальная часть разговора сохраняет
 порядок (<code>apps/api/test/contract/llm-provider.contract.ts</code>).</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th>адаптер<th>куда попадает поздний <code>system</code><tbody><tr><td>OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr<td>база совместимости (<code>toWireMessage</code>)<td>конец <code>messages</code>, <code>role: "system"</code><tr><td>Ollama<td>собственный (<code>messages</code> отправляется как есть)<td>конец <code>messages</code>, <code>role: "system"</code><tr><td>Anthropic<td>собственный (официальный SDK)<td>конец <code>system</code> верхнего уровня; позиция теряется</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th>адаптер</th>
+<th>куда попадает поздний <code>system</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr</td>
+<td>база совместимости (<code>toWireMessage</code>)</td>
+<td>конец <code>messages</code>, <code>role: &quot;system&quot;</code></td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>собственный (<code>messages</code> отправляется как есть)</td>
+<td>конец <code>messages</code>, <code>role: &quot;system&quot;</code></td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>собственный (официальный SDK)</td>
+<td>конец <code>system</code> верхнего уровня; позиция теряется</td>
+</tr>
+</tbody>
+</table></div>
 <p>Ни один адаптер его не отбрасывает и не дублирует. Чего фальшивый сервер не
 может сказать — принимает ли РЕАЛЬНЫЙ provider такое тело: он принимает что
 угодно. Это отдельный ручной smoke,
@@ -811,7 +859,7 @@ provider Anthropic). Без поля OpenRouter резервирует кред�
 <code>describe</code> на provider, каждый обусловлен тем же ключом, что и smoke приёмки
 (плюс <code>ANTHROPIC_TEST_KEY</code>; Ollama — через <code>OLLAMA_SISTEMA_TARDIO_SMOKE=1</code>).
 Какие уже прогонялись, записано в
-<a class="" href=/brabo/dev/ru/explanation/aceite-providers>приёмке providers</a>. Без такого прогона
+<a href="../explanation/aceite-providers.html">приёмке providers</a>. Без такого прогона
 provider <strong>не доказан</strong> в отношении приёма позднего <code>system</code> — правило ADR
 0041/0042.</p>
 <p><strong>Наблюдение, не измерение (пробел 2 из AT-081):</strong> у Anthropic подъём
@@ -819,7 +867,7 @@ provider <strong>не доказан</strong> в отношении приёма
 разговора, — так что любое изменение её текста меняет префикс запроса, а с ним
 и любой prompt caching, который у префикса был бы. Кэш сегодня в продукте не
 наблюдаем (AT-082), поэтому это зафиксировано, но не количественно оценено.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=openrouter--первый-hub-фаза-11a>OpenRouter — первый hub (Фаза 11a)<a href=#openrouter--первый-hub-фаза-11a class=hash-link aria-label="Прямая ссылка на OpenRouter — первый hub (Фаза 11a)" title="Прямая ссылка на OpenRouter — первый hub (Фаза 11a)" translate=no>​</a></h2>
+<h2 id="openrouter--первый-hub-фаза-11a">OpenRouter — первый hub (Фаза 11a)</h2>
 <p><code>OpenRouterProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>openrouterConfig()</code>
 (<code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code>). Он объявляет
 <code>listModels: true</code> — единственный фрагмент кода, который меняется при включении
@@ -828,34 +876,34 @@ capability, это конфигурация; <code>SyncModelCatalogUseCase</code
 <p>Найденные и протестированные особенности
 (<code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>):</p>
 <ul>
-<li class=""><strong>Собственные заголовки</strong>: <code>HTTP-Referer</code> (из <code>API_PUBLIC_URL</code>) и <code>X-Title: "Brabo"</code> — необязательные по официальной документации (атрибуция/рейтинг на
+<li><strong>Собственные заголовки</strong>: <code>HTTP-Referer</code> (из <code>API_PUBLIC_URL</code>) и <code>X-Title: &quot;Brabo&quot;</code> — необязательные по официальной документации (атрибуция/рейтинг на
 сайте OpenRouter), отправляются всегда, потому что ничего не стоят;</li>
-<li class=""><strong>Id модели с префиксом upstream</strong> (<code>openai/gpt-4o-mini</code>,
+<li><strong>Id модели с префиксом upstream</strong> (<code>openai/gpt-4o-mini</code>,
 <code>anthropic/claude-3-5-sonnet</code>): префикс — это ЗАПРОШЕННЫЙ поставщик, а не тот,
 кто ответил, — см. <code>extrairUpstreamProvider</code> ниже;</li>
-<li class=""><strong>Каталог с ценой в той же строке</strong>: <code>GET /v1/models</code> возвращает
+<li><strong>Каталог с ценой в той же строке</strong>: <code>GET /v1/models</code> возвращает
 <code>pricing.prompt</code>/<code>pricing.completion</code> как десятичную СТРОКУ в USD <strong>за
 токен</strong>, в отличие от простого стандарта OpenAI только с id <code>{ data: [{ id }] }</code>.
 <code>parseCatalogoOpenRouter</code> переводит в микро-USD за миллион
 (<code>* 1e12</code>, с округлением — колонка <code>bigint</code>);</li>
-<li class=""><strong>Ошибка ПОСРЕДИ потока</strong>: OpenRouter принимает соединение и начинает слать
+<li><strong>Ошибка ПОСРЕДИ потока</strong>: OpenRouter принимает соединение и начинает слать
 текст, ещё не зная, упадёт ли реальный provider за ним, — режим сбоя, которого
 у OpenAI нет, потому что она не маршрутизирует на стороннюю инфраструктуру.
 Кадр приходит как
-<code>{"error":{"code":"...","message":"..."},"choices":[...]}</code>; истинное поле
+<code>{&quot;error&quot;:{&quot;code&quot;:&quot;...&quot;,&quot;message&quot;:&quot;...&quot;},&quot;choices&quot;:[...]}</code>; истинное поле
 <code>error</code> — это сигнал. Числовой код использует тот же <code>normalizeHttpStatus</code>
 базы; строковый код сопоставляется по подстроке (<code>mapearCodigoDeFrame</code>) с
 <code>upstream</code> как безопасным умолчанием — никогда молчание, даже для кода вне
 карты;</li>
-<li class=""><strong>Реальная стоимость в <code>usage.cost</code></strong> (ADR 0188, RN-665): последний кадр
+<li><strong>Реальная стоимость в <code>usage.cost</code></strong> (ADR 0188, RN-665): последний кадр
 потока несёт то, что взял hub, в USD; <code>extrairCustoRealOpenRouter</code> переводит
 её в микро-USD, и metering записывает её как число. При <code>is_byok: true</code> поле —
 это комиссия hub, а не инференс, поэтому оно НЕ читается, и строка падает на
 каталог. <code>model</code> (датированная версия, в которую разрешился alias вроде
 <code>~deepseek/deepseek-flash-latest</code>) и <code>id</code> (<code>gen-…</code>) читаются базой для любого
 provider этого диалекта;</li>
-<li class=""><strong>Alias свободной маршрутизации (<code>~…</code>) синхронизируется, но не может быть
-отобран кураторством</strong> (AT-271, <a class="" href=/brabo/dev/ru/business-rules/custo#rn-679>RN-679</a>):
+<li><strong>Alias свободной маршрутизации (<code>~…</code>) синхронизируется, но не может быть
+отобран кураторством</strong> (AT-271, <a href="../business-rules/custo.html#rn-679">RN-679</a>):
 id вроде <code>~deepseek/deepseek-flash-latest</code> всегда перенаправляет на самую новую
 модель семейства, его цена в каталоге — витринная, а счёт приходит от любого
 upstream, обслужившего вызов. Синхронизация оставляет его в каталоге (удаление
@@ -863,15 +911,15 @@ upstream, обслужившего вызов. Синхронизация ост
 <code>alias_de_roteamento_livre</code>, а чтение кураторства помечает его
 <code>freeRoutingAlias</code>. Активированный до правила остаётся активным и может быть
 выключен — выключенный, не возвращается;</li>
-<li class=""><strong>Проверка подключения</strong>: <code>GET /key</code> (официальная документация) проверяет ключ,
+<li><strong>Проверка подключения</strong>: <code>GET /key</code> (официальная документация) проверяет ключ,
 не тратя токены на настоящий вызов чата. Это первый
 <code>LLMCredentialConnectionTester</code> на стороне LLM. Начиная с
-<a class="" href=/brabo/dev/ru/adr/0050-credencial-sempre-cifrada-verificacao-explicita>ADR 0050</a> он
+<a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050</a> он
 <strong>не запускается при регистрации</strong>: учётные данные шифруются и хранятся без
 оценки, а проверка — явное действие
 <code>POST /users/me/credentials/{provider}/test</code> над уже сохранённым ключом.
 Provider без объявленной проверки (сегодня: <code>ollama</code>/<code>anthropic</code>/<code>openai</code>)
-возвращает <code>nao_suportado</code> — никогда ложный <code>ok</code> (<a class="" href=/brabo/dev/ru/business-rules#rn-055>RN-055</a>).</li>
+возвращает <code>nao_suportado</code> — никогда ложный <code>ok</code> (<a href="../business-rules.html#rn-055">RN-055</a>).</li>
 </ul>
 <p>Приёмочный тест с реальными учётными данными, которого требует Фаза 11a, —
 регистрация, синхронизация, наполняющая каталог, кураторская активация и сессия
@@ -880,39 +928,39 @@ Provider без объявленной проверки (сегодня: <code>o
 запускается в CI: без <code>OPENROUTER_TEST_KEY</code> в окружении весь <code>describe</code>
 пропускается с предупреждением. Та же схема, что и у smoke git против реального
 API (<code>github-provider.smoke.spec.ts</code>, <code>gitlab-provider.smoke.spec.ts</code>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=nvidia-nim-фаза-11b>NVIDIA NIM (Фаза 11b)<a href=#nvidia-nim-фаза-11b class=hash-link aria-label="Прямая ссылка на NVIDIA NIM (Фаза 11b)" title="Прямая ссылка на NVIDIA NIM (Фаза 11b)" translate=no>​</a></h2>
+<h2 id="nvidia-nim-фаза-11b">NVIDIA NIM (Фаза 11b)</h2>
 <p><code>NvidiaNimProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>nvidiaNimConfig()</code>
 (<code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code>), направленный на
 <strong>хостируемый</strong> endpoint (<code>integrate.api.nvidia.com</code>) — не на самостоятельно
 размещаемый контейнер, который является другим продуктом с другим адресом.</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong>: <code>GET /v1/models</code> существует (официальная документация
+<li><strong><code>listModels: false</code></strong>: <code>GET /v1/models</code> существует (официальная документация
 сверена в этой сессии) и возвращает <code>id</code>/<code>object</code>/<code>created</code>/<code>owned_by</code>, но ни
 одна найденная документация не даёт цену за токен — настоящий каталог, но
 бесполезный для стоимости по модели, которую требует metering (capabilities в
 два слоя, ADR 0041). Provider живёт на <strong>ручном seed</strong>
 (<code>apps/api/src/db/seed.ts</code>), пока кто-нибудь не подтвердит endpoint цены, если
 он существует;</li>
-<li class=""><strong>Без отдельного заголовка</strong>: <code>Authorization: Bearer nvapi-...</code> — стандартный
+<li><strong>Без отдельного заголовка</strong>: <code>Authorization: Bearer nvapi-...</code> — стандартный
 bearer, у ключа лишь префикс <code>nvapi-</code> по соглашению NVIDIA;</li>
-<li class=""><strong>Tool calling — ПО МОДЕЛИ, а не по API</strong>: лишь конкретные модели (Llama
+<li><strong>Tool calling — ПО МОДЕЛИ, а не по API</strong>: лишь конкретные модели (Llama
 3.1 70B/405B, варианты Nemotron, ...) действительно его поддерживают — но это
 никогда не флаг конфигурации, это целиком <code>models.supports_tool_calling</code>
 (seed/кураторство), подтверждено чтением <code>buildBody()</code> в базе: флаг
 <code>capabilities.toolCalling</code> решает лишь, отправляется ли параметр <code>tools</code>, а не
 умеет ли им пользоваться конкретная модель;</li>
-<li class=""><strong><code>stream_options.include_usage</code> не подтверждено</strong> для хостируемого endpoint
+<li><strong><code>stream_options.include_usage</code> не подтверждено</strong> для хостируемого endpoint
 (документировано только для самостоятельно размещаемого ПО NIM) —
 <code>streamOptionsIncludeUsage: false</code>; fallback <code>estimated</code> базы покрывает случай,
 когда поле так и не приходит;</li>
-<li class=""><strong>Проверка подключения</strong>: без отдельного endpoint проверки (endpoint
+<li><strong>Проверка подключения</strong>: без отдельного endpoint проверки (endpoint
 «whoami»/баланса не найден) — <code>GET /v1/models</code> с ключом, важен только статус
 (200 против 401/403).</li>
 </ul>
-<p>:::info NVIDIA не берёт плату за токен
-Поиск официальной цены был повторён и пришёл к ответу лучше, чем «не нашёл»:
+<div class="admonicao admonicao-info" data-admonicao="info"><p class="admonicao-titulo">NVIDIA не берёт плату за токен</p>
+<p>Поиск официальной цены был повторён и пришёл к ответу лучше, чем «не нашёл»:
 <strong>цены за токен, которую можно найти, нет</strong>. Официальная документация
-(<a href=https://docs.api.nvidia.com/nim/docs/product target=_blank rel="noopener noreferrer" class="">docs.api.nvidia.com/nim/docs/product</a>)
+(<a href="https://docs.api.nvidia.com/nim/docs/product">docs.api.nvidia.com/nim/docs/product</a>)
 говорит, что хостируемый endpoint — это бесплатный доступ для <strong>прототипирования</strong>
 для участников Developer Program, а production требует лицензии NVIDIA AI
 Enterprise — «These licenses start at $4500 per GPU per year or ~ $1 per GPU per
@@ -920,98 +968,98 @@ hour in the cloud.» Единица — GPU/час, а не токен.</p>
 <p>Три модели NIM из seed поэтому имеют <strong>оценочную</strong> цену по сравнению с
 эквивалентами у других providers и <code>manual_pricing = true</code>: этого достаточно,
 чтобы у потолка бюджета было что вычитать, и это максимум возможной честности,
-пока бизнес-модель поставщика не основана на токенах.
-:::</p>
+пока бизнес-модель поставщика не основана на токенах.</p>
+</div>
 <p>Приёмочный тест с реальными учётными данными находится в
 <code>test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts</code>, обусловлен
 <code>NVIDIA_NIM_TEST_KEY</code>. В отличие от OpenRouter, шаг «синхронизации» ничего не
 обнаруживает (capability намеренно <code>false</code>) — smoke подтверждает, что provider
 выходит с <code>pulado: 'sem_capability'</code> в отчёте, и отбирает вручную добавленную
 модель, ровно как сделал бы owner в production.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=together-ai-фаза-11b>Together AI (Фаза 11b)<a href=#together-ai-фаза-11b class=hash-link aria-label="Прямая ссылка на Together AI (Фаза 11b)" title="Прямая ссылка на Together AI (Фаза 11b)" translate=no>​</a></h2>
+<h2 id="together-ai-фаза-11b">Together AI (Фаза 11b)</h2>
 <p><code>TogetherProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>togetherConfig()</code>
 (<code>apps/api/src/infrastructure/llm/together-provider.ts</code>).</p>
 <ul>
-<li class=""><strong><code>listModels: true</code></strong>: <code>GET /v1/models</code> документирован с <code>pricing: {input, output, cached_input, base, hourly, finetune}</code> — используются только
+<li><strong><code>listModels: true</code></strong>: <code>GET /v1/models</code> документирован с <code>pricing: {input, output, cached_input, base, hourly, finetune}</code> — используются только
 <code>input</code>/<code>output</code>;</li>
-<li class=""><strong>Единица цены НЕ документирована Together явно</strong>: значения — ЧИСЛА (а не
+<li><strong>Единица цены НЕ документирована Together явно</strong>: значения — ЧИСЛА (а не
 строки, как в OpenRouter), и по сравнению с опубликованной рыночной ценой
 (Llama 3.3 70B по US$1,04/1M на together.ai/models — тот же порядок величины,
-что пример <code>"input": 0.3</code> официальной схемы) вывод — <strong>USD за МИЛЛИОН токенов
+что пример <code>&quot;input&quot;: 0.3</code> официальной схемы) вывод — <strong>USD за МИЛЛИОН токенов
 напрямую</strong>, а не за токен. Подтверждает это против реального ключа smoke (см.
 комментарий в начале <code>together-provider.smoke.spec.ts</code>) — если однажды это
 окажется неверным, это находка, которую нужно исправить здесь и в парсере, а
 не замалчивать;</li>
-<li class=""><strong>Ids с namespace</strong>: <code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code> — «сплющенный»
+<li><strong>Ids с namespace</strong>: <code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code> — «сплющенный»
 id в стиле OpenAI (<code>gpt-4o</code>) отвечает 404;</li>
-<li class=""><strong><code>stream_options.include_usage</code> не подтверждено</strong> в документации — то же
+<li><strong><code>stream_options.include_usage</code> не подтверждено</strong> в документации — то же
 осторожное обращение, что и у NIM, fallback <code>estimated</code> покрывает;</li>
-<li class=""><strong>429 несёт <code>error_type: dynamic_request_limited | dynamic_token_limited</code></strong>
+<li><strong>429 несёт <code>error_type: dynamic_request_limited | dynamic_token_limited</code></strong>
 в теле — отдельно не тестируется, потому что тело остаётся
 <code>{error: {message}}</code>, совместимым со стандартным парсингом базы; важно лишь,
 если однажды понадобится различать два вида rate limit;</li>
-<li class=""><strong>Проверка подключения</strong>: без отдельного endpoint — <code>GET /v1/models</code>, только
+<li><strong>Проверка подключения</strong>: без отдельного endpoint — <code>GET /v1/models</code>, только
 статус.</li>
 </ul>
 <p>Приёмочный тест с реальными учётными данными находится в
 <code>test/infrastructure/llm/together-provider.smoke.spec.ts</code>, обусловлен
 <code>TOGETHER_TEST_KEY</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=deepinfra-фаза-11b>DeepInfra (Фаза 11b)<a href=#deepinfra-фаза-11b class=hash-link aria-label="Прямая ссылка на DeepInfra (Фаза 11b)" title="Прямая ссылка на DeepInfra (Фаза 11b)" translate=no>​</a></h2>
+<h2 id="deepinfra-фаза-11b">DeepInfra (Фаза 11b)</h2>
 <p><code>DeepInfraProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>deepinfraConfig()</code>
 (<code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code>), <code>baseUrl</code>
 <code>https://api.deepinfra.com/v1/openai</code> (поверхность, совместимая с OpenAI, — у
 DeepInfra есть и нативные endpoints вне её, здесь не используемые).</p>
 <ul>
-<li class=""><strong><code>listModels: true</code></strong>, подтверждено ВЖИВУЮ в этой сессии против
+<li><strong><code>listModels: true</code></strong>, подтверждено ВЖИВУЮ в этой сессии против
 <code>GET {baseUrl}/models</code> (ТОТ ЖЕ endpoint, который база уже вызывает по
 умолчанию, без необходимого расширения): ответ несёт <code>metadata.pricing. {input_tokens,output_tokens}</code> (USD за миллион, число — то же соглашение,
 выведенное для Together) и <code>metadata.context_length</code> в каждой строке;</li>
-<li class=""><strong>Каталог ПУБЛИЧНЫЙ — без всякой аутентификации</strong>, подтверждено вживую (вызов
+<li><strong>Каталог ПУБЛИЧНЫЙ — без всякой аутентификации</strong>, подтверждено вживую (вызов
 сработал без заголовка <code>Authorization</code>). Это имеет реальное последствие:
 <strong>проверки подключения для DeepInfra нет</strong>
 (<code>llm-credential-connection-tester.ts</code> не имеет для неё записи) — недействительный
 ключ обнаружился бы только при первом реальном вызове ЧАТА, никогда при
 регистрации. Другого публично документированного аутентифицированного
 endpoint проверки не найдено;</li>
-<li class=""><strong>Каталог смешивает чат с изображением/аудио/видео/embedding в ОДНОМ
+<li><strong>Каталог смешивает чат с изображением/аудио/видео/embedding в ОДНОМ
 списке</strong>, каждый тип со своим форматом <code>pricing</code>
 (<code>per_image_unit</code>, <code>input_characters</code>, <code>output_seconds</code>, ...) —
 <code>parseCatalogoDeepInfra</code> фильтрует по <code>metadata.tags.includes('chat')</code>, прежде
 чем пытаться читать <code>input_tokens</code>/<code>output_tokens</code>; без фильтра модель
 изображений вошла бы с ценой, сфабрикованной из поля, которое даже не «за
 токен»;</li>
-<li class=""><strong><code>stream_options.include_usage</code> подтверждено как поддерживаемое</strong> в
+<li><strong><code>stream_options.include_usage</code> подтверждено как поддерживаемое</strong> в
 документации (в отличие от NIM/Together) — <code>streamOptionsIncludeUsage: true</code>;</li>
-<li class=""><strong>Ошибка в стандартном формате</strong> <code>{"error": {"message", "type", "param", "code"}}</code>
+<li><strong>Ошибка в стандартном формате</strong> <code>{&quot;error&quot;: {&quot;message&quot;, &quot;type&quot;, &quot;param&quot;, &quot;code&quot;}}</code>
 — совместима со стандартным парсингом базы, без отдельного <code>parseErrorFrame</code>.</li>
 </ul>
 <p>Приёмочный тест с реальными учётными данными находится в
 <code>test/infrastructure/llm/deepinfra-provider.smoke.spec.ts</code>, обусловлен
 <code>DEEPINFRA_TEST_KEY</code> — и это первый smoke, в котором шаг РЕГИСТРАЦИИ ничего не
 проверяет; плохой ключ обнаружил бы только шаг ЧАТА.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=bitdeer-фаза-11b>Bitdeer (Фаза 11b)<a href=#bitdeer-фаза-11b class=hash-link aria-label="Прямая ссылка на Bitdeer (Фаза 11b)" title="Прямая ссылка на Bitdeer (Фаза 11b)" translate=no>​</a></h2>
+<h2 id="bitdeer-фаза-11b">Bitdeer (Фаза 11b)</h2>
 <p><code>BitdeerProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>bitdeerConfig()</code>
 (<code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code>) — самая поверхностная
 публичная документация из пяти в этой фазе.</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong>: никакого формата каталога/цены публично не найдено
+<li><strong><code>listModels: false</code></strong>: никакого формата каталога/цены публично не найдено
 (страница цен рендерится через JS, без примера, доступного неинтерактивному
 поиску) — без сверенного формата нет честного <code>parseCatalogo</code>, который можно
 написать. Перепроверено: <code>bitdeer.ai/en/pricing/ai-models</code> по-прежнему строит
 таблицу на клиенте (отдаваемый HTML <strong>не</strong> содержит ни одного имени модели), и
 документации цен вне её нет. Цена seed остаётся ОЦЕНОЧНОЙ;</li>
-<li class=""><strong><code>Authorization: Bearer &lt;chave></code> ПОДТВЕРЖДЕНО</strong> (реальный пример curl найден
+<li><strong><code>Authorization: Bearer &lt;chave&gt;</code> ПОДТВЕРЖДЕНО</strong> (реальный пример curl найден
 в документации API embeddings Bitdeer в этой сессии) — даже при том, что для
 остального диалекта примеров нет;</li>
-<li class=""><strong><code>GET /v1/models</code> существует и аутентифицирован</strong> (401 вживую без ключа,
+<li><strong><code>GET /v1/models</code> существует и аутентифицирован</strong> (401 вживую без ключа,
 подтверждено в этой сессии) — становится проверкой подключения (только
 статус, как у остальных без отдельного endpoint);</li>
-<li class=""><strong>Три РЕАЛЬНЫХ id модели подтверждены</strong> в примерах конфигурации из блога самой
+<li><strong>Три РЕАЛЬНЫХ id модели подтверждены</strong> в примерах конфигурации из блога самой
 Bitdeer (не витринные имена): <code>moonshotai/Kimi-K2.5</code>,
 <code>zai-org/GLM-5</code>, <code>nvidia/NVIDIA-Nemotron-3-Super-120B-A12B</code> — засеяны в
 <code>apps/api/src/db/seed.ts</code> с ОЦЕНОЧНОЙ ценой (рынок модели/семейства у других
 providers, не подтверждено самой Bitdeer);</li>
-<li class=""><strong>Ни одной особенности потока/ошибки не подтверждено</strong> — заявление Bitdeer об
+<li><strong>Ни одной особенности потока/ошибки не подтверждено</strong> — заявление Bitdeer об
 «OpenAI REST API standards» не сопровождалось реальным примером
 <code>/chat/completions</code>, поэтому контрактный тест не закладывает никакой
 особенности, которую документация не доказала. Smoke — ПЕРВОЕ реальное
@@ -1020,13 +1068,13 @@ providers, не подтверждено самой Bitdeer);</li>
 <p>Приёмочный тест с реальными учётными данными находится в
 <code>test/infrastructure/llm/bitdeer-provider.smoke.spec.ts</code>, обусловлен
 <code>BITDEER_TEST_KEY</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=vultr-serverless-inference-фаза-11b>Vultr Serverless Inference (Фаза 11b)<a href=#vultr-serverless-inference-фаза-11b class=hash-link aria-label="Прямая ссылка на Vultr Serverless Inference (Фаза 11b)" title="Прямая ссылка на Vultr Serverless Inference (Фаза 11b)" translate=no>​</a></h2>
+<h2 id="vultr-serverless-inference-фаза-11b">Vultr Serverless Inference (Фаза 11b)</h2>
 <p><code>VultrProvider</code> — это <code>OpenAICompatibleProvider</code> с <code>vultrConfig()</code>
 (<code>apps/api/src/infrastructure/llm/vultr-provider.ts</code>) — единственный из пяти, у
 которого решение по <code>listModels</code> <strong>изменилось в ходе реализации</strong> по сравнению с
 исходным планом.</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong> (исходный план указывал <code>true</code>): база ВСЕГДА вызывает
+<li><strong><code>listModels: false</code></strong> (исходный план указывал <code>true</code>): база ВСЕГДА вызывает
 <code>{baseUrl}/models</code> (<code>openai-compatible-provider.ts</code>, <code>listModels()</code>), а
 официальный справочник самой Vultr (<code>api.vultrinference.com</code>) описывает
 <code>GET /models</code> как возвращающий только <code>id</code>/<code>created</code>/<code>object</code>/<code>owned_by</code>/<code>features</code>
@@ -1035,23 +1083,23 @@ providers, не подтверждено самой Bitdeer);</li>
 проверенному в этой сессии пути — данных недостаточно, чтобы написать
 <code>parseCatalogo</code>, не рискуя указать на неверный URL («хрупкий true»). Сам
 <code>GET /v1/models</code> подтверждён (401 вживую без ключа, дважды) — просто без цены;</li>
-<li class=""><strong>Tool calling ПОДТВЕРЖДЁН реальным примером</strong>: официальная документация
+<li><strong>Tool calling ПОДТВЕРЖДЁН реальным примером</strong>: официальная документация
 (<code>docs.vultr.com/how-to-use-tool-calling-with-vultr-serverless-inference</code>)
-показывает <code>kimi-k2-instruct</code>, отвечающий с <code>finish_reason: "tool_calls"</code> —
+показывает <code>kimi-k2-instruct</code>, отвечающий с <code>finish_reason: &quot;tool_calls&quot;</code> —
 чистый стандартный диалект OpenAI, без странных полей в этом примере; две
 другие засеянные модели (<code>llama-3.3-70b-instruct-fp8</code>,
 <code>deepseek-r1-distill-llama-70b</code>) не имеют подтверждения tool calling —
 <code>supportsToolCalling: false</code> для них;</li>
-<li class=""><strong>Суффикс <code>-normalize</code></strong>: первоначальное исследование указало на
+<li><strong>Суффикс <code>-normalize</code></strong>: первоначальное исследование указало на
 документированный нормализующий прокси — переподтвердить эту документацию в
 этой сессии НЕ удалось (направленный поиск не нашёл термин на проверенных
 страницах). По умолчанию он в любом случае не используется (мы сохраняем
 исходный id модели);</li>
-<li class=""><strong>Проверка подключения</strong>: <code>GET /v1/models</code>, только статус.</li>
+<li><strong>Проверка подключения</strong>: <code>GET /v1/models</code>, только статус.</li>
 </ul>
-<p>:::tip Цена Vultr ОФИЦИАЛЬНАЯ, и это единый тариф
-В отличие от NIM и Bitdeer, Vultr <strong>публикует</strong> тариф —
-<a href=https://docs.vultr.com/support/products/serverless/how-do-i-monitor-the-usage-and-cost-of-my-vultr-serverless-inference-subscription target=_blank rel="noopener noreferrer" class="">в документации по использованию и стоимости Serverless Inference</a>:
+<div class="admonicao admonicao-tip" data-admonicao="tip"><p class="admonicao-titulo">Цена Vultr ОФИЦИАЛЬНАЯ, и это единый тариф</p>
+<p>В отличие от NIM и Bitdeer, Vultr <strong>публикует</strong> тариф —
+<a href="https://docs.vultr.com/support/products/serverless/how-do-i-monitor-the-usage-and-cost-of-my-vultr-serverless-inference-subscription">в документации по использованию и стоимости Serverless Inference</a>:
 «Requests are billed at $0.55 per 1,000,000 input tokens and $2.75 per
 1,000,000 output tokens.» Это тариф <strong>сервиса</strong>, а не модели — документация не
 различает по моделям, и поэтому три строки seed повторяют одну и ту же пару
@@ -1063,21 +1111,21 @@ providers, не подтверждено самой Bitdeer);</li>
 <p><code>manual_pricing</code> остаётся <code>true</code>, и это не противоречие: флаг означает «цена
 введена человеком по документации, а не пришла из синхронизации»
 (<code>apps/api/src/db/schema.ts</code>). Изменилось то, что число теперь — от самого
-provider, а не рыночное сравнение.
-:::</p>
+provider, а не рыночное сравнение.</p>
+</div>
 <p>Приёмочный тест с реальными учётными данными находится в
 <code>test/infrastructure/llm/vultr-provider.smoke.spec.ts</code>, обусловлен
 <code>VULTR_TEST_KEY</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=hubs-и-реальная-стоимость>Hubs и реальная стоимость<a href=#hubs-и-реальная-стоимость class=hash-link aria-label="Прямая ссылка на Hubs и реальная стоимость" title="Прямая ссылка на Hubs и реальная стоимость" translate=no>​</a></h2>
+<h2 id="hubs-и-реальная-стоимость">Hubs и реальная стоимость</h2>
 <p>В <strong>hub</strong> (OpenRouter) в вызове фигурирует hub, но стоит provider, который
 фактически обслужил. Metering записывает обоих:</p>
 <ul>
-<li class=""><code>ChatUsageChunk.upstreamProvider</code> — provider заполняет его, когда hub это
+<li><code>ChatUsageChunk.upstreamProvider</code> — provider заполняет его, когда hub это
 сообщает;</li>
-<li class=""><code>token_usage.upstream_provider</code> — свободный текст, <strong>допускающий null</strong>. Это не
+<li><code>token_usage.upstream_provider</code> — свободный текст, <strong>допускающий null</strong>. Это не
 enum: множество принадлежит hub, меняется без предупреждения, и версионировать
 его не наше дело. <code>null</code> означает «пришло не через hub, или hub не сообщил»;</li>
-<li class="">метрики <code>brabo_llm_tokens_total</code> и <code>brabo_llm_cost_micros_total</code> получили
+<li>метрики <code>brabo_llm_tokens_total</code> и <code>brabo_llm_cost_micros_total</code> получили
 метку <code>upstream_provider</code>, а исполнительный dashboard — панель стоимости по
 нижележащему provider. Без hub метка повторяет сам provider — с пустой меткой
 <code>sum by (upstream_provider)</code> показал бы только прошедшее через hub, и казалось
@@ -1092,18 +1140,23 @@ enum: множество принадлежит hub, меняется без п�
 строки без явного решения — а когда удалённый каталог не сообщает цену,
 сохранённое значение сохраняется, а не обнуляется: отсутствующее поле означает
 «provider не сказал», а не «бесплатно».</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=пример-одна-и-та-же-модель-hub--напрямую>Пример: одна и та же модель, hub × напрямую<a href=#пример-одна-и-та-же-модель-hub--напрямую class=hash-link aria-label="Прямая ссылка на Пример: одна и та же модель, hub × напрямую" title="Прямая ссылка на Пример: одна и та же модель, hub × напрямую" translate=no>​</a></h3>
+<h3 id="пример-одна-и-та-же-модель-hub--напрямую">Пример: одна и та же модель, hub × напрямую</h3>
 <p>Обещание Фазы 11a («сопоставимую стоимость между „той же моделью через hub“ и
 „напрямую“ можно запросить») становится реальным использованием только когда ОДНА
 И ТА ЖЕ модель появляется с обеих сторон — сегодня это любая модель, которую
 публикуют OpenAI/Anthropic и которая также есть в каталоге OpenRouter
 (например, GPT-4o):</p>
-<div class="language-promql codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-promql codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain"># Razão de custo: servido via OpenRouter vs. servido direto pela OpenAI,</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># no mesmo período. > 1 quer dizer que o hub saiu mais caro que o direto.</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openrouter", upstream_provider="openai"}[1h]))</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  /</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openai"}[1h]))</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-promql"># Razão de custo: servido via OpenRouter vs. servido direto pela OpenAI,
+# no mesmo período. &gt; 1 quer dizer que o hub saiu mais caro que o direto.
+sum(rate(brabo_llm_cost_micros_total{provider=&quot;openrouter&quot;, upstream_provider=&quot;openai&quot;}[1h]))
+  /
+sum(rate(brabo_llm_cost_micros_total{provider=&quot;openai&quot;}[1h]))
+</code></pre>
 <p>Это зацепка, которую открывает <code>upstream_provider</code>, — сегодня без
 автоматического потребителя. Задуманное прочтение (записано как семя, не
 реализовано) — однажды Психолог предложит «эта модель дешевле напрямую, чем
 через hub» на основе этой же метрики.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=контрактный-набор>Контрактный набор<a href=#контрактный-набор class=hash-link aria-label="Прямая ссылка на Контрактный набор" title="Прямая ссылка на Контрактный набор" translate=no>​</a></h2>
+<h2 id="контрактный-набор">Контрактный набор</h2>
 <p><code>apps/api/test/contract/llm-provider.contract.ts</code> прогоняет одну и ту же батарею
 против любой реализации, как набор git делает с Фазы 2. Суть в разделении:
 <strong>контракт владеет утверждениями, harness владеет диалектом.</strong></p>
@@ -1112,10 +1165,19 @@ enum: множество принадлежит hub, меняется без п�
 присутствующим и отсутствующим usage, tool calling, четырьмя ошибками и
 молчащим сервером. Фальшивый сервер — настоящий <code>node:http</code> на эфемерном порту,
 а не mock <code>fetch</code>: под тестом находится именно поведение сокета.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=tool-calling-и-спасение-в-engine>Tool calling и спасение в engine<a href=#tool-calling-и-спасение-в-engine class=hash-link aria-label="Прямая ссылка на Tool calling и спасение в engine" title="Прямая ссылка на Tool calling и спасение в engine" translate=no>​</a></h2>
+<h2 id="tool-calling-и-спасение-в-engine">Tool calling и спасение в engine</h2>
 <p><code>ToolCallRecovery</code> в engine (ADR 0020) восстанавливает вызовы, которые
 маленькая модель написала прозой вместо использования поля <code>tools</code>. Это
 <strong>спасение, а не разрешение</strong>: оно зависит от того, что модель случайно угадает
 формат, и молча не срабатывает, когда не угадывает. Поэтому привязка к агенту
 модели без нативного tool calling отклоняется в домене, а не просто
-не рекомендуется.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-11-01T00:01:10.000Z itemprop=dateModified>1 нояб. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#контракт class="table-of-contents__link toc-highlight">Контракт</a><li><a href=#capabilities-два-слоя class="table-of-contents__link toc-highlight">Capabilities: два слоя</a><ul><li><a href=#три-грани-модальности class="table-of-contents__link toc-highlight">Три грани модальности</a></ul><li><a href=#каталог-моделей-обнаружение-и-жизненный-цикл class="table-of-contents__link toc-highlight">Каталог моделей: обнаружение и жизненный цикл</a><ul><li><a href=#две-независимые-оси-доступности class="table-of-contents__link toc-highlight">Две независимые оси доступности</a><li><a href=#третья-ось-для-чего-workspace-использует-модель class="table-of-contents__link toc-highlight">Третья ось: для чего workspace использует модель</a><li><a href=#три-правила-реконсиляции class="table-of-contents__link toc-highlight">Три правила реконсиляции</a><li><a href=#и-два-правила-реконсиляции-цены class="table-of-contents__link toc-highlight">И два правила реконсиляции цены</a><li><a href=#каскад-перепроверяет-capability-при-спуске-по-уровням class="table-of-contents__link toc-highlight">Каскад перепроверяет capability при спуске по уровням</a><li><a href=#кто-планирует-и-кто-выполняет class="table-of-contents__link toc-highlight">Кто планирует и кто выполняет</a></ul><li><a href=#цена-действует-отныне-никогда-задним-числом class="table-of-contents__link toc-highlight">Цена: действует отныне, никогда задним числом</a><li><a href=#embeddings class="table-of-contents__link toc-highlight">Embeddings</a><ul><li><a href=#кто-векторизует-сегодня class="table-of-contents__link toc-highlight">Кто векторизует сегодня</a></ul><li><a href=#нормализованные-ошибки class="table-of-contents__link toc-highlight">Нормализованные ошибки</a><li><a href=#inactivity-ceiling class="table-of-contents__link toc-highlight">Потолок бездействия</a><li><a href=#база-совместимая-с-openai class="table-of-contents__link toc-highlight">База, совместимая с OpenAI</a><li><a href=#normalized-divergences class="table-of-contents__link toc-highlight">Нормализованные расхождения</a><ul><li><a href=#a-system-message-at-the-end-of-the-conversation-at-161 class="table-of-contents__link toc-highlight">Сообщение <code>system</code> в конце разговора (AT-161)</a></ul><li><a href=#openrouter--первый-hub-фаза-11a class="table-of-contents__link toc-highlight">OpenRouter — первый hub (Фаза 11a)</a><li><a href=#nvidia-nim-фаза-11b class="table-of-contents__link toc-highlight">NVIDIA NIM (Фаза 11b)</a><li><a href=#together-ai-фаза-11b class="table-of-contents__link toc-highlight">Together AI (Фаза 11b)</a><li><a href=#deepinfra-фаза-11b class="table-of-contents__link toc-highlight">DeepInfra (Фаза 11b)</a><li><a href=#bitdeer-фаза-11b class="table-of-contents__link toc-highlight">Bitdeer (Фаза 11b)</a><li><a href=#vultr-serverless-inference-фаза-11b class="table-of-contents__link toc-highlight">Vultr Serverless Inference (Фаза 11b)</a><li><a href=#hubs-и-реальная-стоимость class="table-of-contents__link toc-highlight">Hubs и реальная стоимость</a><ul><li><a href=#пример-одна-и-та-же-модель-hub--напрямую class="table-of-contents__link toc-highlight">Пример: одна и та же модель, hub × напрямую</a></ul><li><a href=#контрактный-набор class="table-of-contents__link toc-highlight">Контрактный набор</a><li><a href=#tool-calling-и-спасение-в-engine class="table-of-contents__link toc-highlight">Tool calling и спасение в engine</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://ko-fi.com/daneiel target=_blank rel="noopener noreferrer" class=footer__link-item>Угостить кофе (Ko-fi)<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>
+не рекомендуется.</p>
+<nav class="site-pager"></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md">Редактировать страницу</a><span>Обновлено 2026-11-03T23:50:59-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>На этой странице</h2><ul><li class="n2"><a href="#контракт">Контракт</a></li><li class="n2"><a href="#capabilities-два-слоя">Capabilities: два слоя</a></li><li class="n3"><a href="#три-грани-модальности">Три грани модальности</a></li><li class="n2"><a href="#каталог-моделей-обнаружение-и-жизненный-цикл">Каталог моделей: обнаружение и жизненный цикл</a></li><li class="n3"><a href="#две-независимые-оси-доступности">Две независимые оси доступности</a></li><li class="n3"><a href="#третья-ось-для-чего-workspace-использует-модель">Третья ось: для чего workspace использует модель</a></li><li class="n3"><a href="#три-правила-реконсиляции">Три правила реконсиляции</a></li><li class="n3"><a href="#и-два-правила-реконсиляции-цены">И два правила реконсиляции цены</a></li><li class="n3"><a href="#каскад-перепроверяет-capability-при-спуске-по-уровням">Каскад перепроверяет capability при спуске по уровням</a></li><li class="n3"><a href="#кто-планирует-и-кто-выполняет">Кто планирует и кто выполняет</a></li><li class="n2"><a href="#цена-действует-отныне-никогда-задним-числом">Цена: действует отныне, никогда задним числом</a></li><li class="n2"><a href="#embeddings">Embeddings</a></li><li class="n3"><a href="#кто-векторизует-сегодня">Кто векторизует сегодня</a></li><li class="n2"><a href="#нормализованные-ошибки">Нормализованные ошибки</a></li><li class="n2"><a href="#inactivity-ceiling">Потолок бездействия</a></li><li class="n2"><a href="#база-совместимая-с-openai">База, совместимая с OpenAI</a></li><li class="n2"><a href="#normalized-divergences">Нормализованные расхождения</a></li><li class="n3"><a href="#a-system-message-at-the-end-of-the-conversation-at-161">Сообщение system в конце разговора (AT-161)</a></li><li class="n2"><a href="#openrouter--первый-hub-фаза-11a">OpenRouter — первый hub (Фаза 11a)</a></li><li class="n2"><a href="#nvidia-nim-фаза-11b">NVIDIA NIM (Фаза 11b)</a></li><li class="n2"><a href="#together-ai-фаза-11b">Together AI (Фаза 11b)</a></li><li class="n2"><a href="#deepinfra-фаза-11b">DeepInfra (Фаза 11b)</a></li><li class="n2"><a href="#bitdeer-фаза-11b">Bitdeer (Фаза 11b)</a></li><li class="n2"><a href="#vultr-serverless-inference-фаза-11b">Vultr Serverless Inference (Фаза 11b)</a></li><li class="n2"><a href="#hubs-и-реальная-стоимость">Hubs и реальная стоимость</a></li><li class="n3"><a href="#пример-одна-и-та-же-модель-hub--напрямую">Пример: одна и та же модель, hub × напрямую</a></li><li class="n2"><a href="#контрактный-набор">Контрактный набор</a></li><li class="n2"><a href="#tool-calling-и-спасение-в-engine">Tool calling и спасение в engine</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-ru.json" data-base="../"></script></body>
+</html>

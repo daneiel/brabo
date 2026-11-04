@@ -1,287 +1,327 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/llm-providers" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>LLM provider | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/reference/llm-providers /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="LLM provider | Brabo"/><meta data-rh=true name=description content="让 Ollama、OpenAI 和 Anthropic 可以互换的统一契约，包括按 provider 和按模型的 capability、目录同步、模型生命周期、规范化的错误以及不活动上限。"/><meta data-rh=true property=og:description content="让 Ollama、OpenAI 和 Anthropic 可以互换的统一契约，包括按 provider 和按模型的 capability、目录同步、模型生命周期、规范化的错误以及不活动上限。"/><meta data-rh=true name=keywords content="LLM,provider,OpenAI,Anthropic,Ollama,capabilities,tool calling,streaming,目录,价格"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/llm-providers /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/llm-providers hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/llm-providers hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/llm-providers hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/llm-providers hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/llm-providers hreflang=x-default /><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.21f5d709.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.d26f403e.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.729afbca.js defer></script></head><body><svg style="display: none;"><defs>
-<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
-</defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>运维手册</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>架构决策（ADR）</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>简体中文</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/llm-providers target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/llm-providers target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><main class="docMainContainer_ia8v docMainContainerEnhanced_VNLS"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">译文日期 2026-10-16；原文此后已有更改。</div><div class="theme-doc-markdown markdown"><header><h1>LLM provider</h1></header>
+<!doctype html>
+<html lang="zh-Hans" data-locale="zh-Hans" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM provider | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="菜单">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="搜索" aria-label="搜索" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="语言"><option value="../../reference/llm-providers.html">pt-BR</option><option value="../../en/reference/llm-providers.html">en</option><option value="../../ru/reference/llm-providers.html">ru</option><option value="../../zh-Hans/reference/llm-providers.html" selected>zh-Hans</option></select>
+<select data-seletor aria-label="环境"><option value="../../../dev/zh-Hans/reference/llm-providers.html" selected>dev</option><option value="../../../prd/zh-Hans/reference/llm-providers.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="切换主题">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 从这里开始</h2><ul><li><a href="../index.html">简介</a></li><li><a href="../getting-started.html">快速开始</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">从零到交付物</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ 架构</h2><ul><li><a href="../architecture.html">架构</a></li><li><a href="../adr.html">决策（ADR）</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — GitProvider 规范化契约的形态</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — GitProvider 错误的规范化</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — 远程 provider 的重试策略</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — 用户 git 凭据的登记</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — 幂等且可恢复的 Gitflow bootstrap</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — 分支保护：provider 之间的分歧与审批矩阵</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — 机制化的分支策略</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — 采纳现有仓库，以及作为关口的计划</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — engine 在远程仓库上工作</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — 流水线合并的告警获得接收方，以及 `dev` 的规则</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — QA 处于测试阶段时，`dev` → `qa` 自动晋升</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — agent 的 harness：确定性的上下文组装</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — 会话的类型是创建时的数据，而执行仍然是事件</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — 一致的传输限制与有效的压缩窗口</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — 点击在**接受**命令时响应，轮次经由通道继续</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — 回答的语言存放在三个地方——账户、会话和项目——采用开放的 BCP-47 列表，绝不放在 `users.locale` 中</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — 循环向 Jev 询问用哪个工具，用户的模型只看到剩下的菜单</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — 已结束的会话可以重新打开：终止状态的专属出口，通向 `active`，带新事件</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — 在轮次进行中到达的消息进入持久化队列，并在轮次结束时被读取</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — harness 中的对话式 Criativo agent + handoff 的基础</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — PO agent、backlog（epics/stories/tasks）与可追溯性</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Arquiteto agent：通过真实 PR 的 ADR、module_map 和交叉验证</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent 与实时团队面板（Fase 4a 收尾）</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — 真正的 Psicólogo：ToolLoop、带证据的假设与成本分诊</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese：熟练度画像、指令补丁与闭环</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — 阶段 4b 的收尾（第 1 次会话）：能送达的证据、能显示的成本、能在 kill 之后存活的分析</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — 阶段 4b 的收尾（第 2 次会话）：能工作的目录、能区分谁拒绝的去重，以及能在一轮之后存活的队列</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — agent 的层级：领域、lead 与委派</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — 由用户拥有权限的故事晋升</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead 作为区域，以及由用户授权的并行</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Arquiteto 的 C4 图</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — 有条件地合并 handoff 的接受与执行的启用</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — 角色流作为声明式登记（fluxo.yml）</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — Dev Lead 的计划挂起轮次以等待审批</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer 作为对话式 agent 加入</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff：代码就绪，自动触发处于休眠</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` 和 `delivery-metricas` 成为报表脚本</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — `dbre` 角色变成两个脚本：迁移 linter 和备份报告</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Dev Lead → dev 的委派成为数据，`parecerArtifactId` 被重新定义</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — 向任选 agent 的手动 handoff 复用&quot;提供 + 接受&quot;，绝不引入第三种 handoff 状态</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — handoff 提议获得生命周期：每个目标一个待处理，以及 `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — 已归档的故事：一列，而不是状态机中的一个状态</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — PR 的 gate：QAAgent 和 SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — 解锁 QA 与 SecOps 的 gate：在工作树上运行 gitleaks、经过校验的意见书，以及文本形式的 tool call</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — 阶段 4a 的收尾：真正做校验的 infra gate，以及说真话的面板</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — gate 作为声明式登记</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — gate agent 等待审批，就像 dev 那样等待</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — gate 在重启后存活</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA 策略和 AppSec 作为第二个**时刻**，而不是新 agent</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` 作为基于 `rate_limit_hits` 的报告脚本</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — gate `necessidade-validada` 由单独的人工确认关闭，而不是由 Criativo 自我验证</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — 为 QA Automação agent 的语义判断建立回归用例 golden-set</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — 停滞超过 2 小时的 gate 周期会被搁置，只有人工操作才能恢复</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — 悬而未决的问题成为待解决的待办</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — 项目的决定传达到 dev 和 QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — dev agent 的基础设施：worktree、git 执行器和合并锁</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — 真正的 DevAgent：ToolLoop、按 task 的预算与阻塞纪律</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — 工作区初始化锁、dev agent 的 Monitor 以及上限继承</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent 作为永久的执行模式</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — 解锁真实的 DevAgent：写入、终端、按模块的 ADR 和按项目的预算</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — dev agent 的按事件重新调度，以及熔断器</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — dogfooding 之后的可运维性：Fase 12 的收尾</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — event log 中的决定，以及 gate 的顺序</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — dev agent 在循环中途等待审批</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — 终端策略中的路径范围</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — 修订 ADR 0065：外部效果的边界不再是 `deny`，而是绝对上限</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — 自动模式放行路径范围，而且只有它放行</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — 自动驾驶：自动模式批准一切（上限除外），作用域与真实执行目录比较，&quot;始终允许&quot;记录动词 + 子命令</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — 自动模式放行 push 和 PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — 可读的 workspace 文件夹名称</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — 项目选择代码存放在哪里：用户目录还是托管目录</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` 取三个值，由 runner 负责验证时 workspace 以 `unverified` 诞生</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — 通过 Runner 浏览本地文件夹</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — 在 `runner` 模式下，项目在点击“Navegar pasta...”时诞生，而不只是在确认时</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — 转换已有项目的 `execution_mode`：dev agent 活动时拒绝，迁移 `permissions.json`，退役容器行</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — 挂载项目的唯一 base，按同一路径挂载</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — 挂载 workspace 的验证推迟到实体化时进行</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — 在 bootstrap 中经同意设定的 base，以及 `mounted` 作为本地默认值</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — 每个项目一个容器：边界不再是策略</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — 容器生命周期：状态表，没有编排器</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — 终端标签页获得生命周期的真实使用者，而不是终端</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Docker 端口，以及选定实现的打包证明</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — dev agent 在项目的真实容器**内部**执行，终端在其中获得一个自动批准的下限</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` 在用户的机器上启动项目容器</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — dev agent 只在容器之后</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — broker 的第二个根，以及选择它的可辨识定位符</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — 项目容器以文件夹所有者身份运行，由 api 测量</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra 在接受 handoff 时启动容器，由服务器执行这一步并预置自主度，并由它交接给 Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra 继承 Arquiteto 声明的网络</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — 本地 runner：通过带一次性 ticket 的 Phoenix 通道在用户机器上执行</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — 给 runner 的 Personal Access Token（`brb_…`），按构造限定到一条路由</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — 通过 `tsup` 和 `npm publish` 分发 `@brabo/runner`，版本只在 CI 中注入</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — 通过 `bun build --compile` 构建 `@brabo/runner` 的独立二进制，原生插件 `.node` 通过真实解压到临时目录的方式嵌入</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — 通过浏览器配置 runner：Ed25519 设备密钥作为 `runner-ticket` 的第二种凭据、GitHub Releases 的二进制代理，以及用 File System Access API 一键配置文件夹</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker 成为 `runner` 模式的真正前提</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — 一个本地 agent，在连接时声明能力</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — runner 中经同意的基础目录，以及通过通道创建文件夹</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — 机器级的设备密钥</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — runner 的独立二进制不再承诺 Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — runner 的独立二进制不再承诺 Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — 通过浏览器配置 runner 的流程退役，路径改为安装程序</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — engine 所缺的 CORS，以及端口作为契约的一部分</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — 凭据总是被加密；验证成为显式动作</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — api 中封闭的 CSP，以及约束在根内的项目范围</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — 签署 git OAuth `state` 的密钥没有默认值</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — 社交登录（GitHub/GitLab），修订 ADR 0031/0032 的 backlog</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — `MailSender` 中的真实 SMTP，置于显式开关之后</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — `project_members` 中的两道降级上限，覆盖关系保留</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — 自我降级上限同样适用于移除项目成员</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — workspace 成员的移除诞生，由同一条款保护</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — 仪表盘的货币：暂用 USD，按 workspace 的手动汇率推迟</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — 活目录、模型生命周期与可审计的价格</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — 在基础之上的六个 LLM provider，Fase 9b 终于关闭</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — 按 workspace 的模型策展</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — 已证明的能力维度；“用来做什么”是策展</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — 同一笔花费的两种受众：owner 的账单与成员的消耗</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — 模型级联中的领域范围，以及全局的 agent 绑定</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — LLMProvider 合约中的 embedding</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` 重新成为花费维度，约束改由类型承担</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — 按能力的模型排名，不编造评分</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — 按区域的预算是叠加的，与项目/会话并列——不是级联，也不是新表</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — 在开发引导中检测原生 Ollama：只问一次，持久化到 `.env`，把 compose 的服务放到 profile 之后</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — 从 Hugging Face 拉取模型：独立的表、两步确认以及官方发布者 allowlist——绝不使用 `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — 路由偏好住在模型 binding 中，随它一起传递，并在计量中冻结</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — provider 返回的真实成本成为计量的数字</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — 故事与规则的语义重复通过带阈值的 embedding 提醒，花费进入计量</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — chunk 表：向量与 `tsvector` 在同一行</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — 混合搜索：权重、阈值，以及什么算引用</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG：混合搜索的独立标签页，不重命名“Chat”</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j 作为知识图谱和 prompt 模板，驱动放在 api 中</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — 面向 agent 的 `rag_search`，以及启动时确保存在的 Ollama 模型</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — 关系记忆作为事件日志的投影；在不触碰 GenServer 的情况下使用模板</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — 附加的本地目录成为 `chunks.scope = 'local'`，由**浏览器**读取，绝不是主机路径</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — RAG 搜索的遥测是**表**，权重冻结在行中</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — RAG 命中率的 golden-set，以及 gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — 重新启用的 Anamnese：没有主体就不运行，被接受的假设成为画像事实</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — 忠实于设计的认证界面，以及三种无法加载的字体</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — 代码的读取面，受约束且有预算</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — 可切换的主题，以及 CSP 下的启动</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — 界面框架，以及标签页注册表刻意偏离 handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — 为仪表盘的“N 个 agent 在线”直接读取 engine 的 schema</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType`（以及将来的类型）由 OpenAPI 契约生成，而不是手工复制</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` 拆分为五个机械式 PR，并事先声明</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — 轮次通道的状态分组抽取到 `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — 把 `ProjectSettingsTab.tsx` 拆分为每个分区一个文件，置于一个 barrel 之后</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — 项目页面通过垂直轨道导航，代码标签页不再自行折叠侧边栏</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — 深色主题变为中性黑，对比度债务结束</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — 用 `motion` 做文本动画</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — 只有一种导航：侧边栏吸收项目轨道</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — 阶段 5（第 1 次会话）：生产镜像、compose.prod、CI 与冒烟测试</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — 阶段 5（第 2 次会话）：使用 Kustomize 部署 Kubernetes、队列指标与本地 overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — 阶段 5（第 3 次会话）：优雅关闭、OpenTelemetry、指标、日志与仪表盘</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — 备份/还原、api 加固、暴露面与发布</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — 没有 collector 的 trace，以及日志中跨层的路径</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — 本地 Compose 中的可观测性：指标和日志，没有 trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — 一行安装程序，带可选来源和标记文件</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — 针对 compose 的卷备份与恢复</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — 第一个账户在终端中诞生，本地 agent 启动时即已配对</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — 安装程序的 compose 随它一起传送，作为已签名的 asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — 本地 overlay 的 S3 目标不再是 MinIO，改为 SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — 开发用 compose 改名为 `brabo-dev`，开发环境拒绝在安装旁边启动</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — engine 升级到 Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint 与生成的 CI 管道的验证</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — 每个正式 tag 都把镜像发布到 GHCR，生产 overlay 按 digest 固定</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — 针对生产 compose 的浏览器 E2E，放在 workspace 之外的包中</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — schema 按领域聚合拆分，置于一个 barrel 之后</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — `pnpm audit` 反复超时是承担的风险；发现问题仍然失败</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — 已发布工件的签名</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — 第三方镜像的 tag 住在引用**之内**，位于 digest 之前</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — 文档的持续同步</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — API 参考由代码产出，表格测试对元数据提出要求</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — 按阶梯发布的文档，位于 Pages 的子目录中</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — 按阶梯对称发布，以及一个供选择的根</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — 发布路径命名的是环境，而不是分支</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` 拥有自己的 lockfile，脱离产品的 `pnpm audit`</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — API 参考变成一个 Redoc 页面</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — 四种语言，以 pt-BR 作为**来源**和默认：文档与界面提供葡萄牙语、英语、俄语和简体中文</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — 每个 ADR 都命名为“ADR NNNN — 标题”</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — 参考文档纳入翻译</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — API 页面按目录翻译</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 规则</h2><ul><li><a href="../business-rules.html">业务规则</a></li><li><a href="../business-rules/custo.html">成本与计量</a></li><li><a href="../business-rules/autenticacao.html">认证</a></li></ul></section><section><h2>📖 参考</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">api 的暴露面</a></li><li><span>API 参考</span></li></ul></section><section><h2>💡 解释</h2><ul><li><span>流程与流水线</span><ul><li><a href="../explanation/documentation-workflow.html">文档同步</a></li><li><a href="../explanation/branching-policy.html">分支策略</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">CI 的供应链</a></li><li><a href="../explanation/gates.html">gates，以及如何测量它们</a></li><li><a href="../explanation/observability.html">可观测性</a></li><li><a href="../explanation/modelo-de-time.html">团队模型与交付物流程</a></li></ul></li><li><span>验证与测量</span><ul><li><a href="../explanation/primeiro-dogfooding.html">第一次 dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">真实执行（hello world）</a></li><li><a href="../explanation/achados-execucao-real.html">流水线真实执行中的发现</a></li><li><a href="../explanation/validacao-fase-12.html">Fase 12 的验证</a></li><li><a href="../explanation/validacao-real.html">真实验证（13b）</a></li><li><a href="../explanation/aceite-providers.html">provider 的验收</a></li><li><a href="../explanation/medicao-do-idioma.html">语言启发式的测量</a></li><li><a href="../explanation/medicao-do-jev.html">Jev 工具路由器的测量</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">审计：fluxo.yml × 代码（v3，ADR 0085）</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">视觉审计：Rodada 29 之前与之后</a></li></ul></li><li><span>阶段历史</span><ul><li><a href="../explanation/historico-de-fases.html">阶段历史</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — 用户的目录</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — 一行命令安装</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30——机器的本地智能体</a></li><li><a href="../explanation/backlog.html">已分类的 backlog</a></li></ul></li><li><span>本地化</span><ul><li><a href="../explanation/localizacao.html">本地化</a></li><li><a href="../explanation/localizacao-en.html">本地化——英语（en）</a></li><li><a href="../explanation/localizacao-ru.html">本地化——俄语（ru）</a></li><li><a href="../explanation/localizacao-zh-hans.html">本地化——简体中文（zh-Hans）</a></li></ul></li><li><span>技术笔记</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI——未采用</a></li></ul></li></ul></section><section><h2>🛠️ 运维</h2><ul><li><a href="../runbook.html">运维手册</a></li></ul></section><section><h2>📚 词汇</h2><ul><li><a href="../glossary.html">术语表</a></li></ul></section><section><h2>🤝 贡献</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">如何贡献</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">在哪里求助</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">报告漏洞</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="llm-provider">LLM provider</h1>
 <p>Brabo 中的每个 agent 和每个聊天都通过一个统一的契约与模型对话。调用方不知道另一端是磁盘上的 Ollama、OpenAI 的 API 还是 Anthropic 的 API——也不应该知道。</p>
-<p>决策见 <a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>，不活动上限继承自 <a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a>。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=契约>契约<a href=#契约 class=hash-link aria-label=契约的直接链接 title=契约的直接链接 translate=no>​</a></h2>
+<p>决策见 <a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041</a>，不活动上限继承自 <a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020</a>。</p>
+<h2 id="契约">契约</h2>
 <p><code>LLMProvider</code>（<code>apps/api/src/application/ports/llm-provider.port.ts</code>）有一个<strong>必需</strong>操作，而且它总是流式的：</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>class</span><span class="token plain"> </span><span class="token class-name" style=color:var(--syntax-type)>LLMProvider</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> name</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> LLMProviderName</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> capabilities</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> LLMProviderCapabilities</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>abstract</span><span class="token plain"> </span><span class="token function" style=color:var(--syntax-function)>chat</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    messages</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> ChatMessage</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    options</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> ChatOptions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> AsyncGenerator</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">ChatStreamChunk</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token doc-comment comment" style=color:var(--syntax-comment);font-style:italic>/** Only when `capabilities.listModels` (Phase 9c). */</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  listModels</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain">apiKey</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>string</span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>Promise</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">ModeloDoCatalogo</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token doc-comment comment" style=color:var(--syntax-comment);font-style:italic>/** Only when `capabilities.embeddings` (ADR 0075). */</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  embed</span><span class="token operator" style=color:var(--syntax-operator)>?</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    inputs</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token keyword" style=color:var(--syntax-keyword)>readonly</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>string</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    options</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> EmbeddingOptions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>Promise</span><span class="token operator" style=color:var(--syntax-operator)>&lt;</span><span class="token plain">EmbeddingResult</span><span class="token operator" style=color:var(--syntax-operator)>></span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-ts">abstract class LLMProvider {
+  abstract readonly name: LLMProviderName;
+  abstract readonly capabilities: LLMProviderCapabilities;
+  abstract chat(
+    messages: ChatMessage[],
+    options: ChatOptions,
+  ): AsyncGenerator&lt;ChatStreamChunk&gt;;
+
+  /** Only when `capabilities.listModels` (Phase 9c). */
+  listModels?(apiKey?: string): Promise&lt;ModeloDoCatalogo[]&gt;;
+  /** Only when `capabilities.embeddings` (ADR 0075). */
+  embed?(
+    inputs: readonly string[],
+    options: EmbeddingOptions,
+  ): Promise&lt;EmbeddingResult&gt;;
+}
+</code></pre>
 <p>两个可选操作遵循同样的<strong>双向</strong>契约：声明了 capability 的实现该方法，没有声明的就不暴露它。消费方通过检查 capability 来降级，绝不是在失败时才发现它。</p>
 <p>tool calling 和 token 计数都没有单独的方法：工具放在 <code>options.tools</code> 中，一切都通过同一个流返回，作为四种 <code>ChatStreamChunk</code> 之一。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>chunk<th>时机<tbody><tr><td><code>text_delta</code><td>生成的一段文本<tr><td><code>tool_calls</code><td>模型请求了工具（单个 chunk，不是增量的）<tr><td><code>usage</code><td>token 计数，带 <code>estimated</code> 标记；当响应中提供时，还有真实成本（<code>costMicros</code>）、实际服务的模型（<code>resolvedModel</code>）、响应 id（<code>generationId</code>）以及 token 计数中缓存/推理的<strong>部分</strong>（<code>cachedInputTokens</code>、<code>reasoningTokens</code>，RN-666）——<a class="" href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a><tr><td><code>error</code><td>按 <code>code</code> 分类的失败——<strong>绝不是异常</strong></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>chunk</th>
+<th>时机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text_delta</code></td>
+<td>生成的一段文本</td>
+</tr>
+<tr>
+<td><code>tool_calls</code></td>
+<td>模型请求了工具（单个 chunk，不是增量的）</td>
+</tr>
+<tr>
+<td><code>usage</code></td>
+<td>token 计数，带 <code>estimated</code> 标记；当响应中提供时，还有真实成本（<code>costMicros</code>）、实际服务的模型（<code>resolvedModel</code>）、响应 id（<code>generationId</code>）以及 token 计数中缓存/推理的<strong>部分</strong>（<code>cachedInputTokens</code>、<code>reasoningTokens</code>，RN-666）——<a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188</a></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>按 <code>code</code> 分类的失败——<strong>绝不是异常</strong></td>
+</tr>
+</tbody>
+</table></div>
 <p>失败变成 chunk 而不是异常，是因为回合已经花掉了 token：即使响应没有到来，计量也必须发生。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=capability两层>Capability：两层<a href=#capability两层 class=hash-link aria-label=Capability：两层的直接链接 title=Capability：两层的直接链接 translate=no>​</a></h2>
+<h2 id="capability两层">Capability：两层</h2>
 <p><strong>provider 的一层</strong>是该后端能做什么的上限。<strong>模型的一层</strong>是 <code>models</code> 表中那一行能做什么。模型可以比 provider 弱，但绝不能更强。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>capability<th>所在位置<th>用途<tbody><tr><td><code>streaming</code><td>provider + <code>models.supports_streaming</code><td>—<tr><td><code>toolCalling</code><td>provider + <code>models.supports_tool_calling</code><td>拒绝 agent 的 binding（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-040>RN-040</a>）<tr><td><code>listModels</code><td>仅 provider<td>启用/跳过目录同步（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-043>RN-043</a>）<tr><td><code>embeddings</code><td>provider + 目录行上的 <code>supportsEmbeddings</code><td>允许/拒绝 embedding 调用（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-190>RN-190</a>）<tr><td><code>promptCaching</code><td>provider + 配置 hook 中的模型过滤（OpenRouter 上为 <code>anthropic/*</code>）<td>在稳定前缀上标记 <code>cache_control</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-892>RN-892</a>）；只有 OpenRouter 为 <code>true</code>，于 2026-10-15 通过 smoke 证明<tr><td><code>context_length</code><td><code>models.context_window</code><td>上下文预算<tr><td><code>vision</code><td><code>models.supports_vision</code><td>过滤目录（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-056>RN-056</a>）<tr><td><code>reasoning</code><td><code>models.supports_reasoning</code><td>同上<tr><td><code>image output</code><td><code>models.generates_image</code><td>同上</table>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=模态的三个维度>模态的三个维度<a href=#模态的三个维度 class=hash-link aria-label=模态的三个维度的直接链接 title=模态的三个维度的直接链接 translate=no>​</a></h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>capability</th>
+<th>所在位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>streaming</code></td>
+<td>provider + <code>models.supports_streaming</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>toolCalling</code></td>
+<td>provider + <code>models.supports_tool_calling</code></td>
+<td>拒绝 agent 的 binding（<a href="../business-rules/custo.html#rn-040">RN-040</a>）</td>
+</tr>
+<tr>
+<td><code>listModels</code></td>
+<td>仅 provider</td>
+<td>启用/跳过目录同步（<a href="../business-rules/custo.html#rn-043">RN-043</a>）</td>
+</tr>
+<tr>
+<td><code>embeddings</code></td>
+<td>provider + 目录行上的 <code>supportsEmbeddings</code></td>
+<td>允许/拒绝 embedding 调用（<a href="../business-rules/custo.html#rn-190">RN-190</a>）</td>
+</tr>
+<tr>
+<td><code>promptCaching</code></td>
+<td>provider + 配置 hook 中的模型过滤（OpenRouter 上为 <code>anthropic/*</code>）</td>
+<td>在稳定前缀上标记 <code>cache_control</code>（<a href="../business-rules/custo.html#rn-892">RN-892</a>）；只有 OpenRouter 为 <code>true</code>，于 2026-10-15 通过 smoke 证明</td>
+</tr>
+<tr>
+<td><code>context_length</code></td>
+<td><code>models.context_window</code></td>
+<td>上下文预算</td>
+</tr>
+<tr>
+<td><code>vision</code></td>
+<td><code>models.supports_vision</code></td>
+<td>过滤目录（<a href="../business-rules/custo.html#rn-056">RN-056</a>）</td>
+</tr>
+<tr>
+<td><code>reasoning</code></td>
+<td><code>models.supports_reasoning</code></td>
+<td>同上</td>
+</tr>
+<tr>
+<td><code>image output</code></td>
+<td><code>models.generates_image</code></td>
+<td>同上</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="模态的三个维度">模态的三个维度</h3>
 <p><code>supports_vision</code>、<code>supports_reasoning</code> 和 <code>generates_image</code> 是 <strong>provider 的事实</strong>：它们在同步时从远程目录中得出，回退规则与 tool calling 相同——先远程，再本地，最后 <code>false</code>。目前只有 OpenRouter 发布它们：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>维度<th>在 OpenRouter 中的来源<th>2026-08-04 的目录中<tbody><tr><td><code>supports_vision</code><td><code>architecture.input_modalities</code> 包含 <code>image</code><td>338 个中有 181 个<tr><td><code>generates_image</code><td><code>architecture.output_modalities</code> 包含 <code>image</code><td>338 个中有 11 个<tr><td><code>supports_reasoning</code><td><code>supported_parameters</code> 包含 <code>reasoning</code><td>338 个中有 213 个</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>在 OpenRouter 中的来源</th>
+<th>2026-08-04 的目录中</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>supports_vision</code></td>
+<td><code>architecture.input_modalities</code> 包含 <code>image</code></td>
+<td>338 个中有 181 个</td>
+</tr>
+<tr>
+<td><code>generates_image</code></td>
+<td><code>architecture.output_modalities</code> 包含 <code>image</code></td>
+<td>338 个中有 11 个</td>
+</tr>
+<tr>
+<td><code>supports_reasoning</code></td>
+<td><code>supported_parameters</code> 包含 <code>reasoning</code></td>
+<td>338 个中有 213 个</td>
+</tr>
+</tbody>
+</table></div>
 <p>接受图像和<strong>生成</strong>图像是两个不同的轴：读一张图和画一张图解决的是不同的问题。</p>
-<p>当 provider 没有声明某种模态时，解析器会<strong>省略</strong>该字段，而 <code>undefined</code> 在同步时保留本地值——没有声明不等于声明了没有。因此界面只把这些维度用作正向过滤：<code>false</code> 意味着"provider 没有声明"，绝不意味着"模型不会"（<a class="" href=/brabo/dev/zh-Hans/adr/0051-facetas-de-capability-e-curadoria-por-uso>ADR 0051</a>）。</p>
-<p>:::caution 这<strong>不</strong>涵盖"最适合写代码"
-没有任何 provider 的目录会发布某个模型擅长什么。这是运维者的策展，按 workspace 存放在 <code>workspace_models.uses</code> 中（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-057>RN-057</a>）——它不是 capability，从模型名推导它只会是一个打扮成数据的猜测。
-:::</p>
-<!-- -->
+<p>当 provider 没有声明某种模态时，解析器会<strong>省略</strong>该字段，而 <code>undefined</code> 在同步时保留本地值——没有声明不等于声明了没有。因此界面只把这些维度用作正向过滤：<code>false</code> 意味着&quot;provider 没有声明&quot;，绝不意味着&quot;模型不会&quot;（<a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051</a>）。</p>
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">这**不**涵盖&quot;最适合写代码&quot;</p>
+<p>没有任何 provider 的目录会发布某个模型擅长什么。这是运维者的策展，按 workspace 存放在 <code>workspace_models.uses</code> 中（<a href="../business-rules/custo.html#rn-057">RN-057</a>）——它不是 capability，从模型名推导它只会是一个打扮成数据的猜测。</p>
+</div>
+<!-- BEGIN:GENERATED:providers-capabilities -->
 <blockquote>
 <p>⚠️ 此区块由 <code>pnpm docs:generate</code> 生成。请勿手动编辑——下次构建会覆盖它。</p>
 </blockquote>
 <p>读取自 <code>apps/api/src/infrastructure/llm/</code> 中的 <code>capabilities</code> 字面量——<strong>11 个 provider</strong>。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th>streaming<th>tool calling<th>list_models<th>embeddings<th>路由偏好<th>凭据<th>模型来源<th>特性摘要<th>来源<tbody><tr><td><code>9router</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync<td>URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities <code>false</code>; Usage corrigido; Token Saver desligado; Raciocínio redigido no OAuth do Claude; Camuflagem das ferramentas no OAuth do Claude; Qual upstream serviu<td><code>apps/api/src/infrastructure/llm/nine-router-provider.ts</code><tr><td><code>anthropic</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code><tr><td><code>bitdeer</code><td>是<td>是<td>否<td>否<td>否<td>API 密钥<td>seed<td><code>Authorization: Bearer &lt;chave></code> CONFIRMADO; <code>GET /v1/models</code> existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada<td><code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code><tr><td><code>deepinfra</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync + seed<td>O catálogo é PÚBLICO — sem autenticação nenhuma; <code>stream_options.include_usage</code> confirmado como suportado; Erro no formato padrão<td><code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code><tr><td><code>nvidia-nim</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync + seed<td>Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; <code>stream_options.include_usage</code> não confirmado<td><code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code><tr><td><code>ollama</code><td>是<td>是<td>是<td>是<td>否<td>无（本地）<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code><tr><td><code>openai</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync + seed<td>—<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code><tr><td><code>opencode-zen</code><td>是<td>否<td>否<td>否<td>否<td>API 密钥<td>seed<td>Sem teste de conexão da credencial; Capabilities <code>false</code><td><code>apps/api/src/infrastructure/llm/opencode-zen-provider.ts</code><tr><td><code>openrouter</code><td>是<td>是<td>是<td>否<td>是<td>API 密钥<td>sync<td>Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em <code>usage.cost</code>; Alias de roteamento livre (<code>~…</code>) é sincronizado mas não pode ser curado<td><code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code><tr><td><code>together</code><td>是<td>是<td>是<td>否<td>否<td>API 密钥<td>sync + seed<td>Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; <code>stream_options.include_usage</code> não confirmado; 429 leva <code>error_type: dynamic_request_limited | dynamic_token_limited</code><td><code>apps/api/src/infrastructure/llm/together-provider.ts</code><tr><td><code>vultr</code><td>是<td>是<td>否<td>否<td>否<td>API 密钥<td>seed<td>Tool calling CONFIRMADO com exemplo real; Sufixo <code>-normalize</code><td><code>apps/api/src/infrastructure/llm/vultr-provider.ts</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th>streaming</th>
+<th>tool calling</th>
+<th>list_models</th>
+<th>embeddings</th>
+<th>路由偏好</th>
+<th>凭据</th>
+<th>模型来源</th>
+<th>特性摘要</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>9router</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync</td>
+<td>URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities <code>false</code>; Usage corrigido; Token Saver desligado; Raciocínio redigido no OAuth do Claude; Camuflagem das ferramentas no OAuth do Claude; Qual upstream serviu</td>
+<td><code>apps/api/src/infrastructure/llm/nine-router-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>anthropic</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/anthropic-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>bitdeer</code></td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>seed</td>
+<td><code>Authorization: Bearer &lt;chave&gt;</code> CONFIRMADO; <code>GET /v1/models</code> existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada</td>
+<td><code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>deepinfra</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync + seed</td>
+<td>O catálogo é PÚBLICO — sem autenticação nenhuma; <code>stream_options.include_usage</code> confirmado como suportado; Erro no formato padrão</td>
+<td><code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>nvidia-nim</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync + seed</td>
+<td>Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; <code>stream_options.include_usage</code> não confirmado</td>
+<td><code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>ollama</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>无（本地）</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/ollama-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>openai</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync + seed</td>
+<td>—</td>
+<td><code>apps/api/src/infrastructure/llm/openai-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>opencode-zen</code></td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>seed</td>
+<td>Sem teste de conexão da credencial; Capabilities <code>false</code></td>
+<td><code>apps/api/src/infrastructure/llm/opencode-zen-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>openrouter</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>是</td>
+<td>API 密钥</td>
+<td>sync</td>
+<td>Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em <code>usage.cost</code>; Alias de roteamento livre (<code>~…</code>) é sincronizado mas não pode ser curado</td>
+<td><code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>together</code></td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>sync + seed</td>
+<td>Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; <code>stream_options.include_usage</code> não confirmado; 429 leva <code>error_type: dynamic_request_limited | dynamic_token_limited</code></td>
+<td><code>apps/api/src/infrastructure/llm/together-provider.ts</code></td>
+</tr>
+<tr>
+<td><code>vultr</code></td>
+<td>是</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td>API 密钥</td>
+<td>seed</td>
+<td>Tool calling CONFIRMADO com exemplo real; Sufixo <code>-normalize</code></td>
+<td><code>apps/api/src/infrastructure/llm/vultr-provider.ts</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>没有 <code>list_models</code> 的 provider 会被目录同步跳过，原因记录在报告中——
 绝不会被当作“目录返回为空”。
 “模型来源”：<code>sync</code> 自行发现，<code>seed</code> 只通过
@@ -294,410 +334,432 @@
 “路由偏好” 是 ADR 0166 的能力（hub 按 <code>price</code>、<code>throughput</code> 或 <code>latency</code>
 选择 upstream），规则相同：只有在针对真实 API 的 smoke 测试
 返回所选 upstream 之后才为 <code>是</code>。</p>
-<!-- -->
+<!-- END:GENERATED:providers-capabilities -->
 <p><code>supports_tool_calling</code> 的默认值是 <code>false</code>。这是故意的：自动同步（Fase 9c）发现的模型进入时不带任何没人验证过的承诺。种子中的模型显式声明这一 capability，migration <code>0026</code> 在已存在的数据库中做同样的回填——只针对种子的七行，绝不是对整张表盲目 <code>UPDATE</code>。</p>
-<p>:::caution 手工插入的模型
-<code>models</code> 没有编辑用的 HTTP 端点：添加模型的人要么通过 <code>seed.ts</code>，要么直接用 SQL。两种情况下，如果打算把这个模型绑定到某个 agent，<strong>请声明 <code>supports_tool_calling</code></strong>——默认的 <code>false</code> 会让 binding 被拒绝，包括在 gate 演示脚本中该模型由 <code>DEMO_QA_MODEL</code> 指定的情况。
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=模型目录发现与生命周期>模型目录：发现与生命周期<a href=#模型目录发现与生命周期 class=hash-link aria-label=模型目录：发现与生命周期的直接链接 title=模型目录：发现与生命周期的直接链接 translate=no>​</a></h2>
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">手工插入的模型</p>
+<p><code>models</code> 没有编辑用的 HTTP 端点：添加模型的人要么通过 <code>seed.ts</code>，要么直接用 SQL。两种情况下，如果打算把这个模型绑定到某个 agent，<strong>请声明 <code>supports_tool_calling</code></strong>——默认的 <code>false</code> 会让 binding 被拒绝，包括在 gate 演示脚本中该模型由 <code>DEMO_QA_MODEL</code> 指定的情况。</p>
+</div>
+<h2 id="模型目录发现与生命周期">模型目录：发现与生命周期</h2>
 <p>声明了 <code>listModels</code> 的 provider 能列出自己的目录。兼容基座实现它已经在说的那种方言的 <code>GET /models</code>，解析可以通过配置替换（<code>parseCatalogo</code>）——hub 在同一行中返回价格和窗口，这不能变成标准解析里的一个 <code>if</code>。</p>
-<p><strong>Ollama 和 Anthropic 现在声明为 <code>true</code></strong>——这是 <a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a> 留下的 backlog。它们之前声明为 <code>false</code> 不是因为缺少端点，而是因为格式还没有与官方文档核对过，而规则是不针对猜测的契约编程。两种格式都在写下第一行代码之前核对过：</p>
+<p><strong>Ollama 和 Anthropic 现在声明为 <code>true</code></strong>——这是 <a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042</a> 留下的 backlog。它们之前声明为 <code>false</code> 不是因为缺少端点，而是因为格式还没有与官方文档核对过，而规则是不针对猜测的契约编程。两种格式都在写下第一行代码之前核对过：</p>
 <ul>
-<li class=""><strong>Anthropic</strong>——<code>GET /v1/models</code> 返回 <code>{ data: [{ id, display_name, max_input_tokens, ... }], has_more, last_id }</code>，<strong>按游标</strong>分页（不是按偏移）：<code>last_id</code> 成为下一页的 <code>after_id</code>，<code>limit</code> 为 1 到 1000。遍历分页的是官方 SDK 的 <code>client.models.list</code>，它自己就会分页——手工重写游标循环等于重写由供应商维护的代码。响应中<strong>没有</strong>价格，所以模型以无价格的状态进入，而不是带一个编造的价格。</li>
-<li class=""><strong>Ollama</strong>——<code>GET /api/tags</code> 在本地主机（<code>OLLAMA_HOST</code>，默认 <code>http://localhost:11434</code>）返回 <code>{ models: [{ name, model, size, ... }] }</code>。没有价格，本地运行时理应如此。</li>
+<li><strong>Anthropic</strong>——<code>GET /v1/models</code> 返回 <code>{ data: [{ id, display_name, max_input_tokens, ... }], has_more, last_id }</code>，<strong>按游标</strong>分页（不是按偏移）：<code>last_id</code> 成为下一页的 <code>after_id</code>，<code>limit</code> 为 1 到 1000。遍历分页的是官方 SDK 的 <code>client.models.list</code>，它自己就会分页——手工重写游标循环等于重写由供应商维护的代码。响应中<strong>没有</strong>价格，所以模型以无价格的状态进入，而不是带一个编造的价格。</li>
+<li><strong>Ollama</strong>——<code>GET /api/tags</code> 在本地主机（<code>OLLAMA_HOST</code>，默认 <code>http://localhost:11434</code>）返回 <code>{ models: [{ name, model, size, ... }] }</code>。没有价格，本地运行时理应如此。</li>
 </ul>
-<p>两者都在出错时<strong>抛出</strong>，正如契约要求：返回空列表会被对账逻辑理解为"全都消失了"，让整个目录不可用（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-043>RN-043</a>）。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=两个独立的可用性轴>两个独立的可用性轴<a href=#两个独立的可用性轴 class=hash-link aria-label=两个独立的可用性轴的直接链接 title=两个独立的可用性轴的直接链接 translate=no>​</a></h3>
+<p>两者都在出错时<strong>抛出</strong>，正如契约要求：返回空列表会被对账逻辑理解为&quot;全都消失了&quot;，让整个目录不可用（<a href="../business-rules/custo.html#rn-043">RN-043</a>）。</p>
+<h3 id="两个独立的可用性轴">两个独立的可用性轴</h3>
 <p>一个模型有两个<strong>独立</strong>的状态，混淆它们正是 Fase 9c 填补的漏洞：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>位置<th>谁写入<th>含义<tbody><tr><td><code>workspace_models.is_active</code><td><strong>该 workspace 的 owner</strong>，通过策展页面<td>出现在选择器中，可以接受新的 binding<tr><td><code>models.availability</code><td><strong>同步</strong>，自行写入<td><code>unavailable</code> = 从 provider 的目录中消失了</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>位置</th>
+<th>谁写入</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>workspace_models.is_active</code></td>
+<td><strong>该 workspace 的 owner</strong>，通过策展页面</td>
+<td>出现在选择器中，可以接受新的 binding</td>
+</tr>
+<tr>
+<td><code>models.availability</code></td>
+<td><strong>同步</strong>，自行写入</td>
+<td><code>unavailable</code> = 从 provider 的目录中消失了</td>
+</tr>
+</tbody>
+</table></div>
 <p>一个模型可以同时是活动的<strong>和</strong>不可用的——正是这种重叠在界面上产生警告。当 provider 把它带回来时，owner 的选择仍然有效：同步永远不会重新开启有人故意关闭的东西。</p>
-<p>自 <a class="" href=/brabo/dev/zh-Hans/adr/0049-curadoria-de-modelo-por-workspace>ADR 0049</a> 起，两个轴不再位于同一张表中。策展是<strong>按 workspace</strong> 的——<code>models.is_active</code> 曾是整个安装的一列，workspace A 的 owner 开启一个模型，也会为 B 开启它（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-052>RN-052</a>）。留在 <code>models</code> 中的是 provider 的事实：名称、价格、capability 和可用性，对所有人都一样。</p>
-<p><strong><code>workspace_models</code> 中没有行就是"关闭"。</strong> 没有单独的"从未决定"状态，正因如此，RN-043 无需任何可能被同步覆盖的列也依然有效。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=第三个轴workspace-用这个模型做什么>第三个轴：workspace 用这个模型做什么<a href=#第三个轴workspace-用这个模型做什么 class=hash-link aria-label="第三个轴：workspace 用这个模型做什么的直接链接" title="第三个轴：workspace 用这个模型做什么的直接链接" translate=no>​</a></h3>
+<p>自 <a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049</a> 起，两个轴不再位于同一张表中。策展是<strong>按 workspace</strong> 的——<code>models.is_active</code> 曾是整个安装的一列，workspace A 的 owner 开启一个模型，也会为 B 开启它（<a href="../business-rules/custo.html#rn-052">RN-052</a>）。留在 <code>models</code> 中的是 provider 的事实：名称、价格、capability 和可用性，对所有人都一样。</p>
+<p><strong><code>workspace_models</code> 中没有行就是&quot;关闭&quot;。</strong> 没有单独的&quot;从未决定&quot;状态，正因如此，RN-043 无需任何可能被同步覆盖的列也依然有效。</p>
+<h3 id="第三个轴workspace-用这个模型做什么">第三个轴：workspace 用这个模型做什么</h3>
 <p><code>workspace_models.uses</code> 保存<strong>按用途</strong>的策展——<code>codigo</code>、<code>documentacao</code>、<code>analise</code>、<code>imagem</code>、<code>conversa</code>——这是 <code>apps/api/src/domain/llm/model-uses.ts</code> 中的一个封闭词汇表。这是任何目录都不会发布的东西：provider 声明 capability，但哪个模型<strong>对这个团队</strong>在代码上表现好，只有用了才知道。</p>
 <p>它不与 <code>is_active</code> 混在一起：</p>
 <ul>
-<li class="">标记一个用途<strong>不会开启</strong>模型——新行以显式的 <code>is_active = false</code> 诞生，与该列的 DEFAULT <code>true</code> 相反；</li>
-<li class="">更换用途<strong>不会关闭</strong>已开启的东西；</li>
-<li class="">列表<strong>替换</strong>之前的列表（空列表取消全部标记）。</li>
+<li>标记一个用途<strong>不会开启</strong>模型——新行以显式的 <code>is_active = false</code> 诞生，与该列的 DEFAULT <code>true</code> 相反；</li>
+<li>更换用途<strong>不会关闭</strong>已开启的东西；</li>
+<li>列表<strong>替换</strong>之前的列表（空列表取消全部标记）。</li>
 </ul>
-<p>路由：<code>POST /workspaces/:workspaceId/models/uses</code>，<code>owner</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-057>RN-057</a>）。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=三条对账规则>三条对账规则<a href=#三条对账规则 class=hash-link aria-label=三条对账规则的直接链接 title=三条对账规则的直接链接 translate=no>​</a></h3>
+<p>路由：<code>POST /workspaces/:workspaceId/models/uses</code>，<code>owner</code>（<a href="../business-rules/custo.html#rn-057">RN-057</a>）。</p>
+<h3 id="三条对账规则">三条对账规则</h3>
 <ol>
-<li class=""><strong>新模型以未激活状态进入</strong>——在任何 workspace 中都没有策展行。一个目录有数百行；把它们全部以激活状态倒进来会让选择变得不可能，并在没人决定的情况下开启昂贵的模型。</li>
-<li class=""><strong>消失的模型变为 <code>unavailable</code>，绝不删除。</strong> <code>model_bindings</code> 和 <code>token_usage</code> 指向这一行；删除它会把成本历史一起带走。</li>
-<li class=""><strong>provider 的失败不会让任何东西变得不可用。</strong> 401 意味着"我不知道那里有什么"，而不是"那里什么都没有"——因为一个被吊销的密钥就把一切标记为消失，会一次性弄掉该 provider 的所有 binding。该 provider 被<strong>跳过</strong>，报告中带有失败来源（<code>infra</code> | <code>modelo</code>）。</li>
+<li><strong>新模型以未激活状态进入</strong>——在任何 workspace 中都没有策展行。一个目录有数百行；把它们全部以激活状态倒进来会让选择变得不可能，并在没人决定的情况下开启昂贵的模型。</li>
+<li><strong>消失的模型变为 <code>unavailable</code>，绝不删除。</strong> <code>model_bindings</code> 和 <code>token_usage</code> 指向这一行；删除它会把成本历史一起带走。</li>
+<li><strong>provider 的失败不会让任何东西变得不可用。</strong> 401 意味着&quot;我不知道那里有什么&quot;，而不是&quot;那里什么都没有&quot;——因为一个被吊销的密钥就把一切标记为消失，会一次性弄掉该 provider 的所有 binding。该 provider 被<strong>跳过</strong>，报告中带有失败来源（<code>infra</code> | <code>modelo</code>）。</li>
 </ol>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=以及两条价格对账规则>以及两条价格对账规则<a href=#以及两条价格对账规则 class=hash-link aria-label=以及两条价格对账规则的直接链接 title=以及两条价格对账规则的直接链接 translate=no>​</a></h3>
-<ol start=4>
-<li class=""><strong><code>manual_pricing</code> 优先于远程目录。</strong> 这样标记的行有一个由某人根据 provider 文档输入的数字，同步不会改动它——即使目录带有自己的价格（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-051>RN-051</a>）。</li>
-<li class=""><strong>同步做出的每次价格变更都会在 <code>model_price_changes</code> 中留下一行</strong>，来源为 <code>sync</code>，<code>changed_by</code> 为空（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-044>RN-044</a>）。</li>
+<h3 id="以及两条价格对账规则">以及两条价格对账规则</h3>
+<ol start="4">
+<li><strong><code>manual_pricing</code> 优先于远程目录。</strong> 这样标记的行有一个由某人根据 provider 文档输入的数字，同步不会改动它——即使目录带有自己的价格（<a href="../business-rules/custo.html#rn-051">RN-051</a>）。</li>
+<li><strong>同步做出的每次价格变更都会在 <code>model_price_changes</code> 中留下一行</strong>，来源为 <code>sync</code>，<code>changed_by</code> 为空（<a href="../business-rules/custo.html#rn-044">RN-044</a>）。</li>
 </ol>
 <p>同步发现的<strong>新</strong>模型，在目录提供了价格时以 <code>manual_pricing = false</code> 诞生——来源是同步，由同步保持该行最新。<strong>没有</strong>价格时被发现，则以 <code>true</code> 诞生：该行在等待有人输入价格，标记它可以让这个数字免受第一个碰巧提供价格的目录影响。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=级联在降级时重新验证-capability>级联在降级时重新验证 capability<a href=#级联在降级时重新验证-capability class=hash-link aria-label="级联在降级时重新验证 capability的直接链接" title="级联在降级时重新验证 capability的直接链接" translate=no>​</a></h3>
-<p><code>resolveBinding</code> 跳过不可用的候选并按优先级继续。当回合带有工具时，它还会在<strong>每一级</strong>跳过不支持 tool calling 的模型——否则 agent 的回退会落到一个只能聊天的模型上，悄无声息地违反 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-040>RN-040</a>：失败只会在之后的 ToolLoop 中表现为"agent 自己停了"。被跳过的内容在 <code>skipped</code> 中返回，界面会显示它。</p>
-<p>优先级是 <code>session > agent > area > project > workspace</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-020>RN-020</a>）。<code>area</code> 在 FASE 23 中加入：它是 lead 和其领域内子 agent 共享的<strong>默认值</strong>，而 agent 自己的 binding 是覆盖它的差异——它进入上面同样的 capability 重新验证，包括对 tool calling 的要求（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-102>RN-102</a>）。<code>agent</code> 和 <code>area</code> 作用域改为<strong>按项目</strong>（复合 <code>scope_id</code>，<code>&lt;projectId>:&lt;slug|chave></code>）——此前 <code>agent</code> 是全局 slug，同一个 binding 对所有项目生效（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-103>RN-103</a>，<a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>）。</p>
-<p>在任何级别都没有值（或只有 workspace 的全局默认值）的子 agent 会继承其领域 lead <strong>解析后</strong>的 binding，响应带有指出该 lead 的 <code>herdadoDoLead</code>；<code>appsec</code> 继承 <code>secops</code>，<code>qa-estrategia</code> 继承 <code>qa</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-703>RN-703</a>）。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=谁调度谁执行>谁调度，谁执行<a href=#谁调度谁执行 class=hash-link aria-label=谁调度，谁执行的直接链接 title=谁调度，谁执行的直接链接 translate=no>​</a></h3>
-<p>engine 负责调度（一个会自我重新调度的 Oban worker，<code>MODEL_SYNC_INTERVAL_SECONDS</code>，默认 6 小时），api 负责执行，因为凭据和 provider 注册表由它保存。策展页面上的"更新目录"按钮调用<strong>同一个</strong>用例——不存在两种可能不一致的对账。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=价格从此往后生效绝不追溯>价格：从此往后生效，绝不追溯<a href=#价格从此往后生效绝不追溯 class=hash-link aria-label=价格：从此往后生效，绝不追溯的直接链接 title=价格：从此往后生效，绝不追溯的直接链接 translate=no>​</a></h2>
+<h3 id="级联在降级时重新验证-capability">级联在降级时重新验证 capability</h3>
+<p><code>resolveBinding</code> 跳过不可用的候选并按优先级继续。当回合带有工具时，它还会在<strong>每一级</strong>跳过不支持 tool calling 的模型——否则 agent 的回退会落到一个只能聊天的模型上，悄无声息地违反 <a href="../business-rules/custo.html#rn-040">RN-040</a>：失败只会在之后的 ToolLoop 中表现为&quot;agent 自己停了&quot;。被跳过的内容在 <code>skipped</code> 中返回，界面会显示它。</p>
+<p>优先级是 <code>session &gt; agent &gt; area &gt; project &gt; workspace</code>（<a href="../business-rules/custo.html#rn-020">RN-020</a>）。<code>area</code> 在 FASE 23 中加入：它是 lead 和其领域内子 agent 共享的<strong>默认值</strong>，而 agent 自己的 binding 是覆盖它的差异——它进入上面同样的 capability 重新验证，包括对 tool calling 的要求（<a href="../business-rules/custo.html#rn-102">RN-102</a>）。<code>agent</code> 和 <code>area</code> 作用域改为<strong>按项目</strong>（复合 <code>scope_id</code>，<code>&lt;projectId&gt;:&lt;slug|chave&gt;</code>）——此前 <code>agent</code> 是全局 slug，同一个 binding 对所有项目生效（<a href="../business-rules/custo.html#rn-103">RN-103</a>，<a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064</a>）。</p>
+<p>在任何级别都没有值（或只有 workspace 的全局默认值）的子 agent 会继承其领域 lead <strong>解析后</strong>的 binding，响应带有指出该 lead 的 <code>herdadoDoLead</code>；<code>appsec</code> 继承 <code>secops</code>，<code>qa-estrategia</code> 继承 <code>qa</code>（<a href="../business-rules/custo.html#rn-703">RN-703</a>）。</p>
+<h3 id="谁调度谁执行">谁调度，谁执行</h3>
+<p>engine 负责调度（一个会自我重新调度的 Oban worker，<code>MODEL_SYNC_INTERVAL_SECONDS</code>，默认 6 小时），api 负责执行，因为凭据和 provider 注册表由它保存。策展页面上的&quot;更新目录&quot;按钮调用<strong>同一个</strong>用例——不存在两种可能不一致的对账。</p>
+<h2 id="价格从此往后生效绝不追溯">价格：从此往后生效，绝不追溯</h2>
 <p><code>token_usage</code> 保存产生每个 <code>cost_micros</code> 的价格（<code>input_price_per_million_micros</code> 和 <code>output_price_per_million_micros</code>）。在 Fase 9c 之前，历史成本就已经是不可变的；缺的是<strong>可复现</strong>——没有记录价格，一旦有人修正了表格，<code>tokens × 价格 = 成本</code> 就不再成立。</p>
-<p>自 <a class="" href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-665>RN-665</a>）起，目录价格只有在响应不带真实成本时才是那个数字。当响应带有它（OpenRouter 的 <code>usage.cost</code>）时，它就是 <code>cost_micros</code>，两个价格列保存<strong>隐含</strong>价格（<code>成本 ÷ token 数</code>，由 <code>price_implicit</code> 标记），目录本应收取的费用放在旁边的 <code>catalog_cost_micros</code> 中——因此 <code>tokens × 价格 = 成本</code> 在每一行上都仍然成立，无论是真实的还是估算的。</p>
-<p>每次价格变更都会在 <code>model_price_changes</code> 中写入一行，只追加，带有前/后的值对以及来源（<code>manual</code> | <code>sync</code>）。这对值故意一起记录：从上一行重建"之前"的值，要依赖于没有任何写入逃出被审计的路径，而这正是审计存在要证明的东西。</p>
-<p>:::caution 有两处写入曾经逃逸
-<code>sync</code> 来源自 Fase 9c 起就存在于领域中，却<strong>没有任何写入产生它</strong>：同步通过 <code>upsert</code> 更换价格，在被审计的路径之外。<code>seed.ts</code> 也是如此——而它会在已有种子数据的数据库上运行（k8s 的 <code>bootstrap.sh</code> 中的 <code>BRABO_FORCE_SEED=1</code>），所以在种子中修正价格会悄无声息地改掉数字。两者都开始接受审计；种子复用 <code>UpdateModelPricingUseCase</code> 而不是重复逻辑，并在 upsert <strong>之前</strong>调用它——在 upsert 之后，两个值已经相同，审计会认为无事可做。
-:::</p>
-<p>:::note 这不是 outbox 事件
-<code>model_price_changes</code> 是独立的表，不是 <code>outbox_events</code> 中的一行。<code>Engine.Outbox.Drain.run_once/0</code> 按 <code>aggregate_type == "session"</code> 过滤——放在那里的价格行会永远保持 <code>processed_at</code> 为空，污染 outbox 的延迟指标。它是一个不可变的领域日志，就像 <code>session_events</code>。
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=embeddings>Embeddings<a href=#embeddings class=hash-link aria-label=Embeddings的直接链接 title=Embeddings的直接链接 translate=no>​</a></h2>
+<p>自 <a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188</a>（<a href="../business-rules/custo.html#rn-665">RN-665</a>）起，目录价格只有在响应不带真实成本时才是那个数字。当响应带有它（OpenRouter 的 <code>usage.cost</code>）时，它就是 <code>cost_micros</code>，两个价格列保存<strong>隐含</strong>价格（<code>成本 ÷ token 数</code>，由 <code>price_implicit</code> 标记），目录本应收取的费用放在旁边的 <code>catalog_cost_micros</code> 中——因此 <code>tokens × 价格 = 成本</code> 在每一行上都仍然成立，无论是真实的还是估算的。</p>
+<p>每次价格变更都会在 <code>model_price_changes</code> 中写入一行，只追加，带有前/后的值对以及来源（<code>manual</code> | <code>sync</code>）。这对值故意一起记录：从上一行重建&quot;之前&quot;的值，要依赖于没有任何写入逃出被审计的路径，而这正是审计存在要证明的东西。</p>
+<div class="admonicao admonicao-caution" data-admonicao="caution"><p class="admonicao-titulo">有两处写入曾经逃逸</p>
+<p><code>sync</code> 来源自 Fase 9c 起就存在于领域中，却<strong>没有任何写入产生它</strong>：同步通过 <code>upsert</code> 更换价格，在被审计的路径之外。<code>seed.ts</code> 也是如此——而它会在已有种子数据的数据库上运行（k8s 的 <code>bootstrap.sh</code> 中的 <code>BRABO_FORCE_SEED=1</code>），所以在种子中修正价格会悄无声息地改掉数字。两者都开始接受审计；种子复用 <code>UpdateModelPricingUseCase</code> 而不是重复逻辑，并在 upsert <strong>之前</strong>调用它——在 upsert 之后，两个值已经相同，审计会认为无事可做。</p>
+</div>
+<div class="admonicao admonicao-note" data-admonicao="note"><p class="admonicao-titulo">这不是 outbox 事件</p>
+<p><code>model_price_changes</code> 是独立的表，不是 <code>outbox_events</code> 中的一行。<code>Engine.Outbox.Drain.run_once/0</code> 按 <code>aggregate_type == &quot;session&quot;</code> 过滤——放在那里的价格行会永远保持 <code>processed_at</code> 为空，污染 outbox 的延迟指标。它是一个不可变的领域日志，就像 <code>session_events</code>。</p>
+</div>
+<h2 id="embeddings">Embeddings</h2>
 <p>契约的第二个操作（ADR 0075），也是 <code>chat</code> 之外唯一花费 token 的操作。只在 <code>capabilities.embeddings</code> 为 <code>true</code> 的地方存在。</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>const</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"> vectors</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> dimensions</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> model</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> inputTokens</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> estimated </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token plain"> </span><span class="token operator" style=color:var(--syntax-operator)>=</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token keyword" style=color:var(--syntax-keyword)>await</span><span class="token plain"> provider</span><span class="token punctuation" style=color:var(--syntax-operator)>.</span><span class="token function" style=color:var(--syntax-function)>embed</span><span class="token punctuation" style=color:var(--syntax-operator)>(</span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>'primeiro trecho'</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'segundo trecho'</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">    model</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'nomic-embed-text'</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><span class="token punctuation" style=color:var(--syntax-operator)>)</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><br/></div></code></pre></div></div>
+<pre class="codigo"><code class="language-ts">const { vectors, dimensions, model, inputTokens, estimated } =
+  await provider.embed(['primeiro trecho', 'segundo trecho'], {
+    model: 'nomic-embed-text',
+  });
+</code></pre>
 <p><strong>它是批量的，顺序是契约。</strong> 索引一次接收 N 个片段，位置是输入与向量之间唯一的联系。因此最重要的保证是：<strong>每个输入一个向量，否则报错</strong>——绝不返回更短的列表。部分被拒绝的响应事后无法察觉；缺陷只会在搜索中出现，远离原因。出于同样的理由，契约拒绝空向量、同一响应中维度不同的向量以及空的输入列表。</p>
 <p><strong>错误会抛出，而不是变成 chunk。</strong> 在 <code>chat</code> 中，错误变成 chunk 是因为回合已经花了 token，计量必须发生；这里没有什么需要保留——要么 provider 返回了向量并收费，要么没返回也没收费。<code>code</code> 的分类与下表完全相同。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>方言<th>端点<th>响应体<tbody><tr><td>OpenAI 兼容基座<td><code>POST /embeddings</code><td><code>{ data: [{ index, embedding }], model, usage.prompt_tokens }</code><tr><td>Ollama<td><code>POST /api/embed</code><td><code>{ model, embeddings: number[][], prompt_eval_count }</code></table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>方言</th>
+<th>端点</th>
+<th>响应体</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI 兼容基座</td>
+<td><code>POST /embeddings</code></td>
+<td><code>{ data: [{ index, embedding }], model, usage.prompt_tokens }</code></td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td><code>POST /api/embed</code></td>
+<td><code>{ model, embeddings: number[][], prompt_eval_count }</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>OpenAI 的 <code>index</code> 是与输入的联系，而文档<strong>不承诺顺序</strong>——所以基座在返回前按它排序。<code>EmbeddingOptions</code> 的 <code>dimensions</code> 字段（缩减向量）只在 OpenAI 中存在；Ollama 会忽略它而不是失败，因为在那里维度属于模型——结果总是声明返回内容的<strong>真实</strong>维度。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=目前谁在做向量化>目前谁在做向量化<a href=#目前谁在做向量化 class=hash-link aria-label=目前谁在做向量化的直接链接 title=目前谁在做向量化的直接链接 translate=no>​</a></h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th><code>embeddings</code><th>原因<tbody><tr><td><code>ollama</code><td><strong>是</strong><td>通过针对 daemon 0.32.1 的执行证明（<code>nomic-embed-text</code>，2 个输入 → 2 个 768 维向量）<tr><td><code>anthropic</code><td>否<td><strong>没有</strong> embedding 端点——文档指向一个第三方，那是另一个 provider<tr><td>其余七个<td>否<td>没有任何带凭据的 smoke 证明过它们的端点（<a class="" href=/brabo/dev/zh-Hans/explanation/aceite-providers>验收</a>）</table>
+<h3 id="目前谁在做向量化">目前谁在做向量化</h3>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th><code>embeddings</code></th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ollama</code></td>
+<td><strong>是</strong></td>
+<td>通过针对 daemon 0.32.1 的执行证明（<code>nomic-embed-text</code>，2 个输入 → 2 个 768 维向量）</td>
+</tr>
+<tr>
+<td><code>anthropic</code></td>
+<td>否</td>
+<td><strong>没有</strong> embedding 端点——文档指向一个第三方，那是另一个 provider</td>
+</tr>
+<tr>
+<td>其余七个</td>
+<td>否</td>
+<td>没有任何带凭据的 smoke 证明过它们的端点（<a href="../explanation/aceite-providers.html">验收</a>）</td>
+</tr>
+</tbody>
+</table></div>
 <p>凭阅读文档来声明正是 ADR 0043 所禁止的，它曾造成两次线上回滚。不过基座的<strong>方言</strong>已经被证明：契约套件在开启 capability 的情况下对它再跑一遍——正是这一点让密钥存在时把某个 provider 改为 <code>true</code> 的成本很低。</p>
-<p>Ollama 也是唯一发布<strong>模型</strong>层的：<code>/api/tags</code> 每行带有 <code>capabilities: ["embedding"]</code> 和 <code>details.embedding_length</code>，目录中的 <code>supportsEmbeddings</code> 和 <code>embeddingDimensions</code> 就来自这里。被要求做 embedding 的聊天模型会从 daemon 收到 <strong><code>501</code></strong>——这就是检查要提前进行的原因（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-190>RN-190</a>）。</p>
-<p>:::note 花费尚未计量
-<code>embed</code> 返回 <code>inputTokens</code>/<code>estimated</code> 以供计量使用，<code>calculateCostMicros(input, 0, …)</code> 也已经可用（embedding 没有输出 token）。缺的是结构性的东西：<code>token_usage.session_id</code> 是 <strong>NOT NULL</strong>，而索引仓库并不发生在会话之内。这是 ADR 0075 中声明的取舍——属于实现消费方的那一波。
-:::</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=规范化的错误>规范化的错误<a href=#规范化的错误 class=hash-link aria-label=规范化的错误的直接链接 title=规范化的错误的直接链接 translate=no>​</a></h2>
+<p>Ollama 也是唯一发布<strong>模型</strong>层的：<code>/api/tags</code> 每行带有 <code>capabilities: [&quot;embedding&quot;]</code> 和 <code>details.embedding_length</code>，目录中的 <code>supportsEmbeddings</code> 和 <code>embeddingDimensions</code> 就来自这里。被要求做 embedding 的聊天模型会从 daemon 收到 <strong><code>501</code></strong>——这就是检查要提前进行的原因（<a href="../business-rules/custo.html#rn-190">RN-190</a>）。</p>
+<div class="admonicao admonicao-note" data-admonicao="note"><p class="admonicao-titulo">花费尚未计量</p>
+<p><code>embed</code> 返回 <code>inputTokens</code>/<code>estimated</code> 以供计量使用，<code>calculateCostMicros(input, 0, …)</code> 也已经可用（embedding 没有输出 token）。缺的是结构性的东西：<code>token_usage.session_id</code> 是 <strong>NOT NULL</strong>，而索引仓库并不发生在会话之内。这是 ADR 0075 中声明的取舍——属于实现消费方的那一波。</p>
+</div>
+<h2 id="规范化的错误">规范化的错误</h2>
 <p>没有人通过匹配供应商消息中的子串来做决定：决定依据 chunk 的 <code>code</code>。这些类位于 <code>apps/api/src/domain/llm/llm-provider-errors.ts</code>。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider 状态码<th><code>code</code><th>含义<tbody><tr><td>401, 403<td><code>auth</code><td>密钥缺失、无效或无权访问该模型<tr><td>402<td><code>insufficient_credit</code><td>provider 账户额度耗尽（RN-730）<tr><td>404<td><code>model_not_found</code><td>该 provider 上不存在这个模型<tr><td>429<td><code>rate_limit</code><td>配额或吞吐量超限<tr><td>413，或带上下文标记的 400<td><code>context_length</code><td>prompt 放不进窗口<tr><td>—<td><code>timeout</code><td>provider 的<strong>沉默</strong>超过了不活动上限<tr><td>—<td><code>connection</code><td>根本没有到达 provider<tr><td>其他任何状态<td><code>upstream</code><td>对方因其他原因失败</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider 状态码</th>
+<th><code>code</code></th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>401, 403</td>
+<td><code>auth</code></td>
+<td>密钥缺失、无效或无权访问该模型</td>
+</tr>
+<tr>
+<td>402</td>
+<td><code>insufficient_credit</code></td>
+<td>provider 账户额度耗尽（RN-730）</td>
+</tr>
+<tr>
+<td>404</td>
+<td><code>model_not_found</code></td>
+<td>该 provider 上不存在这个模型</td>
+</tr>
+<tr>
+<td>429</td>
+<td><code>rate_limit</code></td>
+<td>配额或吞吐量超限</td>
+</tr>
+<tr>
+<td>413，或带上下文标记的 400</td>
+<td><code>context_length</code></td>
+<td>prompt 放不进窗口</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>timeout</code></td>
+<td>provider 的<strong>沉默</strong>超过了不活动上限</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>connection</code></td>
+<td>根本没有到达 provider</td>
+</tr>
+<tr>
+<td>其他任何状态</td>
+<td><code>upstream</code></td>
+<td>对方因其他原因失败</td>
+</tr>
+</tbody>
+</table></div>
 <p>400 只有在响应体带有已知标记（<code>context_length_exceeded</code> 及其变体）时才会变成 <code>context_length</code>。按标记匹配是脆弱的，所以明确无误的 413 优先，不带标记的 400 落到 <code>upstream</code>，而不是对原因撒谎。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=inactivity-ceiling>不活动上限<a href=#inactivity-ceiling class=hash-link aria-label=不活动上限的直接链接 title=不活动上限的直接链接 translate=no>​</a></h2>
-<p>这个上限与总时长无关，而是关于<strong>沉默</strong>。合法的回合可能很慢（模型在第一个 token 之前要处理数千个 prompt token），但绝不会沉默。这是 ADR 0020 的教训：当时 <code>fetch</code> 在 undici 固定的 300 秒时放弃，报出一个含糊的 "fetch failed"，agent 为一个从未被响应的请求记录了"模型停了"。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th>机制<th>env<tbody><tr><td>Ollama<td><code>node:http</code> 的 socket 超时<td><code>OLLAMA_REQUEST_TIMEOUT_MS</code><tr><td>OpenAI 兼容基座<td>同上<td><code>LLM_REQUEST_TIMEOUT_MS</code><tr><td>Anthropic<td>在 SDK 的流上套用 <code>withIdleTimeout</code><td><code>LLM_REQUEST_TIMEOUT_MS</code></table>
+<h2 id="inactivity-ceiling">不活动上限</h2>
+<p>这个上限与总时长无关，而是关于<strong>沉默</strong>。合法的回合可能很慢（模型在第一个 token 之前要处理数千个 prompt token），但绝不会沉默。这是 ADR 0020 的教训：当时 <code>fetch</code> 在 undici 固定的 300 秒时放弃，报出一个含糊的 &quot;fetch failed&quot;，agent 为一个从未被响应的请求记录了&quot;模型停了&quot;。</p>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th>机制</th>
+<th>env</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ollama</td>
+<td><code>node:http</code> 的 socket 超时</td>
+<td><code>OLLAMA_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+<tr>
+<td>OpenAI 兼容基座</td>
+<td>同上</td>
+<td><code>LLM_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>在 SDK 的流上套用 <code>withIdleTimeout</code></td>
+<td><code>LLM_REQUEST_TIMEOUT_MS</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>Ollama 有自己的 env，因为本地模型到第一个 token 的延迟高出一个数量级。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=openai-兼容基座>OpenAI 兼容基座<a href=#openai-兼容基座 class=hash-link aria-label="OpenAI 兼容基座的直接链接" title="OpenAI 兼容基座的直接链接" translate=no>​</a></h2>
+<h2 id="openai-兼容基座">OpenAI 兼容基座</h2>
 <p><code>OpenAICompatibleProvider</code> 只实现一次 <code>/chat/completions</code> 方言。九个 provider 由它派生：OpenAI（第一个实例）、OpenRouter（Fase 11a，hub）以及 Fase 11b 的五个——NVIDIA NIM、Together、DeepInfra、Bitdeer、Vultr。它们都只改变 <code>baseUrl</code>、认证头和开关——绝不改变解析（唯一被证明有必要的例外是在 capability 为 <code>true</code> 时各自的 <code>parseCatalogo</code>——见下面各 provider 的章节）。</p>
-<div class="language-ts codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-ts codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token keyword" style=color:var(--syntax-keyword)>interface</span><span class="token plain"> </span><span class="token class-name" style=color:var(--syntax-type)>OpenAICompatibleFlags</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  streamOptionsIncludeUsage</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token builtin" style=color:var(--syntax-type)>boolean</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  maxTokensField</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'max_tokens'</span><span class="token plain"> </span><span class="token operator" style=color:var(--syntax-operator)>|</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>'max_completion_tokens'</span><span class="token punctuation" style=color:var(--syntax-operator)>;</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
-<p>输出上限字段在<strong>每次</strong>调用中都会发送（RN-734）：调用方定义了就用 <code>options.maxTokens</code>，否则用 <code>MAX_TOKENS_PADRAO</code>（4096，与 Anthropic provider 的默认值相同）。没有这个字段，OpenRouter 会为每个进行中的调用按模型的<strong>最大</strong>输出预留额度，即使真实调用能放进余额也会返回 402。被这个上限截断的响应目前还不会被叙述：这个方言不读取 <code>finish_reason: "length"</code>。</p>
-<p>当模型会推理（<code>models.supports_reasoning</code>）且 provider 的配置有 <code>campoDeRaciocinioDesligado</code>（目前只有 OpenRouter）时，输出上限变为可见输出 + <code>ORCAMENTO_DE_RACIOCINIO</code>（4096），因为推理计入 <code>max_tokens</code>（RN-741）。不会仅因为模型接受该参数就发送任何推理字段（RN-782）：2026-10-10 的付费测量（AT-467）显示，<code>reasoning: { max_tokens }</code> 在 <code>anthropic/claude-haiku-4.5</code> 上<strong>开启</strong>了推理（74% 的调用，成本 2.8 倍），而被 <code>anthropic/claude-haiku-5.5</code> <strong>忽略</strong>（请求 1024，花费 8192）。执行用的 dev agent（<code>dev-&lt;modulo></code>，不是 <code>dev-lead</code>）会收到 <code>reasoning: { enabled: false }</code>（RN-783，负责人的决定）：8 个响应中 0 个被截断，Haiku 5.5 上成本 -42%。模型目录中"思考"维度的帮助说明了这一点。直连的 Anthropic provider 不发送 <code>thinking</code>，所以那里模型不做推理。</p>
+<pre class="codigo"><code class="language-ts">interface OpenAICompatibleFlags {
+  streamOptionsIncludeUsage: boolean;
+  maxTokensField: 'max_tokens' | 'max_completion_tokens';
+}
+</code></pre>
+<p>输出上限字段在<strong>每次</strong>调用中都会发送（RN-734）：调用方定义了就用 <code>options.maxTokens</code>，否则用 <code>MAX_TOKENS_PADRAO</code>（4096，与 Anthropic provider 的默认值相同）。没有这个字段，OpenRouter 会为每个进行中的调用按模型的<strong>最大</strong>输出预留额度，即使真实调用能放进余额也会返回 402。被这个上限截断的响应目前还不会被叙述：这个方言不读取 <code>finish_reason: &quot;length&quot;</code>。</p>
+<p>当模型会推理（<code>models.supports_reasoning</code>）且 provider 的配置有 <code>campoDeRaciocinioDesligado</code>（目前只有 OpenRouter）时，输出上限变为可见输出 + <code>ORCAMENTO_DE_RACIOCINIO</code>（4096），因为推理计入 <code>max_tokens</code>（RN-741）。不会仅因为模型接受该参数就发送任何推理字段（RN-782）：2026-10-10 的付费测量（AT-467）显示，<code>reasoning: { max_tokens }</code> 在 <code>anthropic/claude-haiku-4.5</code> 上<strong>开启</strong>了推理（74% 的调用，成本 2.8 倍），而被 <code>anthropic/claude-haiku-5.5</code> <strong>忽略</strong>（请求 1024，花费 8192）。执行用的 dev agent（<code>dev-&lt;modulo&gt;</code>，不是 <code>dev-lead</code>）会收到 <code>reasoning: { enabled: false }</code>（RN-783，负责人的决定）：8 个响应中 0 个被截断，Haiku 5.5 上成本 -42%。模型目录中&quot;思考&quot;维度的帮助说明了这一点。直连的 Anthropic provider 不发送 <code>thinking</code>，所以那里模型不做推理。</p>
 <p>每个开关的存在都是因为某个真实的 provider 有差异。没有需要它的 provider，就不要加开关。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=normalized-divergences>规范化的差异<a href=#normalized-divergences class=hash-link aria-label=规范化的差异的直接链接 title=规范化的差异的直接链接 translate=no>​</a></h2>
+<h2 id="normalized-divergences">规范化的差异</h2>
 <p>三个 provider 都通过同一份契约，但方言并不相同。有差异的地方被规范化，而不是被隐藏：</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>主题<th>Ollama<th>兼容基座<th>Anthropic<tbody><tr><td>格式<td>NDJSON<td>SSE <code>data:</code><td>带命名事件的 SSE<tr><td>传输<td><code>node:http</code><td><code>node:http</code><td>官方 SDK + <code>withIdleTimeout</code><tr><td>tool call 的 id<td>不发送——由我们生成<td>发送；缺失时由我们生成<td>发送<tr><td>tool call 的参数<td>已经反序列化<td>分片的字符串，按索引重组<td><code>input_json_delta</code>，由 SDK 重组<tr><td>没有 <code>usage</code> 的响应<td>不发出 chunk<td>本地计数，<code>estimated: true</code><td><strong>不可能</strong>——<code>usage</code> 在 <code>message_start</code> 中是必需的<tr><td><code>tool</code> 角色<td>独立的消息<td><code>role: "tool"</code> + <code>tool_call_id</code><td><code>user</code> 回合内的 <code>tool_result</code> 块<tr><td>在输出上限处被截断的响应<td>不读取<td><code>finish_reason: "length"</code> → <code>truncated</code> chunk<td><code>stop_reason: "max_tokens"</code> → <code>truncated</code> chunk<tr><td>在 <code>user</code>/<code>tool</code> <strong>之后</strong>的 <code>system</code><td>保留在原位，<code>messages</code> 的最后一项<td>保留在原位，<code>messages</code> 的最后一项<td><strong>上提</strong>：追加到顶层的 <code>system</code> 参数（在已有 prompt 之后用 <code>\n\n</code> 连接），并从 <code>messages</code> 中移除</table>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>主题</th>
+<th>Ollama</th>
+<th>兼容基座</th>
+<th>Anthropic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>格式</td>
+<td>NDJSON</td>
+<td>SSE <code>data:</code></td>
+<td>带命名事件的 SSE</td>
+</tr>
+<tr>
+<td>传输</td>
+<td><code>node:http</code></td>
+<td><code>node:http</code></td>
+<td>官方 SDK + <code>withIdleTimeout</code></td>
+</tr>
+<tr>
+<td>tool call 的 id</td>
+<td>不发送——由我们生成</td>
+<td>发送；缺失时由我们生成</td>
+<td>发送</td>
+</tr>
+<tr>
+<td>tool call 的参数</td>
+<td>已经反序列化</td>
+<td>分片的字符串，按索引重组</td>
+<td><code>input_json_delta</code>，由 SDK 重组</td>
+</tr>
+<tr>
+<td>没有 <code>usage</code> 的响应</td>
+<td>不发出 chunk</td>
+<td>本地计数，<code>estimated: true</code></td>
+<td><strong>不可能</strong>——<code>usage</code> 在 <code>message_start</code> 中是必需的</td>
+</tr>
+<tr>
+<td><code>tool</code> 角色</td>
+<td>独立的消息</td>
+<td><code>role: &quot;tool&quot;</code> + <code>tool_call_id</code></td>
+<td><code>user</code> 回合内的 <code>tool_result</code> 块</td>
+</tr>
+<tr>
+<td>在输出上限处被截断的响应</td>
+<td>不读取</td>
+<td><code>finish_reason: &quot;length&quot;</code> → <code>truncated</code> chunk</td>
+<td><code>stop_reason: &quot;max_tokens&quot;</code> → <code>truncated</code> chunk</td>
+</tr>
+<tr>
+<td>在 <code>user</code>/<code>tool</code> <strong>之后</strong>的 <code>system</code></td>
+<td>保留在原位，<code>messages</code> 的最后一项</td>
+<td>保留在原位，<code>messages</code> 的最后一项</td>
+<td><strong>上提</strong>：追加到顶层的 <code>system</code> 参数（在已有 prompt 之后用 <code>\n\n</code> 连接），并从 <code>messages</code> 中移除</td>
+</tr>
+</tbody>
+</table></div>
 <p>Anthropic 这一列代价最高：并行调用的结果必须在<strong>同一个</strong> <code>user</code> 回合中到达，所以连续的 <code>tool</code> 消息会被合并。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-system-message-at-the-end-of-the-conversation-at-161>对话末尾的一条 <code>system</code> 消息（AT-161）<a href=#a-system-message-at-the-end-of-the-conversation-at-161 class=hash-link aria-label=a-system-message-at-the-end-of-the-conversation-at-161的直接链接 title=a-system-message-at-the-end-of-the-conversation-at-161的直接链接 translate=no>​</a></h3>
-<p>迟到 <code>system</code> 这一行之所以存在，是因为 AT-081 的语言指引计划在一个回合的每次调用中，于列表<strong>末尾</strong>发送<strong>一条</strong>短暂的 <code>role: "system"</code> 消息——第一次调用时在 <code>user</code> 之后，之后的调用中在 <code>tool</code> 之后。契约套件为九个 provider 中的每一个回答这条消息落在<strong>序列化后的请求体</strong>中的什么位置：每个测试框架声明 <code>posicaoDoSistemaTardio</code>，契约在两个位置上核对它，并核对文本恰好出现一次、对话其余部分保持顺序（<code>apps/api/test/contract/llm-provider.contract.ts</code>）。</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>provider<th>适配器<th>迟到 <code>system</code> 落在哪里<tbody><tr><td>OpenAI、OpenRouter、NVIDIA NIM、Together、DeepInfra、Bitdeer、Vultr<td>兼容基座（<code>toWireMessage</code>）<td><code>messages</code> 末尾，<code>role: "system"</code><tr><td>Ollama<td>自有（<code>messages</code> 原样发送）<td><code>messages</code> 末尾，<code>role: "system"</code><tr><td>Anthropic<td>自有（官方 SDK）<td>顶层 <code>system</code> 的末尾；位置丢失</table>
-<p>没有任何适配器丢弃或重复它。假服务器无法回答的是<strong>真实</strong>的 provider 是否接受这个请求体——它什么都接受。这是一个单独的手动 smoke，<code>apps/api/test/infrastructure/llm/sistema-tardio.smoke.spec.ts</code>，每个 provider 一个 <code>describe</code>，各自以验收 smoke 使用的同一个密钥为条件（另加 <code>ANTHROPIC_TEST_KEY</code>；Ollama 由 <code>OLLAMA_SISTEMA_TARDIO_SMOKE=1</code> 控制）。哪些已经运行过记录在 <a class="" href=/brabo/dev/zh-Hans/explanation/aceite-providers>provider 验收</a>中。没有这次运行，就迟到 <code>system</code> 的接受而言，provider <strong>未被证明</strong>——这是 ADR 0041/0042 的规则。</p>
+<h3 id="a-system-message-at-the-end-of-the-conversation-at-161">对话末尾的一条 <code>system</code> 消息（AT-161）</h3>
+<p>迟到 <code>system</code> 这一行之所以存在，是因为 AT-081 的语言指引计划在一个回合的每次调用中，于列表<strong>末尾</strong>发送<strong>一条</strong>短暂的 <code>role: &quot;system&quot;</code> 消息——第一次调用时在 <code>user</code> 之后，之后的调用中在 <code>tool</code> 之后。契约套件为九个 provider 中的每一个回答这条消息落在<strong>序列化后的请求体</strong>中的什么位置：每个测试框架声明 <code>posicaoDoSistemaTardio</code>，契约在两个位置上核对它，并核对文本恰好出现一次、对话其余部分保持顺序（<code>apps/api/test/contract/llm-provider.contract.ts</code>）。</p>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>provider</th>
+<th>适配器</th>
+<th>迟到 <code>system</code> 落在哪里</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI、OpenRouter、NVIDIA NIM、Together、DeepInfra、Bitdeer、Vultr</td>
+<td>兼容基座（<code>toWireMessage</code>）</td>
+<td><code>messages</code> 末尾，<code>role: &quot;system&quot;</code></td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>自有（<code>messages</code> 原样发送）</td>
+<td><code>messages</code> 末尾，<code>role: &quot;system&quot;</code></td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>自有（官方 SDK）</td>
+<td>顶层 <code>system</code> 的末尾；位置丢失</td>
+</tr>
+</tbody>
+</table></div>
+<p>没有任何适配器丢弃或重复它。假服务器无法回答的是<strong>真实</strong>的 provider 是否接受这个请求体——它什么都接受。这是一个单独的手动 smoke，<code>apps/api/test/infrastructure/llm/sistema-tardio.smoke.spec.ts</code>，每个 provider 一个 <code>describe</code>，各自以验收 smoke 使用的同一个密钥为条件（另加 <code>ANTHROPIC_TEST_KEY</code>；Ollama 由 <code>OLLAMA_SISTEMA_TARDIO_SMOKE=1</code> 控制）。哪些已经运行过记录在 <a href="../explanation/aceite-providers.html">provider 验收</a>中。没有这次运行，就迟到 <code>system</code> 的接受而言，provider <strong>未被证明</strong>——这是 ADR 0041/0042 的规则。</p>
 <p><strong>观察，而非测量（AT-081 的缺口 2）：</strong> 在 Anthropic 上，上提让指引改变了位于对话<strong>之前</strong>的顶层 <code>system</code> 块——所以它的文本每次变化都会改变请求的前缀，以及该前缀本可获得的任何 prompt caching。目前缓存在产品中不可观测（AT-082），所以这一点只是记录下来，没有量化。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=openrouter第一个-hubfase-11a>OpenRouter——第一个 hub（Fase 11a）<a href=#openrouter第一个-hubfase-11a class=hash-link aria-label="OpenRouter——第一个 hub（Fase 11a）的直接链接" title="OpenRouter——第一个 hub（Fase 11a）的直接链接" translate=no>​</a></h2>
+<h2 id="openrouter第一个-hubfase-11a">OpenRouter——第一个 hub（Fase 11a）</h2>
 <p><code>OpenRouterProvider</code> 是带 <code>openrouterConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code>）。它声明 <code>listModels: true</code>——当一个 capability 开启时，唯一改变的代码就是配置；其余由 <code>SyncModelCatalogUseCase</code> 处理。</p>
 <p>发现并经过测试的特殊之处（<code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>）：</p>
 <ul>
-<li class=""><strong>自有的头</strong>：<code>HTTP-Referer</code>（来自 <code>API_PUBLIC_URL</code>）和 <code>X-Title: "Brabo"</code>——按官方文档是可选的（用于 OpenRouter 网站上的署名/排名），因为没有成本所以总是发送；</li>
-<li class=""><strong>以上游为前缀的模型 id</strong>（<code>openai/gpt-4o-mini</code>、<code>anthropic/claude-3-5-sonnet</code>）：前缀是<strong>请求的</strong>供应商，不是实际响应的——见下面的 <code>extrairUpstreamProvider</code>；</li>
-<li class=""><strong>价格就在行内的目录</strong>：<code>GET /v1/models</code> 以 USD <strong>每 token</strong> 的十进制<strong>字符串</strong>返回 <code>pricing.prompt</code>/<code>pricing.completion</code>，不同于 OpenAI 只有 id 的简单模式 <code>{ data: [{ id }] }</code>。<code>parseCatalogoOpenRouter</code> 把它换算为每百万的 micro-USD（<code>* 1e12</code>，四舍五入——该列是 <code>bigint</code>）；</li>
-<li class=""><strong>流中途的错误</strong>：OpenRouter 会接受连接并开始发送文本，而那时它还不知道背后的真实 provider 会不会失败——这是 OpenAI 没有的失败方式，因为 OpenAI 不路由到第三方基础设施。该帧形如 <code>{"error":{"code":"...","message":"..."},"choices":[...]}</code>；真实存在的 <code>error</code> 字段就是信号。数字代码使用基座的同一个 <code>normalizeHttpStatus</code>；字符串代码通过子串映射（<code>mapearCodigoDeFrame</code>），以 <code>upstream</code> 作为安全默认值——绝不沉默，即使是映射之外的代码；</li>
-<li class=""><strong><code>usage.cost</code> 中的真实成本</strong>（ADR 0188，RN-665）：流的最后一帧带有 hub 收取的费用，单位 USD；<code>extrairCustoRealOpenRouter</code> 把它换算为 micro-USD，计量把它作为那个数字记录。<code>is_byok: true</code> 时，该字段是 hub 的服务费，而不是推理费用，所以<strong>不</strong>读取它，该行回退到目录价格。<code>model</code>（像 <code>~deepseek/deepseek-flash-latest</code> 这样的别名解析到的带日期版本）和 <code>id</code>（<code>gen-…</code>）由基座为该方言的每个 provider 读取；</li>
-<li class=""><strong>自由路由别名（<code>~…</code>）会被同步但不能被策展</strong>（AT-271，<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-679>RN-679</a>）：像 <code>~deepseek/deepseek-flash-latest</code> 这样的 id 总是重定向到该家族最新的模型，它在目录中的价格只是橱窗价，账单来自实际服务该调用的任何上游。同步把它保留在目录中（移除它会把一个已策展的模型标为 <code>unavailable</code>）；激活它是 422 <code>alias_de_roteamento_livre</code>，策展的读取会用 <code>freeRoutingAlias</code> 标记它。在规则之前激活的保持激活，可以被关闭——关闭后就不会再回来；</li>
-<li class=""><strong>连接测试</strong>：<code>GET /key</code>（官方文档）验证密钥，而不必在真正的聊天调用上花费 token。它是 LLM 一侧的第一个 <code>LLMCredentialConnectionTester</code>。自 <a class="" href=/brabo/dev/zh-Hans/adr/0050-credencial-sempre-cifrada-verificacao-explicita>ADR 0050</a> 起，它<strong>不在登记时运行</strong>：凭据被加密并保存，不做评判，验证是对已保存密钥的显式动作 <code>POST /users/me/credentials/{provider}/test</code>。没有声明测试的 provider（目前：<code>ollama</code>/<code>anthropic</code>/<code>openai</code>）返回 <code>nao_suportado</code>——绝不是虚假的 <code>ok</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-055>RN-055</a>）。</li>
+<li><strong>自有的头</strong>：<code>HTTP-Referer</code>（来自 <code>API_PUBLIC_URL</code>）和 <code>X-Title: &quot;Brabo&quot;</code>——按官方文档是可选的（用于 OpenRouter 网站上的署名/排名），因为没有成本所以总是发送；</li>
+<li><strong>以上游为前缀的模型 id</strong>（<code>openai/gpt-4o-mini</code>、<code>anthropic/claude-3-5-sonnet</code>）：前缀是<strong>请求的</strong>供应商，不是实际响应的——见下面的 <code>extrairUpstreamProvider</code>；</li>
+<li><strong>价格就在行内的目录</strong>：<code>GET /v1/models</code> 以 USD <strong>每 token</strong> 的十进制<strong>字符串</strong>返回 <code>pricing.prompt</code>/<code>pricing.completion</code>，不同于 OpenAI 只有 id 的简单模式 <code>{ data: [{ id }] }</code>。<code>parseCatalogoOpenRouter</code> 把它换算为每百万的 micro-USD（<code>* 1e12</code>，四舍五入——该列是 <code>bigint</code>）；</li>
+<li><strong>流中途的错误</strong>：OpenRouter 会接受连接并开始发送文本，而那时它还不知道背后的真实 provider 会不会失败——这是 OpenAI 没有的失败方式，因为 OpenAI 不路由到第三方基础设施。该帧形如 <code>{&quot;error&quot;:{&quot;code&quot;:&quot;...&quot;,&quot;message&quot;:&quot;...&quot;},&quot;choices&quot;:[...]}</code>；真实存在的 <code>error</code> 字段就是信号。数字代码使用基座的同一个 <code>normalizeHttpStatus</code>；字符串代码通过子串映射（<code>mapearCodigoDeFrame</code>），以 <code>upstream</code> 作为安全默认值——绝不沉默，即使是映射之外的代码；</li>
+<li><strong><code>usage.cost</code> 中的真实成本</strong>（ADR 0188，RN-665）：流的最后一帧带有 hub 收取的费用，单位 USD；<code>extrairCustoRealOpenRouter</code> 把它换算为 micro-USD，计量把它作为那个数字记录。<code>is_byok: true</code> 时，该字段是 hub 的服务费，而不是推理费用，所以<strong>不</strong>读取它，该行回退到目录价格。<code>model</code>（像 <code>~deepseek/deepseek-flash-latest</code> 这样的别名解析到的带日期版本）和 <code>id</code>（<code>gen-…</code>）由基座为该方言的每个 provider 读取；</li>
+<li><strong>自由路由别名（<code>~…</code>）会被同步但不能被策展</strong>（AT-271，<a href="../business-rules/custo.html#rn-679">RN-679</a>）：像 <code>~deepseek/deepseek-flash-latest</code> 这样的 id 总是重定向到该家族最新的模型，它在目录中的价格只是橱窗价，账单来自实际服务该调用的任何上游。同步把它保留在目录中（移除它会把一个已策展的模型标为 <code>unavailable</code>）；激活它是 422 <code>alias_de_roteamento_livre</code>，策展的读取会用 <code>freeRoutingAlias</code> 标记它。在规则之前激活的保持激活，可以被关闭——关闭后就不会再回来；</li>
+<li><strong>连接测试</strong>：<code>GET /key</code>（官方文档）验证密钥，而不必在真正的聊天调用上花费 token。它是 LLM 一侧的第一个 <code>LLMCredentialConnectionTester</code>。自 <a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050</a> 起，它<strong>不在登记时运行</strong>：凭据被加密并保存，不做评判，验证是对已保存密钥的显式动作 <code>POST /users/me/credentials/{provider}/test</code>。没有声明测试的 provider（目前：<code>ollama</code>/<code>anthropic</code>/<code>openai</code>）返回 <code>nao_suportado</code>——绝不是虚假的 <code>ok</code>（<a href="../business-rules.html#rn-055">RN-055</a>）。</li>
 </ul>
 <p>Fase 11a 要求的真实凭据验收测试——登记、同步填充目录、策展激活，以及一次端到端的聊天会话，其成本冻结在 <code>token_usage</code> 中——是 <code>test/infrastructure/llm/openrouter-provider.smoke.spec.ts</code>。它从不在 CI 中运行：环境中没有 <code>OPENROUTER_TEST_KEY</code> 时，整个 <code>describe</code> 带着警告被跳过。与针对真实 API 的 git smoke（<code>github-provider.smoke.spec.ts</code>、<code>gitlab-provider.smoke.spec.ts</code>）是同一个模式。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=nvidia-nimfase-11b>NVIDIA NIM（Fase 11b）<a href=#nvidia-nimfase-11b class=hash-link aria-label="NVIDIA NIM（Fase 11b）的直接链接" title="NVIDIA NIM（Fase 11b）的直接链接" translate=no>​</a></h2>
+<h2 id="nvidia-nimfase-11b">NVIDIA NIM（Fase 11b）</h2>
 <p><code>NvidiaNimProvider</code> 是带 <code>nvidiaNimConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/nvidia-nim-provider.ts</code>），指向<strong>托管</strong>端点（<code>integrate.api.nvidia.com</code>）——而不是自托管容器，那是另一个产品，地址也不同。</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong>：<code>GET /v1/models</code> 存在（本次会话核对过官方文档），返回 <code>id</code>/<code>object</code>/<code>created</code>/<code>owned_by</code>，但找到的文档中没有任何每 token 价格——一个真实但对计量所需的按模型成本毫无用处的目录（两层 capability，ADR 0041）。该 provider 依靠<strong>手工种子</strong>（<code>apps/api/src/db/seed.ts</code>）运作，直到有人确认存在价格端点；</li>
-<li class=""><strong>没有专用的头</strong>：<code>Authorization: Bearer nvapi-...</code>——标准 bearer，密钥带 <code>nvapi-</code> 前缀只是 NVIDIA 的惯例；</li>
-<li class=""><strong>tool calling 是按模型的，不是按 API 的</strong>：只有特定模型（Llama 3.1 70B/405B、Nemotron 的变体……）真正支持它——但这从来不是配置开关，完全取决于 <code>models.supports_tool_calling</code>（种子/策展），这一点通过阅读基座的 <code>buildBody()</code> 得到确认：开关 <code>capabilities.toolCalling</code> 只决定是否发送 <code>tools</code> 参数，而不决定特定模型是否会用它；</li>
-<li class=""><strong><code>stream_options.include_usage</code> 未经确认</strong>适用于托管端点（只在自托管的 NIM 软件中有文档）——<code>streamOptionsIncludeUsage: false</code>；基座的 <code>estimated</code> 回退覆盖了该字段永远不出现的情况；</li>
-<li class=""><strong>连接测试</strong>：没有专用的验证端点（没有找到"whoami"/余额端点）——用密钥调用 <code>GET /v1/models</code>，只看状态码（200 还是 401/403）。</li>
+<li><strong><code>listModels: false</code></strong>：<code>GET /v1/models</code> 存在（本次会话核对过官方文档），返回 <code>id</code>/<code>object</code>/<code>created</code>/<code>owned_by</code>，但找到的文档中没有任何每 token 价格——一个真实但对计量所需的按模型成本毫无用处的目录（两层 capability，ADR 0041）。该 provider 依靠<strong>手工种子</strong>（<code>apps/api/src/db/seed.ts</code>）运作，直到有人确认存在价格端点；</li>
+<li><strong>没有专用的头</strong>：<code>Authorization: Bearer nvapi-...</code>——标准 bearer，密钥带 <code>nvapi-</code> 前缀只是 NVIDIA 的惯例；</li>
+<li><strong>tool calling 是按模型的，不是按 API 的</strong>：只有特定模型（Llama 3.1 70B/405B、Nemotron 的变体……）真正支持它——但这从来不是配置开关，完全取决于 <code>models.supports_tool_calling</code>（种子/策展），这一点通过阅读基座的 <code>buildBody()</code> 得到确认：开关 <code>capabilities.toolCalling</code> 只决定是否发送 <code>tools</code> 参数，而不决定特定模型是否会用它；</li>
+<li><strong><code>stream_options.include_usage</code> 未经确认</strong>适用于托管端点（只在自托管的 NIM 软件中有文档）——<code>streamOptionsIncludeUsage: false</code>；基座的 <code>estimated</code> 回退覆盖了该字段永远不出现的情况；</li>
+<li><strong>连接测试</strong>：没有专用的验证端点（没有找到&quot;whoami&quot;/余额端点）——用密钥调用 <code>GET /v1/models</code>，只看状态码（200 还是 401/403）。</li>
 </ul>
-<p>:::info NVIDIA 不按 token 收费
-对官方价格的搜索重新做了一遍，得到了比"没找到"更好的答案：<strong>根本没有按 token 的价格可找</strong>。官方文档（<a href=https://docs.api.nvidia.com/nim/docs/product target=_blank rel="noopener noreferrer" class="">docs.api.nvidia.com/nim/docs/product</a>）说托管端点是面向 Developer Program 成员的免费<strong>原型</strong>访问，生产环境需要 NVIDIA AI Enterprise 许可——"These licenses start at $4500 per GPU per year or ~ $1 per GPU per hour in the cloud." 单位是 GPU/小时，而不是 token。</p>
-<p>因此，种子中的三个 NIM 模型使用的是通过与其他 provider 上的同等模型比较得出的<strong>估算</strong>价格，并且 <code>manual_pricing = true</code>：这足以让预算上限有东西可扣，也是在供应商的商业模式不按 token 计费期间所能做到的最大诚实。
-:::</p>
-<p>真实凭据的验收测试位于 <code>test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts</code>，以 <code>NVIDIA_NIM_TEST_KEY</code> 为条件。与 OpenRouter 不同，"同步"步骤什么都不会发现（capability 故意是 <code>false</code>）——smoke 确认该 provider 在报告中显示为 <code>pulado: 'sem_capability'</code>，并策展一个手工插入的模型，正如 owner 在生产中会做的那样。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=together-aifase-11b>Together AI（Fase 11b）<a href=#together-aifase-11b class=hash-link aria-label="Together AI（Fase 11b）的直接链接" title="Together AI（Fase 11b）的直接链接" translate=no>​</a></h2>
+<div class="admonicao admonicao-info" data-admonicao="info"><p class="admonicao-titulo">NVIDIA 不按 token 收费</p>
+<p>对官方价格的搜索重新做了一遍，得到了比&quot;没找到&quot;更好的答案：<strong>根本没有按 token 的价格可找</strong>。官方文档（<a href="https://docs.api.nvidia.com/nim/docs/product">docs.api.nvidia.com/nim/docs/product</a>）说托管端点是面向 Developer Program 成员的免费<strong>原型</strong>访问，生产环境需要 NVIDIA AI Enterprise 许可——&quot;These licenses start at $4500 per GPU per year or ~ $1 per GPU per hour in the cloud.&quot; 单位是 GPU/小时，而不是 token。</p>
+<p>因此，种子中的三个 NIM 模型使用的是通过与其他 provider 上的同等模型比较得出的<strong>估算</strong>价格，并且 <code>manual_pricing = true</code>：这足以让预算上限有东西可扣，也是在供应商的商业模式不按 token 计费期间所能做到的最大诚实。</p>
+</div>
+<p>真实凭据的验收测试位于 <code>test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts</code>，以 <code>NVIDIA_NIM_TEST_KEY</code> 为条件。与 OpenRouter 不同，&quot;同步&quot;步骤什么都不会发现（capability 故意是 <code>false</code>）——smoke 确认该 provider 在报告中显示为 <code>pulado: 'sem_capability'</code>，并策展一个手工插入的模型，正如 owner 在生产中会做的那样。</p>
+<h2 id="together-aifase-11b">Together AI（Fase 11b）</h2>
 <p><code>TogetherProvider</code> 是带 <code>togetherConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/together-provider.ts</code>）。</p>
 <ul>
-<li class=""><strong><code>listModels: true</code></strong>：<code>GET /v1/models</code> 有文档，带 <code>pricing: {input, output, cached_input, base, hourly, finetune}</code>——只使用 <code>input</code>/<code>output</code>；</li>
-<li class=""><strong>价格单位 Together 没有明确写在文档中</strong>：值是<strong>数字</strong>（而不是 OpenRouter 那样的字符串），通过与公布的市场价格比较（together.ai/models 上 Llama 3.3 70B 为每 1M US$1.04——与官方 schema 示例 <code>"input": 0.3</code> 同一数量级），推断为<strong>直接按每百万 token 的 USD</strong>，而不是每 token。用真实密钥确认这一点的是 smoke（参见 <code>together-provider.smoke.spec.ts</code> 顶部的注释）——如果有一天被证明是错的，那是需要在这里和解析器中修正的发现，而不是需要掩盖的；</li>
-<li class=""><strong>带命名空间的 id</strong>：<code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code>——OpenAI 风格的"扁平" id（<code>gpt-4o</code>）返回 404；</li>
-<li class=""><strong><code>stream_options.include_usage</code> 未在文档中确认</strong>——与 NIM 一样谨慎处理，由 <code>estimated</code> 回退兜底；</li>
-<li class=""><strong>429 的响应体带有 <code>error_type: dynamic_request_limited | dynamic_token_limited</code></strong>——没有单独测试，因为响应体仍然是 <code>{error: {message}}</code>，与基座的标准解析兼容；只有在哪天我们需要区分这两种速率限制时才重要；</li>
-<li class=""><strong>连接测试</strong>：没有专用端点——<code>GET /v1/models</code>，只看状态码。</li>
+<li><strong><code>listModels: true</code></strong>：<code>GET /v1/models</code> 有文档，带 <code>pricing: {input, output, cached_input, base, hourly, finetune}</code>——只使用 <code>input</code>/<code>output</code>；</li>
+<li><strong>价格单位 Together 没有明确写在文档中</strong>：值是<strong>数字</strong>（而不是 OpenRouter 那样的字符串），通过与公布的市场价格比较（together.ai/models 上 Llama 3.3 70B 为每 1M US$1.04——与官方 schema 示例 <code>&quot;input&quot;: 0.3</code> 同一数量级），推断为<strong>直接按每百万 token 的 USD</strong>，而不是每 token。用真实密钥确认这一点的是 smoke（参见 <code>together-provider.smoke.spec.ts</code> 顶部的注释）——如果有一天被证明是错的，那是需要在这里和解析器中修正的发现，而不是需要掩盖的；</li>
+<li><strong>带命名空间的 id</strong>：<code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code>——OpenAI 风格的&quot;扁平&quot; id（<code>gpt-4o</code>）返回 404；</li>
+<li><strong><code>stream_options.include_usage</code> 未在文档中确认</strong>——与 NIM 一样谨慎处理，由 <code>estimated</code> 回退兜底；</li>
+<li><strong>429 的响应体带有 <code>error_type: dynamic_request_limited | dynamic_token_limited</code></strong>——没有单独测试，因为响应体仍然是 <code>{error: {message}}</code>，与基座的标准解析兼容；只有在哪天我们需要区分这两种速率限制时才重要；</li>
+<li><strong>连接测试</strong>：没有专用端点——<code>GET /v1/models</code>，只看状态码。</li>
 </ul>
 <p>真实凭据的验收测试位于 <code>test/infrastructure/llm/together-provider.smoke.spec.ts</code>，以 <code>TOGETHER_TEST_KEY</code> 为条件。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=deepinfrafase-11b>DeepInfra（Fase 11b）<a href=#deepinfrafase-11b class=hash-link aria-label="DeepInfra（Fase 11b）的直接链接" title="DeepInfra（Fase 11b）的直接链接" translate=no>​</a></h2>
+<h2 id="deepinfrafase-11b">DeepInfra（Fase 11b）</h2>
 <p><code>DeepInfraProvider</code> 是带 <code>deepinfraConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/deepinfra-provider.ts</code>），<code>baseUrl</code> 为 <code>https://api.deepinfra.com/v1/openai</code>（OpenAI 兼容的接口面——DeepInfra 在它之外还有原生端点，这里不使用）。</p>
 <ul>
-<li class=""><strong><code>listModels: true</code></strong>，本次会话中针对 <code>GET {baseUrl}/models</code> <strong>实时</strong>确认（与基座默认调用的是<strong>同一个</strong>端点，无需扩展）：响应每行带有 <code>metadata.pricing.{input_tokens,output_tokens}</code>（每百万的 USD，数字——与为 Together 推断的约定相同）和 <code>metadata.context_length</code>；</li>
-<li class=""><strong>目录是公开的——完全不需要认证</strong>，实时确认过（调用在没有 <code>Authorization</code> 头的情况下成功）。这有一个真实的后果：<strong>DeepInfra 没有连接测试</strong>（<code>llm-credential-connection-tester.ts</code> 中没有它的条目）——无效的密钥只会在第一次真正的<strong>聊天</strong>调用时被发现，而绝不会在登记时。没有找到任何其他公开文档化的、需要认证的验证端点；</li>
-<li class=""><strong>目录在同一个列表中混合了聊天与图像/音频/视频/embedding</strong>，每种类型的 <code>pricing</code> 格式不同（<code>per_image_unit</code>、<code>input_characters</code>、<code>output_seconds</code>……）——<code>parseCatalogoDeepInfra</code> 在尝试读取 <code>input_tokens</code>/<code>output_tokens</code> 之前按 <code>metadata.tags.includes('chat')</code> 过滤；没有这个过滤，图像模型会带着一个从根本不是"每 token"的字段编造出来的价格进入；</li>
-<li class=""><strong>文档确认支持 <code>stream_options.include_usage</code></strong>（与 NIM/Together 不同）——<code>streamOptionsIncludeUsage: true</code>；</li>
-<li class=""><strong>错误为标准格式</strong> <code>{"error": {"message", "type", "param", "code"}}</code>——与基座的标准解析兼容，没有专用的 <code>parseErrorFrame</code>。</li>
+<li><strong><code>listModels: true</code></strong>，本次会话中针对 <code>GET {baseUrl}/models</code> <strong>实时</strong>确认（与基座默认调用的是<strong>同一个</strong>端点，无需扩展）：响应每行带有 <code>metadata.pricing.{input_tokens,output_tokens}</code>（每百万的 USD，数字——与为 Together 推断的约定相同）和 <code>metadata.context_length</code>；</li>
+<li><strong>目录是公开的——完全不需要认证</strong>，实时确认过（调用在没有 <code>Authorization</code> 头的情况下成功）。这有一个真实的后果：<strong>DeepInfra 没有连接测试</strong>（<code>llm-credential-connection-tester.ts</code> 中没有它的条目）——无效的密钥只会在第一次真正的<strong>聊天</strong>调用时被发现，而绝不会在登记时。没有找到任何其他公开文档化的、需要认证的验证端点；</li>
+<li><strong>目录在同一个列表中混合了聊天与图像/音频/视频/embedding</strong>，每种类型的 <code>pricing</code> 格式不同（<code>per_image_unit</code>、<code>input_characters</code>、<code>output_seconds</code>……）——<code>parseCatalogoDeepInfra</code> 在尝试读取 <code>input_tokens</code>/<code>output_tokens</code> 之前按 <code>metadata.tags.includes('chat')</code> 过滤；没有这个过滤，图像模型会带着一个从根本不是&quot;每 token&quot;的字段编造出来的价格进入；</li>
+<li><strong>文档确认支持 <code>stream_options.include_usage</code></strong>（与 NIM/Together 不同）——<code>streamOptionsIncludeUsage: true</code>；</li>
+<li><strong>错误为标准格式</strong> <code>{&quot;error&quot;: {&quot;message&quot;, &quot;type&quot;, &quot;param&quot;, &quot;code&quot;}}</code>——与基座的标准解析兼容，没有专用的 <code>parseErrorFrame</code>。</li>
 </ul>
 <p>真实凭据的验收测试位于 <code>test/infrastructure/llm/deepinfra-provider.smoke.spec.ts</code>，以 <code>DEEPINFRA_TEST_KEY</code> 为条件——这是第一个<strong>登记</strong>步骤什么都不验证的 smoke；只有<strong>聊天</strong>步骤会发现坏密钥。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=bitdeerfase-11b>Bitdeer（Fase 11b）<a href=#bitdeerfase-11b class=hash-link aria-label="Bitdeer（Fase 11b）的直接链接" title="Bitdeer（Fase 11b）的直接链接" translate=no>​</a></h2>
+<h2 id="bitdeerfase-11b">Bitdeer（Fase 11b）</h2>
 <p><code>BitdeerProvider</code> 是带 <code>bitdeerConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/bitdeer-provider.ts</code>）——是本阶段五个中公开文档最浅的。</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong>：没有公开找到任何目录/价格格式（价格页面由 JS 渲染，没有非交互式搜索可以访问的示例）——没有核对过的格式，就写不出诚实的 <code>parseCatalogo</code>。重新核对过：<code>bitdeer.ai/en/pricing/ai-models</code> 仍然在客户端组装表格（提供的 HTML 中<strong>没有</strong>任何模型名），除此之外没有价格文档。种子价格仍然是<strong>估算</strong>的；</li>
-<li class=""><strong><code>Authorization: Bearer &lt;chave></code> 已确认</strong>（本次会话在 Bitdeer 的 embeddings API 文档中找到了真实的 curl 示例）——即使方言的其余部分完全没有示例；</li>
-<li class=""><strong><code>GET /v1/models</code> 存在且需要认证</strong>（没有密钥时实时返回 401，本次会话确认）——它成为连接测试（只看状态码，与其他没有专用端点的一样）；</li>
-<li class=""><strong>三个真实的模型 id 已确认</strong>，来自 Bitdeer 自己博客中的配置示例（不是橱窗名称）：<code>moonshotai/Kimi-K2.5</code>、<code>zai-org/GLM-5</code>、<code>nvidia/NVIDIA-Nemotron-3-Super-120B-A12B</code>——在 <code>apps/api/src/db/seed.ts</code> 中以<strong>估算</strong>价格写入种子（该模型/家族在其他 provider 上的市场价，未经 Bitdeer 自己确认）；</li>
-<li class=""><strong>没有确认任何流/错误方面的特殊之处</strong>——Bitdeer 关于 "OpenAI REST API standards" 的声明没有附带真实的 <code>/chat/completions</code> 示例，所以契约测试不会填充任何文档没有证明的特殊性。smoke 是对该方言的<strong>第一次</strong>真实确认。</li>
+<li><strong><code>listModels: false</code></strong>：没有公开找到任何目录/价格格式（价格页面由 JS 渲染，没有非交互式搜索可以访问的示例）——没有核对过的格式，就写不出诚实的 <code>parseCatalogo</code>。重新核对过：<code>bitdeer.ai/en/pricing/ai-models</code> 仍然在客户端组装表格（提供的 HTML 中<strong>没有</strong>任何模型名），除此之外没有价格文档。种子价格仍然是<strong>估算</strong>的；</li>
+<li><strong><code>Authorization: Bearer &lt;chave&gt;</code> 已确认</strong>（本次会话在 Bitdeer 的 embeddings API 文档中找到了真实的 curl 示例）——即使方言的其余部分完全没有示例；</li>
+<li><strong><code>GET /v1/models</code> 存在且需要认证</strong>（没有密钥时实时返回 401，本次会话确认）——它成为连接测试（只看状态码，与其他没有专用端点的一样）；</li>
+<li><strong>三个真实的模型 id 已确认</strong>，来自 Bitdeer 自己博客中的配置示例（不是橱窗名称）：<code>moonshotai/Kimi-K2.5</code>、<code>zai-org/GLM-5</code>、<code>nvidia/NVIDIA-Nemotron-3-Super-120B-A12B</code>——在 <code>apps/api/src/db/seed.ts</code> 中以<strong>估算</strong>价格写入种子（该模型/家族在其他 provider 上的市场价，未经 Bitdeer 自己确认）；</li>
+<li><strong>没有确认任何流/错误方面的特殊之处</strong>——Bitdeer 关于 &quot;OpenAI REST API standards&quot; 的声明没有附带真实的 <code>/chat/completions</code> 示例，所以契约测试不会填充任何文档没有证明的特殊性。smoke 是对该方言的<strong>第一次</strong>真实确认。</li>
 </ul>
 <p>真实凭据的验收测试位于 <code>test/infrastructure/llm/bitdeer-provider.smoke.spec.ts</code>，以 <code>BITDEER_TEST_KEY</code> 为条件。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=vultr-serverless-inferencefase-11b>Vultr Serverless Inference（Fase 11b）<a href=#vultr-serverless-inferencefase-11b class=hash-link aria-label="Vultr Serverless Inference（Fase 11b）的直接链接" title="Vultr Serverless Inference（Fase 11b）的直接链接" translate=no>​</a></h2>
+<h2 id="vultr-serverless-inferencefase-11b">Vultr Serverless Inference（Fase 11b）</h2>
 <p><code>VultrProvider</code> 是带 <code>vultrConfig()</code> 的 <code>OpenAICompatibleProvider</code>（<code>apps/api/src/infrastructure/llm/vultr-provider.ts</code>）——五个中唯一一个 <code>listModels</code> 的决定相对原计划<strong>在实现过程中改变了</strong>的。</p>
 <ul>
-<li class=""><strong><code>listModels: false</code></strong>（原计划是 <code>true</code>）：基座<strong>总是</strong>调用 <code>{baseUrl}/models</code>（<code>openai-compatible-provider.ts</code>，<code>listModels()</code>），而 Vultr 自己的官方参考（<code>api.vultrinference.com</code>）描述 <code>GET /models</code> 只返回 <code>id</code>/<code>created</code>/<code>object</code>/<code>owned_by</code>/<code>features</code>——<strong>没有价格</strong>。文档中与价格相关的端点（<code>GET /provider</code>，带 <code>cost</code>/<code>contextWindow</code>）在本次会话测试的路径上<strong>实时返回 404</strong>——数据不足以写出一个不冒指向错误 URL 风险的 <code>parseCatalogo</code>（"脆弱的 true"）。<code>GET /v1/models</code> 本身已确认（没有密钥时实时返回 401，两次）——只是没有价格；</li>
-<li class=""><strong>tool calling 已用真实示例确认</strong>：官方文档（<code>docs.vultr.com/how-to-use-tool-calling-with-vultr-serverless-inference</code>）展示了 <code>kimi-k2-instruct</code> 以 <code>finish_reason: "tool_calls"</code> 响应——纯标准 OpenAI 方言，那个示例中没有奇怪的字段；另外两个种子模型（<code>llama-3.3-70b-instruct-fp8</code>、<code>deepseek-r1-distill-llama-70b</code>）没有 tool calling 的确认——它们是 <code>supportsToolCalling: false</code>；</li>
-<li class=""><strong><code>-normalize</code> 后缀</strong>：最初的调研指向一个有文档的规范化代理——本次会话<strong>无法</strong>再次确认该文档（定向搜索在核对过的页面中没有找到这个词）。无论如何默认都不使用它（我们保留模型的原始 id）；</li>
-<li class=""><strong>连接测试</strong>：<code>GET /v1/models</code>，只看状态码。</li>
+<li><strong><code>listModels: false</code></strong>（原计划是 <code>true</code>）：基座<strong>总是</strong>调用 <code>{baseUrl}/models</code>（<code>openai-compatible-provider.ts</code>，<code>listModels()</code>），而 Vultr 自己的官方参考（<code>api.vultrinference.com</code>）描述 <code>GET /models</code> 只返回 <code>id</code>/<code>created</code>/<code>object</code>/<code>owned_by</code>/<code>features</code>——<strong>没有价格</strong>。文档中与价格相关的端点（<code>GET /provider</code>，带 <code>cost</code>/<code>contextWindow</code>）在本次会话测试的路径上<strong>实时返回 404</strong>——数据不足以写出一个不冒指向错误 URL 风险的 <code>parseCatalogo</code>（&quot;脆弱的 true&quot;）。<code>GET /v1/models</code> 本身已确认（没有密钥时实时返回 401，两次）——只是没有价格；</li>
+<li><strong>tool calling 已用真实示例确认</strong>：官方文档（<code>docs.vultr.com/how-to-use-tool-calling-with-vultr-serverless-inference</code>）展示了 <code>kimi-k2-instruct</code> 以 <code>finish_reason: &quot;tool_calls&quot;</code> 响应——纯标准 OpenAI 方言，那个示例中没有奇怪的字段；另外两个种子模型（<code>llama-3.3-70b-instruct-fp8</code>、<code>deepseek-r1-distill-llama-70b</code>）没有 tool calling 的确认——它们是 <code>supportsToolCalling: false</code>；</li>
+<li><strong><code>-normalize</code> 后缀</strong>：最初的调研指向一个有文档的规范化代理——本次会话<strong>无法</strong>再次确认该文档（定向搜索在核对过的页面中没有找到这个词）。无论如何默认都不使用它（我们保留模型的原始 id）；</li>
+<li><strong>连接测试</strong>：<code>GET /v1/models</code>，只看状态码。</li>
 </ul>
-<p>:::tip Vultr 的价格是<strong>官方</strong>的，而且是统一费率
-与 NIM 和 Bitdeer 不同，Vultr <strong>公布</strong>了费率——<a href=https://docs.vultr.com/support/products/serverless/how-do-i-monitor-the-usage-and-cost-of-my-vultr-serverless-inference-subscription target=_blank rel="noopener noreferrer" class="">在 Serverless Inference 的用量与成本文档中</a>："Requests are billed at $0.55 per 1,000,000 input tokens and $2.75 per 1,000,000 output tokens." 这是<strong>服务</strong>的费率，而不是按模型——文档不区分模型，这就是种子中三行重复同一对值（<code>550_000</code> / <code>2_750_000</code> micros）的原因。</p>
+<div class="admonicao admonicao-tip" data-admonicao="tip"><p class="admonicao-titulo">Vultr 的价格是**官方**的，而且是统一费率</p>
+<p>与 NIM 和 Bitdeer 不同，Vultr <strong>公布</strong>了费率——<a href="https://docs.vultr.com/support/products/serverless/how-do-i-monitor-the-usage-and-cost-of-my-vultr-serverless-inference-subscription">在 Serverless Inference 的用量与成本文档中</a>：&quot;Requests are billed at $0.55 per 1,000,000 input tokens and $2.75 per 1,000,000 output tokens.&quot; 这是<strong>服务</strong>的费率，而不是按模型——文档不区分模型，这就是种子中三行重复同一对值（<code>550_000</code> / <code>2_750_000</code> micros）的原因。</p>
 <p>之前那里的估算错在危险的方向：三个模型中有两个的<strong>输出</strong>价是 <code>400_000</code>，而真实值是 <code>2_750_000</code>。计量把输出成本低估了将近 7 倍——而输出正是写代码的 agent 账单的主要部分。</p>
-<p><code>manual_pricing</code> 仍然是 <code>true</code>，这并不矛盾：这个开关的意思是"价格是由一个人阅读文档后输入的，而不是来自同步"（<code>apps/api/src/db/schema.ts</code>）。改变的是，这个数字现在来自 provider 本身，而不是市场比较。
-:::</p>
+<p><code>manual_pricing</code> 仍然是 <code>true</code>，这并不矛盾：这个开关的意思是&quot;价格是由一个人阅读文档后输入的，而不是来自同步&quot;（<code>apps/api/src/db/schema.ts</code>）。改变的是，这个数字现在来自 provider 本身，而不是市场比较。</p>
+</div>
 <p>真实凭据的验收测试位于 <code>test/infrastructure/llm/vultr-provider.smoke.spec.ts</code>，以 <code>VULTR_TEST_KEY</code> 为条件。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=hub-与真实成本>Hub 与真实成本<a href=#hub-与真实成本 class=hash-link aria-label="Hub 与真实成本的直接链接" title="Hub 与真实成本的直接链接" translate=no>​</a></h2>
+<h2 id="hub-与真实成本">Hub 与真实成本</h2>
 <p>在 <strong>hub</strong>（OpenRouter）中，出现在调用中的是 hub，但产生成本的是实际提供服务的 provider。计量会把两者都记录下来：</p>
 <ul>
-<li class=""><code>ChatUsageChunk.upstreamProvider</code>——当 hub 提供该信息时，由 provider 填写；</li>
-<li class=""><code>token_usage.upstream_provider</code>——自由文本，<strong>可为空</strong>。它不是 enum：这个集合属于 hub，会不经通知地变化，不该由我们来维护版本。<code>null</code> 意味着"不是来自 hub，或者 hub 没有提供"；</li>
-<li class="">指标 <code>brabo_llm_tokens_total</code> 和 <code>brabo_llm_cost_micros_total</code> 增加了 <code>upstream_provider</code> 标签，执行仪表盘有一个按底层 provider 显示成本的面板。没有 hub 时，标签重复 provider 本身——如果标签为空，<code>sum by (upstream_provider)</code> 只会显示经过 hub 的部分，让其余部分看起来没有任何成本。</li>
+<li><code>ChatUsageChunk.upstreamProvider</code>——当 hub 提供该信息时，由 provider 填写；</li>
+<li><code>token_usage.upstream_provider</code>——自由文本，<strong>可为空</strong>。它不是 enum：这个集合属于 hub，会不经通知地变化，不该由我们来维护版本。<code>null</code> 意味着&quot;不是来自 hub，或者 hub 没有提供&quot;；</li>
+<li>指标 <code>brabo_llm_tokens_total</code> 和 <code>brabo_llm_cost_micros_total</code> 增加了 <code>upstream_provider</code> 标签，执行仪表盘有一个按底层 provider 显示成本的面板。没有 hub 时，标签重复 provider 本身——如果标签为空，<code>sum by (upstream_provider)</code> 只会显示经过 hub 的部分，让其余部分看起来没有任何成本。</li>
 </ul>
 <p>从帧中读取该字段是基座中的一个<strong>配置 hook</strong>（<code>extrairUpstreamProvider</code>），而不是解析中的一个 <code>if</code>：每个 hub 把这个信息放在不同的地方，而本阶段的规则是 provider 的特殊性要变成配置。</p>
-<p><code>models.manual_pricing</code> 标记一个根据 provider 文档输入、而不是同步得到的价格。目录同步在没有显式决定的情况下<strong>不会覆盖</strong>被标记行的价格——而当远程目录不提供价格时，保存的值会被保留而不是清零：缺失的字段意味着"provider 没说"，绝不意味着"免费"。</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=示例同一个模型hub--直连>示例：同一个模型，hub × 直连<a href=#示例同一个模型hub--直连 class=hash-link aria-label="示例：同一个模型，hub × 直连的直接链接" title="示例：同一个模型，hub × 直连的直接链接" translate=no>​</a></h3>
-<p>Fase 11a 的承诺（"'同一模型经由 hub'与'直连'之间的可比成本是可查询的"）只有在<strong>同一个</strong>模型出现在两边时才会成为真正的用途——如今任何 OpenAI/Anthropic 发布且同时在 OpenRouter 目录中的模型都是如此（例如 GPT-4o）：</p>
-<div class="language-promql codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-promql codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain"># Razão de custo: servido via OpenRouter vs. servido direto pela OpenAI,</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># no mesmo período. > 1 quer dizer que o hub saiu mais caro que o direto.</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openrouter", upstream_provider="openai"}[1h]))</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  /</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">sum(rate(brabo_llm_cost_micros_total{provider="openai"}[1h]))</span><br/></div></code></pre></div></div>
-<p>这是 <code>upstream_provider</code> 所提供的挂钩——目前没有自动的消费方。预期的用法（记录为种子想法，尚未实现）是心理学家有一天根据同一个指标建议"这个模型直连比经由 hub 更便宜"。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=契约套件>契约套件<a href=#契约套件 class=hash-link aria-label=契约套件的直接链接 title=契约套件的直接链接 translate=no>​</a></h2>
+<p><code>models.manual_pricing</code> 标记一个根据 provider 文档输入、而不是同步得到的价格。目录同步在没有显式决定的情况下<strong>不会覆盖</strong>被标记行的价格——而当远程目录不提供价格时，保存的值会被保留而不是清零：缺失的字段意味着&quot;provider 没说&quot;，绝不意味着&quot;免费&quot;。</p>
+<h3 id="示例同一个模型hub--直连">示例：同一个模型，hub × 直连</h3>
+<p>Fase 11a 的承诺（&quot;'同一模型经由 hub'与'直连'之间的可比成本是可查询的&quot;）只有在<strong>同一个</strong>模型出现在两边时才会成为真正的用途——如今任何 OpenAI/Anthropic 发布且同时在 OpenRouter 目录中的模型都是如此（例如 GPT-4o）：</p>
+<pre class="codigo"><code class="language-promql"># Razão de custo: servido via OpenRouter vs. servido direto pela OpenAI,
+# no mesmo período. &gt; 1 quer dizer que o hub saiu mais caro que o direto.
+sum(rate(brabo_llm_cost_micros_total{provider=&quot;openrouter&quot;, upstream_provider=&quot;openai&quot;}[1h]))
+  /
+sum(rate(brabo_llm_cost_micros_total{provider=&quot;openai&quot;}[1h]))
+</code></pre>
+<p>这是 <code>upstream_provider</code> 所提供的挂钩——目前没有自动的消费方。预期的用法（记录为种子想法，尚未实现）是心理学家有一天根据同一个指标建议&quot;这个模型直连比经由 hub 更便宜&quot;。</p>
+<h2 id="契约套件">契约套件</h2>
 <p><code>apps/api/test/contract/llm-provider.contract.ts</code> 针对任何实现运行同一组测试，就像 git 套件自 Fase 2 起所做的那样。分工才是重点：<strong>契约拥有断言，测试框架拥有方言。</strong></p>
 <p>新的 provider 只需要编写测试框架——把每个场景翻译成自己的线路格式——就能继承以下测试：分帧断开的流、有和没有 usage、tool calling、四种错误以及沉默的服务器。假服务器是临时端口上一个真正的 <code>node:http</code>，而不是 <code>fetch</code> 的 mock：被测的恰恰是 socket 的行为。</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=tool-calling-与-engine-的救援>tool calling 与 engine 的救援<a href=#tool-calling-与-engine-的救援 class=hash-link aria-label="tool calling 与 engine 的救援的直接链接" title="tool calling 与 engine 的救援的直接链接" translate=no>​</a></h2>
-<p>engine 的 <code>ToolCallRecovery</code>（ADR 0020）会恢复小模型用散文写出、而不是使用 <code>tools</code> 字段的调用。它是<strong>救援，而不是许可</strong>：它依赖模型碰巧写对格式，写不对时就沉默地失败。因此，把一个没有原生 tool calling 的模型绑定到 agent 会在领域中被拒绝，而不只是不被鼓励。</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-11-01T00:01:10.000Z itemprop=dateModified>2026年11月1日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#契约 class="table-of-contents__link toc-highlight">契约</a><li><a href=#capability两层 class="table-of-contents__link toc-highlight">Capability：两层</a><ul><li><a href=#模态的三个维度 class="table-of-contents__link toc-highlight">模态的三个维度</a></ul><li><a href=#模型目录发现与生命周期 class="table-of-contents__link toc-highlight">模型目录：发现与生命周期</a><ul><li><a href=#两个独立的可用性轴 class="table-of-contents__link toc-highlight">两个独立的可用性轴</a><li><a href=#第三个轴workspace-用这个模型做什么 class="table-of-contents__link toc-highlight">第三个轴：workspace 用这个模型做什么</a><li><a href=#三条对账规则 class="table-of-contents__link toc-highlight">三条对账规则</a><li><a href=#以及两条价格对账规则 class="table-of-contents__link toc-highlight">以及两条价格对账规则</a><li><a href=#级联在降级时重新验证-capability class="table-of-contents__link toc-highlight">级联在降级时重新验证 capability</a><li><a href=#谁调度谁执行 class="table-of-contents__link toc-highlight">谁调度，谁执行</a></ul><li><a href=#价格从此往后生效绝不追溯 class="table-of-contents__link toc-highlight">价格：从此往后生效，绝不追溯</a><li><a href=#embeddings class="table-of-contents__link toc-highlight">Embeddings</a><ul><li><a href=#目前谁在做向量化 class="table-of-contents__link toc-highlight">目前谁在做向量化</a></ul><li><a href=#规范化的错误 class="table-of-contents__link toc-highlight">规范化的错误</a><li><a href=#inactivity-ceiling class="table-of-contents__link toc-highlight">不活动上限</a><li><a href=#openai-兼容基座 class="table-of-contents__link toc-highlight">OpenAI 兼容基座</a><li><a href=#normalized-divergences class="table-of-contents__link toc-highlight">规范化的差异</a><ul><li><a href=#a-system-message-at-the-end-of-the-conversation-at-161 class="table-of-contents__link toc-highlight">对话末尾的一条 <code>system</code> 消息（AT-161）</a></ul><li><a href=#openrouter第一个-hubfase-11a class="table-of-contents__link toc-highlight">OpenRouter——第一个 hub（Fase 11a）</a><li><a href=#nvidia-nimfase-11b class="table-of-contents__link toc-highlight">NVIDIA NIM（Fase 11b）</a><li><a href=#together-aifase-11b class="table-of-contents__link toc-highlight">Together AI（Fase 11b）</a><li><a href=#deepinfrafase-11b class="table-of-contents__link toc-highlight">DeepInfra（Fase 11b）</a><li><a href=#bitdeerfase-11b class="table-of-contents__link toc-highlight">Bitdeer（Fase 11b）</a><li><a href=#vultr-serverless-inferencefase-11b class="table-of-contents__link toc-highlight">Vultr Serverless Inference（Fase 11b）</a><li><a href=#hub-与真实成本 class="table-of-contents__link toc-highlight">Hub 与真实成本</a><ul><li><a href=#示例同一个模型hub--直连 class="table-of-contents__link toc-highlight">示例：同一个模型，hub × 直连</a></ul><li><a href=#契约套件 class="table-of-contents__link toc-highlight">契约套件</a><li><a href=#tool-calling-与-engine-的救援 class="table-of-contents__link toc-highlight">tool calling 与 engine 的救援</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>运维手册</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://ko-fi.com/daneiel target=_blank rel="noopener noreferrer" class=footer__link-item>请我喝咖啡 (Ko-fi)<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+<h2 id="tool-calling-与-engine-的救援">tool calling 与 engine 的救援</h2>
+<p>engine 的 <code>ToolCallRecovery</code>（ADR 0020）会恢复小模型用散文写出、而不是使用 <code>tools</code> 字段的调用。它是<strong>救援，而不是许可</strong>：它依赖模型碰巧写对格式，写不对时就沉默地失败。因此，把一个没有原生 tool calling 的模型绑定到 agent 会在领域中被拒绝，而不只是不被鼓励。</p>
+<nav class="site-pager"></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/reference/llm-providers.md">编辑此页</a><span>更新于 2026-11-03T23:50:59-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>本页内容</h2><ul><li class="n2"><a href="#契约">契约</a></li><li class="n2"><a href="#capability两层">Capability：两层</a></li><li class="n3"><a href="#模态的三个维度">模态的三个维度</a></li><li class="n2"><a href="#模型目录发现与生命周期">模型目录：发现与生命周期</a></li><li class="n3"><a href="#两个独立的可用性轴">两个独立的可用性轴</a></li><li class="n3"><a href="#第三个轴workspace-用这个模型做什么">第三个轴：workspace 用这个模型做什么</a></li><li class="n3"><a href="#三条对账规则">三条对账规则</a></li><li class="n3"><a href="#以及两条价格对账规则">以及两条价格对账规则</a></li><li class="n3"><a href="#级联在降级时重新验证-capability">级联在降级时重新验证 capability</a></li><li class="n3"><a href="#谁调度谁执行">谁调度，谁执行</a></li><li class="n2"><a href="#价格从此往后生效绝不追溯">价格：从此往后生效，绝不追溯</a></li><li class="n2"><a href="#embeddings">Embeddings</a></li><li class="n3"><a href="#目前谁在做向量化">目前谁在做向量化</a></li><li class="n2"><a href="#规范化的错误">规范化的错误</a></li><li class="n2"><a href="#inactivity-ceiling">不活动上限</a></li><li class="n2"><a href="#openai-兼容基座">OpenAI 兼容基座</a></li><li class="n2"><a href="#normalized-divergences">规范化的差异</a></li><li class="n3"><a href="#a-system-message-at-the-end-of-the-conversation-at-161">对话末尾的一条 system 消息（AT-161）</a></li><li class="n2"><a href="#openrouter第一个-hubfase-11a">OpenRouter——第一个 hub（Fase 11a）</a></li><li class="n2"><a href="#nvidia-nimfase-11b">NVIDIA NIM（Fase 11b）</a></li><li class="n2"><a href="#together-aifase-11b">Together AI（Fase 11b）</a></li><li class="n2"><a href="#deepinfrafase-11b">DeepInfra（Fase 11b）</a></li><li class="n2"><a href="#bitdeerfase-11b">Bitdeer（Fase 11b）</a></li><li class="n2"><a href="#vultr-serverless-inferencefase-11b">Vultr Serverless Inference（Fase 11b）</a></li><li class="n2"><a href="#hub-与真实成本">Hub 与真实成本</a></li><li class="n3"><a href="#示例同一个模型hub--直连">示例：同一个模型，hub × 直连</a></li><li class="n2"><a href="#契约套件">契约套件</a></li><li class="n2"><a href="#tool-calling-与-engine-的救援">tool calling 与 engine 的救援</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-zh-Hans.json" data-base="../"></script></body>
+</html>
