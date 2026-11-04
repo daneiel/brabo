@@ -27,4 +27,10 @@ defmodule Engine.Gates.Hooks.TerminationTest do
     assert v.itens == ["a"]
     assert v.coverage_matrix == []
   end
+
+  test "AT-687: sem relatório o parecer leva o motivo e o veredito não muda" do
+    assert {:halt, {_, v}} = parecer(%{"veredito" => "approved", "itens" => []})
+    assert v.veredito == "approved"
+    assert %{indisponivel: "sem_relatorio", origem: "modelo"} = v.execucao_de_testes
+  end
 end

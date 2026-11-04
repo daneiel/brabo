@@ -452,13 +452,28 @@ defmodule Engine.Gates.QaLeadServer do
   # é o que vira `delegations.parecer_artifact_id`. `emit_returning/5` porque
   # o id é justamente o que se precisa referenciar.
   defp emit_parecer_interno(project_id, session_id, task_id, subagent, verdict) do
-    ArtifactEmitter.emit_returning(project_id, session_id, subagent, "qa_verdict", %{
-      taskId: task_id,
-      veredito: verdict.veredito,
-      resumo: verdict.resumo,
-      itens: verdict.itens,
-      coverageMatrix: Map.get(verdict, :coverage_matrix, [])
-    })
+    ArtifactEmitter.emit_returning(
+      project_id,
+      session_id,
+      subagent,
+      "qa_verdict",
+      %{
+        taskId: task_id,
+        veredito: verdict.veredito,
+        resumo: verdict.resumo,
+        itens: verdict.itens,
+        coverageMatrix: Map.get(verdict, :coverage_matrix, [])
+      }
+      |> com_execucao_de_testes(verdict)
+    )
+  end
+
+  # AT-687 (RN-996): `execucaoDeTestes` só entra no payload quando existe.
+  defp com_execucao_de_testes(payload, verdict) do
+    case Map.get(verdict, :execucao_de_testes) do
+      nil -> payload
+      exec -> Map.put(payload, :execucaoDeTestes, exec)
+    end
   end
 
   defp record_delegation(project_id, session_id, task_id, campos) do
@@ -483,13 +498,20 @@ defmodule Engine.Gates.QaLeadServer do
          dev_state,
          task_id
        ) do
-    ArtifactEmitter.emit(project_id, dev_state.session_id, "qa", "qa_verdict", %{
-      taskId: task_id,
-      veredito: veredito,
-      resumo: resumo,
-      itens: itens,
-      coverageMatrix: Map.get(verdict, :coverage_matrix, [])
-    })
+    ArtifactEmitter.emit(
+      project_id,
+      dev_state.session_id,
+      "qa",
+      "qa_verdict",
+      %{
+        taskId: task_id,
+        veredito: veredito,
+        resumo: resumo,
+        itens: itens,
+        coverageMatrix: Map.get(verdict, :coverage_matrix, [])
+      }
+      |> com_execucao_de_testes(verdict)
+    )
 
     apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, verdict)
   end

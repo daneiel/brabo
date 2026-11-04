@@ -31,6 +31,10 @@ defmodule Engine.Gates.Tools.EmitQaVerdict do
           "openQuestionId" => %{"type" => "string"},
           "resumo" => %{"type" => "string"},
           "itens" => %{"type" => "array", "items" => %{"type" => "string"}},
+          "relatorioDeTestes" => %{
+            "type" => "string",
+            "description" => "caminho relativo do relatório JUnit gerado (opcional)"
+          },
           "coverageMatrix" => %{
             "type" => "array",
             "items" => %{

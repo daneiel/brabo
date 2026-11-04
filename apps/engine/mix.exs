@@ -48,7 +48,7 @@ defmodule Engine.MixProject do
   def application do
     [
       mod: {Engine.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :xmerl]
     ]
   end
 
