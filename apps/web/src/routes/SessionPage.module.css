@@ -631,22 +631,9 @@
  * gaveta de navegação do `Shell` (RN-643). Dentro dela o `.aside` perde os
  * 320px fixos e ocupa a gaveta inteira.
  */
-.fundoDaGavetaDoContexto {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  background: var(--overlay);
-}
-
-.gavetaDoContexto {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 81;
+.gavetaDoContexto[data-side] {
   width: min(360px, calc(100vw - 48px));
-  display: flex;
-  flex-direction: column;
+  gap: 0;
   background: var(--surface-1);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-modal);
@@ -817,23 +804,7 @@
   background: var(--border);
 }
 
-/* A marca de passagem de bastão é uma FRASE, não um selo em caixa alta: o
-   desenho a escreve por extenso, com os dois agentes na cor de cada um. */
-.handoffPill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--text-muted);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 5px 12px;
-  white-space: nowrap;
-  min-width: 0;
-}
-
+/* A marca de passagem de bastão é uma FRASE (o `Badge` do kit). */
 .handoffAgent {
   font-weight: 600;
   color: var(--msg-color);

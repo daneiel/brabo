@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Session, SessionEvent } from '../lib/api-types';
 import { historicoFalso } from '../test/historico-de-eventos';
@@ -178,11 +178,11 @@ describe('SessionPage — layout móvel (AT-328)', () => {
     expect(gaveta).toHaveAttribute('aria-modal', 'true');
     expect(gaveta).toHaveTextContent(TITULO_DO_PAINEL);
     const fechar = screen.getByRole('button', { name: 'Fechar painel de contexto' });
-    expect(document.activeElement).toBe(fechar);
+    await waitFor(() => expect(document.activeElement).toBe(fechar));
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: TITULO_DO_PAINEL })).toBeNull();
-    expect(document.activeElement).toBe(alternar);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: TITULO_DO_PAINEL })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(alternar));
   });
 
   it('o X e o fundo também fecham a gaveta', async () => {
@@ -195,7 +195,7 @@ describe('SessionPage — layout móvel (AT-328)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     fireEvent.click(alternar);
-    fireEvent.click(screen.getByTestId('fundo-da-gaveta-do-contexto'));
+    fireEvent.click(document.querySelector('[data-slot="sheet-overlay"]') as HTMLElement);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

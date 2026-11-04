@@ -22,6 +22,7 @@ import { CartaoOuReferenciaNoFio } from '../components/CartaoOuReferenciaNoFio';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { MensagemDeConversa } from '../components/ai-elements/message';
 import { Reasoning } from '../components/ai-elements/reasoning';
 import { ArtifactCard } from '../components/ai-elements/artifact';
@@ -341,10 +342,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       const p = promocoesPendentes[0];
       return (
         <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
-          <span className={styles.handoffPill}>
+          <Badge tone="muted" size="md">
             <StackIcon size={13} />
             {t('historia.pendente', { titulo: p.titulo })}
-          </span>
+          </Badge>
           <div style={{ display: 'flex', gap: 8 }}>
             <Button
               variant="success"
@@ -603,14 +604,14 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         desfecho: true,
         node: isOfertaAtual ? (
           <div className={styles.handoffCard} key={event.id}>
-            <span className={styles.handoffPill}>
+            <Badge tone="muted" size="md">
               {origem}
               <ChevronRightIcon size={13} />
               {t('handoff.passouOBastaoAo')}
               <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                 {nomeDoAgente(toAgent)}
               </span>
-            </span>
+            </Badge>
             <Button
               variant="success"
               legenda={t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta!.toAgent) })}
@@ -666,14 +667,14 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           </div>
         ) : (
           <div className={styles.handoffDivider} key={event.id}>
-            <span className={styles.handoffPill}>
+            <Badge tone="muted" size="md">
               {origem}
               <ChevronRightIcon size={13} />
               {t('handoff.passouOBastaoAo')}
               <span className={styles.handoffAgent} style={corDoAgente(toAgent)}>
                 {nomeDoAgente(toAgent)}
               </span>
-            </span>
+            </Badge>
           </div>
         ),
       });
@@ -697,12 +698,12 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             key={event.id}
             data-testid="handoff-aceite-automatico"
           >
-            <span className={styles.handoffPill}>
+            <Badge tone="muted" size="md">
               {t('handoff.aceiteAutomatico', {
                 agente: nomeDoAgente(payload.toAgent),
                 regras: payload.criterio?.regras ?? 0,
               })}
-            </span>
+            </Badge>
           </div>
         ),
       });
@@ -716,12 +717,12 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             key={event.id}
             data-testid="handoff-aceite-automatico-falhou"
           >
-            <span className={styles.handoffPill}>
+            <Badge tone="muted" size="md">
               {t('handoff.aceiteAutomaticoFalhou', {
                 agente: nomeDoAgente(payload.toAgent),
                 erro: payload.error ?? '',
               })}
-            </span>
+            </Badge>
           </div>
         ),
       });
@@ -755,13 +756,13 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             tipo={t(event.type === 'backlog.epic_created' ? 'turno.artefato.epico' : 'turno.artefato.historia')}
             titulo={titulo}
             descricao={
-              <span className={styles.handoffPill}>
+              <Badge tone="muted" size="md">
                 <StackIcon size={13} />
                 <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
                   {nomeDoAgente(event.actor.id)}
                 </span>
                 {t(verboKey)} &quot;{titulo}&quot;
-              </span>
+              </Badge>
             }
             acao={
               <Link
@@ -836,10 +837,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       empurrar({
         node: (
           <div className={styles.handoffDivider} key={event.id}>
-            <span className={styles.handoffPill}>
+            <Badge tone="muted" size="md">
               <StackIcon size={13} />
               {t('historia.estevePendente', { titulo })}
-            </span>
+            </Badge>
           </div>
         ),
       });
@@ -1222,17 +1223,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             {/* A frase de `classifyEvent` JÁ nomeia o subagente e a área —
                 prefixar o lead produziria "QA Lead QA Automação concluiu a
                 delegação (qa)". */}
-            <span
-              className={styles.handoffPill}
-              style={
-                display.bad
-                  ? ({ color: 'var(--danger)' } as CSSProperties)
-                  : undefined
-              }
-            >
+            <Badge tone={display.bad ? "danger" : "muted"} size="md">
               <display.icon size={13} />
               {display.text}
-            </span>
+            </Badge>
           </div>
         ),
       });
