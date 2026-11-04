@@ -4,7 +4,7 @@
  * Mede, por locale (`en`, `ru`, `zh-Hans`), quanto da fonte pt-BR (`docs/`,
  * inclusive `docs/reference/**` desde o ADR 0219, menos o próprio relatório e
  * o `openapi.json` — `ehFonteTraduzivel`) tem tradução em
- * `docs/i18n/<locale>/docusaurus-plugin-content-docs/current/`, e se cada
+ * `docs/i18n/<locale>/`, e se cada
  * tradução está EM DIA ou DEFASADA. A procedência é o `traducao_de:` do
  * frontmatter (o commit da fonte que foi traduzido). Defasada = a fonte tem
  * commit MAIS NOVO (pela data de commit, nunca pelo relógio) que o
