@@ -97,7 +97,7 @@ export function descobrirPaginas({ raiz, locale = LOCALE_FONTE }) {
     const titulo = dados.title ?? h1 ?? slug;
     return {
       slug, url: urlDe(slug, locale), arquivo, relativo, locale,
-      traduzida: veioDaTraducao, titulo, descricao: dados.description ?? '',
+      traduzida: locale === LOCALE_FONTE || veioDaTraducao, titulo, descricao: dados.description ?? '',
       rotulo: dados.sidebar_label ?? titulo, dados, corpo,
     };
   });
