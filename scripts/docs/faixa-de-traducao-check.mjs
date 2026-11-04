@@ -78,7 +78,7 @@ function conferir(rotulo, rota, querFaixa) {
     falhas++;
     return;
   }
-  const tem = h.includes(MARCA);
+  const tem = h.includes(MARCA) || h.includes('class="site-faixa"'); // site novo (AT-662): a faixa é .site-faixa
   if (tem !== querFaixa) {
     console.error(`[faixa] ${rota}: faixa ${tem ? 'PRESENTE' : 'AUSENTE'}, esperado ${querFaixa ? 'presente' : 'ausente'} (${rotulo}).`);
     falhas++;

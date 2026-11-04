@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **docs**: `pnpm docs:site:check` confere links, âncoras e recursos de fora no site novo (`build/docs-site/`), com as pendências declaradas; o site passou a mostrar a faixa de tradução só onde cabe e a achar as imagens e o pager das páginas aninhadas (AT-662, lane A5).
 - **docs**: o ADR 0253 decide tirar o site do Docusaurus por um gerador próprio; o núcleo (`pnpm docs:site`, `scripts/docs/site/`) roda ao lado, com as mesmas URLs e âncoras (AT-662, lane A1).
 - **docs**: a referência da API do site novo é Redoc 3 renderizado no servidor, uma página por tag (`reference/api/<tag>.html`, índice em `reference/api.html`), traduzida por locale e com `disableTelemetry: true`; as âncoras antigas `#tag/…/operation/…` deixam de existir (AT-662, lane A3).
 - **docs**: o contexto lido em toda sessão perde dois blocos de área (socket e orçamento do web; chaves de dispositivo e instalador), que viraram regras de caminho em `.claude/rules/`, sem perder texto.

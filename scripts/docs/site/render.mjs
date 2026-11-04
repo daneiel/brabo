@@ -131,6 +131,18 @@ export async function criarRenderizador({ paginas }) {
     return linkAberto(t, i, o, env, self);
   };
 
+  // A fonte traduzida mora em website/i18n/…, então cita `../../…/docs/assets/x`; no site as imagens vivem em `<locale>/assets/`.
+  const imagemAberta = md.renderer.rules.image ?? ((t, i, o, _e, s) => s.renderToken(t, i, o));
+  md.renderer.rules.image = (t, i, o, env, self) => {
+    const src = t[i].attrGet('src');
+    const m = src && /^(?:\.\.\/)+docs\/assets\/(.+)$/.exec(src);
+    if (m) {
+      const noLocale = env.pagina.locale === 'pt-BR' ? env.pagina.url : env.pagina.url.slice(env.pagina.locale.length + 1);
+      t[i].attrSet('src', `${'../'.repeat(noLocale.split('/').length - 1)}assets/${m[1]}`);
+    }
+    return imagemAberta(t, i, o, env, self);
+  };
+
   return (pagina) => {
     const env = { pagina };
     const tokens = md.parse(pagina.corpo, env);
