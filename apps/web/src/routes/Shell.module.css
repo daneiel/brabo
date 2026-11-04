@@ -478,26 +478,17 @@
   z-index: 1;
 }
 
-.gaveta {
-  position: fixed;
+.gaveta[data-side] {
   top: 0;
   bottom: 0;
   left: 0;
+  gap: 0;
+  padding: 0;
   z-index: 90;
   width: min(18rem, 86vw);
+  max-width: none;
+  background: var(--surface-1);
   box-shadow: var(--shadow-lg);
-}
-
-.gaveta[hidden] {
-  display: none;
-}
-
-/* Abaixo do modal (z-index 100): o wizard aberto pela gaveta fica por cima. */
-.fundoDaGaveta {
-  position: fixed;
-  inset: 0;
-  z-index: 89;
-  background: var(--overlay);
 }
 
 .movel .main {
