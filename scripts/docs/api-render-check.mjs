@@ -19,7 +19,7 @@
  * ESCOPO, declarado: não abre navegador. Falha de HIDRATAÇÃO do Redoc não é
  * pega aqui; o que é pego é a página sumir, vir vazia ou perder operações.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,9 +44,18 @@ for (const rel of ['reference/api.html', 'en/reference/api.html', 'ru/reference/
   }
   const html = readFileSync(arquivo, 'utf8');
   const temTitulo = html.includes(SPEC.info.title);
-  const operacoes = new Set(
-    html.match(/data-section-id="?tag\/[^\s">]*\/operation\/[^\s">]+/g) ?? [],
-  ).size;
+  // Site novo (AT-662 A3): uma página por tag em `reference/api/`; soma as operações
+  // distintas (uma operação em duas tags conta uma vez). Sem a pasta, é a página única antiga.
+  const pasta = join(arquivo, '..', 'api');
+  const ids = new Set();
+  if (existsSync(pasta)) {
+    for (const f of readdirSync(pasta).filter((n) => n.endsWith('.html'))) {
+      for (const m of readFileSync(join(pasta, f), 'utf8').matchAll(/data-section-id="[^"]*" id="([^"]+)"/g)) ids.add(m[1]);
+    }
+  } else {
+    for (const m of html.matchAll(/data-section-id="?tag\/[^\s">]*\/operation\/[^\s">]+/g)) ids.add(m[0]);
+  }
+  const operacoes = ids.size;
   if (!temTitulo || operacoes < esperadas) {
     console.error(
       `[api-render] ${rel}: título "${SPEC.info.title}" ${temTitulo ? 'presente' : 'AUSENTE'}, ` +
