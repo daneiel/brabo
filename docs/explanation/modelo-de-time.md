@@ -2,9 +2,9 @@
 
 > Contexto consolidado da sessão de desenho do modelo de time
 > (ago/2026), auditado contra o estado real do produto. A especificação
-> formal vive em [`docs/fluxo.yml`](../fluxo.yml); este documento
+> formal vive em `packages/contracts/fluxo.yml`; este documento
 > explica as decisões. Decisão estrutural: ADR 0085. Peças irmãs:
-> `docs/gates.yml` (ADR 0054) e `agent-areas.ts` (catálogo, FASE 18).
+> `apps/api/config/gates.yml` (ADR 0054) e `agent-areas.ts` (catálogo, FASE 18).
 
 ## Origem {#origin}
 

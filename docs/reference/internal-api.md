@@ -498,7 +498,7 @@ erro (o fechamento por heartbeat), nunca como "sem teto".
 |---|---|
 | GET | `/internal/gates` (**não** escopada à sessão) |
 
-Leitura do registro declarativo em `docs/gates.yml`
+Leitura do registro declarativo em `apps/api/config/gates.yml`
 ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). Não é
 escopada à sessão pela mesma razão do catálogo de modelos: o registro é global —
 quais gates existem é um fato sobre o produto, o mesmo para todo projeto.
@@ -508,9 +508,9 @@ de PR, não em runtime. Uma rota de escrita transformaria uma decisão de engenh
 configuração de produção, que é o que o ADR rejeitou ao escolher
 YAML em vez de tabela.
 
-O arquivo viaja dentro da imagem (`COPY docs/gates.yml` em
+O arquivo viaja dentro da imagem (`COPY apps/api/config/gates.yml` em
 `docker/api/Dockerfile.prod`), como as migrations: o loader sobe a partir de
-`__dirname` até achá-lo, e em produção o acha em `/app/docs/gates.yml`. O
+`__dirname` até achá-lo, e em produção o acha em `/app/apps/api/config/gates.yml`. O
 carregamento é preguiçoso — arquivo ilegível devolve erro nesta rota, em vez de
 impedir a api de subir.
 
@@ -687,7 +687,7 @@ A TERCEIRA rota de leitura do PO, mesmo desenho das duas acima
 ([RN-407](../business-rules.md#rn-407)) — fecha o último item pendente da
 auditoria `fluxo.yml` × código
 ([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
-`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`packages/contracts/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
 `status: lacuna` desde o ADR 0089 — o DADO já existia (o
 script `analise:funil` mede o funil sessão → commit → PR → merge, o lead time
 real e a frequência real de deploy), só faltava o MECANISMO de leitura dentro do

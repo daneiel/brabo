@@ -3846,7 +3846,7 @@ Alertmanager nem destino de notificação configurado.
 
 ## Registro de gates {#registro-de-gates}
 
-Os gates do fluxo são declarados em `docs/gates.yml`
+Os gates do fluxo são declarados em `apps/api/config/gates.yml`
 ([ADR 0054](adr/0054-gates-como-registro-declarativo.md)). Duas coisas
 operacionais valem saber.
 
@@ -3854,7 +3854,7 @@ operacionais valem saber.
 nos dois estágios, do mesmo jeito que faz com as migrations, e o
 `.dockerignore` o reinclui explicitamente — toda a `docs/` é ignorada, e
 este é o único arquivo de lá que é dado de produção, não
-documentação. Em runtime ele fica em `/app/docs/gates.yml`; o loader
+documentação. Em runtime ele fica em `/app/apps/api/config/gates.yml`; o loader
 sobe a partir de `__dirname` até achá-lo, sem variável de
 ambiente.
 
@@ -3864,7 +3864,7 @@ processo segue. Se a rota devolve erro, confira que o arquivo
 entrou:
 
 ```bash
-kubectl -n brabo exec deploy/api -- cat /app/docs/gates.yml | head -5
+kubectl -n brabo exec deploy/api -- cat /app/apps/api/config/gates.yml | head -5
 ```
 
 Vazio ou ausente quer dizer que a imagem foi construída sem ele — provavelmente um

@@ -4,7 +4,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 # 团队模型与交付物流程 {#team-model-and-deliverable-flow}
 
-> 团队模型设计会话（2026 年 8 月）的综合背景，已对照产品的真实状态进行审计。正式规格在 [`docs/fluxo.yml`](../../../../../../docs/fluxo.yml) 中；本文档解释其中的决定。结构性决定：ADR 0085。姊妹部件：`docs/gates.yml`（ADR 0054）和 `agent-areas.ts`（目录，FASE 18）。
+> 团队模型设计会话（2026 年 8 月）的综合背景，已对照产品的真实状态进行审计。正式规格在 `packages/contracts/fluxo.yml` 中；本文档解释其中的决定。结构性决定：ADR 0085。姊妹部件：`apps/api/config/gates.yml`（ADR 0054）和 `agent-areas.ts`（目录，FASE 18）。
 
 ## 起源 {#origin}
 

@@ -2465,7 +2465,7 @@ motivo real. Mesmo padrão do callback de conexão de git
 ## Auditoria fluxo.yml × código — o plano do Dev Lead vira aprovação de verdade (RN-284, ADR 0086)
 
 Não é fase planejada: é a correção de uma divergência que a auditoria de
-`docs/fluxo.yml` × código encontrou (`docs/explanation/auditoria-fluxo-vs-codigo.md`,
+`packages/contracts/fluxo.yml` × código encontrou (`docs/explanation/auditoria-fluxo-vs-codigo.md`,
 achado A2) — o fluxo já declarava a saída `plano-de-paralelismo` do `dev-lead`
 como `via: proposed_action`, e o código nunca foi ajustado para bater.
 
@@ -2550,7 +2550,7 @@ visível em Aprovações (é durável na api), mas o Dev Lead não narra o desfe
 automaticamente: o processo que assinou o `Wake` morreu, e o próximo restart
 sobe um Dev Lead novo, sem inscrição para aquela ação. Fechar isto exigiria o
 mesmo mecanismo do ADR 0052 — fora do escopo desta mudança, que só faz o
-comportamento bater com o que `docs/fluxo.yml` já declarava.
+comportamento bater com o que `packages/contracts/fluxo.yml` já declarava.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`,
   `dev_lead_server.ex`; `apps/engine/lib/engine/agents/turno_assincrono.ex`
@@ -2573,7 +2573,7 @@ comportamento bater com o que `docs/fluxo.yml` já declarava.
 
 ## UX Designer — o quinto agente conversacional (RN-285..287, ADR 0087)
 
-Não é gatilho de separação disparado (`docs/fluxo.yml` sempre declarou "quando
+Não é gatilho de separação disparado (`packages/contracts/fluxo.yml` sempre declarou "quando
 o projeto GERENCIADO tiver interface própria a desenhar" como critério) — é
 decisão consciente do dono do produto de antecipar o papel. `teste-de-
 usabilidade` (exige usuário humano real) fica fora de alcance; `metricas-de-
@@ -2598,7 +2598,7 @@ negócio" que o Criativo produz, sem artefato novo. O sistema de design
 agentes conversacionais não têm ferramenta de leitura de arquivo do repo — é
 a única camada do prompt presente em TODO turno, não só no kickoff.
 
-Sem área, sem subagentes: `docs/fluxo.yml` já classificava o papel como
+Sem área, sem subagentes: `packages/contracts/fluxo.yml` já classificava o papel como
 `camada_produto`, ao lado de Criativo e PO, nenhum dos quais tem área.
 
 ### RN-286 — `propose_prototype` grava artefato sem tabela e sem caso de uso dedicado, e oferece DOIS handoffs sobre o MESMO artefato {#rn-286}
@@ -2624,7 +2624,7 @@ mecanismo do `artifact.product_brief` do Criativo. Nenhuma rota nova na api.
 Depois de gravar, `gravar_e_ofertar_handoffs/2` (`ux_designer_tools.ex:149`)
 oferece DOIS handoffs sobre o MESMO artefato — `create_handoff` para "po" e
 para "dev-lead", os dois com o `artifactId` do protótipo. Nunca um segundo
-artefato para "spec-visual" (`docs/fluxo.yml`): o PO lê `resumo`/`prototipo`
+artefato para "spec-visual" (`packages/contracts/fluxo.yml`): o PO lê `resumo`/`prototipo`
 para desenhar o backlog, o Dev Lead lê as MESMAS `telas`/`anotacoes` como
 referência visual de implementação — duplicar o conteúdo arriscaria as duas
 cópias divergirem na revisão seguinte, o mesmo argumento por trás do C4 não
@@ -2677,7 +2677,7 @@ que `projects-summary.repository.spec.ts` prova não cresce.
 ---
 
 ## Staff: código pronto, dormente para disparo automático (RN-305/RN-306, ADR 0088)
-Não é fase planejada: `docs/fluxo.yml` declara o Staff/Principal Engineer como
+Não é fase planejada: `packages/contracts/fluxo.yml` declara o Staff/Principal Engineer como
 `status: planned` desde o ADR 0085 ("contrato pronto, ativação decidida,
 aguarda gatilho"). O dono do produto decidiu antecipar o CÓDIGO mesmo sabendo
 que o gatilho automático (a Anamnese notando um problema sistêmico
@@ -2782,7 +2782,7 @@ arquivo). O caminho ponta a ponta de uso hoje é a rota interna
 
 ### RN-340 — O gate `implementavel` decide a story ANTES do dev agent escrever código {#rn-340}
 
-`docs/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
+`apps/api/config/gates.yml` declarava o gate `implementavel` (dono `dev-lead`) desde a
 FASE 14d com `status: planned` — nunca ativado. O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
 ativa: a ferramenta `assess_implementability` do Dev Lead propõe o **parecer
 de implementabilidade** de uma story (`implementavel`/`inviavel` +
@@ -2820,7 +2820,7 @@ desfechos, papel mínimo, fora dos tetos absolutos) segue igual.
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex`
   (`run_assessment/2`, `spec_assess_implementability/0`),
   `dev_lead_server.ex` (`run_tool/3`); `apps/api/src/domain/actions/decide.ts`
-  (`assess_implementability`); `docs/gates.yml` (`implementavel`,
+  (`assess_implementability`); `apps/api/config/gates.yml` (`implementavel`,
   `status: active`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
   (describe "assess_implementability"), `dev_lead_server_test.exs`
@@ -2831,7 +2831,7 @@ desfechos, papel mínimo, fora dos tetos absolutos) segue igual.
 
 ### RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende {#rn-341}
 
-`docs/fluxo.yml` declarava o papel `qa-estrategia` como `proposto`, com o
+`packages/contracts/fluxo.yml` declarava o papel `qa-estrategia` como `proposto`, com o
 critério de separação escrito no próprio registro: "pode ser o próprio
 qa-lead em segundo MOMENTO, não necessariamente agente novo — a separação é
 de entregável". O [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
@@ -2890,7 +2890,7 @@ por baixo.
   `tools/emit_plano_de_teste.ex`, `hooks/termination_plano_de_teste.ex`;
   `apps/engine/lib/engine/harness/artifact_schemas.ex` (`plano_de_teste`);
   `apps/engine/lib/engine/harness/iteracoes.ex` (SEM cláusula nova, ver
-  acima); `docs/fluxo.yml` (`qa-estrategia`, `status: active`)
+  acima); `packages/contracts/fluxo.yml` (`qa-estrategia`, `status: active`)
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`,
   `qa_lead_server_test.exs` (describe "plano de teste da entrega (ADR 0192)"), `apps/engine/test/engine/harness/artifact_schemas_test.exs`
   (describe "plano_de_teste"), `iteracoes_test.exs` ("qa-estrategia é
@@ -2901,7 +2901,7 @@ por baixo.
 
 ## O appsec ganha o segundo momento do secops (RN-360/361, ADR 0090)
 
-`docs/fluxo.yml` já declarava o `id: appsec` como `proposto`, com o critério
+`packages/contracts/fluxo.yml` já declarava o `id: appsec` como `proposto`, com o critério
 de separação escrito por antecipação: "mesmo padrão do QA: dois MOMENTOS, não
 dois agentes por ora". Esta mudança constrói esse segundo momento — threat
 model de DESIGN, ANTES de existir código/PR — decisão consciente do dono do
@@ -2953,7 +2953,7 @@ nem silêncio só em broadcast.
 
 **O gatilho automático existe desde a [RN-539](#rn-539)**. Esta entrega foi
 mantida autocontida de propósito (nenhum arquivo de outra frente tocado:
-`decide.ts`, `docs/gates.yml` e `dev_lead_tools.ex` intocados), e declarava a
+`decide.ts`, `apps/api/config/gates.yml` e `dev_lead_tools.ex` intocados), e declarava a
 lacuna: `run_design/2` era ACIONÁVEL e nada acionava sozinho. O ponto de
 disparo que ela nomeava — `assess_implementability` do Dev Lead, frente
 `qa-estrategia`, gate `implementavel`, mesmo ADR 0090 — passou a ser o
@@ -2975,7 +2975,7 @@ chamador de verdade, em paralelo e uma vez só por story.
 ### RN-361 — O threat model concluído cria TRÊS handoffs, sempre endereçando o LEAD {#rn-361}
 
 `criar_handoffs_appsec/3` (`secops_agent_server.ex:326`) cria um handoff por
-alvo declarado em `docs/fluxo.yml` (`saidas` do `appsec`): arquiteto,
+alvo declarado em `packages/contracts/fluxo.yml` (`saidas` do `appsec`): arquiteto,
 dev-lead e infra — mesmo padrão de
 `OfferInfraHandoffUseCase`/`ArquitetoServer.executar_offer_infra_handoff/1`
 (chamadas SEPARADAS, uma por alvo, para uma falha de handoff não desfazer os
@@ -3003,7 +3003,7 @@ recebe outra, e isso não é falha.
 ## Analytics e delivery-metricas: os dois papéis viram RELATÓRIO (RN-320..322, ADR 0089)
 
 Decisão consciente do dono do produto de ANTECIPAR a construção dos papéis
-`analytics` e `delivery-metricas` (`docs/fluxo.yml`, `status: proposto`) sem
+`analytics` e `delivery-metricas` (`packages/contracts/fluxo.yml`, `status: proposto`) sem
 esperar o gatilho orgânico que cada um já declarava. Os dois viram um SCRIPT
 só — `apps/api/scripts/analise-funil.ts` — no mesmo formato de
 `medir-execucao.ts` (Fase 13b): `NestFactory.createApplicationContext`,
@@ -3057,7 +3057,7 @@ time negativo.
 `executionResult.targetBranch` está em `PROTECTED_BRANCHES`
 (`apps/api/src/domain/actions/protected-branches.ts`) — merge numa branch de
 feature não é deploy. Cruza por REFERÊNCIA com o gate `backmerge`
-(`docs/gates.yml`): a evidência dele é CI, em `.release/gate.json`, fora do
+(`apps/api/config/gates.yml`): a evidência dele é CI, em `.release/gate.json`, fora do
 alcance de um script que só lê o banco, então não há junção de dado, só o
 mesmo recorte de branch que o gate observa.
 
@@ -3072,7 +3072,7 @@ vez de um número aproximado:
    Brabo não instrumenta os projetos que ele CONSTRÓI, e não há caminho
    nenhum para essa telemetria existir hoje.
 3. **MTTR e change failure rate.** Exigem sinal de INCIDENTE de produção
-   real — a mesma dependência que `docs/fluxo.yml` já registra para
+   real — a mesma dependência que `packages/contracts/fluxo.yml` já registra para
    `secops-runtime`/`platform` (`status: proposto`/`planned`, ativação
    sincronizada com `DEPLOY_ENABLED`).
 
@@ -3087,7 +3087,7 @@ vez de um número aproximado:
 ## `secops-runtime` — relatório de abuso sobre `rate_limit_hits` (RN-375..377, ADR 0091)
 
 Decisão consciente do dono do produto de antecipar o papel `secops-runtime`
-(`docs/fluxo.yml`, `camada_seguranca`), que nasceu `proposto` com o critério
+(`packages/contracts/fluxo.yml`, `camada_seguranca`), que nasceu `proposto` com o critério
 de separação "produção com tráfego real (pós `DEPLOY_ENABLED` + `platform`
 ativo)". Esse gatilho não disparou — não há tráfego de produção. O que existe
 hoje é `rate_limit_hits` (`RateLimitGuard`, ADR 0027): uma linha por request
@@ -3124,7 +3124,7 @@ IP por rota" seria inventar dimensão que a tabela nunca guardou.
 
 `montarRelatorio` sempre inclui `naoMedido`: detecção automática de
 incidente, resposta a incidente e postmortem de segurança. As três dependem
-do mesmo gatilho que `docs/fluxo.yml` já declarava para `secops-runtime` —
+do mesmo gatilho que `packages/contracts/fluxo.yml` já declarava para `secops-runtime` —
 tráfego de produção real — e nenhuma delas é simulada com incidente de
 exemplo nem número inventado (mesmo princípio dos ADRs 0041/0042/0077: sem o
 dado real, a lacuna fica visível em vez de fingida). A seção só sai da lista
@@ -3142,7 +3142,7 @@ apagar na próxima limpeza.
 
 ### RN-385 — O papel `platform` nasce como SCRIPT de leitura pontual, sobre as mesmas fontes do `DomainGaugesCollector` {#rn-385}
 
-`docs/fluxo.yml` descreve `platform` (`camada_plataforma`) como "SRE / Platform
+`packages/contracts/fluxo.yml` descreve `platform` (`camada_plataforma`) como "SRE / Platform
 — dono do loop de retorno", `status: planned`, com ativação sincronizada a
 `DEPLOY_ENABLED` — que não existe. O dono do produto decidiu antecipar a
 metade que já tem dado real por trás: `pnpm --filter api relatorio:telemetria
@@ -3188,12 +3188,12 @@ Três lacunas, todas explícitas: **SLO numérico formal** (nenhum está
 definido); **postmortem** (depende de incidente real que não aconteceu); e
 **telemetria de volta ao produto em loop fechado** (o script é leitura
 pontual sob demanda — observar, decidir e agir sozinho é o que tornaria
-`platform` `active` em `docs/fluxo.yml`, e por isso o `gate_saida: { id:
+`platform` `active` em `packages/contracts/fluxo.yml`, e por isso o `gate_saida: { id:
 operavel, status: planned }` do papel permanece `planned`, intocado por esta
 mudança).
 
 - **Onde:** `apps/api/scripts/relatorio-telemetria.ts` (função `imprimir`,
-  seção "Não medido"); `docs/fluxo.yml` (`camada_plataforma › platform ›
+  seção "Não medido"); `packages/contracts/fluxo.yml` (`camada_plataforma › platform ›
   saidas_alvo`, artefato `telemetria-consolidada`, campo `nota`)
 - **Teste:** cobertura indireta — a seção é texto fixo verificado por leitura
   do arquivo; não há verdade condicional a testar aqui (nada a errar entre
@@ -3210,7 +3210,7 @@ mudança).
 `apps/api/src/db/migrations/` linha a linha, sem depender de `--projeto`
 nem de banco — o risco que ele acha é de SCHEMA, não de carga, e por isso
 não depende de volume real de dados nenhum (o critério de separação que
-`docs/fluxo.yml` já declarava para o papel). Cinco padrões, cada um com a
+`packages/contracts/fluxo.yml` já declarava para o papel). Cinco padrões, cada um com a
 razão anexada ao achado: `DROP TABLE`/`TRUNCATE` (perda total,
 irreversível), `DROP COLUMN` (perda da coluna, irreversível),
 `ALTER COLUMN ... TYPE`/`SET DATA TYPE` (pode reescrever a tabela inteira)
@@ -3357,7 +3357,7 @@ por `createdAt` ASC) — o artefato que justificou a decisão de delegar.
 ativado (`extraDevAgentId(module)`, a MESMA função que constrói o id em todo
 o resto do use case — nenhum formato novo). Sem `artifact.module_map` no
 projeto (não deveria acontecer — é entrada obrigatória do Dev Lead em
-`docs/fluxo.yml`), a delegação NÃO é gravada com um id inventado: só loga o
+`packages/contracts/fluxo.yml`), a delegação NÃO é gravada com um id inventado: só loga o
 estado inesperado, pela mesma lição da RN-059 (nunca falha silenciosa, mas
 também nunca finge uma justificativa que não existe). E falha de
 `RecordDelegationUseCase.execute` (ex.: banco fora do ar) é capturada e
@@ -3381,7 +3381,7 @@ gravação auxiliar.
 Fecha o último achado do plano da auditoria (seção D,
 `docs/explanation/auditoria-fluxo-vs-codigo.md`) — B2. As outras cinco
 ondas já tinham fechado (a 3, 4 e 5 antecipadas fora de ordem pelos ADRs
-0089/0090; a 1 e a 2 nos PRs anteriores). `docs/fluxo.yml` (papel
+0089/0090; a 1 e a 2 nos PRs anteriores). `packages/contracts/fluxo.yml` (papel
 `criativo`) declarava `gate_saida: { id: necessidade-validada, status:
 proposto }` desde o ADR 0085 sem mecanismo nenhum atrás — e
 `modelo-de-time.md` já registrava por que: o Criativo (o modelo) decidir
@@ -3414,7 +3414,7 @@ O botão só habilita DEPOIS que `confirm_readiness` já consolidou o
 `product_brief` (`hasProductBrief`, `events.some(e => e.type ===
 'artifact.product_brief')`) — não faz sentido "validar" um resumo
 executivo que ainda não foi produzido, e é essa a leitura mais
-consistente com `docs/fluxo.yml`: `necessidade-validada` é gate de SAÍDA
+consistente com `packages/contracts/fluxo.yml`: `necessidade-validada` é gate de SAÍDA
 do Criativo, o momento em que o trabalho dele já entregou um artefato
 concreto. `ValidateNecessityUseCase` revalida a mesma pré-condição no
 BACKEND (`SessionEventRepository.listByTypeInSession(sessionId,
@@ -3429,12 +3429,12 @@ nenhum esperando por este evento — ele é só o registro de que um humano
 validou o MÉRITO do que já foi entregue. `ValidateNecessityUseCase` não
 recebe `ApiToEngineClient` no construtor.
 
-`docs/gates.yml` ganha o gate `necessidade-validada`: `status: active`,
+`apps/api/config/gates.yml` ganha o gate `necessidade-validada`: `status: active`,
 `aprovacao_humana: true` (é literalmente um clique humano),
 `verificacao: script`, mas `severidade: warn` — nada no produto hoje
 CONSULTA a passagem deste gate antes de deixar o PO seguir (diferente de
 `story-promovida`/`plano-de-adocao`, que são `block` porque uma trava
-real de código os impede de serem pulados). `docs/fluxo.yml` (papel
+real de código os impede de serem pulados). `packages/contracts/fluxo.yml` (papel
 `criativo`) passa `status: proposto` → `status: ativo`.
 
 - **Onde:** `apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts`;
@@ -3459,7 +3459,7 @@ O PO ganhou uma TERCEIRA ferramenta de leitura — `listar_metricas_de_produto`
 irmãs da [RN-164](business-rules/autenticacao.md#rn-164): escopo fechado no projeto, sem termo de busca,
 sem paginação.
 
-`docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
+`packages/contracts/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
 `status: lacuna` desde o [ADR 0089](adr/0089-analytics-e-delivery-metricas-como-relatorio.md),
 que já tinha entregue o DADO — o script `pnpm --filter api analise:funil`
 mede o funil real sessão → commit → PR → merge, o lead time real e a
@@ -4407,7 +4407,7 @@ mesma recusa vale na corrida (`Registry` dizia conectado no início de
   `apps/engine/test/engine_web/channels/terminal_channel_test.exs`
   (describe "workspace_confirm"), `apps/runner/src/channel.spec.ts`
   (`enviarWorkspaceConfirm` depois do join)
-- **Borda:** o `docs/gates.yml` registra `workspace-verificado` como
+- **Borda:** o `apps/api/config/gates.yml` registra `workspace-verificado` como
   `severidade: warn` — quem trava de verdade é a recusa explícita do
   engine, o gate é só o registro/evidência.
 - **Decisão arquitetural:**
@@ -7111,7 +7111,7 @@ antes de `create_c4_diagram` precisar dele.
 
 ### RN-490 — O golden-set de acerto do RAG mede por CAMINHO DE ARQUIVO, no TOP-5, nunca por chunk exato ou rank 1 {#rn-490}
 
-O gate `rag-acertivo` (`docs/gates.yml`) mede se a busca híbrida devolve o
+O gate `rag-acertivo` (`apps/api/config/gates.yml`) mede se a busca híbrida devolve o
 arquivo certo para 17 perguntas compostas a partir de RNs/ADRs reais deste
 repositório (golden-set, molde do ADR 0123 aplicado ao RAG). O critério de
 "acertou" tem duas decisões deliberadas, e as duas evitam medir a pergunta
@@ -7661,7 +7661,7 @@ em 6). `ubuntu-latest`, sem GPU nenhuma, basta aqui — não bastaria para o
 QA. O golden-set do QA **não muda nada** com esta RN: continua inteiramente
 manual, `TODO(humano)` no CLAUDE.md.
 
-**`severidade: warn` (`docs/gates.yml`) CONTINUA `warn`, e o motivo mudou.**
+**`severidade: warn` (`apps/api/config/gates.yml`) CONTINUA `warn`, e o motivo mudou.**
 Não é mais "não há CI com LLM" — passa a ser cadência: o workflow é
 AGENDADO (noturno + disparo manual), nunca roda por `pull_request`. `block`
 prometeria um travamento de merge que não existe — o mesmo raciocínio que
@@ -7729,7 +7729,7 @@ Medido depois das três correções, nesta máquina, pelo caminho que o job
 passa a percorrer: **17/17 no top-5**, igual às duas rodadas manuais que
 gravaram o piso.
 
-- **Onde:** `.github/workflows/golden-set-rag.yml`, `docs/gates.yml`
+- **Onde:** `.github/workflows/golden-set-rag.yml`, `apps/api/config/gates.yml`
   (`rag-acertivo`), `apps/engine/mix.exs`,
   `apps/api/scripts/seed-golden-set-rag.ts`
 - **ADR:** [0138](adr/0138-golden-set-do-rag-em-ci-agendado.md)
@@ -9859,7 +9859,7 @@ reparável (termina em toast), não o invisível.
 O appsec (`Engine.Gates.SecOpsAgentServer.run_design/2`, [RN-360](#rn-360))
 nasceu implementado, testado e **sem chamador de produção nenhum**: a única
 menção fora de teste era um comentário em `artifact_schemas.ex`. A própria
-[RN-360](#rn-360) declarava a lacuna, e `docs/fluxo.yml` (papel `appsec`,
+[RN-360](#rn-360) declarava a lacuna, e `packages/contracts/fluxo.yml` (papel `appsec`,
 campo `acionamento`) já NOMEAVA o gatilho que faltava — `assess_implementability`
 do Dev Lead, gate `implementavel`, o mesmo [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md).
 Era ele. `run_assessment/2` passa a chamá-lo por
@@ -9918,7 +9918,7 @@ dispara — ela não sabe qual é a story.
   histórico ilegível não disparam
 - **ADR:** [0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
   (que declarava o gatilho automático como fora de escopo)
-- **Origem:** `docs/fluxo.yml`, papel `appsec`. Fica declarado e NÃO feito:
+- **Origem:** `packages/contracts/fluxo.yml`, papel `appsec`. Fica declarado e NÃO feito:
   `artifact.threat_model` é emitido na sessão da STORY
   (`emit_threat_model/3` lê `story["sessionId"]`), enquanto a guarda lê o
   histórico da sessão do DEV LEAD. No caminho comum são a mesma sessão — o
@@ -18905,7 +18905,7 @@ exigia separado — a pessoa declara as duas coisas, com as palavras das duas.
 
 A recusa do engine (409 turno em curso, 422 sem regra de negócio) sobe ANTES
 do passo 3: sem turno aceito não há brief a caminho, e a necessidade NÃO fica
-validada. O gate segue `warn` (`docs/gates.yml`) — nada a jusante o consulta.
+validada. O gate segue `warn` (`apps/api/config/gates.yml`) — nada a jusante o consulta.
 A tela não tem mais o botão "Confirmar necessidade validada"; o título do
 botão habilitado diz o que o clique fecha, e o aviso de sucesso diz que o PO
 entra quando o resumo ficar pronto.
@@ -19385,7 +19385,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 
 Decisão do dono em 01/10 ([ADR 0190](adr/0190-a-infra-sobe-o-container-no-aceite.md),
 AT-262). Até aqui "Confirmar arquitetura pronta" oferecia DOIS handoffs — à
-Infra e ao Dev Lead (FASE 14d, `handoff-duplo` em `docs/fluxo.yml`) —, e o Dev
+Infra e ao Dev Lead (FASE 14d, `handoff-duplo` em `packages/contracts/fluxo.yml`) —, e o Dev
 Lead podia ser aceito antes de existir o container em que os dev agents
 trabalham ([RN-502](#rn-502)). No uso real de 29/09 os dois nasceram da mesma
 confirmação (sessão `be70`, seq 252/254).
@@ -19552,7 +19552,7 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:457` (`run_assessment`),
   `:538` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
-  `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
+  `apps/api/config/gates.yml` (`qa-verificada`, `implementavel`); `packages/contracts/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
 - **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs`, describe
   "plano de teste da entrega (ADR 0192)" — o plano antes da Automação e dentro
@@ -20666,7 +20666,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   sistema) —, pela fachada `EngineApiClient`, depois do ambiente (RN-706) e
   antes do perfil (RN-680) e do idioma (RN-622, sempre o último). A fonte é
   UMA, `Engine.Harness.FluxoDoTime`, conferida por teste contra
-  `docs/fluxo.yml`: todo papel citado existe ali como `active`, e o texto não
+  `packages/contracts/fluxo.yml`: todo papel citado existe ali como `active`, e o texto não
   cita etapa fora dele (deploy, pipeline, Dockerfile, InfraAgent). O Criativo
   registra restrição técnica EXPLÍCITA do usuário (linguagem, "nenhuma
   dependência", "sem rede", "um módulo só") como `decision_record`
@@ -23336,7 +23336,7 @@ sem dizer qual.
   `start`/`main` do projeto rodado, ou um teste que importe o entrypoint real,
   não um app montado no próprio teste) e responde numa rota ou comando. Sem
   essa evidência, a lacuna vai para `itens`. É régua de PROMPT: o contrato
-  externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
+  externo dos gates (`apps/api/config/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:121`

@@ -9,6 +9,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **docs**: o contexto lido em toda sessão perde dois blocos de área (socket e orçamento do web; chaves de dispositivo e instalador), que viraram regras de caminho em `.claude/rules/`, sem perder texto.
 - **docs**: o ADR 0252 registra a decisão de separar o monorepo em repositórios `brabo-*` em `viralabs-dev`, com o mapa no contexto do Claude; estado decidido, em migração (AT-690).
 - **infra**: o dono do repositório deixa de estar fixo no `install.sh`, na rota do runner, na unit, no site e no workflow de docs: `BRABO_REPO` e `BRABO_RUNNER_RELEASES_REPO` (padrão `daneiel/brabo`) e `github.repository` (AT-691)
+- **testes**: um spec de CI reprova teste de app que lê arquivo fora do próprio app sem estar numa lista de exceções com motivo (AT-692).
+- **contratos**: `gates.yml` vai para `apps/api/config/`, `fluxo.yml` para `packages/contracts/` e `gerar:areas` passa a gerar `areas.json`, de onde web e engine derivam a cópia deles (AT-692).
 - **web**: sai do kit shadcn o que ficou sem uso (`accordion`, `radio-group`, `scroll-area`, `spinner`, `switch`) e um teste reprova componente do kit que ninguém importa (AT-655 V10).
 - **web**: o resto de Visão geral e de Gastos usa o kit shadcn (`Field`, `Table`, `EmptyState`, `Disclosure`, `Card`) no lugar de campo, tabela, vazio e `<details>` desenhados à mão (AT-655 V7).
 - **web**: o composer ganha `/skills` (ferramentas e instrução do agente) e `/buscar` (busca do RAG), só de leitura (AT-724).
