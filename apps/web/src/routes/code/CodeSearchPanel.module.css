@@ -26,20 +26,7 @@
 
 .input {
   flex: 1;
-  min-width: 0;
   height: 30px;
-  padding: 0 8px;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: var(--fs-body);
-}
-
-.input:focus-visible {
-  outline: none;
-  border-color: var(--border-strong);
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .resultados {
@@ -72,6 +59,10 @@
 .resultado {
   width: 100%;
   display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: auto;
+  border-radius: 0;
   flex-direction: column;
   gap: 2px;
   padding: 8px 14px;

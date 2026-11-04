@@ -15,6 +15,9 @@ import {
   ContainerImageGateNotice,
   type SuperficieDoPortao,
 } from '../../components/ContainerImageGate';
+import { Input } from '@/components/shadcn/input';
+import { Button as BotaoDoKit } from '@/components/shadcn/button';
+import { Badge as SeloDoKit } from '@/components/shadcn/badge';
 import { Disclosure } from '../../components/ui/Disclosure';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { PrIcon } from '../../components/ui/icons';
@@ -166,7 +169,7 @@ export function PrListAndDiff({
                 titulo={
                   <span className={styles.tituloArquivo}>
                     <span className={styles.caminho}>{arquivo.path}</span>
-                    <span className={styles.selo}>{t(CHAVE_STATUS[arquivo.status])}</span>
+                    <SeloDoKit variant="outline" className={styles.selo}>{t(CHAVE_STATUS[arquivo.status])}</SeloDoKit>
                   </span>
                 }
                 trailing={
@@ -227,8 +230,9 @@ export function PrListAndDiff({
           {listaQuery.data.items.map((pr) => (
             <li key={pr.id}>
               <div className={styles.itemPrLinha}>
-                <button
+                <BotaoDoKit
                   type="button"
+                  variant="ghost"
                   className={styles.itemPr}
                   aria-label={t('diff.openPrAriaLabel', { number: pr.number, title: pr.title })}
                   onClick={() => setSelecionada(pr)}
@@ -243,10 +247,10 @@ export function PrListAndDiff({
                       {pr.updatedAt && ` · ${new Date(pr.updatedAt).toLocaleDateString('pt-BR')}`}
                     </span>
                   </span>
-                  <span className={[styles.itemPrEstado, styles[`estadoSelo_${pr.state}`]].join(' ')}>
+                  <SeloDoKit variant="outline" className={[styles.itemPrEstado, styles[`estadoSelo_${pr.state}`]].join(' ')}>
                     {t(CHAVE_ESTADO_PR[pr.state])}
-                  </span>
-                </button>
+                  </SeloDoKit>
+                </BotaoDoKit>
                 {renderItemExtra && (
                   <div className={styles.itemPrExtra}>{renderItemExtra(pr)}</div>
                 )}
@@ -270,16 +274,17 @@ export function PrListAndDiff({
         <label className={styles.label} htmlFor="diff-pr-id">
           {t('diff.idLabel')}
         </label>
-        <input
+        <Input
           id="diff-pr-id"
+          data-mono=""
           className={styles.input}
           value={idDigitado}
           onChange={(e) => setIdDigitado(e.target.value)}
           placeholder={t('diff.idPlaceholder')}
         />
-        <button type="submit" className={styles.botao}>
+        <BotaoDoKit type="submit" variant="secondary" size="sm">
           {t('diff.viewDiffButton')}
-        </button>
+        </BotaoDoKit>
       </form>
     </div>
   );

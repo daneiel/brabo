@@ -47,6 +47,7 @@
     "empty": "Nenhuma branch encontrada neste repositório.",
     "truncated": "A lista foi cortada no teto de branches enriquecidas.",
     "manualPlaceholder": "ir para tag ou sha exato",
+    "filterPlaceholder": "Filtrar branches",
     "manualAriaLabel": "Ir para tag ou sha exato",
     "goButton": "Ir",
     "prState": {

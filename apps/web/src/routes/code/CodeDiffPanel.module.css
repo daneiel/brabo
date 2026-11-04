@@ -65,6 +65,9 @@
 }
 
 .itemPr {
+  justify-content: flex-start;
+  height: auto;
+  border-radius: 0;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -148,33 +151,8 @@
 }
 
 .input {
-  height: 28px;
-  /* 200px cortava o placeholder ("ex.: 218, ou o id do provider") no meio
-     da palavra — achado de uso. 260px cabe o texto inteiro nos dois
-     idiomas (pt-BR e en) em `--font-mono` a 12px. */
   width: 260px;
-  padding: 0 8px;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.botao {
   height: 28px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.botao:hover {
-  background: var(--surface-1);
 }
 
 .estado {
@@ -219,11 +197,6 @@
   font-family: var(--font-mono);
   font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1px 5px;
 }
 
 .contadores {

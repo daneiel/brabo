@@ -48,6 +48,7 @@
     "empty": "В этом репозитории ветки не найдены.",
     "truncated": "Список обрезан по лимиту обогащённых веток.",
     "manualPlaceholder": "перейти к тегу или точному sha",
+    "filterPlaceholder": "Фильтр веток",
     "manualAriaLabel": "Перейти к тегу или точному sha",
     "goButton": "Перейти",
     "prState": {
