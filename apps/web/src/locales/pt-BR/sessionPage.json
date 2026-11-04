@@ -140,6 +140,26 @@
         "nome": "plano",
         "descricao": "Insere um pedido do plano atual no campo",
         "texto": "Mostre o seu plano atual."
+      },
+      "skills": {
+        "nome": "skills",
+        "descricao": "Lista as ferramentas e a instrução do agente",
+        "titulo_zero": "{{agente}}: nenhuma ferramenta",
+        "titulo_one": "{{agente}}: {{count}} ferramenta",
+        "titulo_other": "{{agente}}: {{count}} ferramentas",
+        "naoSei": "Não sei as ferramentas de {{agente}} agora: o engine não respondeu.",
+        "semAgente": "{{agente}} não está no catálogo.",
+        "instrucao": "Instrução vigente (v{{versao}})",
+        "erro": "Não foi possível ler o catálogo: {{motivo}}"
+      },
+      "buscar": {
+        "nome": "buscar",
+        "descricao": "Busca na base do projeto o texto do campo",
+        "semConsulta": "Escreva o que buscar no campo e use /buscar.",
+        "titulo_zero": "Busca \"{{consulta}}\": nada encontrado",
+        "titulo_one": "Busca \"{{consulta}}\": {{count}} trecho",
+        "titulo_other": "Busca \"{{consulta}}\": {{count}} trechos",
+        "erro": "A busca falhou: {{motivo}}"
       }
     }
   },

@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: o composer ganha `/skills` (ferramentas e instrução do agente) e `/buscar` (busca do RAG), só de leitura (AT-724).
+
 - **web**: as Configurações do projeto usam `Item`, `Table` e `Button` do kit shadcn no lugar dos cartões, da matriz e dos chips desenhados à mão (AT-655 V6).
 
 - **web**: a gaveta móvel da barra lateral usa o `Sheet` do kit shadcn, com as mesmas entradas, foco preso e Esc (AT-655 V3b)

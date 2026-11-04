@@ -36,6 +36,9 @@ export interface ContextoDeComandos {
   inserirTexto: (texto: string) => void;
   aprovar: () => void;
   mostrarAjuda: () => void;
+  /** AT-724: só LEEM (catálogo e busca do RAG); o resultado vai a um painel, nunca a proposed_action. */
+  listarSkills: () => void;
+  buscar: () => void;
 }
 
 interface Definicao {
@@ -63,6 +66,8 @@ export const CATALOGO: Definicao[] = [
   { id: 'parar', tipo: 'acao', disponivel: (c) => c.streaming, executar: (c) => void c.handleCancel() },
   { id: 'aprovar', tipo: 'acao', executar: (c) => c.aprovar() },
   { id: 'ajuda', tipo: 'acao', executar: (c) => c.mostrarAjuda() },
+  { id: 'skills', tipo: 'acao', executar: (c) => c.listarSkills() },
+  { id: 'buscar', tipo: 'acao', executar: (c) => c.buscar() },
   { id: 'resumo', tipo: 'prompt', executar: (c) => c.inserirTexto(c.t('composer.comandos.resumo.texto')) },
   { id: 'plano', tipo: 'prompt', executar: (c) => c.inserirTexto(c.t('composer.comandos.plano.texto')) },
 ];
