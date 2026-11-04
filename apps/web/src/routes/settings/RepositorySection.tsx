@@ -8,6 +8,7 @@ import { BranchIcon } from '../../components/ui/icons';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * Repositório do projeto e, quando ele foi ADOTADO, as divergências que
@@ -53,13 +54,13 @@ export function RepositorySection({ projectId }: { projectId: string }) {
           soltos sobre o fundo da aba. O selo "sincronizado" do desenho NÃO
           entra: não existe fato de sincronismo no `repository`, e um selo teal
           fixo afirmaria algo que ninguém mediu. */}
-      <div className={styles.repoCard}>
+      <Item variant="outline" className={styles.repoCard}>
         <BranchIcon size={16} className={styles.repoIcone} />
         <code className={styles.repoPath}>{repository.externalId}</code>
         <span className={styles.repoMeta}>
           {repository.provider} · {repository.defaultBranch}
         </span>
-      </div>
+      </Item>
 
       {planoEstado?.decision === 'as_is' && (
         <Alert tone="accent">

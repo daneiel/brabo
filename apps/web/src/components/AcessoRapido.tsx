@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, Shield, UserCog, Wrench, type LucideIcon } from 'lucide-react';
+import { Button } from './ui/Button';
 import { Alert } from './ui/Alert';
 import { Modal } from './ui/Modal';
 import { entrarRapido, papeisDoAcessoRapido } from '../lib/auth';
@@ -53,8 +54,9 @@ export default function AcessoRapido({ irPara }: { irPara: (rota: string) => voi
 
   return (
     <div data-acesso-rapido>
-      <button
+      <Button
         type="button"
+        variant="secondary"
         className={styles.botaoSocial}
         onClick={() => {
           setErro(null);
@@ -63,7 +65,7 @@ export default function AcessoRapido({ irPara }: { irPara: (rota: string) => voi
       >
         <Wrench size={17} aria-hidden="true" />
         {t('loginPage.quickAccess.button')}
-      </button>
+      </Button>
       {aberto && (
         <Modal title={t('loginPage.quickAccess.title')} onClose={() => setAberto(false)}>
           <Alert tone="warning">{t('loginPage.quickAccess.warning')}</Alert>
@@ -77,8 +79,9 @@ export default function AcessoRapido({ irPara }: { irPara: (rota: string) => voi
               const Icone = ICONES[papel] ?? UserCog;
               return (
                 <li key={papel}>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     className={styles.botaoSocial}
                     style={{ width: '100%' }}
                     disabled={entrando}
@@ -87,7 +90,7 @@ export default function AcessoRapido({ irPara }: { irPara: (rota: string) => voi
                     <Icone size={17} aria-hidden="true" />
                     <strong>{papel}</strong>
                     <span>{email}</span>
-                  </button>
+                  </Button>
                 </li>
               );
             })}

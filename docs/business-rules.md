@@ -13285,9 +13285,9 @@ segunda conversão `runner → runner` que a próxima reconexão desfaria. Ofere
 botão seria um controle que não controla nada; a seção diz isso em texto
 ([ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)).
 
-- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:300`
-  (`mostrarProximoPasso`), `:313` (`setConvertidoParaRunner`, a visita em que a
-  conversão salvou), `:452` (o bloco do próximo passo), `:483`
+- **Código:** `apps/web/src/routes/settings/ExecutionModeSection.tsx:304`
+  (`mostrarProximoPasso`), `:317` (`setConvertidoParaRunner`, a visita em que a
+  conversão salvou), `:452` (o bloco do próximo passo), `:487`
   (`RunnerOnboardingPanel`, o mesmo da aba Código);
   `apps/web/src/locales/pt-BR/settings.json:249` e
   `apps/web/src/locales/en/settings.json:249` (`executionMode.nextStep.*`) e
@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:631` (`execucao`), `:639`
-  (`origemDaAtividade`), `:646` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:604` (`execucao`), `:594`
+  (`origemDaAtividade`), `:601` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18279,7 +18279,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:85` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:62` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
@@ -18342,8 +18342,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:448`
-  (`movel`), `:489` (`prenderFoco`), `:508` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:444`
+  (`movel`), `:463` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:70` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:76` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:597` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:562` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:554` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:509` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
@@ -22446,7 +22446,7 @@ sem dizer qual.
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
-  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1128`
+  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1143`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:178`
   (`TabelaMarkdown`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
@@ -25134,7 +25134,7 @@ sem dizer qual.
 ### RN-912 — O modelo da área é uma caixa na linha do lead, em "Modelos por agente" {#rn-912}
 
 - **Regra:** a seção "Modelo por área" deixou de existir. O padrão da área (RN-102, escopo `area` da RN-470) liga-se por uma caixa **só na linha do lead** de cada área (`dev-lead`, `qa`, `infra`): "Valer para a área X inteira (lead + subagentes)". O binding de área é um valor por área e não guarda o agente de origem, então a caixa em toda linha deixaria duas disputarem o valor. Marcada ⇔ o vigente do lead vem da área (`origin: 'area'`), lido do lote da RN-654, sem consulta nova. **Marcar** grava a área com o vigente do lead e o critério de roteamento dele (`PUT .../area-bindings/:area`) e DEPOIS apaga o binding próprio do lead (`DELETE .../agent-bindings/:lead`; copiar o deixaria para trás, RN-102). São duas chamadas e o desfecho é por passo (RN-469): se a área recusa (inclusive o 422 da RN-040) nada mudou e o toast traz a frase da api; se a área gravou e o DELETE falha, a tela diz que o padrão da área foi gravado e o modelo próprio do lead não foi removido (404 do DELETE conta como já removido). **Desmarcar** apaga a área (`DELETE .../area-bindings/:area`) e não grava nada no lead; 404 vira "já herdava". Com a caixa marcada, o seletor e o critério de roteamento do lead gravam a ÁREA. O agente com binding próprio vence a área (RN-470) e NÃO segue: a tela lista, com plural, os subagentes conhecidos nessa situação (recorte declarado, RN-180; os `dev-<modulo>` dinâmicos não entram e a tela diz isso) e não apaga a decisão deles. O "aplicar a todos" (RN-476) grava binding próprio nos 17 e, por isso, tira os subagentes do padrão da área; o aviso dele diz isso. **Papel:** a caixa e, enquanto marcada, o seletor do lead pedem `maintainer` (o mínimo do endpoint de área, RN-102), comparado por `roleAtLeast`; abaixo disso ficam inertes e o motivo é dito UMA vez em texto na legenda da seção (ADR 0064). As demais linhas seguem em `developer`. A caixa nasce desabilitada se o lead não tem vigente para copiar, e diz o motivo em texto na própria caixa (AT-601, chave `modelsSection.areaBox.needsModel`). Revisa a UI das RN-040, RN-102 e RN-470; a cascata, o escopo e os endpoints não mudam (sem ADR).
-- **Onde:** `apps/web/src/routes/settings/ModelsSection.tsx:94` (`podeEditarArea`), `:428` (`areaDoLead`), `:446` (`handleMarcarArea`), `:486` (`handleDesmarcarArea`)
+- **Onde:** `apps/web/src/routes/settings/ModelsSection.tsx:98` (`podeEditarArea`), `:432` (`areaDoLead`), `:450` (`handleMarcarArea`), `:490` (`handleDesmarcarArea`)
 - **Teste:** `apps/web/src/routes/settings/ModelsSection.caixa-da-area.test.tsx` (AT-601: motivo sem vigente no lead); `apps/web/src/routes/ProjectSettingsTab.test.tsx` (marcar, a área recusando, FALHA PARCIAL, desmarcar com e sem 404, seletor do lead na área, não-seguidores, `developer` inerte); `apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx` (os dois mínimos); `bindings-em-lote.test.tsx` (lote único); `cascata.test.tsx`; `heranca.test.tsx`; `filtro-de-aptos.test.tsx` (RN-040); `preferencia-de-roteamento.test.tsx` (ADR 0166)
 - **Origem:** AT-600 (EP-031), pedido do dono de 22/10.
 

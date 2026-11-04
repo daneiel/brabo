@@ -2817,9 +2817,9 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:154` (`cadeiaDoAgente`),
-  `:321` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:403` (`handleClearAgentBinding` — os
+  `apps/web/src/routes/settings/ModelsSection.tsx:158` (`cadeiaDoAgente`),
+  `:325` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:407` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:359` (coluna Origem), `:429`
   (`não há nível abaixo`), `:448` (`sem gasto ainda`),
   `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o

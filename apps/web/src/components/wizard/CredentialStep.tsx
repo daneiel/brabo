@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Ajuda } from '../ui/Ajuda';
 import type { UserCredentialMetadata } from '../../lib/api-types';
 import { Button } from '../ui/Button';
+import { ToggleGroup, ToggleGroupItem } from '../shadcn/toggle-group';
 import { Input } from '../ui/Input';
 import { CheckIcon, LockIcon, PlusIcon } from '../ui/icons';
 import { formatRelativeTime } from '../../lib/time';
@@ -52,19 +53,22 @@ export function CredentialStep({
       </Ajuda>
 
       {credentials.length > 0 && (
-        <div className={styles.credList}>
+        <ToggleGroup
+          className={styles.credList}
+          value={selectedId ? [selectedId] : []}
+          onValueChange={(v) => v[0] && onSelect(v[0])}
+        >
           {credentials.map((cred) => {
             const selected = cred.id === selectedId;
             return (
-              <button
+              <ToggleGroupItem
                 key={cred.id}
-                type="button"
+                value={cred.id}
                 data-testid="credential-option"
                 data-selected={selected}
                 className={[styles.credOption, selected && styles.selected]
                   .filter(Boolean)
                   .join(' ')}
-                onClick={() => onSelect(cred.id)}
               >
                 <span className={styles.credIcon}>
                   {selected ? <CheckIcon size={14} /> : <LockIcon size={14} />}
@@ -77,10 +81,10 @@ export function CredentialStep({
                     time: formatRelativeTime(cred.createdAt),
                   })}
                 </span>
-              </button>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
       )}
 
       {adding ? (
@@ -125,15 +129,16 @@ export function CredentialStep({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          icon
           className={styles.addToggle}
           onClick={() => setAdding(true)}
           aria-label={t('credentialStep.addNewToken')}
           title={t('credentialStep.addNewToken')}
         >
           <PlusIcon size={14} aria-hidden="true" />
-        </button>
+        </Button>
       )}
     </div>
   );

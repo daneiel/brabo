@@ -10,6 +10,7 @@ import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * Quem promove história a `ready` (Fase 12c — RN-048). Projeto NOVO nasce em
@@ -61,7 +62,7 @@ export function PromotionSection({ projectId }: { projectId: string }) {
         <span className={styles.eyebrow}>{t('promotion.eyebrow')}</span>
       </div>
 
-      <div className={styles.ajusteCard}>
+      <Item variant="outline" className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('promotion.card.title')}</div>
           <div className={styles.ajusteHint}>
@@ -89,7 +90,7 @@ export function PromotionSection({ projectId }: { projectId: string }) {
             <option value="auto">{t('promotion.optionAuto')}</option>
           </Select>
         </div>
-      </div>
+      </Item>
     </SecaoDeConfiguracoes>
   );
 }

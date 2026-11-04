@@ -49,6 +49,7 @@ import {
 } from '../../lib/bindings-resolvidos';
 import { AvisoDeBindingsNaoLidos, MarcaDeBindingNaoLido } from './LeituraDosBindings';
 import { Checkbox } from '@/components/shadcn/checkbox';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * Modelos por agente — a primeira seção do mockup (`design/SCREENS.md`).
@@ -802,7 +803,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       </p>
       )}
 
-      <div className={styles.custoCard}>
+      <Item variant="outline" className={styles.custoCard}>
         <ClockIcon size={15} className={styles.custoIcone} />
         <span className={styles.custoTexto}>
           {t('modelsSection.costCard.label')}{' '}
@@ -811,7 +812,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         <span className={styles.custoValor}>
           {custos === undefined ? '—' : formatarCustoMicros(custoTotalMicros)}
         </span>
-      </div>
+      </Item>
 
       {/* Aplicar um modelo aos 19 agentes de uma vez. Fica ACIMA da tabela, e
           não numa coluna: a ação é sobre a tabela inteira, e uma célula a

@@ -6,8 +6,17 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: as Configurações do projeto usam `Item`, `Table` e `Button` do kit shadcn no lugar dos cartões, da matriz e dos chips desenhados à mão (AT-655 V6).
+
+- **web**: a gaveta móvel da barra lateral usa o `Sheet` do kit shadcn, com as mesmas entradas, foco preso e Esc (AT-655 V3b)
+- **web**: Conta, Status e as telas de login passam para os componentes do kit shadcn (`Item`, `Card`, `Table`, `Badge`, `Button`), sem mudar o que a pessoa vê nem faz (AT-655 V5)
+
+- **web**: o Início e a tela de provisionamento usam `Card`, `EmptyState` e `Alert` do kit shadcn (AT-655 V4a).
+
+- **web**: o assistente de novo projeto e o navegador de pastas usam `ToggleGroup`, `Button` e `Breadcrumb` do kit shadcn, sem mudar passos, validações nem a oferta de modo (AT-655 V4b).
 - **web**: a aba Código passa a usar as abas, o campo e o botão do kit shadcn no painel inferior, na busca, no seletor de branch e na lista de PRs (AT-655 V1).
 - **web**: as abas RAG e PRs usam os componentes do kit (`Alert`, `Card`, `Input`, `Button`) no lugar de avisos, cartões e botões desenhados à mão, sem mudar o comportamento (AT-655 V2)
+- **web**: o painel "precisa de você" passa a ser um `Sheet` e as notificações um `Popover` do kit shadcn, com `Button`, `Badge` e `EmptyState`, sem mudar o que o usuário vê e faz (AT-655 V3a).
 - **api**: o catálogo da Anthropic nasce com preço de lista datado (2026-10-06) e `supportsReasoning` do SDK, em vez de preço 0 e raciocínio falso; preço manual segue intocado pelo sync (RN-997, ADR 0251).
 - **api**: a capability `reasoningText` fica `true` no OpenRouter e na Anthropic, provada por smoke com credencial em 2026-11-03 (AT-676, RN-993); o smoke do OpenRouter passa a usar `deepseek/deepseek-r1-0528`.
 - **api**: a Anthropic pede `thinking` adaptive com `display: summarized` nos modelos atuais (o `enabled` com budget dava 400) e mantém `enabled` nos antigos (AT-676, RN-993).

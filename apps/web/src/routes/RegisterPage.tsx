@@ -111,13 +111,14 @@ export function RegisterPage({ onRegistrar, irPara }: RegisterPageProps) {
       rodapeDoCartao={
         <>
           {t('registerPage.form.alreadyHaveAccountPrompt')}{' '}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={styles.link}
             onClick={() => irPara('/login')}
           >
             {t('registerPage.form.login')}
-          </button>
+          </Button>
         </>
       }
     >

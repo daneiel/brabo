@@ -129,7 +129,7 @@ describe('AuthLayout', () => {
     // O bloco de baixo é um wrapper da moldura: sem conteúdo, não sobra uma div
     // vazia entre o card e o rodapé (que somaria 18px de espaço fantasma).
     const rodape = container.querySelector('footer');
-    expect(rodape?.previousElementSibling?.tagName).toBe('SECTION');
+    expect(rodape?.previousElementSibling?.getAttribute('data-slot')).toBe('card');
   });
 
   it('renderiza rodapé do card e bloco de baixo quando entregues', () => {

@@ -110,9 +110,10 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
                     <span className={styles.versionNote}>
                       {version.note ?? '—'}
                     </span>
-                    <button
+                    <Button
                       type="button"
-                      className={styles.evidenceChip}
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setExpanded(open ? null : key)}
                     >
                       {open
@@ -121,7 +122,7 @@ export function InstructionVersionsSection({ projectId }: { projectId: string })
                             additions: version.diff.additions,
                             deletions: version.diff.deletions,
                           })}
-                    </button>
+                    </Button>
                     {!version.isCurrent && (
                       <Button
                         variant="secondary"

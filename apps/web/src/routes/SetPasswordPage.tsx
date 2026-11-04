@@ -118,13 +118,14 @@ export function SetPasswordPage({
       rodapeDoCartao={
         <>
           {t('setPasswordPage.form.expiredPrompt')}{' '}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={styles.link}
             onClick={() => irPara('/esqueci-senha')}
           >
             {t('setPasswordPage.form.requestAnother')}
-          </button>
+          </Button>
         </>
       }
     >

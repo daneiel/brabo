@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from 'react';
@@ -84,6 +83,7 @@ import {
   SidebarProvider,
   SidebarRail,
 } from '../components/shadcn/sidebar';
+import { Sheet, SheetClose, SheetContent } from '../components/shadcn/sheet';
 // O assistente de novo projeto é um chunk próprio (AT-300): ele só abre por
 // clique, e trazia para o bundle inicial o navegador de pastas inteiro.
 const PaletaDeComandos = lazy(() => import('../components/PaletaDeComandos'));
@@ -113,11 +113,6 @@ function iniciaisDoProjeto(nome: string): string {
     partes.length >= 2 ? [partes[0]?.[0], partes[1]?.[0]] : [nome[0], nome[1]];
   return letras.filter((c): c is string => !!c).join('').toUpperCase();
 }
-
-/** O que recebe foco dentro da gaveta móvel (RN-643) — para o foco inicial e o
- * laço do Tab. `disabled` e `tabindex="-1"` ficam de fora. */
-const SELETOR_FOCAVEL =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function rotuloDoAgente(agente: string): string {
   return AGENTS[agente as keyof typeof AGENTS]?.name ?? agente;
@@ -449,13 +444,7 @@ export function Shell() {
   const colapsado = !movel && colapsadoManual;
   const [gavetaAberta, setGavetaAberta] = useState(false);
   const idDaGaveta = useId();
-  const gavetaRef = useRef<HTMLElement>(null);
   const botaoDeMenuRef = useRef<HTMLButtonElement>(null);
-
-  function fecharGaveta({ devolverFoco }: { devolverFoco: boolean }) {
-    setGavetaAberta(false);
-    if (devolverFoco) botaoDeMenuRef.current?.focus();
-  }
 
   // Fecha ao navegar — inclusive navegação que não veio de clique na gaveta
   // (o `navigate` do wizard, o botão voltar do navegador).
@@ -468,40 +457,6 @@ export function Shell() {
   useEffect(() => {
     if (!movel) setGavetaAberta(false);
   }, [movel]);
-
-  // Aberta, o foco ENTRA na gaveta (é um diálogo modal) e o Esc a fecha
-  // devolvendo o foco ao botão que a abriu — de qualquer lugar da página.
-  useEffect(() => {
-    if (!movel || !gavetaAberta) return;
-    gavetaRef.current?.querySelector<HTMLElement>(SELETOR_FOCAVEL)?.focus();
-    function aoTeclar(e: globalThis.KeyboardEvent) {
-      if (e.key !== 'Escape') return;
-      e.preventDefault();
-      setGavetaAberta(false);
-      botaoDeMenuRef.current?.focus();
-    }
-    document.addEventListener('keydown', aoTeclar);
-    return () => document.removeEventListener('keydown', aoTeclar);
-  }, [movel, gavetaAberta]);
-
-  // Tab não escapa da gaveta aberta (`aria-modal`): do último volta ao
-  // primeiro, e vice-versa.
-  function prenderFoco(e: KeyboardEvent<HTMLElement>) {
-    if (!movel || !gavetaAberta || e.key !== 'Tab') return;
-    const focaveis = Array.from(
-      gavetaRef.current?.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL) ?? [],
-    );
-    const primeiro = focaveis[0];
-    const ultimo = focaveis[focaveis.length - 1];
-    if (!primeiro || !ultimo) return;
-    if (e.shiftKey && document.activeElement === primeiro) {
-      e.preventDefault();
-      ultimo.focus();
-    } else if (!e.shiftKey && document.activeElement === ultimo) {
-      e.preventDefault();
-      primeiro.focus();
-    }
-  }
 
   // Clicar num LINK da gaveta fecha — mesmo quando ele não troca o pathname
   // (as abas do projeto mudam só o `?tab=`).
@@ -968,39 +923,28 @@ export function Shell() {
         </header>
       )}
 
-      {movel && gavetaAberta && (
-        <div
-          className={styles.fundoDaGaveta}
-          data-testid="fundo-da-gaveta"
-          aria-hidden="true"
-          onClick={() => fecharGaveta({ devolverFoco: true })}
-        />
-      )}
-
       {movel ? (
-        <aside
-          id={idDaGaveta}
-          ref={gavetaRef}
-          className={styles.gaveta}
-          hidden={!gavetaAberta}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('sidebar.mobile.drawerLabel')}
-          onKeyDown={prenderFoco}
-          onClick={fecharAoSeguirLink}
-        >
-          <button
-            type="button"
-            className={styles.fecharGaveta}
-            aria-label={t('sidebar.mobile.closeMenu')}
-            onClick={() => fecharGaveta({ devolverFoco: true })}
+        // Sheet do kit: foco preso, Esc, fundo e devolução do foco vêm dele (RN-643).
+        <Sheet open={gavetaAberta} onOpenChange={setGavetaAberta}>
+          <SheetContent
+            id={idDaGaveta}
+            side="left"
+            showCloseButton={false}
+            className={styles.gaveta}
+            aria-label={t('sidebar.mobile.drawerLabel')}
+            onClick={fecharAoSeguirLink}
           >
-            <XIcon size={18} />
-          </button>
-          <Sidebar collapsible="none" className={styles.larguraTotal}>
-            {conteudo}
-          </Sidebar>
-        </aside>
+            <SheetClose
+              className={styles.fecharGaveta}
+              aria-label={t('sidebar.mobile.closeMenu')}
+            >
+              <XIcon size={18} />
+            </SheetClose>
+            <Sidebar collapsible="none" className={styles.larguraTotal}>
+              {conteudo}
+            </Sidebar>
+          </SheetContent>
+        </Sheet>
       ) : (
         <Sidebar collapsible="icon">
           {conteudo}

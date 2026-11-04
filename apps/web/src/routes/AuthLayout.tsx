@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { LogoMark } from '../components/ui/icons';
 import { runtimeConfig } from '../lib/runtime-config';
 import styles from './AuthLayout.module.css';
@@ -123,7 +125,7 @@ export function AuthLayout({
         </div>
 
         <div className={styles.colunaFormulario}>
-          <section className={styles.cartao}>
+          <Card padding="none" className={styles.cartao}>
             <div className={styles.cabeca}>
               <h1 className={styles.titulo}>{titulo}</h1>
               <p className={styles.subtitulo}>{subtitulo}</p>
@@ -132,7 +134,7 @@ export function AuthLayout({
             {rodapeDoCartao && (
               <div className={styles.rodapeCartao}>{rodapeDoCartao}</div>
             )}
-          </section>
+          </Card>
 
           {abaixoDoCartao && (
             <div className={styles.abaixoDoCartao}>{abaixoDoCartao}</div>
@@ -149,13 +151,14 @@ export function AuthLayout({
             <span className={styles.separador} aria-hidden="true">
               ·
             </span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={styles.linkRodape}
               onClick={() => irPara('/status')}
             >
               {t('authLayout.statusLink')}
-            </button>
+            </Button>
             <span className={styles.separador} aria-hidden="true">
               ·
             </span>

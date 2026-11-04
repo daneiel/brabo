@@ -3,6 +3,7 @@ import { Grid3x3 } from 'lucide-react';
 import { Ajuda } from '@/components/ui/Ajuda';
 import { ROLE_ORDER } from '../../lib/roles';
 import type { Role } from '../../lib/api-types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import styles from '../ProjectSettingsTab.module.css';
 
 // `key` resolve para `matrix.rows.<key>` — a tradução é resolvida por quem
@@ -25,33 +26,33 @@ export function MatrixSection() {
         <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
       </div>
       <div className={styles.matrixWrap}>
-        <table className={styles.matrixTable}>
-          <thead>
-            <tr>
-              <th>{t('matrix.columns.action')}</th>
-              <th>owner</th>
-              <th>maintainer</th>
-              <th>developer</th>
-              <th>viewer</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('matrix.columns.action')}</TableHead>
+              <TableHead className={styles.matrixCol}>owner</TableHead>
+              <TableHead className={styles.matrixCol}>maintainer</TableHead>
+              <TableHead className={styles.matrixCol}>developer</TableHead>
+              <TableHead className={styles.matrixCol}>viewer</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {MATRIX_ROWS.map((row) => (
-              <tr key={row.key}>
-                <td>{t(`matrix.rows.${row.key}`)}</td>
+              <TableRow key={row.key}>
+                <TableCell>{t(`matrix.rows.${row.key}`)}</TableCell>
                 {(['owner', 'maintainer', 'developer', 'viewer'] as Role[]).map((role) => (
-                  <td key={role}>
+                  <TableCell key={role}>
                     {ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(row.minRole) ? (
                       <span className={styles.check}>✓</span>
                     ) : (
                       <span className={styles.dash}>—</span>
                     )}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       {/* A legenda do desenho: sem ela, ✓ e — são dois símbolos sem contrato. */}
       <div className={styles.matrixLegenda}>

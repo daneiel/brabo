@@ -27,6 +27,7 @@ import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * Onde o código do projeto mora — `container` (padrão), `mounted` (pasta do
@@ -379,7 +380,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
         <div className={styles.subtitle}>{t('executionMode.needsMaintainer')}</div>
       )}
 
-      <div className={styles.ajusteCard} style={{ marginTop: 12 }}>
+      <Item variant="outline" className={styles.ajusteCard} style={{ marginTop: 12 }}>
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('executionMode.card.title')}</div>
         </div>
@@ -405,7 +406,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
             <Perigo assunto={t('executionMode.warning.assunto')}>{avisoDaConversao}</Perigo>
           )}
         </div>
-      </div>
+      </Item>
 
       {precisaCaminho && (
         <div style={{ marginTop: 12 }}>
