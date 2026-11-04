@@ -107,28 +107,7 @@ defmodule Engine.Agents.ArquitetoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [
-         CreateModuleMap.spec(),
-         AssignStoryModules.spec(),
-         ChooseProjectImage.spec(),
-         CreateC4Diagram.spec(),
-         RouteModulesToInfra.spec(),
-         DeclareModuleContracts.spec(),
-         ProposeAdr.spec(),
-         EmitInsight.spec(),
-         # Frente 3 do plano de decision_record — mesma ferramenta do
-         # Criativo, tipo novo (`decision_record`).
-         EmitArtifact.spec(),
-         DeclareOpenQuestion.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec(),
-         # RN-772/773 (AT-454): leituras do estado que muda FORA da conversa
-         # (a aprovação das ADRs, as tarefas do PO) — sem elas o Arquiteto
-         # afirmava o retrato da hora em que propôs.
-         ListarAdrsPropostas.spec(),
-         ListarBacklog.spec()
-       ],
+       tool_specs: tool_specs(),
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -610,5 +589,31 @@ defmodule Engine.Agents.ArquitetoServer do
   # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      CreateModuleMap.spec(),
+      AssignStoryModules.spec(),
+      ChooseProjectImage.spec(),
+      CreateC4Diagram.spec(),
+      RouteModulesToInfra.spec(),
+      DeclareModuleContracts.spec(),
+      ProposeAdr.spec(),
+      EmitInsight.spec(),
+      # Frente 3 do plano de decision_record — mesma ferramenta do
+      # Criativo, tipo novo (`decision_record`).
+      EmitArtifact.spec(),
+      DeclareOpenQuestion.spec(),
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec(),
+      # RN-772/773 (AT-454): leituras do estado que muda FORA da conversa
+      # (a aprovação das ADRs, as tarefas do PO) — sem elas o Arquiteto
+      # afirmava o retrato da hora em que propôs.
+      ListarAdrsPropostas.spec(),
+      ListarBacklog.spec()
+    ]
   end
 end

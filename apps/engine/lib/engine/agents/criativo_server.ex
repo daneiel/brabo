@@ -112,14 +112,7 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [
-         EmitArtifact.spec(),
-         AskStructuredQuestions.spec(),
-         DeclareOpenQuestion.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec()
-       ],
+       tool_specs: tool_specs(),
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -786,5 +779,17 @@ defmodule Engine.Agents.CriativoServer do
   # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      EmitArtifact.spec(),
+      AskStructuredQuestions.spec(),
+      DeclareOpenQuestion.spec(),
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec()
+    ]
   end
 end

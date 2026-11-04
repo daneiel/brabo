@@ -229,15 +229,7 @@ defmodule Engine.Infra.InfraLeadServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [
-         ValidateInfraFile.spec(),
-         ProposeInfraPr.spec(),
-         ProposeContainerStart.spec(),
-         ProposeContainerStartViaRunner.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec()
-       ],
+       tool_specs: tool_specs(),
        # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
        # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
        # do turno, e uma segunda mensagem entrar na fila de mensagens (RN-673)
@@ -1714,5 +1706,18 @@ defmodule Engine.Infra.InfraLeadServer do
       do: acordar(project_id, session_id)
 
     :ok
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      ValidateInfraFile.spec(),
+      ProposeInfraPr.spec(),
+      ProposeContainerStart.spec(),
+      ProposeContainerStartViaRunner.spec(),
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec()
+    ]
   end
 end
