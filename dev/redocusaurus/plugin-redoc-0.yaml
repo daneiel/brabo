@@ -15732,6 +15732,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ToolCallResponseDto'
+        thinkingBlocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            Anthropic thinking blocks (signed, opaque). The engine sends them
+            back untouched on the `assistant` message that asked for tools
+            (AT-676).
       required:
         - role
         - content
@@ -15753,6 +15762,12 @@ components:
           type: boolean
           example: false
           description: Texto → vetor (ADR 0075). Só `true` quando provado.
+        reasoningText:
+          type: boolean
+          example: false
+          description: >-
+            The provider returns the reasoning TEXT as a `reasoning` chunk
+            (AT-676, ADR 0249). Only `true` after a smoke against the real API.
         routingPreference:
           type: boolean
           example: false
@@ -15798,6 +15813,7 @@ components:
         - toolCalling
         - listModels
         - embeddings
+        - reasoningText
         - routingPreference
         - stickySession
         - priceCeiling
@@ -15837,6 +15853,12 @@ components:
             Nome do modelo que gerou a resposta (achado do problema 2) — `null`
             quando o turno falhou antes de resolver um modelo (sem binding, ou
             binding para modelo inexistente).
+        raciocinio:
+          type: string
+          description: >-
+            The model reasoning text for the step, whole, never in `content` and
+            never sent back to the model (AT-676, ADR 0249). Absent when none.
+            The engine stores it as `agent.response.payload.raciocinio`.
         truncated:
           type: boolean
           enum:
@@ -15868,6 +15890,7 @@ components:
           type: string
           enum:
             - delta
+            - raciocinio
             - done
             - error
           example: delta
@@ -15877,6 +15900,11 @@ components:
         text:
           type: string
           example: I'll read the
+        raciocinio:
+          type: string
+          description: >-
+            Only on the `final` frame (AT-676): the whole reasoning of the step.
+            A `raciocinio` frame carries a live piece in `text`.
         usage:
           $ref: '#/components/schemas/LlmUsageResponseDto'
         message:

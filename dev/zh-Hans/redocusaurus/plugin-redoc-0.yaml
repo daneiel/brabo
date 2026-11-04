@@ -14684,6 +14684,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ToolCallResponseDto'
+        thinkingBlocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: >-
+            Anthropic thinking blocks (signed, opaque). The engine sends them
+            back untouched on the `assistant` message that asked for tools
+            (AT-676).
       required:
         - role
         - content
@@ -14705,6 +14714,12 @@ components:
           type: boolean
           example: false
           description: 文本 → 向量（ADR 0075）。只有经过验证时才为 `true`。
+        reasoningText:
+          type: boolean
+          example: false
+          description: >-
+            The provider returns the reasoning TEXT as a `reasoning` chunk
+            (AT-676, ADR 0249). Only `true` after a smoke against the real API.
         routingPreference:
           type: boolean
           example: false
@@ -14745,6 +14760,7 @@ components:
         - toolCalling
         - listModels
         - embeddings
+        - reasoningText
         - routingPreference
         - stickySession
         - priceCeiling
@@ -14781,6 +14797,12 @@ components:
           description: >-
             生成响应的模型名称（问题 2 的发现）——当回合在解析模型之前就失败时（没有 binding，或 binding 指向不存在的模型）为
             `null`。
+        raciocinio:
+          type: string
+          description: >-
+            The model reasoning text for the step, whole, never in `content` and
+            never sent back to the model (AT-676, ADR 0249). Absent when none.
+            The engine stores it as `agent.response.payload.raciocinio`.
         truncated:
           type: boolean
           enum:
@@ -14809,6 +14831,7 @@ components:
           type: string
           enum:
             - delta
+            - raciocinio
             - done
             - error
           example: delta
@@ -14816,6 +14839,11 @@ components:
         text:
           type: string
           example: I'll read the
+        raciocinio:
+          type: string
+          description: >-
+            Only on the `final` frame (AT-676): the whole reasoning of the step.
+            A `raciocinio` frame carries a live piece in `text`.
         usage:
           $ref: '#/components/schemas/LlmUsageResponseDto'
         message:
