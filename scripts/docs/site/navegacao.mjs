@@ -37,7 +37,7 @@ export function adrsPorTema(raiz) {
 
 /** Rótulos da barra traduzidos (`current.json` do locale), como mapa pt-BR -> texto. */
 export function lerRotulosDaBarra(raiz, locale) {
-  const arq = path.join(raiz, CAMINHO_DAS_TRADUCOES(locale), '../current.json');
+  const arq = path.join(raiz, CAMINHO_DAS_TRADUCOES(locale), 'current.json');
   const mapa = {};
   try {
     for (const [k, v] of Object.entries(JSON.parse(readFileSync(arq, 'utf8')))) {

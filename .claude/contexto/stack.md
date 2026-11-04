@@ -71,9 +71,10 @@
 - Monorepo pnpm (TS) com apps/engine Elixir ao lado; Docker Compose para dev.
   `website/` NÃO é membro do workspace (ADR 0117) — lockfile próprio em
   `website/pnpm-workspace.yaml`/`website/pnpm-lock.yaml`, instalado com
-  `pnpm install` de DENTRO de `website/`, nunca `pnpm --filter website` (usa
-  `pnpm --dir website` nos scripts `docs:*`). Isola o `pnpm audit` do
-  produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
+  `pnpm install` de DENTRO de `website/`, nunca `pnpm --filter website` (a
+  página da API do gerador lê `website/node_modules`). Isola o `pnpm audit` do
+  produto da árvore do Redoc, que nunca chega a imagem nenhuma (desde o ADR 0253
+  `website/` guarda só ela).
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
   `package.json`: já são vinte e oito na raiz e vinte e sete no website, cada um com o
@@ -112,10 +113,12 @@
   overlay as QUATRO que o kustomize conhece (o broker fica fora do k8s). O overlay do repositório
   guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
-- Docs: Docusaurus 3.x em website/ lendo de docs/, que é a FONTE em pt-BR e o
-  locale padrão (ADR 0216); `en`, `ru` e `zh-Hans` moram em
-  `website/i18n/<locale>/`, e página sem tradução cai na fonte; Mermaid; busca
-  local (`pt`, `en`, `ru`, `zh`)
+- Docs: gerador próprio em `scripts/docs/site/` (ADR 0253, que tirou o
+  Docusaurus; `pnpm docs:build` = gerar + checar links) lendo de docs/, que é a
+  FONTE em pt-BR e o locale padrão (ADR 0216); `en`, `ru` e `zh-Hans` moram em
+  `docs/i18n/<locale>/` (nunca página da fonte) e página sem tradução cai na
+  fonte; Mermaid; busca por substring, índice por idioma; a API é Redoc 3,
+  uma página por tag
 - CI/CD de release e cadeia de suprimentos (pin por SHA/digest, assinatura,
   Trivy, `install-e2e.yml`): as regras moram em
   `.claude/rules/ci-e-cadeia-de-suprimentos.md`, carregadas quando a sessão lê

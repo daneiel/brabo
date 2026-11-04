@@ -1,6 +1,6 @@
 /**
  * Tipos de `./links-do-locale.mjs`, para o spec (`tsc --noEmit` do CI) e para
- * `website/docusaurus.config.ts`, que importa `reescreverLinkDeGap`.
+ * o antigo `website/docusaurus.config.ts` (histórico: o gerador próprio não reescreve links).
  */
 
 export declare const LOCALES_COM_PREFIXO: string[];

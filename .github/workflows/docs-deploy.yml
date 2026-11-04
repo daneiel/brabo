@@ -21,7 +21,7 @@ name: Documentação
 on:
   push:
     branches: [dev, main]
-    paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
+    paths: ['docs/**', 'scripts/docs/**', 'design/**', 'website/**', '.github/workflows/docs-deploy.yml']
 
 # `contents: write` porque a publicação agora é um COMMIT na `gh-pages`, não um
 # artefato. Ver o comentário do passo de publicação para o porquê da troca.
@@ -91,37 +91,21 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `website/` NÃO é mais membro do workspace da raiz (ADR 0117) — tem
-      # `pnpm-lock.yaml` PRÓPRIO, e o install acima não o alcança. Sem este
-      # passo separado, `pnpm docs:build` (agora `pnpm --dir website build`)
-      # falharia por `node_modules` ausente.
+      # `website/` NÃO é membro do workspace da raiz (ADR 0117) — guarda só a
+      # árvore do Redoc, com `pnpm-lock.yaml` PRÓPRIO, e o install acima não o
+      # alcança. Sem este passo, a página da API do `pnpm docs:build` falharia.
       - name: Instalar dependências do website
         working-directory: website
         run: pnpm install --frozen-lockfile
 
-      - name: Cache do Rspack
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-        with:
-          # Chave por DEGRAU: o `baseUrl` entra no bundle, então o cache de
-          # `dev` não serve para `main`. Sem o degrau na key os três degraus se
-          # invalidariam em rodízio, e o cache viraria enfeite.
-          path: website/node_modules/.cache
-          key: rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('website/pnpm-lock.yaml') }}-${{ hashFiles('docs/**') }}
-          restore-keys: |
-            rspack-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('website/pnpm-lock.yaml') }}-
-            rspack-${{ runner.os }}-${{ github.ref_name }}-
-
-      # onBrokenLinks/onBrokenAnchors/onBrokenMarkdownLinks são 'throw':
-      # link quebrado reprova aqui, não vira 404 em produção.
+      # O checador de links do gerador (AT-662, ADR 0253) está no `docs:build`:
+      # link ou âncora quebrados reprovam aqui, não viram 404 em produção.
       #
-      # `DOCS_BRANCH` acompanha `DOCS_BASE_URL` e NÃO é redundante com ele: o
-      # site deduzia "sou produção?" comparando o baseUrl com `/brabo/`, e com
-      # os três degraus em subdiretório essa comparação passaria a ser falsa
-      # para `main` também — `noIndex: true` na documentação real, em silêncio e
-      # com o CI verde. O degrau agora é declarado.
+      # `DOCS_BRANCH` declara o degrau (noindex fora de `main`, aviso da fase de
+      # teste, seletor de ambiente). Os assets são RELATIVOS, então o gerador
+      # não precisa do `baseUrl` do degrau.
       - name: Build do site
         env:
-          DOCS_BASE_URL: ${{ steps.degrau.outputs.base }}
           DOCS_BRANCH: ${{ steps.degrau.outputs.branch }}
         run: pnpm docs:build
 
@@ -227,7 +211,7 @@ jobs:
 
           # 2. O degrau deste push, do build recém-feito.
           mkdir -p "publicacao/$CAMINHO"
-          cp -a website/build/. "publicacao/$CAMINHO/"
+          cp -a build/docs-site/. "publicacao/$CAMINHO/"
           echo "publicando: /$CAMINHO/ ($(find "publicacao/$CAMINHO" -type f | wc -l) arquivo(s))"
 
           # 3. A raiz: índice dos degraus + o 404 que segura os links antigos.

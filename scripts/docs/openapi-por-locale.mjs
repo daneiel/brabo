@@ -2,7 +2,7 @@
 /**
  * A página da API (Redoc) por locale (ADR 0220, AT-565). A fonte das
  * descrições continua sendo o texto dos decorators da api; cada locale tem um
- * CATÁLOGO em `website/i18n/<locale>/openapi-textos.json`, chaveado pelo sha256
+ * CATÁLOGO em `docs/i18n/<locale>/openapi-textos.json`, chaveado pelo sha256
  * (12 hex) do texto da fonte: `{ "<hash>": { "fonte": "...", "traducao": "..." } }`.
  *
  * Funções PURAS (o config do site e o `generate.mjs` as chamam). O comando que
@@ -193,7 +193,7 @@ export const rotulosFaltando = (rotulos) => {
   ]);
 };
 
-export const caminhoDoCatalogo = (raiz, locale) => join(raiz, 'website/i18n', locale, 'openapi-textos.json');
+export const caminhoDoCatalogo = (raiz, locale) => join(raiz, 'docs/i18n', locale, 'openapi-textos.json');
 
 export const lerCatalogo = (raiz, locale) => {
   const p = caminhoDoCatalogo(raiz, locale);

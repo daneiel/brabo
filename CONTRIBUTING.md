@@ -125,14 +125,14 @@ Três regras que caem daí:
   [`docs/business-rules.md`](docs/business-rules.md), com `arquivo:linha` e o
   teste que a cobre.
 
-Rodar o site de documentação localmente — `website/` tem lockfile próprio
-desde o [ADR 0117](docs/adr/0117-lockfile-proprio-para-o-website.md), então o
-`pnpm install` da raiz (Setup, acima) não instala as dependências dele:
+Rodar o site de documentação localmente — `website/` guarda só a árvore do
+Redoc, com lockfile próprio desde o [ADR 0117](docs/adr/0117-lockfile-proprio-para-o-website.md),
+então o `pnpm install` da raiz (Setup, acima) não instala as dependências dele:
 
 ```bash
 cd website && pnpm install && cd ..  # só na primeira vez, ou quando o lockfile mudar
-pnpm docs:start     # servidor de desenvolvimento
-pnpm docs:build     # build de produção — link quebrado FALHA o build
+pnpm docs:start     # gera o site e serve em http://localhost:3000
+pnpm docs:build     # gera build/docs-site e confere links — link quebrado FALHA
 ```
 
 Sem informação suficiente para escrever algo, use
@@ -146,11 +146,8 @@ reflete a branch. Numa `0.x` com um único release publicado, versionar
 adicionaria manutenção sem dar nada em troca — cada versão congelada é uma
 cópia inteira de `docs/` que passa a envelhecer sozinha.
 
-Quando fizer sentido, o comando é:
-
-```bash
-pnpm --dir website docusaurus docs:version 0.2
-```
+Quando fizer sentido, a versão congelada vira decisão própria (o gerador de
+site não tem o comando do Docusaurus), com ADR.
 
 E a regra de **quando**: só em **major ou minor**, nunca em patch. `0.2`,
 `1.0`, `1.1` — sim. `1.0.1` — não. Versionar demais multiplica o custo de

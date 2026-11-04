@@ -13,7 +13,7 @@ import {
 
 // AT-221: a reescrita punha `/pt-BR` e o baseUrl do locale punha de novo —
 // `href=/brabo/prd/pt-BR/pt-BR/...`, 404 no site pt-BR inteiro, build verde.
-const FONTE_PT = 'i18n/en/docusaurus-plugin-content-docs/current/business-rules.md';
+const FONTE_PT = 'docs/i18n/en/business-rules.md';
 
 describe('reescreverLinkDeGap', () => {
   it('não põe prefixo de locale: quem põe é o baseUrl do build', () => {

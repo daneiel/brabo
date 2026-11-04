@@ -34,10 +34,10 @@ export const LOCALES = ['pt-BR', 'en', 'ru', 'zh-Hans'];
 
 /** Onde moram as traduções de um locale, relativo à raiz do repositório. */
 export const CAMINHO_DAS_TRADUCOES = (locale) =>
-  `website/i18n/${locale}/docusaurus-plugin-content-docs/current`;
+  `docs/i18n/${locale}`;
 
 /** Não são páginas do site: a missão de documentação e os parciais `_*.md`. */
-const excluida = (rel) => rel.startsWith('missions/') || path.posix.basename(rel).startsWith('_');
+const excluida = (rel) => rel.startsWith('missions/') || rel.startsWith('i18n/') || path.posix.basename(rel).startsWith('_');
 
 /** Separa o frontmatter (YAML) do corpo. Sem frontmatter, `dados` é `{}`. */
 export function lerFrontmatter(texto) {

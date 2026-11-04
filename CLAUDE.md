@@ -63,7 +63,7 @@ coisas saíram do import sem perder uma palavra:
   hospeda hoje. Cabeçalho de RN sem ela, ou com outro número, REPROVA o
   `docs:check` — nos três arquivos e nas traduções deles (`en`, `ru`, `zh-Hans`, ADR 0216)
   (`scripts/docs/ancoras-de-rn.mjs`, AT-230): o `docs:build` não pega, porque
-  sem âncora o Docusaurus gera um id pelo título e compila.
+  sem âncora o gerador cria um id pelo título e compila.
 - TODA mudança verifica se ESTE arquivo — com as partes que ele importa de
   `.claude/contexto/` — precisa mudar: Stack, Convenções, "O que NÃO fazer"
   e o estado das fases. Não pergunte se deve: verifique.
@@ -85,7 +85,7 @@ coisas saíram do import sem perder uma palavra:
   AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`,
   `dev` → `/brabo/dev/` (a `qa` foi aposentada, ADR 0235), com a raiz sendo o índice gerado por
   `scripts/docs/landing.mjs`. O mapa branch→caminho existe num ponto por
-  processo (o passo do `docs-deploy.yml`, `DEGRAUS` no `docusaurus.config.ts` e
+  processo (o passo do `docs-deploy.yml`, `DEGRAUS` em `scripts/docs/site/layout.mjs` e
   no `landing.mjs`) — nunca interpole `$GITHUB_REF_NAME` num caminho.
 - A versão anunciada em PROSA é verificada por `pnpm docs:check` em DOIS
   arquivos, contra o primeiro `## vX.Y.Z` do CHANGELOG: `README.md` e
@@ -149,7 +149,7 @@ coisas saíram do import sem perder uma palavra:
   Desde a AT-549 a fonte do runbook é pt-BR (ADR 0216) e a tabela mora nela; o
   script acha a seção pela âncora `{#procedimentos-e-verificacao}`, nunca pelo
   título, e o cabeçalho da tabela e as classes ficam literais (vocabulário de
-  máquina). A cópia em inglês em `website/i18n/en/` NÃO é conferida.
+  máquina). A cópia em inglês em `docs/i18n/en/` NÃO é conferida.
 - O índice de ADR é agrupado por TEMA, e o tema mora FORA do ADR (ADR 0202,
   AT-137): `docs/adr/temas.yml` tem a lista fechada (15 temas) e UM tema por
   ADR. ADR novo ganha a linha dele ali e a linha do índice na seção do tema, em

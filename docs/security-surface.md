@@ -878,7 +878,7 @@ detalhar o motivo na URL.
   estruturalmente não as vê. As duas só existem com
   `NODE_ENV !== 'production'` (`main.ts`), são públicas, e servem o mesmo
   documento que a
-  [referência gerada](/reference/api/) publica. Registrado aqui em vez de
+  [referência gerada](reference/api.html) publica. Registrado aqui em vez de
   deixado de fora: o que o teste não alcança precisa estar na prosa.
 - **`GET`/`POST /auth/dev-login` (acesso rápido por papel, AT-722) NÃO estão
   na tabela, de propósito.** O módulo só é registrado com

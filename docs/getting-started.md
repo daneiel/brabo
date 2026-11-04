@@ -298,7 +298,7 @@ scripts/
   ci/       automação de release e política de branch (testada com vitest)
   dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
   docs/     geração e verificação da documentação
-website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+website/    só a árvore do Redoc; o site é gerado por scripts/docs/site/ a partir de docs/
 ```
 
 `apps/engine` fica fora do workspace pnpm (é um projeto Mix), com scripts na

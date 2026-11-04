@@ -57,7 +57,7 @@ export function conferirAncoras(texto) {
 /** Os locales traduzidos (ADR 0216): pt-BR é a fonte, em `docs/`. */
 export const LOCALES_TRADUZIDOS = ['en', 'ru', 'zh-Hans'];
 
-const traducao = (locale) => `website/i18n/${locale}/docusaurus-plugin-content-docs/current`;
+const traducao = (locale) => `docs/i18n/${locale}`;
 
 /**
  * Os arquivos de RN, pelo GLOB (um quarto arquivo entra sozinho, como na
