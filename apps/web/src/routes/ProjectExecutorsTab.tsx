@@ -367,6 +367,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             <EmptyState titulo={t('tab.noExecutorsTitle')} icone={<Users size={18} />}>{t('tab.noExecutors')}</EmptyState>
           ) : (
             <AgentTeamGrid
+          projectId={projectId}
               roster={roster}
               groups={executorGroups}
               events={events}

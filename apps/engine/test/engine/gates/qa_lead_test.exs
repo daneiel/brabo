@@ -157,4 +157,18 @@ defmodule Engine.Gates.QaLeadTest do
       assert {:blocked, %{origin: "infra"}} = QaLead.consolidar(resultados)
     end
   end
+
+  describe "execucao_de_testes (AT-687, RN-996)" do
+    @v %{veredito: "approved", resumo: "ok", itens: [], coverage_matrix: []}
+
+    test "o consolidado leva o campo da Automação; sem ele, o mapa não ganha chave" do
+      exec = %{fonte: "junit", total: 1}
+
+      assert {:ok, %{execucao_de_testes: ^exec}} =
+               QaLead.consolidar([{"Automação", {:ok, Map.put(@v, :execucao_de_testes, exec)}}])
+
+      assert {:ok, c} = QaLead.consolidar([{"Automação", {:ok, @v}}])
+      refute Map.has_key?(c, :execucao_de_testes)
+    end
+  end
 end

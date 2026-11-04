@@ -1617,7 +1617,7 @@ que não libera o escopo.
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
-  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:114`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts` ("modo automático

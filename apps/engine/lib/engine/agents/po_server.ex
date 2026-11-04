@@ -126,32 +126,7 @@ defmodule Engine.Agents.PoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [
-         # LEITURA primeiro, de propósito: até a RN-164 as quatro ferramentas
-         # do PO eram todas de ESCRITA, e ele nunca relia nada depois do
-         # kickoff. A ordem da lista é o que o modelo vê primeiro.
-         ListarRegrasDeNegocio.spec(),
-         ListarBacklog.spec(),
-         ListarMetricasDeProduto.spec(),
-         CreateEpic.spec(),
-         CreateStory.spec(),
-         # RN-720: completar a história existente em vez de recriá-la.
-         CompleteStory.spec(),
-         UpdateStory.spec(),
-         ArchiveStory.spec(),
-         CreateTask.spec(),
-         # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
-         # Criativo (RN-162) — o PO só passou a advertisá-la.
-         AskStructuredQuestions.spec(),
-         OfferHandoff.spec(),
-         # Frente 3 do plano de decision_record — mesma ferramenta do
-         # Criativo (RN-162 style reuse), tipo novo (`decision_record`).
-         EmitArtifact.spec(),
-         DeclareOpenQuestion.spec(),
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec()
-       ],
+       tool_specs: tool_specs(),
        # Épicos criados NESTE processo que ainda não receberam história
        # (RN-165): `%{epic_id => titulo}`. Não é reidratado de propósito — a
        # cobrança é sobre a obrigação que o PO assumiu no turno, e um estado
@@ -843,5 +818,35 @@ defmodule Engine.Agents.PoServer do
   # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      # LEITURA primeiro, de propósito: até a RN-164 as quatro ferramentas
+      # do PO eram todas de ESCRITA, e ele nunca relia nada depois do
+      # kickoff. A ordem da lista é o que o modelo vê primeiro.
+      ListarRegrasDeNegocio.spec(),
+      ListarBacklog.spec(),
+      ListarMetricasDeProduto.spec(),
+      CreateEpic.spec(),
+      CreateStory.spec(),
+      # RN-720: completar a história existente em vez de recriá-la.
+      CompleteStory.spec(),
+      UpdateStory.spec(),
+      ArchiveStory.spec(),
+      CreateTask.spec(),
+      # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
+      # Criativo (RN-162) — o PO só passou a advertisá-la.
+      AskStructuredQuestions.spec(),
+      OfferHandoff.spec(),
+      # Frente 3 do plano de decision_record — mesma ferramenta do
+      # Criativo (RN-162 style reuse), tipo novo (`decision_record`).
+      EmitArtifact.spec(),
+      DeclareOpenQuestion.spec(),
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec()
+    ]
   end
 end

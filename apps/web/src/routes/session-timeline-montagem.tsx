@@ -451,7 +451,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     // esquecesse `autor`/`turno` viraria um item de turno "0" no meio do
     // fio, e o desfecho pararia nele sem que ninguém entendesse por quê.
     const empurrar = (
-      entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno' | 'origem'>,
+      entry: Omit<TimelineEntry, 'seq' | 'autor' | 'turno' | 'origem'> & { seq?: number },
     ) =>
       items.push({
         seq: event.seq,
@@ -526,7 +526,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           e.type === 'chat.structured_question_answered' &&
           (e.payload as StructuredQuestionAnsweredPayload)?.questionSetId === event.id,
       );
+      // RN-994: a pergunta vem DEPOIS da mensagem que a introduz — o cartão
+      // vai para logo após a `agent.response` do mesmo agente que fecha o
+      // turno (antes da próxima fala do usuário). Sem ela, fica onde está.
+      const fimDoTurno = events.find(
+        (e) => e.seq > event.seq && e.type === 'chat.message' && e.actor.kind === 'user',
+      )?.seq;
+      const fechamento = events.find(
+        (e) =>
+          e.seq > event.seq &&
+          (fimDoTurno === undefined || e.seq < fimDoTurno) &&
+          e.type === 'agent.response' &&
+          e.actor.id === event.actor.id,
+      );
       empurrar({
+        ...(fechamento ? { seq: fechamento.seq + 0.5 } : {}),
         mensagem: true, // RN-644: conta no corte do fio
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (

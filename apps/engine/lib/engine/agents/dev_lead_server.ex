@@ -174,18 +174,7 @@ defmodule Engine.Agents.DevLeadServer do
        # TERCEIRA, também aditiva — não precisa do tratamento especial de
        # `propose_execution_plan`/`assess_implementability` (nunca devolve
        # `{:pending, _}`), só o `run_tool/3` comum abaixo.
-       tool_specs: [
-         DevLeadTools.spec(),
-         DevLeadTools.spec_assess_implementability(),
-         EmitArtifact.spec(),
-         DeclareOpenQuestion.spec(),
-         # RN-699 (AT-363): leitura do backlog e do module_map vigente.
-         DevLeadTools.spec_read_backlog(),
-         # AT-582: o plano do próprio agente, lido pelo diário na retomada.
-         Engine.Harness.Tools.RegistrarPlano.spec(),
-         # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
-         Engine.Harness.Tools.RagSearch.spec()
-       ],
+       tool_specs: tool_specs(),
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -627,6 +616,11 @@ defmodule Engine.Agents.DevLeadServer do
     CADA tarefa pendente a UM módulo do module_map (`tarefas`): só o dev
     daquele módulo pega a tarefa, e tarefa sem módulo recusa o plano.
 
+    Inclua nas tarefas de cada módulo a de ter RELATÓRIO JUnit: o dev instala
+    o reporter do runner de teste do módulo (vitest `--reporter=junit`,
+    pytest `--junitxml`, `jest-junit`, `junit_formatter`...), com commit e PR
+    normais. É dele que o QA lê os testes que rodaram (RN-996).
+
     Você NÃO escreve código. Decide quantos agentes valem a pena para o
     trabalho em mão, e responde por essa escolha.
 
@@ -794,5 +788,21 @@ defmodule Engine.Agents.DevLeadServer do
   # de cada turno desde RN-122. O que sobra aqui é só o broadcast efêmero.
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  @doc "AT-686: o catálogo completo de ferramentas deste agente (o `init/1` e o catálogo leem daqui)."
+  def tool_specs do
+    [
+      DevLeadTools.spec(),
+      DevLeadTools.spec_assess_implementability(),
+      EmitArtifact.spec(),
+      DeclareOpenQuestion.spec(),
+      # RN-699 (AT-363): leitura do backlog e do module_map vigente.
+      DevLeadTools.spec_read_backlog(),
+      # AT-582: o plano do próprio agente, lido pelo diário na retomada.
+      Engine.Harness.Tools.RegistrarPlano.spec(),
+      # AT-716 (RN-982): consulta ao RAG do projeto, a mesma ferramenta dos dev agents.
+      Engine.Harness.Tools.RagSearch.spec()
+    ]
   end
 end

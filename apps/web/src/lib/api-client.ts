@@ -9,6 +9,7 @@ import type {
   WorkspaceSpendReport,
 } from './spend';
 import type {
+  CatalogoDeAgentes,
   ResumoDoContextoDaSessao,
   AgentAutonomyRule,
   AgentAutonomyActionType,
@@ -1225,6 +1226,8 @@ export const getResolvedModelBindings = (
       areas: areas.length > 0 ? areas.join(',') : undefined,
     })}`,
   );
+export const getAgentCatalog = (projectId: string) =>
+  get<CatalogoDeAgentes>(`/projects/${projectId}/agent-catalog`);
 export const getAgentModelBinding = (projectId: string, agentSlug: string) =>
   get<ResolvedBinding | null>(`/projects/${projectId}/agent-bindings/${agentSlug}`);
 export const setAgentModelBinding = (

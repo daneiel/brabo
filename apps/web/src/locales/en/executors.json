@@ -37,7 +37,24 @@
       "auto": "Automatic mode",
       "autoModeHint": "Auto mode: runs any command, even outside the project folder. git push and PR are released; deploy, sudo/doas and merges into a protected branch still ask for your approval."
     },
-    "rearm": "rearm"
+    "rearm": "rearm",
+    "catalog": {
+      "instructions": "Instructions",
+      "tools": "Tools",
+      "identity": "Identity",
+      "projectInstruction": "Project instruction (version {{versao}})",
+      "noProjectInstruction": "This agent has no instruction of its own in this project yet.",
+      "instructionsUnavailable": "Could not read the instructions right now.",
+      "missing_one": "{{count}} character missing (text truncated)",
+      "missing_other": "{{count}} characters missing (text truncated)",
+      "toolsUnavailable": "Could not read the tools right now.",
+      "noTools": "This agent has no tools.",
+      "note": "Full catalog: at each step the model may see only part of it.",
+      "loading": "Loading…",
+      "error": "Could not read this agent's catalog.",
+      "toolCount_one": "{{count}} tool",
+      "toolCount_other": "{{count}} tools"
+    }
   },
   "teamGrid": {
     "leadBadge": "Lead",

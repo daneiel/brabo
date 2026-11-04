@@ -237,6 +237,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
             resumo: payload.resumo,
             itens: payload.itens,
             coverageMatrix: payload.coverageMatrix as CoverageMatrixRow[] | undefined,
+            execucaoDeTestes: payload.execucaoDeTestes,
             subVerdicts: subVerdictsFor(taskId),
             dispensed: dispensedFor(taskId),
           };

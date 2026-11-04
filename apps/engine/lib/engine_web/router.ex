@@ -75,6 +75,9 @@ defmodule EngineWeb.Router do
     # pausa é DECISÃO sem esbarrar no 503 de "/reanalyze" primeiro.
     get "/psychologist/status", PsychologistCommandController, :status
 
+    # AT-686 (RN-995): catálogo de ferramentas e identidade dos agentes, só leitura.
+    get "/agents/catalog", AgentCatalogController, :index
+
     post "/projects/:projectId/anamnese/run", AnamneseCommandController, :run
 
     post "/projects/:projectId/agents/:agent/instructions/invalidate",

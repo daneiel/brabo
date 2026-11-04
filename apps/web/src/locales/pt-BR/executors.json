@@ -38,7 +38,26 @@
       "auto": "Modo automático",
       "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. git push e PR ficam liberados; deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
     },
-    "rearm": "rearmar"
+    "rearm": "rearmar",
+    "catalog": {
+      "instructions": "Instruções",
+      "tools": "Ferramentas",
+      "identity": "Identidade",
+      "projectInstruction": "Instrução do projeto (versão {{versao}})",
+      "noProjectInstruction": "Este agente ainda não tem instrução própria neste projeto.",
+      "instructionsUnavailable": "Não foi possível ler as instruções agora.",
+      "missing_one": "Faltam {{count}} caracteres (texto cortado)",
+      "missing_other": "Faltam {{count}} caracteres (texto cortado)",
+      "toolsUnavailable": "Não foi possível ler as ferramentas agora.",
+      "noTools": "Este agente não tem ferramentas.",
+      "note": "Catálogo completo: a cada passo o modelo pode ver só uma parte dele.",
+      "loading": "Carregando…",
+      "error": "Não foi possível ler o catálogo deste agente.",
+      "toolCount_one": "{{count}} ferramenta",
+      "toolCount_other": "{{count}} ferramentas",
+      "missing_zero": "Faltam {{count}} caracteres (texto cortado)",
+      "toolCount_zero": "{{count}} ferramentas"
+    }
   },
   "teamGrid": {
     "leadBadge": "Lead",

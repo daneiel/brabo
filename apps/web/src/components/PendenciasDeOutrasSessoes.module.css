@@ -6,7 +6,6 @@
    — antes ela ia de borda a borda e ficava mais larga que a coluna. */
 .wrapper {
   flex-shrink: 0;
-  max-width: 780px;
   width: calc(100% - 48px);
   margin: 12px auto 8px;
   box-sizing: border-box;

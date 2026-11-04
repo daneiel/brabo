@@ -95,7 +95,8 @@ defmodule Engine.Gates.QaLead do
        coverage_matrix: coverage_matrix_de(pareceres),
        decisao_do_usuario: Map.get(verdict, :decisao_do_usuario, %{}),
        retomada: Map.get(verdict, :retomada)
-     }}
+     }
+     |> com_execucao_de_testes(pareceres)}
   end
 
   defp consolidar_sem_decisao(pareceres) do
@@ -109,7 +110,8 @@ defmodule Engine.Gates.QaLead do
          resumo: resumo_aprovado(pareceres),
          itens: [],
          coverage_matrix: coverage_matrix_de(pareceres)
-       }}
+       }
+       |> com_execucao_de_testes(pareceres)}
     else
       {:ok,
        %{
@@ -117,7 +119,8 @@ defmodule Engine.Gates.QaLead do
          resumo: resumo_pendencias(pareceres),
          itens: itens_prefixados(pareceres),
          coverage_matrix: coverage_matrix_de(pareceres)
-       }}
+       }
+       |> com_execucao_de_testes(pareceres)}
     end
   end
 
@@ -132,6 +135,14 @@ defmodule Engine.Gates.QaLead do
         matrix -> matrix
       end
     end)
+  end
+
+  # AT-687 (RN-996): campo aditivo; só a Automação o produz.
+  defp com_execucao_de_testes(consolidado, pareceres) do
+    case Enum.find_value(pareceres, fn {_l, v} -> Map.get(v, :execucao_de_testes) end) do
+      nil -> consolidado
+      exec -> Map.put(consolidado, :execucao_de_testes, exec)
+    end
   end
 
   defp resumo_aprovado(pareceres) do
