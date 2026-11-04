@@ -54,7 +54,7 @@ function saiDoApp(arquivo: string): boolean {
     const m = txt.match(/['"]((?:\.\.\/?)+)([^'"]*)['"]/);
     if (!m) return false;
     const base = linha.includes('process.cwd()') ? app : dir;
-    const alvo = path.posix.normalize(path.posix.join(base, m[1], m[2]));
+    const alvo = path.posix.normalize(path.posix.join(base, m[1] ?? "", m[2] ?? ""));
     return !alvo.startsWith(`${app}/`) && alvo !== app;
   });
 }
