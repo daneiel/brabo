@@ -13,6 +13,8 @@ describe('âncora do campo do composer', () => {
     expect(bloco).not.toBeNull();
     expect(bloco![1]).toMatch(/flex:\s*1\b/);
     expect(bloco![1]).toMatch(/min-width:\s*0\b/);
+  // O grupo é coluna: o que estica na LARGURA é o align-self, não o flex.
+  expect(bloco![1]).toMatch(/align-self:\s*stretch/);
   });
 
   it('o SessionComposer aplica a classe ao div da âncora', () => {
