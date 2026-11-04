@@ -52,13 +52,16 @@ async function carregarRedoc() {
 export const operacoesDoSpec = (spec) =>
   Object.values(spec.paths).reduce((n, item) => n + Object.keys(item).filter((m) => METODOS.has(m)).length, 0);
 
-/** `/<base>/<tag>` -> `<tag>.html`; `/<base>/<tag>/<op>` -> `<tag>.html#<op>`; `id` nas seções de operação. */
+/**
+ * Todo `href` que o Redoc gera sob `base` vira relativo e existente: `/<base>/<tag>` -> `<tag>.html`;
+ * `/<base>/<tag>/<op>[...]` (inclusive `#<op>/request`, `?t=...`) -> `<tag>.html#<op>`; `/<base>` e
+ * `/<base>/section/...` -> `../api.html`. O `id` entra na seção de operação.
+ */
 export function relativizar(html, base) {
   const b = base.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
   return html
-    .replace(new RegExp(`href="${b}/([^/"#]+)/([^"#]+)"`, 'g'), 'href="$1.html#$2"')
-    .replace(new RegExp(`href="${b}/([^/"#]+)"`, 'g'), 'href="$1.html"')
-    .replace(new RegExp(`href="${b}"`, 'g'), 'href="../api.html"')
+    .replace(new RegExp(`href="${b}(?:/([^/"#?]+))?(?:/([^/"#?]+))?[^"]*"`, 'g'), (_m, tag, op) =>
+      !tag || tag === 'section' ? 'href="../api.html"' : `href="${tag}.html${op ? `#${op}` : ''}"`)
     .replace(new RegExp(`data-section-id="${b}/[^/"]+/([^"]+)"`, 'g'), (m, op) => `${m} id="${op}"`);
 }
 
