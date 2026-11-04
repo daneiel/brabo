@@ -88,7 +88,7 @@ function renderAberto(groups: NotificationGroup[], onMarkRead = vi.fn()) {
 
 describe('NotificationBell', () => {
   it('renderiza os eventos NA ORDEM recebida, sem reordenar', () => {
-    const { container } = render(
+    render(
       comProvider(
         <NotificationBell
           groups={[grupo()]}
@@ -100,7 +100,7 @@ describe('NotificationBell', () => {
       ),
     );
 
-    const ids = [...container.querySelectorAll('[id^="event-evt-"]')].map(
+    const ids = [...document.querySelectorAll('[id^="event-evt-"]')].map(
       (el) => el.id,
     );
     expect(ids).toEqual(['event-evt-3', 'event-evt-2', 'event-evt-1']);

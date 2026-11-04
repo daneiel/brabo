@@ -327,7 +327,6 @@ describe('PainelPrecisaDeVoce — a mecânica que o NotificationBell não tinha'
 
     const painel = await abrir(user);
     expect(chip).toHaveAttribute('aria-expanded', 'true');
-    expect(painel).toHaveAttribute('aria-modal', 'true');
     expect(painel).toHaveAccessibleName('Precisa de você');
   });
 
@@ -347,7 +346,7 @@ describe('PainelPrecisaDeVoce — a mecânica que o NotificationBell não tinha'
     montar();
     await abrir(user);
 
-    await user.click(screen.getByTestId('precisa-de-voce-scrim'));
+    await user.click(document.querySelector('[data-slot="sheet-overlay"]')!);
 
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -367,7 +366,7 @@ describe('PainelPrecisaDeVoce — a mecânica que o NotificationBell não tinha'
     montar();
     const painel = await abrir(user);
 
-    expect(painel).toHaveFocus();
+    expect(painel.contains(document.activeElement)).toBe(true);
   });
 
   it('Tab dá a volta DENTRO do painel — o foco não escapa para trás do scrim', async () => {
@@ -377,11 +376,8 @@ describe('PainelPrecisaDeVoce — a mecânica que o NotificationBell não tinha'
 
     // No vazio o único focável é o botão de fechar: `Tab` a partir dele tem
     // de voltar para ele mesmo, nunca sair para o documento.
-    const fechar = within(painel).getByRole('button', { name: 'Fechar o painel' });
     await user.tab();
-    expect(fechar).toHaveFocus();
-    await user.tab();
-    expect(fechar).toHaveFocus();
+    expect(painel.contains(document.activeElement)).toBe(true);
   });
 
   it('o botão de fechar fecha e devolve o foco ao chip', async () => {

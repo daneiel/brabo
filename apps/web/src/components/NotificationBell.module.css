@@ -6,51 +6,22 @@
   position: relative;
   width: 38px;
   height: 38px;
-  border-radius: var(--radius-md);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.button:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
 }
 
 .badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
   border: 2px solid var(--surface-0);
-  color: var(--on-accent);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
   width: 380px;
+  max-width: calc(100vw - 16px);
   max-height: 70vh;
   overflow-y: auto;
-  background: var(--surface-1);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  z-index: 60;
+  gap: 0;
+  padding: 0;
 }
 
 .header {
@@ -72,11 +43,7 @@
 }
 
 .markRead {
-  background: none;
-  border: none;
   color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .group {
@@ -103,9 +70,6 @@
 
 .groupCount {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
 }
 
 .windowNote {
@@ -128,9 +92,3 @@
   color: var(--text-muted);
 }
 
-.empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-}
