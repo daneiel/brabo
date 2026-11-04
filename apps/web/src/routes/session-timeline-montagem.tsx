@@ -23,6 +23,7 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { MensagemDeConversa } from '../components/ai-elements/message';
+import { Reasoning } from '../components/ai-elements/reasoning';
 import { ArtifactCard } from '../components/ai-elements/artifact';
 import { PassosEncerrados } from '../components/ai-elements/passos-encerrados';
 import { passosDoTurno } from '../lib/passos-do-turno';
@@ -955,6 +956,20 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       const ferramentas = passosDoTurno(events, event);
       if (ferramentas.length > 0) {
         empurrar({ node: <PassosEncerrados key={`${event.id}-cadeia`} passos={ferramentas} /> });
+      }
+      const rac = payload as { raciocinio?: unknown; raciocinioTotal?: unknown };
+      if (typeof rac.raciocinio === 'string' && rac.raciocinio !== '') {
+        const total = typeof rac.raciocinioTotal === 'number' ? rac.raciocinioTotal : rac.raciocinio.length;
+        empurrar({
+          node: (
+            <Reasoning
+              key={`${event.id}-raciocinio`}
+              titulo={t('turno.raciocinio')}
+              contagem={t('turno.raciocinioChars', { count: total })}
+              texto={rac.raciocinio}
+            />
+          ),
+        });
       }
       const consultado = fontesDoTurno(event.payload);
       if (consultado.fontes.length > 0) {

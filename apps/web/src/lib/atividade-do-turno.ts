@@ -28,6 +28,8 @@ export interface EstadoDaAtividadeDoTurno {
   linhas: LinhaDeAtividade[];
   /** Texto do delta corrente, ainda NÃO arquivado (pode estar vazio). */
   corrente: string;
+  /** Raciocínio ao vivo (AT-676), só para quem a api deixa ver; some no reset. */
+  raciocinio?: string;
 }
 
 export const ESTADO_INICIAL_DA_ATIVIDADE: EstadoDaAtividadeDoTurno = {
@@ -37,6 +39,7 @@ export const ESTADO_INICIAL_DA_ATIVIDADE: EstadoDaAtividadeDoTurno = {
 
 export type AcaoDeAtividadeDoTurno =
   | { tipo: 'delta'; texto: string }
+  | { tipo: 'raciocinio'; texto: string }
   | { tipo: 'tool_call'; frase: string }
   | { tipo: 'reset' };
 
@@ -48,6 +51,9 @@ export function reduzirAtividadeDoTurno(
     case 'delta':
       return { ...estado, corrente: estado.corrente + acao.texto };
 
+    case 'raciocinio':
+      return { ...estado, raciocinio: (estado.raciocinio ?? '') + acao.texto };
+
     case 'tool_call': {
       const linhas = [...estado.linhas];
       // Arquivar corrente VAZIO é no-op — nunca insere uma linha de narração
@@ -58,7 +64,7 @@ export function reduzirAtividadeDoTurno(
         linhas.push({ tipo: 'narracao', texto: estado.corrente });
       }
       linhas.push({ tipo: 'ferramenta', texto: acao.frase });
-      return { linhas, corrente: '' };
+      return { ...estado, linhas, corrente: '' };
     }
 
     case 'reset':
