@@ -16,8 +16,13 @@
  * RELATIVOS, então a página vale sob qualquer prefixo (`/brabo/dev/`). Uma operação com
  * mais de uma tag aparece em cada página dela. A âncora antiga `#tag/…/operation/…` não existe.
  *
- * Sem hidratação: as páginas são HTML+CSS estáticos (o Redoc não publica um cliente de
- * hidratação para este SSR). Nada vem de CDN; `disableTelemetry: true` sempre, e o teste
+ * MOLDURA: `moldura(locale, { slug, titulo, conteudo, extraHead })` (opcional) devolve o documento
+ * HTML; o `build.mjs` passa a do `layout.mjs`. O CSS do Redoc é UM arquivo por locale
+ * (`reference/api/redoc.css`), união das regras de topo de todas as páginas.
+ *
+ * PERDA DECLARADA, sem hidratação: as páginas são HTML+CSS estáticos (expandir, recolher e
+ * alternar exemplos não funcionam). Medido em redoc@3.0.1: `redoc.d.ts` não exporta `hydrate`
+ * e o único cliente é `redoc.standalone.js`, que embute `otel.cloud.redocly.com` (telemetria). Nada vem de CDN; `disableTelemetry: true` sempre, e o teste
  * prova que nenhum HTML contém `otel.cloud.redocly.com`.
  *
  * As dependências do Redoc moram na árvore isolada de `website/` (lockfile próprio).
@@ -57,10 +62,21 @@ export function relativizar(html, base) {
     .replace(new RegExp(`data-section-id="${b}/[^/"]+/([^"]+)"`, 'g'), (m, op) => `${m} id="${op}"`);
 }
 
+// shortcut: separa só regras de topo (profundidade de chaves 0) e dedupe por texto; a ordem é a da primeira página que a trouxe.
+export function regrasDeTopo(css) {
+  const out = [];
+  let d = 0, ini = 0;
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === '{') d++;
+    else if (css[i] === '}' && --d === 0) { out.push(css.slice(ini, i + 1).trim()); ini = i + 1; }
+  }
+  return out;
+}
+
 const pagina = (lang, titulo, estilos, corpo) =>
   `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title>${estilos}</head><body>${corpo}</body></html>`;
 
-export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en', 'ru', 'zh-Hans'], raiz = RAIZ }) {
+export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en', 'ru', 'zh-Hans'], raiz = RAIZ, moldura = null }) {
   const R = await carregarRedoc();
   const fonte = JSON.parse(readFileSync(path.join(raiz, 'docs/reference/openapi.json'), 'utf8'));
   const resultado = {};
@@ -76,6 +92,8 @@ export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en'
     const preparado = await R.prepareApiDocs({ spec, basePath: base, options: { disableTelemetry: true, labels } });
     const tags = preparado.items.filter((i) => i.type === 'group');
     const secoes = new Set();
+    const regras = new Set();
+    const paginas = [];
     for (const t of tags) {
       const sheet = new R.ServerStyleSheet();
       const router = R.React.createElement(
@@ -85,13 +103,19 @@ export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en'
       );
       const corpo = relativizar(R.renderToString(sheet.collectStyles(router)), base);
       for (const m of corpo.matchAll(/data-section-id="[^"]*" id="([^"]+)"/g)) secoes.add(m[1]);
-      const nome = t.link.split('/').pop();
-      const voltar = `<p style="margin:12px 16px"><a href="../api.html">${esc(spec.info.title)}</a></p>`;
-      writeFileSync(path.join(dirRef, 'api', `${nome}.html`), pagina(locale, `${t.label} — ${spec.info.title}`, sheet.getStyleTags(), voltar + corpo));
+      for (const css of sheet.getStyleTags().matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) for (const r of regrasDeTopo(css[1])) regras.add(r);
       sheet.seal();
+      paginas.push({ nome: t.link.split('/').pop(), titulo: `${t.label} — ${spec.info.title}`, corpo });
+    }
+    writeFileSync(path.join(dirRef, 'api', 'redoc.css'), [...regras].join('\n'));
+    const envolver = moldura ?? ((_l, { titulo, conteudo, extraHead }) => pagina(locale, titulo, extraHead, conteudo));
+    for (const p of paginas) {
+      const voltar = `<p><a href="../api.html">${esc(spec.info.title)}</a></p>`;
+      writeFileSync(path.join(dirRef, 'api', `${p.nome}.html`), envolver(locale, { slug: `reference/api/${p.nome}.html`, titulo: p.titulo, conteudo: voltar + p.corpo, extraHead: '<link rel="stylesheet" href="redoc.css">' }));
     }
     const lista = tags.map((t) => `<li><a href="api/${esc(t.link.split('/').pop())}.html">${esc(t.label)}</a> (${t.items.length})</li>`).join('');
-    writeFileSync(path.join(dirRef, 'api.html'), pagina(locale, spec.info.title, '', `<main style="max-width:48rem;margin:2rem auto;padding:0 16px;font-family:sans-serif"><h1>${esc(spec.info.title)}</h1><ul>${lista}</ul></main>`));
+    const indice = `<h1>${esc(spec.info.title)}</h1><ul>${lista}</ul>`;
+    writeFileSync(path.join(dirRef, 'api.html'), envolver(locale, { slug: 'reference/api.html', titulo: spec.info.title, conteudo: indice, extraHead: '' }));
     resultado[locale] = { tags: tags.length, operacoes: secoes.size, esperadas: operacoesDoSpec(spec) };
   }
   return resultado;

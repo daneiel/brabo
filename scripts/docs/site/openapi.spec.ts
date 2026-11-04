@@ -14,7 +14,7 @@ describe('referência da API (Redoc 3, uma página por tag)', () => {
       expect(r[l].operacoes).toBe(r[l].esperadas);
       const dir = path.join(saida, l === 'pt-BR' ? '' : l, 'reference');
       expect(JSON.parse(readFileSync(path.join(dir, 'openapi.json'), 'utf8')).paths).toBeDefined();
-      const paginas = [path.join(dir, 'api.html'), ...readdirSync(path.join(dir, 'api')).map((f) => path.join(dir, 'api', f))];
+      const paginas = [path.join(dir, 'api.html'), ...readdirSync(path.join(dir, 'api')).filter((f) => f.endsWith('.html')).map((f) => path.join(dir, 'api', f))];
       expect(paginas.length).toBe(r[l].tags + 1);
       for (const p of paginas) expect(readFileSync(p, 'utf8')).not.toContain('otel.cloud.redocly.com');
     }

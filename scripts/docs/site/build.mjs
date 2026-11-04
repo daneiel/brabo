@@ -28,6 +28,7 @@ import { construirNavegacao, lerRotulosDaBarra, listaPlana } from './navegacao.m
 import { LOCALES, descobrirPaginas, historicoDoGit } from './paginas.mjs';
 import { copiarAssets, renderizarPagina } from './layout.mjs';
 import { gravarIndice, tagDeBusca } from './busca.mjs';
+import { construirReferenciaDaApi } from './openapi.mjs';
 import { criarRenderizador } from './render.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -67,6 +68,18 @@ export async function construir({ raiz = RAIZ, saida = path.join(raiz, 'build/do
     await gravarIndice(path.join(saida, locale === 'pt-BR' ? '' : locale), locale, paginas.map((p) => ({ slug: p.slug || 'index', titulo: p.titulo, texto: renderizadas.get(p.slug).texto })));
     resultado.locales[locale] = { paginas, navegacao };
   }
+  const moldura = (locale, { slug, titulo, conteudo, extraHead }) => {
+    const { paginas, navegacao } = resultado.locales[locale];
+    const porSlug = new Map(paginas.map((p) => [p.slug, p]));
+    const sem = (u) => (locale === 'pt-BR' ? u : u.slice(locale.length + 1));
+    return renderizarPagina({
+      locale, pagina: { locale, url: locale === 'pt-BR' ? slug : `${locale}/${slug}`, titulo, traduzida: true },
+      corpo: { html: conteudo, toc: [], temH1: slug.endsWith('api.html') }, navegacao, extraHead,
+      urlDe: (sl) => (porSlug.get(sl) ? sem(porSlug.get(sl).url) : null), rotuloDe: (sl) => porSlug.get(sl)?.rotulo,
+      anterior: null, proximo: null, degrau: grau, edicao: {},
+    });
+  };
+  await construirReferenciaDaApi({ saida, locales: LOCALES, moldura });
   // imagens: o site espelha docs/, então o caminho relativo da fonte vale em cada locale
   copiarAssets(saida);
   for (const l of LOCALES) cpSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'assets/busca.js'), path.join(saida, l === 'pt-BR' ? '' : l, 'assets/busca.js')); // a tag da busca é relativa ao locale

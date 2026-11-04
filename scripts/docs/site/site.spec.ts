@@ -102,5 +102,5 @@ describe('build', () => {
     expect(readFileSync(path.join(saida, 'zh-Hans/adr/0001-x.html'), 'utf8')).toContain('lang="zh-Hans"');
     await construir({ raiz, saida, degrau: 'main', git: false });
     expect(readFileSync(path.join(saida, 'index.html'), 'utf8')).not.toContain('noindex');
-  });
+  }, 120_000);
 });

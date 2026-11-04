@@ -160,6 +160,6 @@ export function renderizarPagina(ctx) {
     locale, slug, titulo: pagina.titulo, conteudo, toc: corpo.toc, nav: grupos, textos: t,
     faixaTraducao: pagina.traduzida ? null : t.faixa,
     editarUrl: edicao.url, atualizadoEm: edicao.atualizadoEm ? `${edicao.atualizadoEm}${edicao.autor ? ` · ${edicao.autor}` : ''}` : null,
-    degrau, degraus: ['dev', 'prd'], temMermaid: corpo.temMermaid, extraScripts: ctx.extraScripts,
+    degrau, degraus: ['dev', 'prd'], temMermaid: corpo.temMermaid, extraScripts: ctx.extraScripts, extraHead: ctx.extraHead,
   });
 }
