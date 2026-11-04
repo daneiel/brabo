@@ -1,3 +1,4 @@
+import { EmptyState } from './ui/EmptyState';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -105,9 +106,7 @@ export function AgentTimelineTree({
 
   if (ramos.length === 0) {
     return (
-      <div className={styles.vazio}>
-        {t('timelineTree.empty')}
-      </div>
+      <EmptyState>{t('timelineTree.empty')}</EmptyState>
     );
   }
 

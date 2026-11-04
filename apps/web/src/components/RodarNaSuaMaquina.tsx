@@ -1,3 +1,4 @@
+import { Card } from './ui/Card';
 import { Snippet } from './ai-elements/snippet';
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +42,7 @@ export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
   if (!run) return null;
 
   return (
-    <section className={styles.cartao} data-testid="rodar-na-sua-maquina" aria-label={t('rodarNaSuaMaquina.title')}>
+    <Card className={styles.cartao} data-testid="rodar-na-sua-maquina" role="region" aria-label={t('rodarNaSuaMaquina.title')}>
       <h2 className={styles.titulo}>{t('rodarNaSuaMaquina.title')}</h2>
       {run.envExample && <p className={styles.texto}>{t('rodarNaSuaMaquina.envExample')}</p>}
       <Snippet texto={run.command} rotulo={t('rodarNaSuaMaquina.copiar')} rotuloCopiado={t('rodarNaSuaMaquina.copiado')} />
@@ -67,6 +68,6 @@ export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
         </a>
         {t('rodarNaSuaMaquina.notaDepois')}
       </p>
-    </section>
+    </Card>
   );
 }

@@ -1,3 +1,4 @@
+import { EmptyState } from './ui/EmptyState';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alturasRelativas, diaCurto, tituloDoDia, type SpendPorDia } from '../lib/spend';
@@ -125,7 +126,7 @@ export function Ranking({
         {titulo}
       </h3>
       {linhas.length === 0 ? (
-        <div className={styles.rankingVazio}>{vazio}</div>
+        <EmptyState>{vazio}</EmptyState>
       ) : (
         <ul className={styles.rankingLista}>
           {linhas.map((linha, i) => (

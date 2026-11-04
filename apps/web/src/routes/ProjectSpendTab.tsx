@@ -1,3 +1,4 @@
+import { Field, FieldLabel } from '@/components/shadcn/field';
 import { Ajuda } from '../components/ui/Ajuda';
 import { Shimmer } from '../components/ui/Shimmer';
 import { Coins, MessageSquare, Save, Wallet } from 'lucide-react';
@@ -214,9 +215,10 @@ function EditorDoOrcamento({
         onChange={(e) => setLimite(e.target.value)}
       />
       <div className={styles.grupoTeto}>
-      <label className={styles.campo}>
-        {t('budgetEditor.policyLabel')}
+      <Field>
+        <FieldLabel htmlFor="politica-do-teto">{t('budgetEditor.policyLabel')}</FieldLabel>
         <Select
+          id="politica-do-teto"
           value={politica}
           disabled={!podeEditar}
           onChange={(e) => setPolitica(e.target.value as BudgetPolicy)}
@@ -224,7 +226,7 @@ function EditorDoOrcamento({
           <option value="block">{t('budgetEditor.block')}</option>
           <option value="allow">{t('budgetEditor.allow')}</option>
         </Select>
-      </label>
+      </Field>
       <div className={styles.acoes}>
         <Button
           type="submit"

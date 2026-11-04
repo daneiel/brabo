@@ -18871,8 +18871,8 @@ absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida
 o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
-- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:73`
-  (`ModoAutomaticoDoTime`), `:109` (`ligar`), `:44`
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:77`
+  (`ModoAutomaticoDoTime`), `:113` (`ligar`), `:48`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:93`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -22338,7 +22338,7 @@ sem dizer qual.
   evento dele, quando a primeira ação já esperava clique. O `allow` padrão do
   `permissions.json` NÃO muda (decisão do dono).
 - **Onde:** `apps/web/src/lib/precisa-de-voce.ts:256` (`gateEsperandoClique`)
-  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:63`
+  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:67`
   (`agentesDaOfertaEmLote`)
 - **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (gate de QA e SecOps
   nomeados; dev agent e humano não) e
@@ -23098,7 +23098,7 @@ sem dizer qual.
   alguns) é dito mesmo que a releitura depois das gravações falhe. Declarado:
   o mesmo sintoma no "Merge" da aba PRs, em "Nova ideação" e no "Aplicar a
   todos os agentes" NÃO foi reproduzido nem corrigido aqui.
-- **Onde:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:98` (`carregando`)
+- **Onde:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:102` (`carregando`)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` ("AT-477
   (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e
   diz por quê")
@@ -23279,7 +23279,7 @@ sem dizer qual.
   a execução ainda não começou ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/execution.ts:37` (`contarTarefasAfetadasAoParar`),
   `apps/web/src/components/PararExecucao.tsx:26` (`PararExecucao`),
-  `apps/web/src/components/ModoAutomaticoDoTime.tsx:73` (`ModoAutomaticoDoTime`)
+  `apps/web/src/components/ModoAutomaticoDoTime.tsx:77` (`ModoAutomaticoDoTime`)
 - **Teste:** `apps/web/src/components/PararExecucao.test.tsx` ("RN-815 (AT-488):
   a tarefa em revisão de QA conta…"; "RN-815: sem backlog lido não afirma…"),
   `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` ("RN-816 (AT-488): no

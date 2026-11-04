@@ -30,9 +30,7 @@ function montar(resposta: unknown) {
 }
 
 function abrir(titulo: string) {
-  const d = screen.getAllByText(titulo)[0].closest('details') as HTMLDetailsElement;
-  d.open = true;
-  fireEvent(d, new Event('toggle'));
+  fireEvent.click(screen.getAllByText(titulo)[0]);
 }
 
 describe('AgentCard: catálogo', () => {
