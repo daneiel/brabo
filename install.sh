@@ -48,9 +48,10 @@
 # Este bloco é POSIX e vem ANTES de tudo, porque é o único que roda sob
 # qualquer `sh`: o `dash` do Debian/Ubuntu morria na linha seguinte, no
 # `set -o pipefail`, com um "Illegal option" que não diz o que fazer.
+REPO="${BRABO_REPO:-daneiel/brabo}"
 if [ -z "${BASH_VERSION:-}" ]; then
   printf '%s\n' '✗ este instalador é um script de bash, e está rodando sob outro shell. Baixe o arquivo e rode com bash:' >&2
-  printf '%s\n' '    curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh' >&2
+  printf '%s\n' "    curl -fsSLO https://github.com/${REPO}/releases/latest/download/install.sh && bash install.sh" >&2
   exit 1
 fi
 
@@ -67,7 +68,7 @@ ORIGEM_DO_SCRIPT="${BASH_SOURCE[0]:-}"
 # Constantes
 # --------------------------------------------------------------------------
 
-REPO='daneiel/brabo'
+# `REPO` nasce no topo (BRABO_REPO, AT-691): o dono do repositório não fica fixo.
 
 # O `cosign` que verifica a assinatura precisa ele mesmo de procedência, senão
 # a cadeia só sobe um degrau. Versão PINADA e conferida por `conferir_hash`

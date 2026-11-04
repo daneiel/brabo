@@ -263,7 +263,7 @@ jobs:
       - name: Onde ficou
         run: |
           set -euo pipefail
-          url="https://daneiel.github.io${{ steps.degrau.outputs.base }}"
+          url="https://${{ github.repository_owner }}.github.io${{ steps.degrau.outputs.base }}"
           {
             echo "### Documentação publicada"
             echo
@@ -271,7 +271,7 @@ jobs:
             echo
             echo "(o caminho publicado é \`${{ steps.degrau.outputs.caminho }}\`, e não o nome da branch — ADR 0073)"
             echo
-            echo "Índice dos três degraus → https://daneiel.github.io/brabo/"
+            echo "Índice dos três degraus → https://${{ github.repository_owner }}.github.io/brabo/"
             echo
             if [ "${GITHUB_REF_NAME}" != 'main' ]; then
               echo "Fora do índice de busca (\`noIndex\`): é pré-visualização do degrau,"

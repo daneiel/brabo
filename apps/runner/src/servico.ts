@@ -510,7 +510,7 @@ const SYSTEMD: PlataformaDeServico = {
       '',
       '[Unit]',
       `Description=${descricao}`,
-      'Documentation=https://github.com/daneiel/brabo/tree/main/apps/runner#readme',
+      `Documentation=https://github.com/${process.env.BRABO_REPO ?? 'daneiel/brabo'}/tree/main/apps/runner#readme`,
       'After=network-online.target',
       '',
       '[Service]',

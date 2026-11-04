@@ -31,6 +31,10 @@ import { join } from 'node:path';
 // `caminho` é o diretório publicado (e o que aparece na URL); `branch` é de
 // onde vem a TAG que carimba a versão daquele degrau. Para `qa` e `dev` os dois
 // coincidem; para o estável, não — `/prd/` é construído da `main`.
+// O dono vem do ambiente (AT-691); o CI exporta GITHUB_REPOSITORY.
+const REPO = process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo';
+const OWNER = REPO.split('/')[0];
+
 const DEGRAUS = [
   {
     caminho: 'prd',
@@ -132,7 +136,7 @@ function paginaIndice(degraus) {
 <meta name="description" content="Documentação do Brabo, publicada por degrau da esteira: prd e dev.">
 <!-- A raiz não é conteúdo: é um índice. Quem indexa é /prd/. -->
 <meta name="robots" content="noindex, follow">
-<link rel="canonical" href="https://daneiel.github.io/brabo/${ESTAVEL}/">
+<link rel="canonical" href="https://${OWNER}.github.io/brabo/${ESTAVEL}/">
 <style>
   /* Valores de design/tokens.css (o índice é um HTML avulso na raiz do Pages e
      não alcança o arquivo): surface-0/1, border, text-primary/secondary/muted e
@@ -210,7 +214,7 @@ function paginaIndice(degraus) {
 ${corpo}
     <footer>
       Cada degrau publica a própria documentação a cada merge.
-      <a href="https://github.com/daneiel/brabo">Repositório</a>.
+      <a href="https://github.com/${REPO}">Repositório</a>.
     </footer>
   </main>
 </body>

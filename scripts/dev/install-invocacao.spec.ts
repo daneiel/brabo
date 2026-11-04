@@ -175,16 +175,16 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
       path.join(RAIZ, 'apps/web/src/components/RunnerOnboardingPanel.tsx'),
       'utf8',
     );
-    const m = /export const COMANDO_DO_INSTALADOR =\s*'([^']+)';/.exec(painel);
+    const m = /export const COMANDO_DO_INSTALADOR =\s*`([^`]+)`;/.exec(painel);
     expect(m, 'não achei `COMANDO_DO_INSTALADOR` no painel — o extrator ficou cego').not.toBeNull();
-    expect(m![1]).toBe(FORMA_CERTA);
+    expect(m![1].replace('${REPO_DO_PRODUTO}', 'daneiel/brabo')).toBe(FORMA_CERTA);
   });
 
   it('o runbook e o bootstrap ensinam a forma certa, e nenhum dos dois a antiga', () => {
     const runbook = fs.readFileSync(path.join(RAIZ, 'docs/runbook.md'), 'utf8');
     expect(runbook).toContain(FORMA_CERTA);
     const bootstrap = fs.readFileSync(path.join(RAIZ, 'scripts/dev/bootstrap.sh'), 'utf8');
-    expect(bootstrap).toContain(FORMA_CERTA);
+    expect(bootstrap.replace('${BRABO_REPO:-daneiel/brabo}', 'daneiel/brabo')).toContain(FORMA_CERTA);
 
     // A forma antiga só pode sobreviver como HISTÓRIA — explicada, nunca
     // ensinada. Nos três arquivos que alguém copia para o terminal, nenhuma

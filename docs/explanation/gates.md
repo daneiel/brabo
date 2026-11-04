@@ -10,7 +10,7 @@ treze, e até a FASE 15a nenhum deles existia como lista: estavam
 espalhados por regras puras, casos de uso, testes e workflows de CI.
 Responder "quais gates existem" exigia ler seis arquivos.
 
-`docs/gates.yml` é essa lista. Este documento explica o que ela é e —
+`apps/api/config/gates.yml` é essa lista. Este documento explica o que ela é e —
 mais importante — o que ela **não** é.
 
 ## O registro descreve; ele não executa {#the-registry-describes-it-doesnt-execute}
@@ -90,7 +90,7 @@ As duas já foram uma função só, e o loader da api a chamava. A
 consequência foi medida na v6.1.0 instalada: `GET /gates` respondia
 `500` com `RegistroDeGatesInvalido` listando os onze alvos como "não
 existe" — doze respostas 5xx em cerca de 55 minutos. Não havia nada de
-errado com o registro. A imagem de produção leva `/app/docs/gates.yml`
+errado com o registro. A imagem de produção leva `/app/apps/api/config/gates.yml`
 e nada mais de `docs/`; `apps/api/test/`, `scripts/ci/` e `.github/`
 nunca entram nela, então uma afirmação sobre o repositório avaliada
 contra essa árvore reprova todo gate, em toda instalação.
@@ -100,7 +100,7 @@ mesmos alvos, e um alvo que some continua reprovando — ela só roda onde
 a pergunta tem sentido. Duas guardas mantêm isso: o teste que sobe até
 a raiz do repositório e confere todo localizador, e um teste do loader
 que reconstrói em disco a árvore da imagem (uma raiz com
-`docs/gates.yml` e nada mais) e afirma que o registro carrega. Devolver
+`apps/api/config/gates.yml` e nada mais) e afirma que o registro carrega. Devolver
 a checagem ao loader deixa o segundo vermelho com a mensagem exata que
 a instalação produziu.
 
@@ -189,7 +189,7 @@ passado horas antes. Registro que ninguém roda é registro que mente.
 ## Ativar um gate `planned` é o mesmo trabalho que qualquer outro {#activating-a-planned-gate-is-the-same-work-as-any-other}
 
 `implementavel` (dono `dev-lead`) nasceu `planned` na FASE 14d, junto
-com o resto do organograma-alvo que `docs/gates.yml`/`docs/fluxo.yml`
+com o resto do organograma-alvo que `apps/api/config/gates.yml`/`packages/contracts/fluxo.yml`
 já descreviam sem código por trás. O
 [ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md) o
 ativou — e o exercício vale como exemplo porque **nada na forma do
@@ -204,7 +204,7 @@ exigiria medir passagens reais antes, a mesma disciplina da FASE 15a).
 O trabalho de verdade fica fora do arquivo: o Dev Lead precisou de uma
 ferramenta nova (`assess_implementability`) que propõe a avaliação como
 `proposed_action`, e QA-estratégia — até então um papel `proposto` em
-`docs/fluxo.yml`, com o critério de separação já escrito ali ("pode ser
+`packages/contracts/fluxo.yml`, com o critério de separação já escrito ali ("pode ser
 o próprio qa-lead num segundo momento") — precisou existir para
 alimentar a avaliação com um plano de teste real. O registro só passou
 a descrever o que o código agora faz.
@@ -227,7 +227,7 @@ sair de `planned`. `paralelismo-autorizado` é o oposto: o mecanismo
 (`RequestParallelizationUseCase`,
 [RN-083](../business-rules/custo.md#rn-083)) está em produção desde a
 FASE 14d — foi o registro que ficou para trás, declarando `planned`
-sobre algo que já era `active` no irmão `docs/fluxo.yml` e no código. A
+sobre algo que já era `active` no irmão `packages/contracts/fluxo.yml` e no código. A
 auditoria fluxo.yml × código (achado A1/B5,
 [auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) achou a
 divergência; a correção foram só as mesmas duas linhas que
@@ -508,8 +508,8 @@ dimensionado pela execução mais lenta medida, não pela mais rápida.
 ## Um gate pode faltar no registro enquanto o `fluxo.yml` já o atribui {#a-gate-can-be-missing-from-the-registry-while-fluxoyml-already-assigns-it}
 
 `deployavel` é o quarto padrão, e o menos lisonjeiro: ele estava
-declarado como `gate_saida` da `area-infra` em `docs/fluxo.yml` e
-estava **ausente de `docs/gates.yml` por completo** — nem `planned`,
+declarado como `gate_saida` da `area-infra` em `packages/contracts/fluxo.yml` e
+estava **ausente de `apps/api/config/gates.yml` por completo** — nem `planned`,
 nem desatualizado, simplesmente não estava lá. O modelo de time tem
 três peças (catálogo, fluxo, registro) e nada ainda as cruza, então um
 gate pode ser entregável numa e não existir em outra. Este é o

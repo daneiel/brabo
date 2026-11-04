@@ -15,7 +15,7 @@ do projeto, não configuração de processo.
 
 Dois arquivos versionados são lidos em tempo de execução e não são
 configuração, embora seja fácil confundi-los com ela: o `permissions.json`
-acima e o `docs/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
+acima e o `apps/api/config/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
 o registro declarativo de gates. Nenhum dos dois tem variável de ambiente que
 aponte um caminho — o registro é achado subindo a partir de `__dirname` — e
 nenhum muda comportamento ao ser editado em produção: o registro DESCREVE os
@@ -281,6 +281,8 @@ rotação possível sem indisponibilidade ([RN-035](../business-rules/autenticac
 | `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | provider local. Em `/tmp`, os repositórios somem no reboot |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | worktrees dos agentes de projeto no modo **Container**. **Precisa ser o mesmo caminho no engine**, e o mesmo volume |
 | `BRABO_PROJECTS_BASE` | vazio | a pasta única do host sob a qual moram os projetos no modo **Mounted**, montada por identidade em `api` e `engine`. Vazio é estado NORMAL: a api informa `projectsBase: null` e o assistente de projeto nem oferece o modo Mounted |
+| `BRABO_RUNNER_RELEASES_REPO` | `daneiel/brabo` | repositório (`dono/nome`) cuja Release mais recente `GET /runner-releases/binary` consulta no GitHub. O dono não fica fixo no código (AT-691, EP-033) |
+| `BRABO_REPO` | `daneiel/brabo` | `dono/nome` do repositório do produto: o `install.sh` baixa dele a Release e confere a identidade do cosign, e a unit do runner aponta a documentação para ele |
 | `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | vazio = conexão OAuth com o GitHub indisponível (o PAT continua funcionando) |
 | `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | idem |
 
@@ -513,6 +515,7 @@ boot. As `VITE_*` são o fallback de desenvolvimento.
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
 | `VITE_LOG_LEVEL` | nível do logger JSON do navegador (default `info`). Num cluster manda a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve no `/config.js` — `VITE_*` só conta num build local |
 | `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é de build por escolha, não por limitação** — veja abaixo |
+| `VITE_BRABO_REPO` | `dono/nome` do repositório do produto (default `daneiel/brabo`); de build. Dele saem o comando do instalador no painel do runner e o endereço do site de documentação (AT-691) |
 | `VITE_BRABO_AMBIENTE` | `dev`, `prd` ou `local`; de build, vinda do `AMBIENTE` do `docker-bake.hcl` (default vazio). Só `local` monta o acesso rápido por papel na tela de login (ADR 0245); as Actions passam `dev` ou `prd` |
 
 Página em branco depois do deploy é quase sempre o `/config.js` apontando para
@@ -862,11 +865,11 @@ ninguém perceba.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventário extraído do código: **183 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **185 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
-**api** — 67 variáveis · produto
+**api** — 68 variáveis · produto
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -889,6 +892,7 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `AUTH_TOKEN_PEPPER` <sub>(apps/api/src/infrastructure/security/auth-key-material.ts)</sub>
 - `BRABO_FORCE_SEED` <sub>(apps/api/src/scripts/provisionar-usuario.ts)</sub>
 - `BRABO_PROJECTS_BASE` <sub>(apps/api/src/infrastructure/filesystem/project-workspaces-root.ts)</sub>
+- `BRABO_RUNNER_RELEASES_REPO` <sub>(apps/api/src/interfaces/http/runner/runner-releases.controller.ts)</sub>
 - `BRABO_SEED_PASSWORD` <sub>(apps/api/src/db/seed.ts)</sub>
 - `BRABO_SERVICE_TOKEN` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
 - `BRABO_SERVICE_TOKEN_PREVIOUS` <sub>(apps/api/src/infrastructure/security/service-token.ts)</sub>
@@ -1002,10 +1006,11 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 5 variáveis · produto
+**web** — 6 variáveis · produto
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
+- `VITE_BRABO_REPO` <sub>(apps/web/src/components/RunnerOnboardingPanel.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>

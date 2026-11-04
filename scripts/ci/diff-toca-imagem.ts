@@ -22,9 +22,6 @@
  *
  * As exceções DENTRO das pastas permitidas não são enfeite, e o spec ao lado
  * as prova contra a árvore real:
- *   - `docs/gates.yml` é o ÚNICO arquivo de `docs/` que a imagem da api
- *     carrega (`docker/api/Dockerfile.prod`, e o `!docs/gates.yml` do
- *     `.dockerignore`) — a api o lê em runtime e o smoke o cobra (RN-070);
  *   - `THIRD_PARTY_NOTICES.md` é o único `.md` da raiz copiado para uma
  *     imagem (as cinco, AT-120);
  *   - `.github/workflows/ci.yml` é onde os PRÓPRIOS passos do job moram.
@@ -47,8 +44,8 @@ function mdDaRaiz(arquivo: string): boolean {
 
 export const REGRAS_SEM_IMAGEM: readonly RegraSemImagem[] = [
   {
-    descricao: 'docs/ (exceto docs/gates.yml, que a imagem da api carrega)',
-    casa: (a) => a.startsWith('docs/') && a !== 'docs/gates.yml',
+    descricao: 'docs/ (documentação; o registro de gates mora em apps/api/config)',
+    casa: (a) => a.startsWith('docs/'),
   },
   { descricao: 'website/ (o site de documentação)', casa: (a) => a.startsWith('website/') },
   { descricao: 'scripts/docs/ (geradores e checagens da documentação)', casa: (a) => a.startsWith('scripts/docs/') },

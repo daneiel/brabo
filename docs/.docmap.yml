@@ -405,7 +405,7 @@ rules:
   # arquivo vira uma lista que descreve um produto que não existe mais.
   - id: registro-de-gates
     watch:
-      - "docs/gates.yml"
+      - "apps/api/config/gates.yml"
       - "apps/api/src/domain/gates/**"
       - "apps/api/src/infrastructure/gates/**"
       - "apps/api/scripts/validacao-gates.ts"
@@ -435,10 +435,10 @@ rules:
   - id: modelo-de-time
     watch:
       - "apps/api/src/domain/agents/**"
-      - "docs/gates.yml"
-    docs: ["docs/fluxo.yml", "docs/explanation/modelo-de-time.md"]
+      - "apps/api/config/gates.yml"
+    docs: ["packages/contracts/fluxo.yml", "docs/explanation/modelo-de-time.md"]
     severity: warn
-    note: "Fluxo declara as relações entre papéis; catálogo (agent-areas.ts) ou controle (gates.yml) mudando pode desalinhar docs/fluxo.yml."
+    note: "Fluxo declara as relações entre papéis; catálogo (agent-areas.ts) ou controle (gates.yml) mudando pode desalinhar packages/contracts/fluxo.yml."
 
   # -------------------------------------------------------- infra e operação
 
@@ -832,7 +832,7 @@ rules:
       - "apps/*/package.json"
       - "apps/engine/mix.exs"
       - "docs/adr/*.md"
-      - "docs/gates.yml"
+      - "apps/api/config/gates.yml"
     # O CLAUDE.md foi partido em `.claude/contexto/` (importadas por ele) e em
     # `.claude/rules/` (regras de caminho, carregadas sob demanda): a
     # regra vale para o conjunto, então tocar QUALQUER uma das partes satisfaz.
@@ -846,5 +846,7 @@ rules:
       - ".claude/rules/runner.md"
       - ".claude/rules/broker-e-containers.md"
       - ".claude/rules/ci-e-cadeia-de-suprimentos.md"
+      - ".claude/rules/web-socket-e-orcamento.md"
+      - ".claude/rules/chaves-de-dispositivo-e-instalador.md"
     severity: warn
     note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."
