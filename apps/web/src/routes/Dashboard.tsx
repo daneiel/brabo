@@ -216,13 +216,13 @@ export function Dashboard() {
           // convidava o usuário a "criar o primeiro projeto" de um workspace
           // que pode ter vinte. Errar calado é ruim; errar afirmando o
           // contrário é pior (RN-088).
-          <div className={styles.empty}>
+          <EmptyState className={styles.empty}>
             <ErroDeCarregamento
               titulo={t('empty.loadError')}
               erro={projectsQuery.error}
               onTentarDeNovo={() => void projectsQuery.refetch()}
             />
-          </div>
+          </EmptyState>
         ) : projectsQuery.isLoading ? (
           <div className={styles.grid}>
             {Array.from({ length: 6 }).map((_, i) => (
