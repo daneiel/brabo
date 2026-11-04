@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { StackIcon, ChevronRightIcon } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
 
@@ -34,10 +35,10 @@ export function StorySlide({
   const { t } = useTranslation('sessionPage');
   return (
     <div className={styles.storySlide}>
-      <span className={styles.handoffPill}>
+      <Badge tone="muted" size="md">
         <StackIcon size={13} />
         {t('historia.pendente', { titulo })}
-      </span>
+      </Badge>
       {resumo && <p className={styles.storySlideResumo}>{resumo}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
         <Button

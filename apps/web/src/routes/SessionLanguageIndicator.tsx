@@ -23,6 +23,8 @@ import {
 } from '../lib/idioma-da-resposta';
 import { useToast } from '../components/ui/ToastProvider';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/shadcn/input';
+import { NativeSelect } from '../components/shadcn/native-select';
 import styles from './SessionLanguageIndicator.module.css';
 
 /** Valor do `<option>` de "seguir a Conta" — soltar o override. */
@@ -196,7 +198,7 @@ export function SessionLanguageIndicator({
               if (codigo.trim()) fixar.mutate(codigo.trim());
             }}
           >
-            <input
+            <Input
               className={styles.campo}
               value={codigo}
               autoFocus
@@ -218,8 +220,9 @@ export function SessionLanguageIndicator({
             </Button>
           </form>
         ) : (
-          <select
-            className={styles.seletor}
+          <NativeSelect
+            size="sm"
+            wrapperClassName={styles.seletor}
             value={data.sessionOverride ?? SEGUIR_A_CONTA}
             disabled={!podeTrocar || fixar.isPending}
             aria-label={t('session.selectAria')}
@@ -234,7 +237,7 @@ export function SessionLanguageIndicator({
               </option>
             ))}
             <option value={OPCAO_OUTRO_CODIGO}>{t('account.otherCode')}</option>
-          </select>
+          </NativeSelect>
         )}
       </div>
       <div

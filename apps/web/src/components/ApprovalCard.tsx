@@ -31,6 +31,7 @@ import {
 import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
+import { Checkbox } from './shadcn/checkbox';
 import styles from './ApprovalCard.module.css';
 import { Check, X, ShieldCheck, Plane } from 'lucide-react';
 
@@ -296,11 +297,10 @@ export function ApprovalCard({
         <>
         <div className={styles.header}>
         {selectable && (
-          <input
-            type="checkbox"
+          <Checkbox
             className={styles.checkbox}
             checked={!!selected}
-            onChange={onToggleSelect}
+            onCheckedChange={() => onToggleSelect?.()}
             aria-label={t('approvalCard.batchSelectAriaLabel')}
           />
         )}

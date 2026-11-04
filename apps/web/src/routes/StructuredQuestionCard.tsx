@@ -9,6 +9,7 @@ import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 import { Textarea } from '../components/shadcn/textarea';
 import {
   Questionnaire,
@@ -117,10 +118,10 @@ export function StructuredQuestionCard({
       <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
         <span className={styles.structuredQuestionCabecalho}>
           <AvatarDoAgente id={agent} />
-          <span className={styles.handoffPill}>
+          <Badge tone="muted" size="md">
             <ChatIcon size={13} />
             {t('perguntas.respondidas', { agente: nomeDoAgente(agent) })}
-          </span>
+          </Badge>
         </span>
         <dl className={styles.structuredQuestionAnswers}>
           {questions.map((q) => (
@@ -179,10 +180,10 @@ export function StructuredQuestionCard({
     <Card radius="md" className={styles.structuredQuestionCard} style={corDoAgente(agent)}>
       <span className={styles.structuredQuestionCabecalho}>
         <AvatarDoAgente id={agent} />
-        <span className={styles.handoffPill}>
+        <Badge tone="muted" size="md">
           <ChatIcon size={13} />
           {t('perguntas.titulo', { agente: nomeDoAgente(agent) })}
-        </span>
+        </Badge>
       </span>
       {/* AT-653 (RN-968): um passo por pergunta. O estado segue controlado aqui
           (`respostas`), nunca por FormData: é ele que mantém as respostas na

@@ -1,8 +1,6 @@
 import {
   lazy,
   Suspense,
-  useEffect,
-  useId,
   useRef,
   useState,
   type Dispatch,
@@ -33,6 +31,7 @@ import { TokenMeter } from '../components/TokenMeter';
 import { SessionLanguageIndicator } from './SessionLanguageIndicator';
 import { ModelPicker } from '../components/ModelPicker';
 import { Button } from '../components/ui/Button';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/shadcn/popover';
 import { Badge } from '../components/ui/Badge';
 import { LIMITE_DO_NOME } from '../lib/session-label';
 import { TIPOS_DE_SESSAO } from '../lib/session-kind';
@@ -390,9 +389,6 @@ function AjustesAgrupados({
 }) {
   const { t } = useTranslation('sessionPage');
   const [aberto, setAberto] = useState(false);
-  const raizRef = useRef<HTMLDivElement>(null);
-  const gatilhoRef = useRef<HTMLButtonElement>(null);
-  const idDoPainel = useId();
   // A MESMA chave do indicador: o react-query deduplica, então o gatilho lê o
   // que o indicador já busca, sem requisição a mais.
   const { data: idioma } = useQuery({
@@ -400,25 +396,6 @@ function AjustesAgrupados({
     queryFn: () => getSessionResponseLanguage(projectId, sessionId),
   });
   const perguntaPendente = Boolean(idioma?.detectionQuestion);
-
-  useEffect(() => {
-    if (!aberto) return;
-    function fora(e: MouseEvent) {
-      if (raizRef.current && !raizRef.current.contains(e.target as Node)) setAberto(false);
-    }
-    function tecla(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setAberto(false);
-        gatilhoRef.current?.focus();
-      }
-    }
-    document.addEventListener('mousedown', fora);
-    document.addEventListener('keydown', tecla);
-    return () => {
-      document.removeEventListener('mousedown', fora);
-      document.removeEventListener('keydown', tecla);
-    };
-  }, [aberto]);
 
   const resumo = [nomeDoModelo ?? t('topbar.ajustes'), idioma?.language]
     .filter(Boolean)
@@ -432,18 +409,12 @@ function AjustesAgrupados({
     .join(' — ');
 
   return (
-    <div className={styles.ajustesAgrupados} ref={raizRef}>
-      <button
-        type="button"
-        ref={gatilhoRef}
+    <Popover open={aberto} onOpenChange={setAberto}>
+      <PopoverTrigger
         className={styles.gatilhoDosAjustes}
-        aria-expanded={aberto}
-        aria-haspopup="dialog"
-        aria-controls={aberto ? idDoPainel : undefined}
         aria-label={nomeAcessivel}
         title={nomeAcessivel}
         data-testid="ajustes-da-sessao"
-        onClick={() => setAberto((v) => !v)}
       >
         <ModelIcon size={14} />
         {modo === 'compacta' && <span className={styles.resumoDosAjustes}>{resumo}</span>}
@@ -455,18 +426,15 @@ function AjustesAgrupados({
           />
         )}
         <ChevronDownIcon size={13} />
-      </button>
-      {aberto && (
-        <div
-          id={idDoPainel}
-          role="dialog"
-          aria-label={t('topbar.ajustesAria')}
-          className={styles.painelDosAjustes}
-          data-testid="painel-dos-ajustes"
-        >
-          {children}
-        </div>
-      )}
-    </div>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        aria-label={t('topbar.ajustesAria')}
+        className={styles.painelDosAjustes}
+        data-testid="painel-dos-ajustes"
+      >
+        {children}
+      </PopoverContent>
+    </Popover>
   );
 }
