@@ -278,12 +278,18 @@ defmodule Engine.Gates.QaAutomacaoAgent do
 
       Siga exatamente estes passos, um por vez, cada um com uma ferramenta:
       1. `terminal` com o comando de teste do projeto (veja o AGENTS.md do
-         repositório) e observe o código de saída.
+         repositório) e observe o código de saída. Se o projeto já tem
+         relatório JUnit configurado, mande-o para `.brabo-qa/junit.xml`
+         (vitest `--reporter=junit --outputFile=.brabo-qa/junit.xml`, pytest
+         `--junitxml=.brabo-qa/junit.xml`). Você NÃO instala reporter: sem
+         relatório, siga sem ele.
       2. `search_workspace` / `read_file` nos arquivos de teste, pra descobrir
          QUAL teste cobre CADA regra acima.
       3. `emit_qa_verdict` com uma linha de `coverageMatrix` por regra —
          `rule` (o texto da regra), `tests` (os arquivos que a cobrem, lista
-         vazia se nenhum) e `covered` (true/false).
+         vazia se nenhum) e `covered` (true/false). Se gerou o relatório,
+         passe `relatorioDeTestes: ".brabo-qa/junit.xml"` (o engine o lê e o
+         apaga).
 
       #{instrucao_de_codigo_de_saida()}
 

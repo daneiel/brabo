@@ -15618,7 +15618,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:751`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:756`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1115`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -19544,8 +19544,8 @@ decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:190` (`plano_de_teste_da_entrega`),
-  `:719` (`plano_de_teste_da_entrega`), `:720` (`plano_ja_emitido`),
-  `:725` (`arquivos_alterados`);
+  `:741` (`plano_de_teste_da_entrega`), `:742` (`plano_ja_emitido`),
+  `:747` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:188` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:226` (`com_o_plano`);
@@ -19756,7 +19756,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
   (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:401`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
-  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:706`
+  (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:711`
   (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:327`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
@@ -22868,7 +22868,7 @@ sem dizer qual.
   `artifact.qa_verdict` sempre como LISTA: string JSON de lista é decodificada
   (o molde da [RN-719](#rn-719)), e string que não é lista vira `[]`.
 - **Onde:** `apps/engine/lib/engine/gates/diff.ex:44` (`base_mais_nova`),
-  `apps/engine/lib/engine/gates/hooks/termination.ex:46` (`lista`)
+  `apps/engine/lib/engine/gates/hooks/termination.ex:54` (`lista`)
 - **Teste:** `apps/engine/test/engine/gates/diff_test.exs` (a tarefa B nascida
   da A, com a A mergeada na origem: o diff é só B) e
   `apps/engine/test/engine/gates/hooks/termination_test.exs` (string JSON vira
@@ -23081,7 +23081,7 @@ sem dizer qual.
   com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
   projeto e comando que não é de Node.
 - **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
-  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:796`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:818`
   (`conferencia_do_readme`)
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
@@ -24334,9 +24334,9 @@ sem dizer qual.
   partir de uma resposta ([ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 - **Onde:** `apps/engine/lib/engine/harness/tools/declare_open_question.ex:54` (`run`),
   `apps/engine/lib/engine/harness/fluxo_do_time.ex:113` (`frase_da_pergunta`),
-  `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:77` (`run`),
+  `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:81` (`run`),
   `apps/engine/lib/engine/gates/qa_lead.ex:89` (`consolidar_decisao`),
-  `apps/engine/lib/engine/gates/qa_lead_server.ex:573` (`estacionar_por_decisao`),
+  `apps/engine/lib/engine/gates/qa_lead_server.ex:595` (`estacionar_por_decisao`),
   `apps/engine/lib/engine/dev/context_builder.ex:121` (`secao_de_decisoes`)
 - **Teste:** `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs`
   ("válida grava artifact.open_question…"; "inválida é recusa nomeada…";
@@ -24584,9 +24584,9 @@ sem dizer qual.
   gate estacionava sem pergunta no fio (medido: `openQuestionId: "1"`, 400 do
   `@IsUUID`). A ferramenta `emit_qa_verdict` recusa, DENTRO do laço e antes da
   api, `openQuestionId` que não é uuid.
-- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:579`
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:601`
   (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:312`
-  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:675`
+  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:697`
   (`texto_da_recusa`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:186`
   (`devolver`), `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:75`
   (`uuid`)
@@ -25329,14 +25329,14 @@ sem dizer qual.
 ### RN-944 — O QA de automação recebe o pedido da volta anterior, o plano é lido por tipo e o dev sabe onde o `write_file` escreve {#rn-944}
 
 - **Regra:** (a) o `changes_requested` mais recente do ator `qa` para a MESMA task entra no `dev_context` como `:pedido_anterior`, e o `QaAutomacaoAgent` acrescenta à mensagem a lista de itens e a instrução de dizer no `resumo` se cada um foi atendido; sem pedido anterior (primeira volta, `approved`, outra task, lista vazia) a mensagem é a de sempre. É insumo, nunca régua nova de veredito (molde do ADR 0192): o teto de correções (RN-015) e o `qa_verdict` único por ciclo não mudam. (b) `plano_ja_emitido/3` lê por tipo (`Reidratacao.eventos_do_tipo/3`), não a janela dos 200 mais recentes: o plano da task não sai da janela nem é pago de novo (cumpre a RN-674). (c) O ambiente de `dev-*`/`qa-*` diz que `write_file`/`read_file` usam caminho relativo à raiz do repositório e que `cd` no `terminal` não persiste (cada chamada é `sh -c` novo em `System.cmd ... cd: dir`, `terminal_executor.ex`).
-- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:762` (`pedido_anterior`), `apps/engine/lib/engine/gates/qa_lead_server.ex:743` (`plano_ja_emitido`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:317` (`com_o_pedido_anterior`), `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`).
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:784` (`pedido_anterior`), `apps/engine/lib/engine/gates/qa_lead_server.ex:743` (`plano_ja_emitido`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:323` (`com_o_pedido_anterior`), `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`).
 - **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`, `apps/engine/test/engine/gates/qa_lead_server_test.exs`, `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`.
 - **Origem:** AT-616 (EP-030), TP-01 (21ª) de 30/10/2026.
 
 ### RN-945 — Os agentes de QA nomeiam o corte pelo teto de saída em vez de "o modelo parou" {#rn-945}
 
 - **Regra:** estende a RN-780 aos dois agentes de QA: quando o `ToolLoop` devolve `corte_pelo_teto: true`, `QaEstrategiaAgent` e `QaAutomacaoAgent` narram, com origem `modelo`, que a resposta foi só raciocínio e o teto de saída a cortou duas vezes (texto único em `Engine.Gates.MotivoDoCorte`). Sem o marcador, o diagnóstico antigo ("parou sem chamar ...") continua. A falha do plano segue sem segurar a revisão (RN-674) e o teto de iterações não muda.
-- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:8` (`texto`).
+- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:427` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:8` (`texto`).
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
 - **Origem:** AT-618 parte 1 (EP-030), TP-01 (21ª) de 30/10/2026.
 
@@ -25606,3 +25606,9 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/session-timeline-montagem.tsx:151` (`montarTimeline`).
 - **Teste:** `apps/web/src/routes/session-timeline-montagem.perguntas.test.tsx` (resposta antes do cartão; turno em curso; duas perguntas na ordem; não pula para a resposta do turno seguinte).
 - **Origem:** pedido do dono, 03/11/2026.
+### RN-996 — O parecer de QA leva o resultado por teste lido do relatório JUnit pelo engine; sem relatório, diz por quê {#rn-996}
+
+- **Regra:** `emit_qa_verdict` aceita `relatorioDeTestes` (caminho relativo, em geral `.brabo-qa/junit.xml`). O ENGINE lê o arquivo (nunca o modelo declara), o apaga e põe `execucaoDeTestes` no `qa_verdict` do subagente e no consolidado: `{fonte: "junit", total, passaram, falharam, pulados, duracaoMs, suites, casosOmitidos}`, ou `{indisponivel: "sem_relatorio" | "relatorio_invalido" | "modo_runner", origem, detalhe?}`. Sem relatório NUNCA vira "0 testes" (RN-470), e falha ao ler nunca muda o veredito (ADR 0054; só registra, a régua de aprovação segue `exit 0` mais a matriz). Teto (ADR 0060): 200 casos gravados, falhas primeiro; 20 mensagens de 500 caracteres; nomes de 200; contadores do relatório inteiro, `casosOmitidos` por subtração. O parser (SAX do `:xmerl`) recusa DOCTYPE/ENTITY (XXE), lê no máximo 2 MiB e 20 000 casos. Em `runner` o arquivo vem pelo canal do runner (o `exec` já existente, sem operação nova). Quem instala o reporter é o dev agent, como TAREFA que o Dev Lead inclui no módulo; o QA só lê.
+- **Onde:** `apps/engine/lib/engine/gates/relatorio_junit.ex:34` (`ler`), `apps/engine/lib/engine/gates/relatorio_junit.ex:111` (`parse`), `apps/engine/lib/engine/gates/hooks/termination.ex:49` (`com_execucao_de_testes`).
+- **Teste:** `apps/engine/test/engine/gates/relatorio_junit_test.exs` (vitest, pytest, XXE recusado, teto de tamanho/casos/gravação, arquivo ausente/inválido/apagado), `apps/engine/test/engine/gates/hooks/termination_test.exs`, `apps/engine/test/engine/gates/qa_lead_test.exs`.
+- **Origem:** AT-687 (EP-031), lane engine.

@@ -18,7 +18,7 @@ defmodule Engine.Gates.Hooks.Termination do
   @tools_de_parecer ["emit_qa_verdict", "emit_perf_seguranca_verdict"]
 
   @impl true
-  def call(%{tool: tool, result_ok?: true, args: args}) when tool in @tools_de_parecer do
+  def call(%{tool: tool, result_ok?: true, args: args} = ctx) when tool in @tools_de_parecer do
     {:halt,
      {tool,
       %{
@@ -27,7 +27,8 @@ defmodule Engine.Gates.Hooks.Termination do
         itens: lista(Map.get(args, "itens")),
         coverage_matrix: lista(Map.get(args, "coverageMatrix"))
       }
-      |> com_decisao_do_usuario(args)}}
+      |> com_decisao_do_usuario(args)
+      |> com_execucao_de_testes(tool, ctx)}}
   end
 
   def call(ctx), do: {:cont, ctx}
@@ -42,6 +43,13 @@ defmodule Engine.Gates.Hooks.Termination do
   end
 
   defp com_decisao_do_usuario(verdict, _args), do: verdict
+
+  # AT-687 (RN-996): só a Automação roda testes. Falha ao ler o relatório
+  # vira campo nomeado (`indisponivel` + `origem`), nunca muda o veredito.
+  defp com_execucao_de_testes(verdict, "emit_qa_verdict", ctx),
+    do: Map.put(verdict, :execucao_de_testes, Engine.Gates.RelatorioJunit.ler(ctx))
+
+  defp com_execucao_de_testes(verdict, _tool, _ctx), do: verdict
 
   # RN-787 (AT-464): o modelo manda `itens`/`coverageMatrix` ora como lista,
   # ora como STRING JSON; o hook lê o argumento cru, e o `qa_verdict` gravava o

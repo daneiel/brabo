@@ -627,6 +627,11 @@ defmodule Engine.Agents.DevLeadServer do
     CADA tarefa pendente a UM módulo do module_map (`tarefas`): só o dev
     daquele módulo pega a tarefa, e tarefa sem módulo recusa o plano.
 
+    Inclua nas tarefas de cada módulo a de ter RELATÓRIO JUnit: o dev instala
+    o reporter do runner de teste do módulo (vitest `--reporter=junit`,
+    pytest `--junitxml`, `jest-junit`, `junit_formatter`...), com commit e PR
+    normais. É dele que o QA lê os testes que rodaram (RN-996).
+
     Você NÃO escreve código. Decide quantos agentes valem a pena para o
     trabalho em mão, e responde por essa escolha.
 
