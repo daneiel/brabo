@@ -165,16 +165,28 @@ export class AnthropicProvider implements LLMProvider {
 
     try {
       // AT-676: `thinking` só quando o modelo raciocina e o raciocínio não foi
-      // desligado. `budget_tokens` >= 1024 e < `max_tokens`, então o teto de
-      // saída passa a ser a saída visível + o orçamento (como no OpenRouter).
+      // desligado (sem `thinking` nenhum: `disabled` é 400 nos 5.5). Modelo
+      // atual: adaptive + `display: summarized` (o padrão omitted devolve texto
+      // vazio) e SEM `budget_tokens`; o texto é um RESUMO, nunca o bruto.
+      // Modelo antigo: `enabled`, `budget_tokens` >= 1024 e < `max_tokens`.
+      const pensa = !!options.reasoning && !options.reasoningOff;
+      const adaptativo = pensamentoAdaptativo(options.model);
       const orcamentoDePensamento =
-        options.reasoning && !options.reasoningOff
+        pensa && !adaptativo
           ? Math.max(1024, options.reasoningBudget ?? 2048)
           : 0;
       const stream = client.messages.stream({
         model: options.model,
         max_tokens:
           (options.maxTokens ?? DEFAULT_MAX_TOKENS) + orcamentoDePensamento,
+        ...(pensa && adaptativo
+          ? {
+              thinking: {
+                type: 'adaptive' as const,
+                display: 'summarized' as const,
+              },
+            }
+          : {}),
         ...(orcamentoDePensamento
           ? {
               thinking: {
@@ -388,4 +400,9 @@ function toThinkingBlocks(content: { type: string }[]): ThinkingBlock[] {
     (bloco): bloco is ThinkingBlock =>
       bloco.type === 'thinking' || bloco.type === 'redacted_thinking',
   );
+}
+
+/** Modelos antigos (3.x e 4.0..4.5, com ou sem data) seguem em `enabled` + budget; o resto, adaptive. */
+export function pensamentoAdaptativo(modelo: string): boolean {
+  return !/^claude-3|^claude-[a-z]+-4(-[0-5])?(-\d{8})?$/.test(modelo);
 }

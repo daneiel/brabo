@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **api**: a Anthropic pede `thinking` adaptive com `display: summarized` nos modelos atuais (o `enabled` com budget dava 400) e mantém `enabled` nos antigos (AT-676, RN-993).
 - **engine**: o raciocínio do turno é gravado inteiro em `agent.response.payload.raciocinio` (fora do `content`, nunca devolvido ao modelo) e vai ao vivo como `agent.reasoning_delta` só para o socket de `developer` ou mais (AT-676, RN-993).
 - **api**: o raciocínio do modelo no contrato de LLM: chunk `reasoning` (OpenRouter `reasoning`, `reasoning_content` e `thinking` da Anthropic, com os blocos assinados devolvidos no laço de ferramentas), frame `raciocinio` ao vivo e `raciocinio` inteiro no `final` do `llm-turn`; `payload.raciocinio` de `agent.response` sai das leituras de evento para quem está abaixo de `developer`; capability `reasoningText` `false` em todos até o smoke (AT-676, RN-993, ADR 0249).
 - **web**: o fio mostra o raciocínio do agente num bloco "Raciocínio" recolhido antes da resposta, e a faixa do turno mostra "Raciocinando…" ao vivo enquanto ele chega (AT-676, RN-993, ADR 0249). Só aparece para quem tem papel `developer` ou acima, porque a api e o canal já filtram o campo.
