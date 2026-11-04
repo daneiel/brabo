@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 /* AT-687: testes que o gate de QA rodou (relatório JUnit lido pelo engine). */
 const TOM = { passou: 'success', falhou: 'danger', pulado: 'muted' } as const;
+const ROTULO = { passou: 'statusPassou', falhou: 'statusFalhou', pulado: 'statusPulado' } as const;
 
 export function TestResults({ execucao }: { execucao: ExecucaoDeTestes }) {
   const { t } = useTranslation('approvals');
@@ -16,9 +17,9 @@ export function TestResults({ execucao }: { execucao: ExecucaoDeTestes }) {
     <div data-slot="ai-test-results" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <strong>{t('prGateTimeline.tests.title')}</strong>
-        <Badge tone="success">{t('prGateTimeline.tests.passed', { n: execucao.passaram })}</Badge>
-        <Badge tone="danger">{t('prGateTimeline.tests.failed', { n: execucao.falharam })}</Badge>
-        <Badge tone="muted">{t('prGateTimeline.tests.skipped', { n: execucao.pulados })}</Badge>
+        <Badge tone="success">{t('prGateTimeline.tests.passed', { count: execucao.passaram })}</Badge>
+        <Badge tone="danger">{t('prGateTimeline.tests.failed', { count: execucao.falharam })}</Badge>
+        <Badge tone="muted">{t('prGateTimeline.tests.skipped', { count: execucao.pulados })}</Badge>
         <span>{execucao.duracaoMs} ms</span>
       </div>
       {execucao.suites.map((s) => (
@@ -29,7 +30,9 @@ export function TestResults({ execucao }: { execucao: ExecucaoDeTestes }) {
               <li key={i}>
                 <Collapsible>
                   <CollapsibleTrigger disabled={!c.mensagem} className="flex items-center gap-2">
-                    <Badge tone={TOM[c.status]}>{c.status}</Badge>
+                    <Badge tone={TOM[c.status] ?? 'muted'}>
+                      {t(`prGateTimeline.tests.${ROTULO[c.status] ?? 'statusDesconhecido'}`)}
+                    </Badge>
                     <span>{c.nome}</span>
                     <span>{c.duracaoMs} ms</span>
                   </CollapsibleTrigger>
@@ -45,7 +48,7 @@ export function TestResults({ execucao }: { execucao: ExecucaoDeTestes }) {
         </div>
       ))}
       {execucao.casosOmitidos > 0 && (
-        <p>{t('prGateTimeline.tests.omitted', { shown: mostrados, total: execucao.total, n: execucao.casosOmitidos })}</p>
+        <p>{t('prGateTimeline.tests.omitted', { shown: mostrados, total: execucao.total, count: execucao.casosOmitidos })}</p>
       )}
     </div>
   );

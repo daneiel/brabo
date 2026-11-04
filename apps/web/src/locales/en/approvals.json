@@ -212,13 +212,21 @@
     },
     "tests": {
       "title": "Tests run",
-      "passed": "Passed: {{n}}",
-      "failed": "Failed: {{n}}",
-      "skipped": "Skipped: {{n}}",
-      "omitted": "Showing {{shown}} of {{total}} cases; {{n}} left out.",
       "sem_relatorio": "The gate produced no test report.",
       "relatorio_invalido": "The test report could not be read.",
-      "modo_runner": "Runner-mode project: the server does not read the test report."
+      "modo_runner": "Runner-mode project: the server does not read the test report.",
+      "passed_one": "{{count}} passed",
+      "passed_other": "{{count}} passed",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "skipped_one": "{{count}} skipped",
+      "skipped_other": "{{count}} skipped",
+      "omitted_one": "Showing {{shown}} of {{total}} cases; {{count}} left out.",
+      "omitted_other": "Showing {{shown}} of {{total}} cases; {{count}} left out.",
+      "statusPassou": "passed",
+      "statusFalhou": "failed",
+      "statusPulado": "skipped",
+      "statusDesconhecido": "unknown status"
     }
   },
   "approvalsTab": {

@@ -220,13 +220,25 @@
     },
     "tests": {
       "title": "Testes executados",
-      "passed": "Passaram: {{n}}",
-      "failed": "Falharam: {{n}}",
-      "skipped": "Pulados: {{n}}",
-      "omitted": "Mostrando {{shown}} de {{total}} casos; {{n}} ficaram de fora.",
       "sem_relatorio": "O gate não gerou relatório de testes.",
       "relatorio_invalido": "O relatório de testes não pôde ser lido.",
-      "modo_runner": "Projeto em modo runner: o relatório de testes não é lido pelo servidor."
+      "modo_runner": "Projeto em modo runner: o relatório de testes não é lido pelo servidor.",
+      "passed_zero": "{{count}} passaram",
+      "passed_one": "{{count}} passou",
+      "passed_other": "{{count}} passaram",
+      "failed_zero": "{{count}} falharam",
+      "failed_one": "{{count}} falhou",
+      "failed_other": "{{count}} falharam",
+      "skipped_zero": "{{count}} pulados",
+      "skipped_one": "{{count}} pulado",
+      "skipped_other": "{{count}} pulados",
+      "omitted_zero": "Mostrando {{shown}} de {{total}} casos; {{count}} ficaram de fora.",
+      "omitted_one": "Mostrando {{shown}} de {{total}} casos; {{count}} ficou de fora.",
+      "omitted_other": "Mostrando {{shown}} de {{total}} casos; {{count}} ficaram de fora.",
+      "statusPassou": "passou",
+      "statusFalhou": "falhou",
+      "statusPulado": "pulado",
+      "statusDesconhecido": "status desconhecido"
     }
   },
   "approvalsTab": {
