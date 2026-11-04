@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **web**: a gaveta móvel da barra lateral usa o `Sheet` do kit shadcn, com as mesmas entradas, foco preso e Esc (AT-655 V3b)
+
 - **web**: a aba Código passa a usar as abas, o campo e o botão do kit shadcn no painel inferior, na busca, no seletor de branch e na lista de PRs (AT-655 V1).
 - **web**: as abas RAG e PRs usam os componentes do kit (`Alert`, `Card`, `Input`, `Button`) no lugar de avisos, cartões e botões desenhados à mão, sem mudar o comportamento (AT-655 V2)
 - **web**: o painel "precisa de você" passa a ser um `Sheet` e as notificações um `Popover` do kit shadcn, com `Button`, `Badge` e `EmptyState`, sem mudar o que o usuário vê e faz (AT-655 V3a).
