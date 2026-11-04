@@ -1573,7 +1573,7 @@ já existe onde há um dono humano
 
 ## api → engine
 
-Vinte e uma rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
+Vinte e duas rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServiceToken`:
 
 | método | caminho | o que dispara |
 |---|---|---|
@@ -1595,6 +1595,7 @@ Vinte e uma rotas de comando, mais as de saúde. Sob `/internal` com `VerifyServ
 | POST | `/sessions/:id/agent/resume` | o botão "Retomar" do turno que o reinício do engine interrompeu (AT-582, ADR 0226) — corpo `{projectId, agent}`; grava `agent.turn_resumed` com `automatica: false` e sobe o turno pela `TurnoAssincrono`; `202` ao aceitar, `409` `turno_nao_interrompido` (o último desfecho do agente não é o reinício, ou há turno/retomada em curso) ou `agente_sem_retomada` (agente que não conversa ou cujo servidor não sabe retomar) |
 | POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | retoma, por gesto humano, um ciclo de gate ESTACIONADO ([RN-724](../business-rules.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202` e o gate é despachado de novo; `409` `gate_nao_estacionado` quando o ciclo não está estacionado (ou o gate não é `qa`/`secops`) |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instruções |
+| GET | `/agents/catalog` | catálogo só de leitura dos agentes: `{agentes: [{agente, identidade, ferramentas: [{nome, descricao}]}]}`, sem parâmetro e sem schema, descrição com teto de 1 000 caracteres; a api o junta à instrução vigente do projeto em `GET /projects/:projectId/agent-catalog` e, com o engine fora, responde `motivoSemCatalogo` em vez de "sem ferramentas" ([RN-995](../business-rules.md#rn-995)) |
 | POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada**; desde a AT-612 o corpo de `/actions/execute` pode trazer `alvo: {qa: true, taskId}`, que a api só repassa quando o ator é `qa-automacao` e a tarefa é do projeto ([RN-938](../business-rules.md#rn-938)), e o engine roda o comando na instância de QA da tarefa em vez do container de trabalho ([RN-940](../business-rules.md#rn-940)) |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | pede ao RUNNER conectado ao projeto que suba/pare/remova o container dele ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — só para projetos `mounted`/`runner`; `container` continua passando pelo broker, nunca por aqui |
 | POST | `/projects/:id/runner/disconnect` | derruba a conexão VIVA do runner daquele usuário no projeto, qualquer que seja a credencial usada ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — desde o [ADR 0201](../adr/0201-revogacao-por-chave.md) chamada pela remoção de membro ([RN-615](../business-rules.md#rn-615)) e como fallback de uma revogação de chave; sempre `200`, com `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
