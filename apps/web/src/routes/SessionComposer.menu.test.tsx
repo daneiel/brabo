@@ -13,6 +13,8 @@ vi.mock('../lib/api-client', async (orig) => ({
   approveAction: vi.fn(async () => ({})),
   sendMessageToMany: vi.fn(async () => ({ mensagemId: 'm1', entregas: [] })),
   getOpenQuestions: vi.fn(async () => ({ total: 0, items: [] })),
+  getAgentCatalog: vi.fn(),
+  searchRag: vi.fn(),
 }));
 vi.mock('../components/ai-elements/anexos', () => ({ AnexosPendentes: () => null, BotaoDeAnexar: () => null }));
 vi.mock('../lib/anexos', () => ({ adicionarAnexos: vi.fn(), subirAnexosPendentes: vi.fn(async () => []) }));
@@ -180,5 +182,37 @@ describe('menus @ e / do composer (AT-717)', () => {
     );
     // não controlado: o nó não tem `value` vindo do React (defaultValue apenas)
     expect(campo.defaultValue).toBe('');
+  });
+
+  it('/skills lista as ferramentas do destinatário (AT-724)', async () => {
+    vi.mocked(api.getAgentCatalog).mockResolvedValueOnce({
+      agentes: [{ agente: 'criativo', identidade: 'x', instrucoesDoProjeto: null, ferramentas: [{ nome: 'emit_artifact', descricao: 'grava' }] }],
+    } as never);
+    const campo = montar();
+    digitar(campo, '/skills');
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(await screen.findByTestId('resultado-do-comando')).toHaveTextContent(/1 ferramenta[\s\S]*emit_artifact/);
+  });
+
+  it('/skills com a api falhando mostra o motivo, nunca "sem ferramentas"', async () => {
+    vi.mocked(api.getAgentCatalog).mockRejectedValueOnce(new Error('engine fora'));
+    const campo = montar();
+    digitar(campo, '/skills');
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(await screen.findByTestId('aviso-do-menu')).toHaveTextContent(/engine fora/);
+  });
+
+  it('/buscar usa o texto do campo no RAG; falha diz o motivo (AT-724)', async () => {
+    vi.mocked(api.searchRag).mockResolvedValueOnce({ query: 'login', searchId: null, vectorAvailable: true, hits: [{ chunkId: 'c', scope: 'adr', content: 'ADR de login', score: 1 }] } as never);
+    const campo = montar();
+    digitar(campo, 'login /buscar');
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(await screen.findByTestId('resultado-do-comando')).toHaveTextContent(/ADR de login/);
+    expect(api.searchRag).toHaveBeenCalledWith('p1', expect.objectContaining({ query: 'login' }));
+
+    vi.mocked(api.searchRag).mockRejectedValueOnce(new Error('rag fora'));
+    digitar(campo, 'outro /buscar');
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(await screen.findByTestId('aviso-do-menu')).toHaveTextContent(/rag fora/);
   });
 });

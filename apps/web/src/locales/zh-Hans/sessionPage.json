@@ -138,6 +138,22 @@
         "nome": "计划",
         "descricao": "在输入框插入查看当前计划的请求",
         "texto": "请展示你当前的计划。"
+      },
+      "skills": {
+        "nome": "skills",
+        "descricao": "列出智能体的工具和指令",
+        "titulo_other": "{{agente}}:{{count}} 个工具",
+        "naoSei": "目前不知道 {{agente}} 的工具:engine 没有响应。",
+        "semAgente": "{{agente}} 不在目录中。",
+        "instrucao": "当前指令 (v{{versao}})",
+        "erro": "无法读取目录:{{motivo}}"
+      },
+      "buscar": {
+        "nome": "search",
+        "descricao": "在项目库中搜索输入框的文字",
+        "semConsulta": "请在输入框写下要搜索的内容,再使用 /search。",
+        "titulo_other": "搜索“{{consulta}}”:{{count}} 段",
+        "erro": "搜索失败:{{motivo}}"
       }
     }
   },

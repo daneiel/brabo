@@ -197,6 +197,7 @@ export function SessionComposer({
     projectId: session?.projectId,
     sessionId: session?.id,
     agentesDaSessao: opcoesDeDestinatario,
+    destinatario,
     acoes,
     streaming,
     draft,
@@ -479,6 +480,21 @@ export function SessionComposer({
                 ))}
               </ul>
               <button type="button" onClick={menu.fecharAjuda}>
+                {t('composer.menu.fecharAjuda')}
+              </button>
+            </div>
+          )}
+          {menu.resultado && (
+            <div className={styles.menuTexto} data-testid="resultado-do-comando">
+              <strong>{menu.resultado.titulo}</strong>
+              <ul>
+                {menu.resultado.linhas.map((l, i) => (
+                  <li key={`${l.rotulo}-${i}`}>
+                    <strong>{l.rotulo}</strong> — {l.texto}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={menu.fecharResultado}>
                 {t('composer.menu.fecharAjuda')}
               </button>
             </div>
