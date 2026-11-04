@@ -327,7 +327,7 @@
 }
 
 .messagesInner {
-  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -422,7 +422,7 @@
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
   width: 100%;
   /* AT-442: durante o turno entram "Pôr na fila" e "Parar"; os botões
@@ -437,7 +437,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-4) 0;
-  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
   width: 100%;
 }
@@ -453,7 +453,7 @@
   align-items: center;
   border-top: 1px solid var(--border);
   padding: 10px 24px 0;
-  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
   width: 100%;
 }
@@ -489,7 +489,7 @@
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) var(--space-4) 0;
-  max-width: 780px;
+  width: 100%;
   margin: 0 auto;
   width: 100%;
 }
@@ -512,7 +512,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  max-width: 780px;
+  width: 100%;
   margin: var(--space-2) auto 0;
   width: calc(100% - 48px);
   padding: 12px var(--space-3);

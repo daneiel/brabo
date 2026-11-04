@@ -26,6 +26,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: o chat da Sessão (fio, composer, avisos e pendências) ocupa a largura inteira, sem a coluna de 780px (ADR 0250).
+
 - **web**: o conteúdo das abas do projeto e da Conta ocupa a largura inteira da área à direita da sidebar, sem a coluna de 1040px nem os 720px (ADR 0248, revisa o 0244).
 - **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
 - **web**: ajustes das telas da R3 (AT-721): o "?" das pendências fica na linha das abas, a explicação de "Reabrir" vai para um "?", o rótulo da falha não cola no nome do agente e os gráficos de gasto sem consumo mostram texto de vazio.
