@@ -7693,6 +7693,10 @@ export interface components {
             /** @example I'll read the file before answering. */
             content: string;
             toolCalls: components["schemas"]["ToolCallResponseDto"][];
+            /** @description Anthropic thinking blocks (signed, opaque). The engine sends them back untouched on the `assistant` message that asked for tools (AT-676). */
+            thinkingBlocks?: {
+                [key: string]: unknown;
+            }[];
         };
         LLMProviderCapabilitiesResponseDto: {
             /** @example true */
@@ -7709,6 +7713,11 @@ export interface components {
              * @example false
              */
             embeddings: boolean;
+            /**
+             * @description The provider returns the reasoning TEXT as a `reasoning` chunk (AT-676, ADR 0249). Only `true` after a smoke against the real API.
+             * @example false
+             */
+            reasoningText: boolean;
             /**
              * @description The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count.
              * @example false
@@ -7753,6 +7762,8 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
+            /** @description The model reasoning text for the step, whole, never in `content` and never sent back to the model (AT-676, ADR 0249). Absent when none. The engine stores it as `agent.response.payload.raciocinio`. */
+            raciocinio?: string;
             /**
              * @description Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: "length"` / `stop_reason: "max_tokens"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.
              * @enum {boolean}
@@ -7767,9 +7778,11 @@ export interface components {
              * @example delta
              * @enum {string}
              */
-            type: "delta" | "done" | "error";
+            type: "delta" | "raciocinio" | "done" | "error";
             /** @example I'll read the */
             text?: string;
+            /** @description Only on the `final` frame (AT-676): the whole reasoning of the step. A `raciocinio` frame carries a live piece in `text`. */
+            raciocinio?: string;
             usage?: components["schemas"]["LlmUsageResponseDto"];
             /** @example provider unavailable */
             message?: string;

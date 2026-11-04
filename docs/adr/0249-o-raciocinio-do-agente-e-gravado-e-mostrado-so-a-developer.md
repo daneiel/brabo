@@ -2,7 +2,7 @@
 
 - **Status:** aceito
 - **Data:** 2026-11-03
-- **Referencia:** o ADR [0224](0224-raciocinio-abortado-no-stream.md) (o raciocínio é CONTADO no stream, não guardado) e o [0041](0041-contrato-de-llm-provider.md) (capability só com prova). Nenhum ADR é editado.
+- **Referencia:** o ADR [0224](0224-raciocinio-abortado-no-stream.md) (o raciocínio é CONTADO no stream, não guardado) e o [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md) (capability só com prova). Nenhum ADR é editado.
 
 ## Contexto
 
