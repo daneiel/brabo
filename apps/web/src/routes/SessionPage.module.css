@@ -526,6 +526,13 @@
   min-width: min(100%, 240px);
 }
 
+/* Âncora do menu de @/ em volta do campo: sem isto o campo fica na largura do conteúdo. */
+.ancoraDoCampo {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .textarea {
   flex: 1 1 320px;
   min-width: min(100%, 240px);

@@ -507,6 +507,7 @@ export function SessionComposer({
           {/* RN-882: o campo é dono do valor durante a digitação. O menu só LÊ o nó. */}
           <div
             ref={setAncora}
+            className={styles.ancoraDoCampo}
             onInput={(e) => menu.ler(e.target as HTMLTextAreaElement)}
             onClick={(e) => e.target instanceof HTMLTextAreaElement && menu.ler(e.target)}
             onKeyUp={(e) => e.target instanceof HTMLTextAreaElement && menu.ler(e.target)}
