@@ -230,8 +230,9 @@ export function PrListAndDiff({
           {listaQuery.data.items.map((pr) => (
             <li key={pr.id}>
               <div className={styles.itemPrLinha}>
-                <button
+                <BotaoDoKit
                   type="button"
+                  variant="ghost"
                   className={styles.itemPr}
                   aria-label={t('diff.openPrAriaLabel', { number: pr.number, title: pr.title })}
                   onClick={() => setSelecionada(pr)}
@@ -246,10 +247,10 @@ export function PrListAndDiff({
                       {pr.updatedAt && ` · ${new Date(pr.updatedAt).toLocaleDateString('pt-BR')}`}
                     </span>
                   </span>
-                  <span className={[styles.itemPrEstado, styles[`estadoSelo_${pr.state}`]].join(' ')}>
+                  <SeloDoKit variant="outline" className={[styles.itemPrEstado, styles[`estadoSelo_${pr.state}`]].join(' ')}>
                     {t(CHAVE_ESTADO_PR[pr.state])}
-                  </span>
-                </button>
+                  </SeloDoKit>
+                </BotaoDoKit>
                 {renderItemExtra && (
                   <div className={styles.itemPrExtra}>{renderItemExtra(pr)}</div>
                 )}

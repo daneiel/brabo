@@ -1,7 +1,3 @@
-.wrapper {
-  position: relative;
-}
-
 .trigger {
   display: flex;
   align-items: center;
@@ -45,37 +41,16 @@
 }
 
 .dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 61;
   width: 330px;
   max-height: 380px;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-1);
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
-  box-shadow: var(--shadow);
+  padding: 0;
+  gap: 0;
   overflow: hidden;
-  animation: bfade 0.13s ease-out;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .dropdown {
-    animation: none;
-  }
-}
-
-@keyframes bfade {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.filtro {
+  height: 30px;
+  font-size: 12px;
 }
 
 .cabecalho {
@@ -122,12 +97,9 @@
   background: transparent;
   border: none;
   border-top: 1px solid var(--border);
+  border-radius: 0;
   cursor: pointer;
   text-align: left;
-}
-
-.lista li:first-child .opcao {
-  border-top: none;
 }
 
 .opcao:hover {

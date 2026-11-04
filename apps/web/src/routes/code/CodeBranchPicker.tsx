@@ -2,7 +2,7 @@ import { Shimmer } from '../../components/ui/Shimmer';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { RotateCcw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -15,6 +15,9 @@ import type {
 import { AGENTS, type AgentDef } from '../../lib/agents';
 import { BranchIcon, CheckIcon, ChevronDownIcon } from '../../components/ui/icons';
 import { Input } from '@/components/shadcn/input';
+import { Button as BotaoDoKit } from '@/components/shadcn/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/shadcn/command';
 import styles from './CodeBranchPicker.module.css';
 
 const CHAVE_ESTADO_PR: Record<CodePullRequestState, string> = {
@@ -42,7 +45,7 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
   const { t } = useTranslation('code');
   const [open, setOpen] = useState(false);
   const [refManual, setRefManual] = useState('');
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [filtro, setFiltro] = useState('');
 
   const branchesQuery = useQuery({
     queryKey: ['code-branches', projectId],
@@ -50,25 +53,6 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
   });
 
   const branchAtual = branchesQuery.data?.items.find((b) => b.name === currentRef);
-
-  // Fechar clicando fora e no Escape — mesmo padrão do ModelPicker.
-  useEffect(() => {
-    if (!open) return;
-
-    function aoClicarFora(event: MouseEvent) {
-      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    function aoTeclar(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
-    }
-
-    document.addEventListener('mousedown', aoClicarFora);
-    document.addEventListener('keydown', aoTeclar);
-    return () => {
-      document.removeEventListener('mousedown', aoClicarFora);
-      document.removeEventListener('keydown', aoTeclar);
-    };
-  }, [open]);
 
   function escolher(nome: string) {
     onSelect(nome);
@@ -85,14 +69,16 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
   }
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef}>
-      <button
-        type="button"
-        className={[styles.trigger, open && styles.triggerAberto].filter(Boolean).join(' ')}
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title={currentRef || t('branchPicker.noDefaultBranch')}
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setFiltro(''); }}>
+      <PopoverTrigger
+        render={
+          <BotaoDoKit
+            type="button"
+            variant="outline"
+            className={[styles.trigger, open && styles.triggerAberto].filter(Boolean).join(' ')}
+            title={currentRef || t('branchPicker.noDefaultBranch')}
+          />
+        }
       >
         <BranchIcon size={13} />
         <span className={styles.triggerLabel}>
@@ -102,10 +88,9 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
         <span className={styles.chevron}>
           <ChevronDownIcon size={12} />
         </span>
-      </button>
+      </PopoverTrigger>
 
-      {open && (
-        <div className={styles.dropdown} role="listbox" aria-label={t('branchPicker.dropdownAriaLabel')}>
+      <PopoverContent align="start" className={styles.dropdown} aria-label={t('branchPicker.dropdownAriaLabel')}>
           <div className={styles.cabecalho}>
             {branchesQuery.data
               ? t('branchPicker.header', { count: branchesQuery.data.items.length })
@@ -132,41 +117,51 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
           )}
 
           {branchesQuery.data && branchesQuery.data.items.length > 0 && (
-            <ul className={styles.lista}>
-              {branchesQuery.data.items.map((branch) => (
-                <li key={branch.name}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={branch.name === currentRef}
-                    className={[styles.opcao, branch.name === currentRef && styles.opcaoSelecionada]
-                      .filter(Boolean)
-                      .join(' ')}
-                    onClick={() => escolher(branch.name)}
-                  >
-                    <span
-                      className={styles.ponto}
-                      style={{ background: corDoPonto(branch, branch.name === currentRef) }}
-                      aria-hidden="true"
-                    />
-                    <span className={styles.corpo}>
-                      <span className={styles.nomeLinha}>
-                        {branch.producedBy && (
-                          <IconeDoAgenteProdutor producedBy={branch.producedBy} />
-                        )}
-                        {branch.name === currentRef && (
-                          <CheckIcon size={11} className={styles.check} />
-                        )}
-                        <span className={styles.nome}>{branch.name}</span>
+            <Command filter={null}>
+              <CommandInput
+                className={styles.filtro}
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                placeholder={t('branchPicker.filterPlaceholder')}
+                aria-label={t('branchPicker.filterPlaceholder')}
+              />
+              <CommandList className={styles.lista}>
+                {branchesQuery.data.items
+                  .filter((b) => b.name.toLowerCase().includes(filtro.trim().toLowerCase()))
+                  .map((branch) => (
+                    <CommandItem
+                      key={branch.name}
+                      value={branch.name}
+                      aria-selected={branch.name === currentRef}
+                      className={[styles.opcao, branch.name === currentRef && styles.opcaoSelecionada]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onClick={() => escolher(branch.name)}
+                    >
+                      <span
+                        className={styles.ponto}
+                        style={{ background: corDoPonto(branch, branch.name === currentRef) }}
+                        aria-hidden="true"
+                      />
+                      <span className={styles.corpo}>
+                        <span className={styles.nomeLinha}>
+                          {branch.producedBy && (
+                            <IconeDoAgenteProdutor producedBy={branch.producedBy} />
+                          )}
+                          {branch.name === currentRef && (
+                            <CheckIcon size={11} className={styles.check} />
+                          )}
+                          <span className={styles.nome}>{branch.name}</span>
+                        </span>
+                        <span className={styles.meta}>
+                          {metaDaBranch(branch, branch.name === currentRef, t)}
+                        </span>
                       </span>
-                      <span className={styles.meta}>
-                        {metaDaBranch(branch, branch.name === currentRef, t)}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    </CommandItem>
+                  ))}
+                <CommandEmpty>{t('branchPicker.empty')}</CommandEmpty>
+              </CommandList>
+            </Command>
           )}
 
           {branchesQuery.data?.truncated && (
@@ -186,9 +181,8 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
               <ArrowRight aria-hidden="true" />
             </Button>
           </form>
-        </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

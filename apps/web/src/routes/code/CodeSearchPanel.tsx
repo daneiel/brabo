@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { mensagemDaApi, searchCode } from '../../lib/api-client';
+import { Button as BotaoDoKit } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import styles from './CodeSearchPanel.module.css';
 
@@ -80,8 +81,9 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
             <ul className={styles.lista}>
               {searchQuery.data.matches.map((m, i) => (
                 <li key={`${m.path}:${m.line}:${i}`}>
-                  <button
+                  <BotaoDoKit
                     type="button"
+                    variant="ghost"
                     className={styles.resultado}
                     onClick={() => onOpenFile(m.path)}
                     title={m.path}
@@ -91,7 +93,7 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
                       <span className={styles.resultadoLinha}>:{m.line}</span>
                     </span>
                     <span className={styles.resultadoTrecho}>{m.text.trim()}</span>
-                  </button>
+                  </BotaoDoKit>
                 </li>
               ))}
             </ul>

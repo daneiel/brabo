@@ -65,6 +65,9 @@
 }
 
 .itemPr {
+  justify-content: flex-start;
+  height: auto;
+  border-radius: 0;
   flex: 1;
   min-width: 0;
   display: flex;
