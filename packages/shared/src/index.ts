@@ -101,6 +101,13 @@ export interface LLMProviderCapabilities {
    */
   readonly embeddings: boolean;
   /**
+   * O provider devolve o TEXTO do raciocínio do modelo, como chunk `reasoning`
+   * (AT-676, ADR 0248). `true` só com smoke contra a API real; sem prova,
+   * `false` (ADR 0041). O código de leitura existe nos providers, a flag só
+   * diz o que foi PROVADO.
+   */
+  readonly reasoningText: boolean;
+  /**
    * O provider sabe receber um CRITÉRIO DE ROTEAMENTO entre os upstreams que
    * servem o mesmo modelo (ADR 0166) — hoje, só um HUB tem o que rotear.
    * Camada de PROVIDER apenas: o critério é do hub, e o catálogo não o publica
@@ -280,6 +287,15 @@ export interface ToolCall {
   arguments: Record<string, unknown>;
 }
 
+/**
+ * Bloco de pensamento da Anthropic (AT-676). A API EXIGE devolvê-lo, intacto e
+ * na ordem, no turno `assistant` que pediu ferramentas. Opaco para o resto:
+ * o engine só o guarda entre as voltas do laço, nunca o lê nem o grava no log.
+ */
+export type ThinkingBlock =
+  | { type: "thinking"; thinking: string; signature: string }
+  | { type: "redacted_thinking"; data: string };
+
 // Definição de uma ferramenta oferecida ao modelo. `parameters` é um JSON
 // Schema (o Ollama repassa isso no campo `tools`).
 export interface ToolDef {
@@ -298,6 +314,8 @@ export interface ChatMessage {
   content: string | ParteDeConteudo[];
   /** Só em mensagens `assistant` que pediram ferramentas. */
   toolCalls?: ToolCall[];
+  /** Só em `assistant` com `toolCalls`: os blocos que o provider devolveu (Anthropic, AT-676). */
+  thinkingBlocks?: ThinkingBlock[];
   /** Só em mensagens `tool` (resultado): a qual tool call responde. */
   toolCallId?: string;
   /** Nome da ferramenta em mensagens `tool`. */
@@ -348,6 +366,12 @@ export interface ChatOptions {
    * saída visível + N. Só vale com `reasoning: true`, sem `reasoningOff`.
    */
   reasoningBudget?: number;
+}
+
+/** Pedaço do TEXTO do raciocínio do modelo (AT-676). Nunca vai ao `content`. */
+export interface ChatReasoningChunk {
+  type: "reasoning";
+  text: string;
 }
 
 export interface ChatTextDeltaChunk {
@@ -419,6 +443,8 @@ export interface ChatErrorChunk {
 export interface ChatToolCallsChunk {
   type: "tool_calls";
   toolCalls: ToolCall[];
+  /** Anthropic: os blocos de pensamento do turno, para devolver no laço. */
+  thinkingBlocks?: ThinkingBlock[];
 }
 
 // A resposta foi CORTADA pelo teto de saída (`max_tokens`, RN-734): o
@@ -438,6 +464,7 @@ export interface ChatTruncatedChunk {
 export type ChatStreamChunk =
   | ChatTruncatedChunk
   | ChatTextDeltaChunk
+  | ChatReasoningChunk
   | ChatUsageChunk
   | ChatErrorChunk
   | ChatToolCallsChunk;
