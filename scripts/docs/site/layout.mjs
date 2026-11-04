@@ -155,7 +155,7 @@ export function renderizarPagina(ctx) {
   const conteudo =
     (corpo.temH1 ? '' : `<h1>${esc(pagina.titulo)}</h1>`) +
     corpo.html +
-    `<nav class="site-pager">${[ctx.anterior, ctx.proximo].map((v) => (v ? `<a href="${esc(hrefDe(v.slug))}">${esc(v.rotulo)}</a>` : '')).join('')}</nav>`;
+    `<nav class="site-pager">${[ctx.anterior, ctx.proximo].map((v) => (v ? `<a href="${'../'.repeat(slug.split('/').length - 1)}${esc(hrefDe(v.slug))}">${esc(v.rotulo)}</a>` : '')).join('')}</nav>`;
   return layout({
     locale, slug, titulo: pagina.titulo, conteudo, toc: corpo.toc, nav: grupos, textos: t,
     faixaTraducao: pagina.traduzida ? null : t.faixa,
