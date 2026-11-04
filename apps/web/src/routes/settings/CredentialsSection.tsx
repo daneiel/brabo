@@ -28,6 +28,7 @@ import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
 import { listProviderCapabilities } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
+import { aposMudarChave } from '../../lib/providers-com-chave';
 
 /**
  * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
@@ -155,9 +156,8 @@ export function CredentialsSection() {
     if (!apiKey) return;
     setEmVoo(provider);
     try {
-      await upsertCredential({ provider, apiKey });
+      await aposMudarChave(queryClient, () => upsertCredential({ provider, apiKey }));
       setDrafts((d) => ({ ...d, [provider]: '' }));
-      queryClient.invalidateQueries({ queryKey: ['credentials'] });
       showToast({ title: t('credentials.toast.saved'), tone: 'success' });
     } catch (erro) {
       showToast({
@@ -205,8 +205,7 @@ export function CredentialsSection() {
   async function handleRemove(provider: LlmCredentialProvider) {
     setEmVoo(provider);
     try {
-      await deleteCredential(provider);
-      queryClient.invalidateQueries({ queryKey: ['credentials'] });
+      await aposMudarChave(queryClient, () => deleteCredential(provider));
       showToast({ title: t('credentials.toast.removed'), tone: 'success' });
     } catch (erro) {
       showToast({
