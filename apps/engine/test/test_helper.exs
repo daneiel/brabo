@@ -247,6 +247,11 @@ CREATE TABLE IF NOT EXISTS public.session_socket_tickets (
 )
 """)
 
+# AT-676: a coluna nasce numa migration da api; aqui o fixture a espelha.
+Engine.Repo.query!(
+  "ALTER TABLE public.session_socket_tickets ADD COLUMN IF NOT EXISTS pode_ver_raciocinio boolean NOT NULL DEFAULT false"
+)
+
 Engine.Repo.query!("""
 CREATE TABLE IF NOT EXISTS public.agent_instructions (
   id uuid PRIMARY KEY,

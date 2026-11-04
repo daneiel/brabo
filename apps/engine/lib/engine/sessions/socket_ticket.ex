@@ -47,6 +47,7 @@ defmodule Engine.Sessions.SocketTicket do
     field :project_id, :binary_id
     field :user_id, :binary_id
     field :scope, :string
+    field :pode_ver_raciocinio, :boolean, default: false
     field :ticket_hash, :string
     field :expires_at, :utc_datetime_usec
     field :consumed_at, :utc_datetime_usec
@@ -69,7 +70,12 @@ defmodule Engine.Sessions.SocketTicket do
           t.ticket_hash == ^hash and
             is_nil(t.consumed_at) and
             t.expires_at > ^DateTime.utc_now(),
-        select: %{project_id: t.project_id, user_id: t.user_id, scope: t.scope}
+        select: %{
+          project_id: t.project_id,
+          user_id: t.user_id,
+          scope: t.scope,
+          pode_ver_raciocinio: t.pode_ver_raciocinio
+        }
 
     case Repo.one(query) do
       nil -> {:error, :invalid}
@@ -96,7 +102,12 @@ defmodule Engine.Sessions.SocketTicket do
             t.session_id == ^session_id and
             is_nil(t.consumed_at) and
             t.expires_at > ^DateTime.utc_now(),
-        select: %{project_id: t.project_id, user_id: t.user_id, scope: t.scope}
+        select: %{
+          project_id: t.project_id,
+          user_id: t.user_id,
+          scope: t.scope,
+          pode_ver_raciocinio: t.pode_ver_raciocinio
+        }
 
     case Repo.update_all(query, set: [consumed_at: DateTime.utc_now()]) do
       {1, [linha]} -> {:ok, linha}

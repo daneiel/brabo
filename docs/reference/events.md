@@ -416,7 +416,7 @@ ele.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Extraídos dos pontos de emissão: **115 identificadores**, dos quais **3** não estão descritos acima.
+Extraídos dos pontos de emissão: **116 identificadores**, dos quais **4** não estão descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -424,6 +424,7 @@ Extraídos dos pontos de emissão: **115 identificadores**, dos quais **3** não
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
 - `agent.plan` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
+- `agent.reasoning_delta` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
 - `agent.status` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>

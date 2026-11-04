@@ -34,6 +34,28 @@ defmodule EngineWeb.SessionChannel do
     end
   end
 
+  # AT-676 (RN-993): o raciocínio só chega a quem o ticket marcou `developer`+.
+  # Sem a flag o delta é descartado e o `agent.response` perde o campo.
+  intercept ["agent.reasoning_delta", "agent.response"]
+
+  @impl true
+  def handle_out("agent.reasoning_delta", payload, socket) do
+    if socket.assigns[:pode_ver_raciocinio] == true,
+      do: push(socket, "agent.reasoning_delta", payload)
+
+    {:noreply, socket}
+  end
+
+  def handle_out("agent.response", payload, socket) do
+    payload =
+      if socket.assigns[:pode_ver_raciocinio] == true,
+        do: payload,
+        else: Map.drop(payload, [:raciocinio, :raciocinioTotal, "raciocinio", "raciocinioTotal"])
+
+    push(socket, "agent.response", payload)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_in("ping", _payload, socket) do
     :ok = SessionServer.heartbeat(socket.assigns.session_id)

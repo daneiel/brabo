@@ -70,6 +70,7 @@ defmodule Engine.Agents.TextoDoTurno do
       [] ->
         Engine.Agents.GravadoNoTurno.descarregar()
         Engine.Agents.FontesDoTurno.descarregar()
+        Engine.Agents.RaciocinioDoTurno.descarregar()
 
         # AT-570: resposta cortada sem texto algum NÃO fecha calada — a linha
         # da RN-737 vira o fecho (o fio mostra "Continuar de onde parou").
@@ -102,6 +103,7 @@ defmodule Engine.Agents.TextoDoTurno do
         base =
           %{content: fecho, modelName: modelo || visto}
           |> Map.merge(Engine.Agents.FontesDoTurno.descarregar())
+          |> Map.merge(Engine.Agents.RaciocinioDoTurno.descarregar())
           |> Engine.Harness.CitacaoDasFontes.marcar()
 
         if passos == [], do: base, else: Map.put(base, :passos, passos)
