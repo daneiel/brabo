@@ -234,7 +234,7 @@ mesmo raciocínio de `propose_execution_plan`/`propose_infra_pr`) — sem
 | `criteriosExecutaveis` | ✅ — lista **não vazia** |
 | `estrategiaDeAutomacao` | ✅ |
 
-O entregável do QA-estratégia (ADR 0090; `docs/fluxo.yml`, papel
+O entregável do QA-estratégia (ADR 0090; `packages/contracts/fluxo.yml`, papel
 `qa-estrategia`, o segundo momento do `qa-lead`). Desde o
 [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
 ([RN-674](../business-rules.md#rn-674)) ele é o plano de teste da ENTREGA de

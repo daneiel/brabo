@@ -15,7 +15,7 @@ do projeto, não configuração de processo.
 
 Dois arquivos versionados são lidos em tempo de execução e não são
 configuração, embora seja fácil confundi-los com ela: o `permissions.json`
-acima e o `docs/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
+acima e o `apps/api/config/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
 o registro declarativo de gates. Nenhum dos dois tem variável de ambiente que
 aponte um caminho — o registro é achado subindo a partir de `__dirname` — e
 nenhum muda comportamento ao ser editado em produção: o registro DESCREVE os

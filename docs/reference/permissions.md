@@ -107,7 +107,7 @@ Lead fica SUSPENSO esperando a decisão, não só a conversa parada.
 
 `assess_implementability` (ADR 0090, [RN-340](../business-rules.md#rn-340))
 é a avaliação de implementabilidade de uma história (gate `implementavel`,
-`docs/gates.yml`) — MESMO calibre e MESMO raciocínio de
+`apps/api/config/gates.yml`) — MESMO calibre e MESMO raciocínio de
 `propose_execution_plan`: uma decisão inicial da sessão, não um estouro de
 teto, e por isso também fora do bloco de tetos absolutos. Ela suspende o turno
 do Dev Lead do mesmo jeito enquanto está `pending`.

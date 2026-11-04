@@ -47,7 +47,6 @@ describe('classificar', () => {
   });
 
   it.each([
-    ['docs/gates.yml', 'a api o carrega na imagem e o smoke o cobra (RN-070)'],
     ['THIRD_PARTY_NOTICES.md', 'copiado para as cinco imagens'],
     ['.github/workflows/ci.yml', 'é onde os passos do próprio job moram'],
     ['docker-bake.hcl', 'define as cinco imagens'],
@@ -153,24 +152,12 @@ describe('contra a árvore real', () => {
   it('lê os Dockerfiles de verdade (senão o cruzamento abaixo seria cego)', () => {
     const origens = origensDosDockerfiles();
     expect(origens).toContain('apps/api');
-    expect(origens).toContain('docs/gates.yml');
     expect(origens).toContain('THIRD_PARTY_NOTICES.md');
     expect(origens).toContain('design');
-    expect(reinclusoesDoDockerignore()).toContain('docs/gates.yml');
   });
 
   it('nada que imagem, smoke ou E2E leem casa com a lista de permitidos', () => {
     expect(vazamentos(REGRAS_SEM_IMAGEM)).toEqual([]);
-  });
-
-  // Prova por MUTAÇÃO: cada exceção da lista existe por um arquivo que a
-  // árvore real carrega. Tirá-la faz o cruzamento acima ACUSAR esse arquivo —
-  // se não acusasse, o cruzamento seria o instrumento que não mede.
-  it('mutação: docs/ inteira sem a exceção do gates.yml vaza o registro de gates', () => {
-    const mutadas = REGRAS_SEM_IMAGEM.map((r) =>
-      r.descricao.startsWith('docs/') ? { ...r, casa: (a: string) => a.startsWith('docs/') } : r,
-    );
-    expect(vazamentos(mutadas)).toContain('docs/gates.yml');
   });
 
   it('mutação: *.md em qualquer lugar vaza o aviso de terceiros e o .md de dentro das apps', () => {

@@ -142,7 +142,7 @@ PR — e os números acima são o ANTES. O que mudou por baixo:
   quando o diff não toca imagem** (AT-303). O primeiro passo classifica o
   diff da PR com `scripts/ci/diff-toca-imagem.ts` (uma lista de permitidos do
   que nunca entra numa imagem, no smoke ou no E2E: `docs/` exceto
-  `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
+  `apps/api/config/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
   exceto `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`,
   `design/*.md`; o spec prova a lista contra os Dockerfiles reais, por
   mutação). Bake, Trivy, broker, smoke e E2E levam `if:` **por passo**, e o

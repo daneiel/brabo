@@ -1,10 +1,10 @@
 defmodule Engine.Harness.FluxoDoTimeTest do
-  @moduledoc "RN-711 (AT-369): o texto do fluxo, conferido contra `docs/fluxo.yml`."
+  @moduledoc "RN-711 (AT-369): o texto do fluxo, conferido contra `packages/contracts/fluxo.yml`."
   use ExUnit.Case, async: true
 
   alias Engine.Harness.FluxoDoTime
 
-  @fluxo Path.expand("../../../../../docs/fluxo.yml", __DIR__)
+  @fluxo Path.expand("../../../../../packages/contracts/fluxo.yml", __DIR__)
 
   # Papéis do fluxo.yml com o status de cada um (sem lib de YAML: o arquivo
   # declara um papel por `- id:` seguido do `status:` dele).

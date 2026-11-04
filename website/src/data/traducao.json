@@ -893,7 +893,7 @@
       "data": "2026-10-15"
     },
     "explanation/auditoria-fluxo-vs-codigo.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/auditoria-visual-rodada-29.md": {
@@ -933,7 +933,7 @@
       "data": "2026-09-26"
     },
     "explanation/gates.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/historico-de-fases.md": {
@@ -965,7 +965,7 @@
       "data": "2026-10-15"
     },
     "explanation/modelo-de-time.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/observability.md": {
@@ -1029,11 +1029,11 @@
       "data": "2026-10-15"
     },
     "reference/artifacts.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/brb.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/configuration.md": {
@@ -1057,7 +1057,7 @@
       "data": "2026-10-16"
     },
     "reference/permissions.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
@@ -1975,7 +1975,7 @@
       "data": "2026-10-15"
     },
     "explanation/auditoria-fluxo-vs-codigo.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/auditoria-visual-rodada-29.md": {
@@ -2015,7 +2015,7 @@
       "data": "2026-09-26"
     },
     "explanation/gates.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/historico-de-fases.md": {
@@ -2047,7 +2047,7 @@
       "data": "2026-10-15"
     },
     "explanation/modelo-de-time.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/observability.md": {
@@ -2111,11 +2111,11 @@
       "data": "2026-10-15"
     },
     "reference/artifacts.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/brb.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/configuration.md": {
@@ -2139,7 +2139,7 @@
       "data": "2026-10-16"
     },
     "reference/permissions.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
@@ -3057,7 +3057,7 @@
       "data": "2026-10-15"
     },
     "explanation/auditoria-fluxo-vs-codigo.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/auditoria-visual-rodada-29.md": {
@@ -3097,7 +3097,7 @@
       "data": "2026-09-26"
     },
     "explanation/gates.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/historico-de-fases.md": {
@@ -3129,7 +3129,7 @@
       "data": "2026-10-15"
     },
     "explanation/modelo-de-time.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/observability.md": {
@@ -3193,11 +3193,11 @@
       "data": "2026-10-15"
     },
     "reference/artifacts.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/brb.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/configuration.md": {
@@ -3221,7 +3221,7 @@
       "data": "2026-10-16"
     },
     "reference/permissions.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/rulesets.md": {
