@@ -5,6 +5,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { RunnerOnboardingPanel } from './RunnerOnboardingPanel';
 import { Alert } from './ui/Alert';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem } from './shadcn/breadcrumb';
 import { FolderIcon, FileIcon, ServerIcon, UserIcon } from './ui/icons';
 import {
   criarFsBrowserViaApi,
@@ -304,8 +305,8 @@ export function FolderBrowserModal({
 
           <div className={styles.layout}>
             <nav className={styles.atalhos} aria-label={t('folderBrowserModal.shortcutsLabel')}>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 className={styles.atalhoItem}
                 disabled={carregando}
                 onClick={() => void carregar()}
@@ -316,7 +317,7 @@ export function FolderBrowserModal({
                     ? t('folderBrowserModal.projectsBase')
                     : t('folderBrowserModal.personalFolder')}
                 </span>
-              </button>
+              </Button>
               {/*
                 A raiz do filesystem NÃO é oferecida pelo transporte de api:
                 `/` está fora da base por construção, e o atalho só teria como
@@ -324,56 +325,59 @@ export function FolderBrowserModal({
                 prometendo o que o servidor não faz.
               */}
               {origem.tipo === 'runner' && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   className={styles.atalhoItem}
                   disabled={carregando}
                   onClick={() => void carregar('/')}
                 >
                   <ServerIcon size={14} />
                   <span>{t('folderBrowserModal.root')}</span>
-                </button>
+                </Button>
               )}
             </nav>
 
             <div className={styles.central}>
-              <div className={styles.breadcrumb} aria-label={t('folderBrowserModal.breadcrumbLabel')}>
+              <Breadcrumb className={styles.breadcrumb} aria-label={t('folderBrowserModal.breadcrumbLabel')}>
+                <BreadcrumbList>
                 {segmentosDoPath(path || '/').map((seg, indice, lista) => (
-                  <span key={seg.caminho} className={styles.segmentoWrapper}>
-                    <button
-                      type="button"
+                  <BreadcrumbItem key={seg.caminho} className={styles.segmentoWrapper}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className={styles.segmento}
                       disabled={carregando}
                       onClick={() => void carregar(seg.caminho)}
                     >
                       {seg.rotulo}
-                    </button>
+                    </Button>
                     {indice < lista.length - 1 && <span aria-hidden="true">/</span>}
-                  </span>
+                  </BreadcrumbItem>
                 ))}
-              </div>
+                </BreadcrumbList>
+              </Breadcrumb>
 
               <div className={styles.lista} role="listbox" aria-label={t('folderBrowserModal.entriesLabel')}>
                 {carregando && <div className={styles.estado}><Shimmer>{t('folderBrowserModal.loading')}</Shimmer></div>}
 
                 {!carregando && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     className={styles.item}
                     onClick={() => void carregar(pathPai(path))}
                     disabled={path === '/' || path === ''}
                   >
                     <FolderIcon size={14} />
                     <span>..</span>
-                  </button>
+                  </Button>
                 )}
 
                 {!carregando &&
                   entradas?.map((entrada) =>
                     entrada.isDir ? (
-                      <button
+                      <Button
                         key={entrada.nome}
-                        type="button"
+                        variant="ghost"
                         role="option"
                         aria-selected={selecionado === entrada.nome}
                         className={[
@@ -387,7 +391,7 @@ export function FolderBrowserModal({
                       >
                         <FolderIcon size={14} />
                         <span>{entrada.nome}</span>
-                      </button>
+                      </Button>
                     ) : (
                       <div
                         key={entrada.nome}

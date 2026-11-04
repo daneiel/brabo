@@ -158,10 +158,10 @@ function cardDoModo(rotulo: string): HTMLButtonElement {
   return card;
 }
 
-/** A classe do card selecionado é hasheada pelo CSS module — só o sufixo importa. */
+/** Selecionado = botão de alternar ligado (aria-pressed), comportamento e não estrutura. */
 function estaSelecionado(rotulo: string): boolean {
   const botao = screen.getByText(rotulo).closest('button');
-  return /selected/.test(botao?.className ?? '');
+  return botao?.getAttribute('aria-pressed') === 'true';
 }
 
 beforeEach(async () => {

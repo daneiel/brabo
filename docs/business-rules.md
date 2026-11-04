@@ -22446,7 +22446,7 @@ sem dizer qual.
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
-  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1128`
+  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1143`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:178`
   (`TabelaMarkdown`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,

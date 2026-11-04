@@ -31,6 +31,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { Ajuda } from '../components/ui/Ajuda';
+import { ToggleGroup, ToggleGroupItem } from '../components/shadcn/toggle-group';
 import { useToast } from '../components/ui/ToastProvider';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon, PlusIcon, FolderIcon } from '../components/ui/icons';
 import {
@@ -642,45 +643,52 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
       <div className={styles.stepTitle}>{t(STEP_TITLE_KEY[currentStep])}</div>
 
       {currentStep === 'mode' && (
-        <div className={styles.providerGrid}>
+        <ToggleGroup
+          className={styles.providerGrid}
+          value={modo ? [modo] : []}
+          onValueChange={(v) => v[0] && setModo(v[0] as ModoDeRepositorio)}
+        >
           {MODOS.map((m) => (
-            <button
+            <ToggleGroupItem
               key={m.id}
-              type="button"
+              value={m.id}
               className={[styles.providerOption, modo === m.id && styles.selected]
                 .filter(Boolean)
                 .join(' ')}
-              onClick={() => setModo(m.id)}
             >
               <span className={styles.providerLabel}>{t(m.labelKey)}</span>
               <span className={styles.providerDesc}>{t(m.descKey)}</span>
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       )}
 
       {currentStep === 'provider' && (
-        <div className={styles.providerGrid}>
+        <ToggleGroup
+          className={styles.providerGrid}
+          value={provider ? [provider] : []}
+          onValueChange={(v) => {
+            if (!v[0]) return;
+            setProvider(v[0] as GitProviderName);
+            setSelectedCredentialId(undefined);
+            setCredError(null);
+          }}
+        >
           {PROVIDERS.map((p) => {
             const Icon = p.icon;
             return (
-              <button
+              <ToggleGroupItem
                 key={p.id}
-                type="button"
+                value={p.id}
                 className={[styles.providerOption, provider === p.id && styles.selected].filter(Boolean).join(' ')}
-                onClick={() => {
-                  setProvider(p.id);
-                  setSelectedCredentialId(undefined);
-                  setCredError(null);
-                }}
               >
                 <Icon size={20} />
                 <span className={styles.providerLabel}>{t(p.labelKey)}</span>
                 <span className={styles.providerDesc}>{t(p.descKey)}</span>
-              </button>
+              </ToggleGroupItem>
             );
           })}
-        </div>
+        </ToggleGroup>
       )}
 
       {currentStep === 'credential' && provider && provider !== 'local' && (
@@ -766,29 +774,37 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </div>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
-              <div className={styles.toggleRow}>
+              <ToggleGroup
+                className={styles.toggleRow}
+                value={[visibility]}
+                onValueChange={(v) => v[0] && setVisibility(v[0] as Visibility)}
+              >
                 {(['private', 'public'] as Visibility[]).map((v) => (
-                  <button
+                  <ToggleGroupItem
                     key={v}
-                    type="button"
+                    value={v}
                     className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
-                    onClick={() => setVisibility(v)}
                   >
                     {v === 'private'
                       ? t('details.create.visibilityPrivate')
                       : t('details.create.visibilityPublic')}
-                  </button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
           </div>
           )}
         <div>
-          <div className={styles.providerGrid}>
+          <ToggleGroup
+            className={styles.providerGrid}
+            value={modoDeWorkspace ? [modoDeWorkspace] : []}
+            // Reclicar o ligado esvazia o grupo: ainda é uma ESCOLHA humana do mesmo modo.
+            onValueChange={(v) => setModoDeWorkspaceEscolhido((v[0] as typeof modoDeWorkspace) ?? modoDeWorkspace)}
+          >
             {modosDeWorkspaceOferecidos.map((m) => (
-              <button
+              <ToggleGroupItem
                 key={m.id}
-                type="button"
+                value={m.id}
                 className={[
                   styles.providerOption,
                   modoDeWorkspace === m.id && styles.selected,
@@ -796,13 +812,12 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   .filter(Boolean)
                   .join(' ')}
                 disabled={!modoExecutavel(m.id)}
-                onClick={() => setModoDeWorkspaceEscolhido(m.id)}
               >
                 <span className={styles.providerLabel}>{t(m.labelKey)}</span>
                 <span className={styles.providerDesc}>{t(m.descKey)}</span>
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
 
           {/* O motivo dos cards inertes, em TEXTO e uma vez (ADR 0064):
               `title` em elemento `disabled` não abre no Chromium. Só com a
