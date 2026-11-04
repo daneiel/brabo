@@ -27,18 +27,6 @@
   border-radius: var(--radius-md);
 }
 
-.aviso {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--danger-soft);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-md);
-  color: var(--danger);
-  font-size: var(--fs-body);
-}
-
 .acoes {
   display: flex;
   justify-content: flex-end;

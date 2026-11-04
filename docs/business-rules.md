@@ -20808,7 +20808,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   usuário e `#pr-3`, e toda PR local era "autor desconhecido".
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:72` (`resultadoDaFalha`),
   `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
-  `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
+  `apps/web/src/routes/ProjectPrsTab.tsx:69` (`ultimaRecusaDeMerge`),
   `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("conflito de merge → kind git_merge, arquivos no resultado e evento na

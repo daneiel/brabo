@@ -13,8 +13,10 @@ import { Button } from '../components/ui/Button';
 import { Ajuda } from '../components/ui/Ajuda';
 import { RefreshCw } from 'lucide-react';
 import { Chip } from '../components/ui/Chip';
+import { Alert } from '../components/ui/Alert';
+import { Input } from '../components/ui/Input';
 import { useToast } from '../components/ui/ToastProvider';
-import { AlertIcon, FolderIcon, SearchIcon } from '../components/ui/icons';
+import { FolderIcon, SearchIcon } from '../components/ui/icons';
 import styles from './ProjectRagTab.module.css';
 
 const ORDEM_DOS_ESCOPOS: RagChunkScope[] = ['docs', 'adr', 'session', 'local'];
@@ -171,7 +173,7 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
 
       <form className={styles.formulario} onSubmit={submeter}>
         <div className={styles.linhaBusca}>
-          <input
+          <Input
             className={styles.input}
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
@@ -217,11 +219,10 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
         {buscado && searchQuery.data && (
           <>
             {!searchQuery.data.vectorAvailable && (
-              <div className={styles.avisoVetor} role="status">
-                <AlertIcon size={14} />
+              <Alert tone="warning" role="status">
                 {t('rag.vectorUnavailable')}
                 {searchQuery.data.vectorUnavailableReason && `: ${searchQuery.data.vectorUnavailableReason}`}
-              </div>
+              </Alert>
             )}
 
             {searchQuery.data.hits.length === 0 ? (

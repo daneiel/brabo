@@ -19,6 +19,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline } from '../components/PrGateTimeline';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
+import { Alert } from '../components/ui/Alert';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
 import { PrListAndDiff } from './code/PrListAndDiff';
@@ -245,7 +246,8 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           // o botão segue ativo, a decisão continua humana.
           const recusa = acaoPendente ? undefined : ultimaRecusaDeMerge(mergesFalhosQuery.data, pr);
           const avisoDeRecusa = recusa ? (
-            <div className={styles.avisoDeGate} data-testid="aviso-merge-recusado">
+            <Alert tone="warning">
+              <div data-testid="aviso-merge-recusado">
               <p>{t('prsTab.mergeRecusado', { reason: recusa.motivo })}</p>
               {recusa.arquivos.length > 0 && (
                 <p>
@@ -256,7 +258,8 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
                 </p>
               )}
               <p>{t('prsTab.mergeResolverAntes')}</p>
-            </div>
+              </div>
+            </Alert>
           ) : null;
           if (acaoPendente) {
             return (
