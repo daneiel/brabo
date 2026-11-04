@@ -1403,6 +1403,7 @@ detalhar o motivo na URL.
 | DELETE | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
 | GET | `/projects/:projectId/area-bindings/:areaKey` | role:viewer |
 | PUT | `/projects/:projectId/area-bindings/:areaKey` | role:maintainer |
+| GET | `/projects/:projectId/agent-catalog` | role:viewer |
 | GET | `/projects/:projectId/agent-costs` | role:developer |
 | GET | `/projects/:projectId/agents/:agent/instruction-versions` | role:viewer |
 | POST | `/projects/:projectId/agents/:agent/instruction-versions/:version/rollback` | role:maintainer |
