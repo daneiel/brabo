@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   CoverageMatrixRow,
+  ExecucaoDeTestes,
   ProposedAction,
   PrGateStatus,
   RegistroDeGates,
 } from '../lib/api-types';
 import { Badge } from './ui/Badge';
+import { TestResults } from './ai-elements/test-results';
 import { Table, type TableColumn } from './ui/Table';
 import { AlertIcon, CheckIcon, ClockIcon, PrIcon } from './ui/icons';
 import { Shimmer } from './ui/Shimmer';
@@ -35,6 +37,7 @@ export interface GateVerdict {
   resumo: string;
   itens: string[];
   coverageMatrix?: CoverageMatrixRow[];
+  execucaoDeTestes?: ExecucaoDeTestes;
   // Rastreabilidade da área de QA (Fase 8b/8d): o parecer de CADA
   // subespecialidade que rodou, e a que foi dispensada (com justificativa —
   // nunca silêncio). `itens` acima já vem prefixado por `[label]`
@@ -290,6 +293,7 @@ function VerdictCard({
               ))}
             </ItemGroup>
           )}
+          {verdict.execucaoDeTestes && <TestResults execucao={verdict.execucaoDeTestes} />}
           {verdict.coverageMatrix && verdict.coverageMatrix.length > 0 && (
             <Table
               columns={columns}

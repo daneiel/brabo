@@ -1188,6 +1188,31 @@ export interface CoverageMatrixRow {
   covered: boolean;
 }
 
+// AT-687: testes que o gate de QA rodou, lidos do relatório JUnit pelo engine.
+export type StatusDeCasoDeTeste = 'passou' | 'falhou' | 'pulado';
+export interface CasoDeTeste {
+  nome: string;
+  status: StatusDeCasoDeTeste;
+  duracaoMs: number;
+  mensagem?: string;
+}
+export interface SuiteDeTestes {
+  nome: string;
+  casos: CasoDeTeste[];
+}
+export type ExecucaoDeTestes =
+  | {
+      fonte: 'junit';
+      total: number;
+      passaram: number;
+      falharam: number;
+      pulados: number;
+      duracaoMs: number;
+      suites: SuiteDeTestes[];
+      casosOmitidos: number;
+    }
+  | { indisponivel: 'sem_relatorio' | 'relatorio_invalido' | 'modo_runner' };
+
 // Payload do session_event `artifact.qa_verdict` (QAAgent).
 export interface QaVerdictPayload {
   taskId: string;
@@ -1195,6 +1220,7 @@ export interface QaVerdictPayload {
   resumo: string;
   itens: string[];
   coverageMatrix: CoverageMatrixRow[];
+  execucaoDeTestes?: ExecucaoDeTestes;
 }
 
 // Payload do session_event `artifact.secops_verdict` (SecOpsAgent).

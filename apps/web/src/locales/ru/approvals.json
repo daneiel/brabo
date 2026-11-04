@@ -225,6 +225,32 @@
       "covered": "Покрытие",
       "coveredYes": "покрыто",
       "coveredNo": "без теста"
+    },
+    "tests": {
+      "title": "Выполненные тесты",
+      "sem_relatorio": "Гейт не создал отчёт о тестах.",
+      "relatorio_invalido": "Не удалось прочитать отчёт о тестах.",
+      "modo_runner": "Проект в режиме runner: сервер не читает отчёт о тестах.",
+      "passed_one": "Пройден {{count}}",
+      "passed_few": "Пройдено {{count}}",
+      "passed_many": "Пройдено {{count}}",
+      "passed_other": "Пройдено {{count}}",
+      "failed_one": "Провален {{count}}",
+      "failed_few": "Провалено {{count}}",
+      "failed_many": "Провалено {{count}}",
+      "failed_other": "Провалено {{count}}",
+      "skipped_one": "Пропущен {{count}}",
+      "skipped_few": "Пропущено {{count}}",
+      "skipped_many": "Пропущено {{count}}",
+      "skipped_other": "Пропущено {{count}}",
+      "omitted_one": "Показано {{shown}} из {{total}} случаев; не показано: {{count}}.",
+      "omitted_few": "Показано {{shown}} из {{total}} случаев; не показано: {{count}}.",
+      "omitted_many": "Показано {{shown}} из {{total}} случаев; не показано: {{count}}.",
+      "omitted_other": "Показано {{shown}} из {{total}} случаев; не показано: {{count}}.",
+      "statusPassou": "пройден",
+      "statusFalhou": "провален",
+      "statusPulado": "пропущен",
+      "statusDesconhecido": "неизвестный статус"
     }
   },
   "approvalsTab": {
