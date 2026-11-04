@@ -1,3 +1,4 @@
+import { Disclosure } from './ui/Disclosure';
 import { useState, type CSSProperties } from 'react';
 import { useCatalogoDeAgentes } from '../lib/agent-catalog-queries';
 import { Hand, Plane, RotateCcw } from 'lucide-react';
@@ -203,10 +204,13 @@ function CatalogoDoAgente({ projectId, slug }: { projectId: string; slug: string
   return (
     <div className={styles.catalog}>
       {(['instructions', 'tools'] as const).map((secao) => (
-        <details key={secao} onToggle={(e) => e.currentTarget.open && setAbertas(true)}>
-          <summary>{t(`agentCard.catalog.${secao}`)}</summary>
+        <Disclosure
+          key={secao}
+          titulo={t(`agentCard.catalog.${secao}`)}
+          onAlternar={(aberto) => aberto && setAbertas(true)}
+        >
           <SecaoDoCatalogo secao={secao} slug={slug} query={catalogo} />
-        </details>
+        </Disclosure>
       ))}
     </div>
   );
