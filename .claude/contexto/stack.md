@@ -120,3 +120,10 @@
   Trivy, `install-e2e.yml`): as regras moram em
   `.claude/rules/ci-e-cadeia-de-suprimentos.md`, carregadas quando a sessão lê
   `.github/`, `scripts/ci/`, `docker/`, `deploy/` ou o `install.sh`.
+- Mapa de repositórios (ADR 0252, EP-033): DECIDIDO, EM MIGRAÇÃO (onda A) — hoje
+  o código ainda mora neste monorepo, nada está separado. Destino em
+  `viralabs-dev`, todos públicos: `brabo` (porta de entrada: docs, site,
+  `install.sh`, release do produto), `brabo-api`, `-engine`, `-web`, `-runner`,
+  `-broker`, `-contracts`, `-ci`, `-infra`, `-qa`, `-workspace`; o `daneiel/brabo`
+  vira `brabo-legacy`. Doc dentro de cada repositório, versões próprias a partir
+  de 1.0.0. Detalhe, ordem das ondas e o que não muda: no ADR.
