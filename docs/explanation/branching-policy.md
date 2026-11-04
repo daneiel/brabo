@@ -1154,6 +1154,8 @@ pendente. O repositório ficaria preso para sempre.
 
 **Falhar ao conferir mantém a trava.** Desconhecido não é permissão.
 
+O job de testes dos scripts instala também o `website/`, por causa do Redoc (ADR 0253).
+
 ## O que a política não resolve {#what-the-policy-doesnt-solve}
 
 **Ela não impede código ruim.** Ela garante que o código passou pelos

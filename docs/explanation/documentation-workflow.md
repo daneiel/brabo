@@ -902,6 +902,19 @@ valores, nos dois temas pela preferência do sistema. A cópia é amarrada por
 `scripts/docs/landing.spec.ts`, que resolve os tokens e reprova o valor que
 divergir — ela já ficou petróleo uma vez depois do ADR 0181.
 
+### O gerador do site que substitui o Docusaurus (em construção) {#site-generator}
+
+O [ADR 0253](../adr/0253-o-site-de-docs-deixa-o-docusaurus.md) tira o site do
+Docusaurus. Enquanto a troca não acontece, o gerador novo roda AO LADO: `pnpm
+docs:site` escreve `build/docs-site/` (ignorado pelo git), com as mesmas URLs e
+âncoras do site publicado, e o Docusaurus e o CI seguem como estão. O núcleo
+mora em `scripts/docs/site/`: `paginas.mjs` descobre as páginas de cada idioma
+(a tradução onde existe, a fonte pt-BR no resto, então o link nunca sai do
+idioma), `render.mjs` converte o Markdown (âncora `{#id}`, admonições, Mermaid,
+realce com shiki, link `.md` para URL relativa) e `navegacao.mjs` porta a barra
+lateral, com os ADRs agrupados por `docs/adr/temas.yml`. O caminho das
+traduções é uma constante só (`CAMINHO_DAS_TRADUCOES`).
+
 ## Rodando na sua máquina {#running-it-on-your-machine}
 
 `website/` tem `pnpm-lock.yaml` próprio desde o [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
