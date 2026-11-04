@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { SessionEvent } from '../lib/api-types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { EmptyState } from './ui/EmptyState';
 import { EventItem } from './EventItem';
 import { BellIcon } from './ui/icons';
 import styles from './NotificationBell.module.css';
@@ -62,25 +66,26 @@ export function NotificationBell({
 
   return (
     <div className={styles.wrapper}>
-      <button
-        type="button"
-        className={styles.button}
-        onClick={() => onOpenChange(!open)}
-        aria-label={t('notificationBell.label')}
-      >
-        <BellIcon size={17} />
-        {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-      </button>
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverTrigger
+          render={<Button variant="secondary" className={styles.button} aria-label={t('notificationBell.label')} />}
+        >
+          <BellIcon size={17} />
+          {unreadCount > 0 && (
+            <Badge tone="accent" className={styles.badge}>
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
+        </PopoverTrigger>
 
-      {open && (
-        <div className={styles.dropdown}>
+        <PopoverContent align="end" sideOffset={8} className={styles.dropdown}>
           <div className={styles.header}>
             <span className={styles.headerTitle}>{t('notificationBell.label')}</span>
-            <button type="button" className={styles.markRead} onClick={onMarkRead}>
+            <Button variant="ghost" size="sm" className={styles.markRead} onClick={onMarkRead}>
               {ocultos > 0
                 ? t('notificationBell.markRead.withCount', { total: totalNaGaveta })
                 : t('notificationBell.markRead.default')}
-            </button>
+            </Button>
           </div>
 
           {ocultos > 0 && (
@@ -90,7 +95,7 @@ export function NotificationBell({
           )}
 
           {groups.length === 0 && (
-            <div className={styles.empty}>{t('notificationBell.empty')}</div>
+            <EmptyState>{t('notificationBell.empty')}</EmptyState>
           )}
 
           {groups.map((group) => (
@@ -98,7 +103,7 @@ export function NotificationBell({
               <div className={styles.groupHeader}>
                 <span className={styles.groupDot} />
                 {group.projectName}
-                <span className={styles.groupCount}>{group.unreadCount}</span>
+                <Badge tone="muted" className={styles.groupCount}>{group.unreadCount}</Badge>
               </div>
               <div className={styles.list}>
                 {group.events.map((event) => (
@@ -112,8 +117,8 @@ export function NotificationBell({
               )}
             </div>
           ))}
-        </div>
-      )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
