@@ -33,6 +33,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **web**: o chat da Sessão (fio, composer, avisos e pendências) ocupa a largura inteira, sem a coluna de 780px (ADR 0250).
 
+- **web**: no fio da Sessão, as perguntas estruturadas do agente aparecem depois da mensagem dele, não antes (RN-994).
 - **web**: o conteúdo das abas do projeto e da Conta ocupa a largura inteira da área à direita da sidebar, sem a coluna de 1040px nem os 720px (ADR 0248, revisa o 0244).
 - **web**: as listas do chat voltam a ter marcador e número, e os títulos dos diálogos voltam ao tamanho do kit; tokens `--sidebar-w`, `--sidebar-w-collapsed` e `--header-h` removidos (AT-659).
 - **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
