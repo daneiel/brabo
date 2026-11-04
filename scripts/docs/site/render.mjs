@@ -12,7 +12,7 @@
  *  - `{#id}` ao fim do título vira o `id` (CONTRATO das RNs, `ancoras-de-rn.mjs`);
  *    sem ele, o id é o slug do texto (github-slugger, como o Docusaurus);
  *  - admonições `:::note|tip|info|warning|caution|danger [título]` ... `:::`;
- *  - ```mermaid -> `<pre class="mermaid">`; demais cercas passam pelo shiki com
+ *  - ```mermaid -> `<pre class="mermaid" data-mermaid>`; demais cercas passam pelo shiki com
  *    tema de variáveis CSS (`--shiki-*`, definidas pelo CSS do site);
  *  - tabela embrulhada em `div.tabela-rolavel`;
  *  - link relativo `x.md#a` vira href relativo à URL da página no locale;
@@ -120,7 +120,7 @@ export async function criarRenderizador({ paginas }) {
   md.renderer.rules.fence = (t, i, _o, env) => {
     const tk = t[i];
     const lang = tk.info.trim().split(/\s+/)[0];
-    if (lang === 'mermaid') { env.temMermaid = true; return `<pre class="mermaid">${esc(tk.content)}</pre>\n`; }
+    if (lang === 'mermaid') { env.temMermaid = true; return `<pre class="mermaid" data-mermaid>${esc(tk.content)}</pre>\n`; }
     if (LINGUAGENS.includes(lang)) return `${realce.codeToHtml(tk.content, { lang, theme: 'brabo' })}\n`;
     return `<pre class="codigo"><code${lang ? ` class="language-${esc(lang)}"` : ''}>${esc(tk.content)}</code></pre>\n`;
   };

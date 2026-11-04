@@ -61,7 +61,7 @@ describe('render', () => {
     const fonte = (await criarRenderizador({ paginas: pt }))(pt.find((p) => p.slug === 'adr/0001-x')!);
     expect(fonte.html).toContain('admonicao-warning');
     expect(fonte.html).toContain('Cuidado!');
-    expect(fonte.html).toContain('<pre class="mermaid">');
+    expect(fonte.html).toContain('<pre class="mermaid" data-mermaid>');
     expect(fonte.html).toContain('tabela-rolavel');
     expect(fonte.temMermaid).toBe(true);
     expect(slugDeTitulo('O que é o Brabo?')).toBe('o-que-é-o-brabo');
