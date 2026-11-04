@@ -3165,6 +3165,38 @@ paths:
       summary: Makes the agent go back to inheriting the area's model
       tags:
         - llm
+  /projects/{projectId}/agent-catalog:
+    get:
+      description: >-
+        Read-only (RN-995). Identity and tools come from the engine; the
+        instruction is the current `agent_instructions` row. No composed prompt,
+        no tool schema. Engine down: identity/tools are null with
+        `motivoSemCatalogo`, instructions still come.
+      operationId: AgentCatalogController_get
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogoDeAgentesResponseDto'
+        '401':
+          description: No token, expired token, or invalid signature.
+        '403':
+          description: Insufficient role on the project.
+        '429':
+          description: Rate limit per user or per IP.
+      security:
+        - bearer: []
+      summary: Lists each agent's identity, project instruction and tools
+      tags:
+        - agents
   /projects/{projectId}/agent-costs:
     get:
       description: >-
@@ -10645,6 +10677,8 @@ tags:
     x-displayName: actions
   - name: execution
     x-displayName: execution
+  - name: agents
+    x-displayName: agents
   - name: anamnesis
     x-displayName: anamnesis
   - name: backlog
@@ -10655,8 +10689,6 @@ tags:
     x-displayName: rag
   - name: sessions
     x-displayName: sessions
-  - name: agents
-    x-displayName: agents
   - name: credentials
     x-displayName: credentials
   - name: users
@@ -10948,6 +10980,34 @@ components:
       required:
         - agent
         - versions
+    AgenteDoCatalogoResponseDto:
+      type: object
+      properties:
+        agente:
+          type: string
+          example: dev-api
+        identidade:
+          type: string
+          nullable: true
+          description: Code identity; null when the engine is unreachable.
+        instrucoesDoProjeto:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/InstrucoesDoProjetoResponseDto'
+        ferramentas:
+          nullable: true
+          description: >-
+            FULL catalog; the per-step cut (Jev) may show less to the model.
+            null = unknown (engine down), never "no tools".
+          type: array
+          items:
+            $ref: '#/components/schemas/FerramentaDoAgenteResponseDto'
+      required:
+        - agente
+        - identidade
+        - instrucoesDoProjeto
+        - ferramentas
     AgentTokenUsageResponseDto:
       type: object
       properties:
@@ -12070,6 +12130,19 @@ components:
         - actors
         - contextDiagram
         - containerDiagram
+    CatalogoDeAgentesResponseDto:
+      type: object
+      properties:
+        agentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgenteDoCatalogoResponseDto'
+        motivoSemCatalogo:
+          type: string
+          enum:
+            - engine_indisponivel
+      required:
+        - agentes
     ChatSseEventResponseDto:
       type: object
       properties:
@@ -14582,6 +14655,18 @@ components:
       required:
         - sessionId
         - modules
+    FerramentaDoAgenteResponseDto:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: write_file
+        descricao:
+          type: string
+          description: Description the model reads (pt-BR), cut at 1000 chars.
+      required:
+        - nome
+        - descricao
     FirstAccountInternalDto:
       type: object
       properties:
@@ -15533,6 +15618,21 @@ components:
       required:
         - title
         - files
+    InstrucoesDoProjetoResponseDto:
+      type: object
+      properties:
+        versao:
+          type: number
+          example: 3
+        conteudo:
+          type: string
+          description: Current instruction text, cut at 8000 chars.
+        conteudoTotal:
+          type: number
+          description: Real length, present only when cut.
+      required:
+        - versao
+        - conteudo
     InstructionVersionResponseDto:
       type: object
       properties:
