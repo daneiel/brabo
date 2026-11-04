@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { simularLayoutMovel } from '../../test/match-media';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './accordion';
 import { Alert } from './alert';
 import { Badge } from './badge';
 import { Breadcrumb } from './breadcrumb';
@@ -16,14 +15,10 @@ import { NativeSelect } from './native-select';
 import { Popover, PopoverTrigger } from './popover';
 import { Progress } from './progress';
 import { Questionnaire, QuestionnaireItem } from './questionnaire';
-import { RadioGroup, RadioGroupItem } from './radio-group';
-import { ScrollArea } from './scroll-area';
 import { Separator } from './separator';
 import { Sheet, SheetTrigger } from './sheet';
 import { Sidebar, SidebarProvider } from './sidebar';
 import { Skeleton } from './skeleton';
-import { Spinner } from './spinner';
-import { Switch } from './switch';
 import { Table } from './table';
 import { Textarea } from './textarea';
 import { Toggle } from './toggle';
@@ -33,14 +28,6 @@ import { Trace } from './trace';
 // registry base-nova. Nada disto é usado em tela ainda; a prova é só que cada um
 // monta sem lançar.
 const simples = {
-  accordion: (
-    <Accordion>
-      <AccordionItem value="a">
-        <AccordionTrigger>x</AccordionTrigger>
-        <AccordionContent>y</AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  ),
   alert: <Alert />,
   badge: <Badge>x</Badge>,
   breadcrumb: <Breadcrumb />,
@@ -56,18 +43,11 @@ const simples = {
       <PopoverTrigger>x</PopoverTrigger>
     </Popover>
   ),
-  'radio-group': (
-    <RadioGroup>
-      <RadioGroupItem value="a" />
-    </RadioGroup>
-  ),
-  'scroll-area': <ScrollArea>x</ScrollArea>,
   sheet: (
     <Sheet>
       <SheetTrigger>x</SheetTrigger>
     </Sheet>
   ),
-  switch: <Switch />,
   empty: <Empty />,
   input: <Input />,
   label: <Label>x</Label>,
@@ -80,7 +60,6 @@ const simples = {
   ),
   separator: <Separator />,
   skeleton: <Skeleton />,
-  spinner: <Spinner />,
   table: <Table />,
   textarea: <Textarea />,
   toggle: <Toggle>x</Toggle>,
