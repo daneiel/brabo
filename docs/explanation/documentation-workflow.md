@@ -553,6 +553,20 @@ visível — a decisão cobriu só o inventário de ambiente.
 `--check` não escreve nada e reprova se qualquer coisa fosse ficar
 diferente. É o modo do CI.
 
+### `fontes.yml` — onde mora o código que a doc lê {#fontesyml--where-the-code-lives}
+
+`scripts/docs/fontes.yml` é o mapa nome-lógico → raiz (`api`, `engine`, `web`,
+`runner`, `broker`, `contracts`, `docs`, `infra`), preparação para a separação
+em repositórios. No monorepo ele é IDENTIDADE: nenhum caminho resolvido muda, e
+os caminhos escritos no código e nas RNs (`apps/api/...`) seguem relativos à
+raiz do monorepo. Todo leitor de código em `scripts/docs` passa pelo resolvedor
+de `fontes.mjs` (`ler`, `arquivos`, `versionados`, `caminhoReal`), que escolhe a
+fonte pelo prefixo mais longo (`infra: .` é o resto). Depois da separação,
+`BRABO_FONTES=/caminho/outro-fontes.yml` aponta os mesmos nomes para clones
+irmãos (raiz relativa ao monorepo ou absoluta). Fonte ausente do mapa ativo,
+raiz inexistente ou arquivo que não abre REPROVA nomeando a fonte — nunca cai no
+caminho antigo nem devolve vazio (`fontes.spec.ts`, por mutação).
+
 ### `drift.mjs` — cobra no PR {#driftmjs--enforces-it-in-the-pr}
 
 Cruza `git diff --name-only <base>...HEAD` com o mapa. Para toda regra

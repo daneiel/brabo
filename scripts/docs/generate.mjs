@@ -46,7 +46,9 @@ import {
   arquivos,
   eventosEmitidosPor,
   grepTodos,
+  caminhoReal,
   ler,
+  versionados as versionadosDasFontes,
 } from './fontes.mjs';
 
 const CHECAR = process.argv.includes('--check');
@@ -980,10 +982,8 @@ function verificarContagensDerivadasDoCodigo() {
  * conserto — pode ser uma chamada e não a definição).
  */
 function verificarRefsComSimbolo() {
-  const versionados = execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
-    .split('\n')
-    .filter(Boolean);
-  let resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  const versionados = versionadosDasFontes();
+  let resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
   // Ref cujo símbolo tem uma ocorrência mais próxima ÚNICA é reancorada no
   // modo escrita (AT-399); a que sumiu ou empata continua pedindo humano.
   if (!CHECAR) {
@@ -992,7 +992,7 @@ function verificarRefsComSimbolo() {
       const refs = resultado.naoBatem.filter((r) => r.doc === doc);
       mudou = reescreverSeDerivavel(doc, (t) => reancorar(t, refs), 'refs `caminho:N` reancoradas pelo símbolo') || mudou;
     }
-    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados);
+    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
   }
   const { total, batem, naoBatem, naoResolvidas } = resultado;
   const estado = vereditoDasRefs(resultado);

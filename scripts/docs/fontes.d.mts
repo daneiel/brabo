@@ -7,6 +7,21 @@
  * `.ts` de `scripts/ci/`, que passam por `tsc --noEmit` no CI.
  */
 
+export declare const CAMINHO_FONTES: string;
+
+export declare function lerMapaDeFontes(arquivo: string): Record<string, string>;
+
+export declare function fonteDe(rel: string): {
+  nome: string;
+  raiz: string;
+  base: string;
+  sub: string;
+};
+
+export declare function caminhoReal(rel: string): string;
+
+export declare function versionados(): string[];
+
 export declare function ler(rel: string): string;
 
 export declare function arquivos(glob: string): string[];
