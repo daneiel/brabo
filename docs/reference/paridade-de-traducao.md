@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 1113 (24.3%) | 27.8% de 21.369.463 | 242 | 27 | 1 | 843 | 0 |
-| `ru` | 270 de 1113 (24.3%) | 27.8% de 21.369.463 | 242 | 27 | 1 | 843 | 0 |
-| `zh-Hans` | 270 de 1113 (24.3%) | 27.8% de 21.369.463 | 242 | 27 | 1 | 843 | 0 |
+| `en` | 270 de 303 (89.1%) | 98.7% de 6.031.417 | 243 | 26 | 1 | 33 | 0 |
+| `ru` | 270 de 303 (89.1%) | 98.7% de 6.031.417 | 243 | 26 | 1 | 33 | 0 |
+| `zh-Hans` | 270 de 303 (89.1%) | 98.7% de 6.031.417 | 243 | 26 | 1 | 33 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -32,7 +32,6 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `explanation/gates.md` (tradução de 2026-10-15)
-- `explanation/localizacao.md` (tradução de 2026-10-15)
 - `explanation/modelo-de-time.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
@@ -62,7 +61,6 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `explanation/gates.md` (tradução de 2026-10-15)
-- `explanation/localizacao.md` (tradução de 2026-10-15)
 - `explanation/modelo-de-time.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
@@ -92,7 +90,6 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `explanation/gates.md` (tradução de 2026-10-15)
-- `explanation/localizacao.md` (tradução de 2026-10-15)
 - `explanation/modelo-de-time.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
@@ -121,7 +118,7 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 ## API (Redoc)
 
-Textos distintos da referência da API (`/reference/api/`) contra o catálogo `docs/i18n/<locale>/openapi-textos.json` (ADR 0220). A fonte é o texto dos decorators da api, quase todo em inglês: `pt-BR`, `ru` e `zh-Hans` traduzem todos, e `en` só os que estão em pt-BR (diacrítico do português ou palavra funcional como "não", "para", "que"). Não soma aos caracteres das páginas.
+Textos distintos da referência da API (`/reference/api/`) contra o catálogo `website/i18n/<locale>/openapi-textos.json` (ADR 0220). A fonte é o texto dos decorators da api, quase todo em inglês: `pt-BR`, `ru` e `zh-Hans` traduzem todos, e `en` só os que estão em pt-BR (diacrítico do português ou palavra funcional como "não", "para", "que"). Não soma aos caracteres das páginas.
 
 | locale | textos traduzidos |
 |---|---|
