@@ -183,14 +183,13 @@ export function ProficiencySection({ projectId }: { projectId: string }) {
                 </div>
                 <div className={styles.evidenceChips}>
                   {profile.evidenceEventIds.map((eventId) => (
-                    <button
+                    <Button variant="secondary" size="sm"
                       key={eventId}
                       type="button"
-                      className={styles.evidenceChip}
                       onClick={() => goToEvidence(eventId)}
                     >
                       {eventId.slice(-8)}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>

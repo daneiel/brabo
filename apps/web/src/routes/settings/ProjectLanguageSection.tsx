@@ -18,6 +18,7 @@ import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { Item } from '@/components/shadcn/item';
 
 /**
  * O idioma do PROJETO ([RN-619](../../../../../docs/business-rules.md#rn-619)):
@@ -105,7 +106,7 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
         <div className={styles.subtitle}>{t('projectLanguage.readOnly')}</div>
       )}
 
-      <div className={styles.ajusteCard}>
+      <Item variant="outline" className={styles.ajusteCard}>
         <div className={styles.ajusteInfo}>
           <div className={styles.ajusteTitulo}>{t('projectLanguage.card.title')}</div>
           <div className={styles.ajusteHint}>
@@ -129,15 +130,20 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
             <option value={OPCAO_OUTRO_CODIGO}>{t('projectLanguage.otherCode')}</option>
           </Select>
         </div>
-      </div>
+      </Item>
 
       {digitando && podeEditar && (
-        <form
+        <Item
+          variant="outline"
           className={styles.ajusteCard}
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (codigo.trim()) void salvar(codigo.trim());
-          }}
+          render={
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (codigo.trim()) void salvar(codigo.trim());
+              }}
+            />
+          }
         >
           <Input
             label={t('projectLanguage.otherLabel')}
@@ -154,7 +160,7 @@ export function ProjectLanguageSection({ projectId }: { projectId: string }) {
           >
             {t('projectLanguage.save')}
           </Button>
-        </form>
+        </Item>
       )}
     </SecaoDeConfiguracoes>
   );
