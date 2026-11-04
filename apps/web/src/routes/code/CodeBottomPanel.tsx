@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getContainerLifecycle } from '../../lib/api-client';
 import { ErroDeCarregamento } from '../../components/ErroDeCarregamento';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { AlertIcon, OutputIcon } from '../../components/ui/icons';
 import type { ContainerLifecycleStatus } from '../../lib/api-types';
@@ -79,20 +80,15 @@ export function CodeBottomPanel({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.painel}>
-      <div className={styles.abas} role="tablist" aria-label={t('bottomPanel.tablistLabel')}>
-        {ABAS.map((item) => (
-          <button
-            key={item.chave}
-            type="button"
-            role="tab"
-            aria-selected={aba === item.chave}
-            className={[styles.aba, aba === item.chave && styles.abaAtiva].filter(Boolean).join(' ')}
-            onClick={() => setAba(item.chave)}
-          >
-            {t(item.chaveRotulo)}
-          </button>
-        ))}
-      </div>
+      <Tabs value={aba} onValueChange={(v) => setAba(v as PainelInferior)}>
+        <TabsList variant="casa" className={styles.abas} aria-label={t('bottomPanel.tablistLabel')}>
+          {ABAS.map((item) => (
+            <TabsTrigger key={item.chave} value={item.chave} variant="casa" className={styles.aba}>
+              {t(item.chaveRotulo)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div className={styles.conteudo}>
         {aba === 'terminal' && (

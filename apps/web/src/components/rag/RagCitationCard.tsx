@@ -5,6 +5,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { mensagemDaApi, sendRagFeedback } from '../../lib/api-client';
 import type { RagSearchHit, RagVerdict } from '../../lib/api-types';
 import { Badge, type BadgeTone } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { ChevronUp, ChevronDown, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { FileIcon, SessionIcon } from '../ui/icons';
 import styles from './RagCitationCard.module.css';
@@ -86,7 +88,7 @@ export function RagCitationCard({
   }
 
   return (
-    <div className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.cabecalho}>
         <Badge tone={TOM_DO_ESCOPO[hit.scope]}>{t(CHAVE_DO_ESCOPO[hit.scope])}</Badge>
         <span className={styles.score} title={t('ragCitation.scoreTitle')}>
@@ -102,11 +104,14 @@ export function RagCitationCard({
 
       <p className={expandido ? styles.conteudoExpandido : styles.conteudo}>{hit.content}</p>
       {hit.content.length > 240 && (
-        <button type="button" className={styles.botaoExpandir} aria-label={expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
-            title={expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
-            onClick={() => setExpandido((v) => !v)}>
+        <Button
+          variant="ghost"
+          legenda={expandido ? t('ragCitation.collapse') : t('ragCitation.expand')}
+          className={styles.botaoExpandir}
+          onClick={() => setExpandido((v) => !v)}
+        >
           {expandido ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
-        </button>
+        </Button>
       )}
 
       <div className={styles.origem}>
@@ -122,36 +127,34 @@ export function RagCitationCard({
             )}
           </span>
         ) : (
-          <button type="button" className={styles.origemSessao} onClick={irParaSessao}>
+          <Button variant="ghost" size="sm" onClick={irParaSessao}>
             <SessionIcon size={13} />
             {hit.origin.title ?? t('ragCitation.viewInSession')}
-          </button>
+          </Button>
         )}
       </div>
 
       {searchId && (
         <div className={styles.voto} role="group" aria-label={t('ragCitation.feedback.groupLabel')}>
           <span className={styles.votoPergunta}>{t('ragCitation.feedback.question')}</span>
-          <button
-            type="button"
-            className={styles.votoBotao}
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={voto.isPending}
-            aria-label={t('ragCitation.feedback.useful')}
-            title={t('ragCitation.feedback.useful')}
+            legenda={t('ragCitation.feedback.useful')}
             onClick={() => voto.mutate('util')}
           >
             <ThumbsUp size={14} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={styles.votoBotao}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={voto.isPending}
-            aria-label={t('ragCitation.feedback.irrelevant')}
-            title={t('ragCitation.feedback.irrelevant')}
+            legenda={t('ragCitation.feedback.irrelevant')}
             onClick={() => voto.mutate('irrelevante')}
           >
             <ThumbsDown size={14} aria-hidden="true" />
-          </button>
+          </Button>
 
           {/* Os três estados, cada um com texto próprio (RN-088). */}
           {voto.isPending && (
@@ -174,6 +177,6 @@ export function RagCitationCard({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

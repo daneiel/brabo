@@ -63,7 +63,7 @@ export function AccountPage() {
   return (
     <div className={styles.page}>
       <CabecalhoDePagina
-        icone={<UserRound className="size-5" />}
+        icone={<UserRound className={styles.iconeG} />}
         titulo={t('account.title')}
         descricao={
           <>
@@ -80,7 +80,7 @@ export function AccountPage() {
       <div className={styles.section}>
         <CabecalhoDePagina
           nivel="h2"
-          icone={<Languages className="size-4" />}
+          icone={<Languages className={styles.iconeM} />}
           titulo={t('account.language.title')}
           descricao={t('account.language.subtitle')}
           acoes={<span className={styles.eyebrow}>{t('account.language.eyebrow')}</span>}

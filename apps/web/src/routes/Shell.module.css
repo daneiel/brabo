@@ -557,3 +557,6 @@
 .userCard:hover {
   background: var(--surface-2);
 }
+
+.menuDoUsuario { min-width: 12rem; }
+.larguraTotal { width: 100%; }

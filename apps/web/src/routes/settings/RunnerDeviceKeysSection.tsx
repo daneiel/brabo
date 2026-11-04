@@ -273,7 +273,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="device-keys">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Laptop aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('runnerDeviceKeys.title')}</h2>
+        <h2 className={styles.title}><Laptop aria-hidden="true" className={styles.tituloIcone} />{t('runnerDeviceKeys.title')}</h2>
         <Ajuda assunto={t('runnerDeviceKeys.title')}>
           {t('runnerDeviceKeys.subtitle')} {t('runnerDeviceKeys.subtitleAlcance')}{' '}
           {t('runnerDeviceKeys.subtitleNaoEBatimento')}

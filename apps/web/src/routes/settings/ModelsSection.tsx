@@ -757,7 +757,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="models">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Cpu aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('modelsSection.title')}</h2>
+        <h2 className={styles.title}><Cpu aria-hidden="true" className={styles.tituloIcone} />{t('modelsSection.title')}</h2>
         <Ajuda assunto={t('modelsSection.title')}>
         <span>
         {/* A legenda é a MESMA fonte de rótulos da cadeia da coluna Origem
@@ -864,8 +864,8 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       )}
 
       {/* Rolagem horizontal DENTRO da tabela: com a navegação lateral a coluna do modelo ficava estreita. */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[56rem]">
+      <div className={styles.rolagemHorizontal}>
+        <div className={styles.larguraMinima}>
           <Table
             columns={columns}
             rows={AGENT_LIST}

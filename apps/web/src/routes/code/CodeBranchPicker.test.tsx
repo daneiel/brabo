@@ -126,7 +126,7 @@ describe('CodeBranchPicker', () => {
     expect(screen.getByTitle(/dev-pieces/)).toBeInTheDocument();
     expect(screen.getByText(/dev-pieces/)).toBeInTheDocument();
 
-    const manual = screen.getByText('feature/refatoracao-manual').closest('button');
+    const manual = screen.getByText('feature/refatoracao-manual').closest('[role="option"]');
     expect(manual).not.toBeNull();
     expect(manual?.querySelector('[title*="dev-"]')).toBeNull();
   });

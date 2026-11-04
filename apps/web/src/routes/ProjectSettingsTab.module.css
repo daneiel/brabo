@@ -899,3 +899,9 @@
     animation: none;
   }
 }
+
+/* Ícone ao lado do título da seção (antes utilitários do Tailwind fora do kit, AT-655 V0). */
+.tituloIcone { display: inline; width: 1rem; height: 1rem; margin-right: 0.5rem; vertical-align: -2px; }
+.quebraLinha { flex-wrap: wrap; }
+.rolagemHorizontal { overflow-x: auto; }
+.larguraMinima { min-width: 56rem; }

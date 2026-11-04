@@ -18586,7 +18586,7 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
   (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
   (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:134`
   (`movel`); `apps/web/src/components/ui/Table.tsx:24` (`largaNoMovel`),
-  `:39` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
+  `:43` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
   `apps/web/src/routes/ProjectSessionsTab.tsx:153` (`movel`)
 - **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
   nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e
@@ -20808,7 +20808,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   usuário e `#pr-3`, e toda PR local era "autor desconhecido".
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:72` (`resultadoDaFalha`),
   `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
-  `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
+  `apps/web/src/routes/ProjectPrsTab.tsx:69` (`ultimaRecusaDeMerge`),
   `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("conflito de merge → kind git_merge, arquivos no resultado e evento na

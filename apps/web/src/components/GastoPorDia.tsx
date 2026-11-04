@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import type { SpendPorDia } from '../lib/spend';
 import { BarrasPorDia } from './SpendCharts';
 import { Card } from './shadcn/card';
+import styles from './GastoPorDia.module.css';
 
 // Carga sob demanda (RN-973): os três gráficos moram no MESMO módulo, logo no mesmo chunk do recharts.
 const Grafico = lazy(() => import('./GraficoDeGastoPorDia'));
@@ -20,20 +21,20 @@ export function GastoPorDia(props: {
 }) {
   const { serie, titulo, tokens } = props;
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="p-4 lg:col-span-2 [&_figure]:m-0">
+    <div className={styles.grade}>
+      <Card className={`${styles.cartao} ${styles.larga}`}>
         <Suspense fallback={<BarrasPorDia serie={serie} titulo={titulo} />}>
           <Grafico serie={serie} titulo={titulo} />
         </Suspense>
       </Card>
-      <div className="grid content-start gap-4">
-        <Card className="p-4 [&_figure]:m-0">
+      <div className={styles.coluna}>
+        <Card className={styles.cartao}>
           <Suspense fallback={null}>
             <Chamadas serie={serie} />
           </Suspense>
         </Card>
         {tokens && (
-          <Card className="p-4 [&_figure]:m-0">
+          <Card className={styles.cartao}>
             <Suspense fallback={null}>
               <Tokens entrada={tokens.entrada} saida={tokens.saida} />
             </Suspense>

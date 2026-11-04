@@ -12,8 +12,9 @@ import {
 import type { AttachLocalFolderReport, LocalFolderFile } from '../../lib/api-types';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Alert } from '../ui/Alert';
 import { useToast } from '../ui/ToastProvider';
-import { AlertIcon, FolderIcon } from '../ui/icons';
+import { FolderIcon } from '../ui/icons';
 import styles from './AttachLocalFolderModal.module.css';
 
 interface Preview {
@@ -165,15 +166,14 @@ export function AttachLocalFolderModal({
         {lendo && <div className={styles.estado}><Shimmer>{t('rag.attachLocalFolder.reading')}</Shimmer></div>}
 
         {preview && preview.overCap && (
-          <div className={styles.aviso} role="alert">
-            <AlertIcon size={14} />
+          <Alert tone="danger" role="alert">
             {preview.included.length === 0 && preview.filesSkipped > RAG_LOCAL_FILE_COUNT_LIMIT
               ? t('rag.attachLocalFolder.tooManyFiles', {
                   count: preview.filesSkipped,
                   limit: RAG_LOCAL_FILE_COUNT_LIMIT,
                 })
               : t('rag.attachLocalFolder.tooManyBytes')}
-          </div>
+          </Alert>
         )}
 
         {preview && !preview.overCap && (

@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import type { RagCoverage, RagFileCoverage } from '../../lib/api-types';
 import { AlertIcon } from '../ui/icons';
+import { Card } from '../ui/Card';
 import styles from './RagCoveragePanel.module.css';
 
 function CartaoDeArquivos({ rotulo, cobertura }: { rotulo: string; cobertura: RagFileCoverage }) {
   const { t } = useTranslation('sessions');
   return (
-    <div className={styles.cartao}>
+    <Card padding="sm" radius="md" className={styles.cartao}>
       <div className={styles.cartaoRotulo}>{rotulo}</div>
       <div className={styles.cartaoValor}>
         {cobertura.filesIndexed}
@@ -23,7 +24,7 @@ function CartaoDeArquivos({ rotulo, cobertura }: { rotulo: string; cobertura: Ra
           </span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -47,7 +48,7 @@ export function RagCoveragePanel({ coverage }: { coverage: RagCoverage }) {
       <div className={styles.grade}>
         <CartaoDeArquivos rotulo={t('ragCoverage.docsLabel')} cobertura={coverage.docs} />
         <CartaoDeArquivos rotulo={t('ragCoverage.adrLabel')} cobertura={coverage.adr} />
-        <div className={styles.cartao}>
+        <Card padding="sm" radius="md" className={styles.cartao}>
           <div className={styles.cartaoRotulo}>{t('ragCoverage.sessionsLabel')}</div>
           <div className={styles.cartaoValor}>
             {coverage.session.sessionsIndexed}
@@ -58,8 +59,8 @@ export function RagCoveragePanel({ coverage }: { coverage: RagCoverage }) {
               ? t('ragCoverage.noSessionsInProject')
               : t('ragCoverage.sessionsIndexed')}
           </div>
-        </div>
-        <div className={styles.cartao}>
+        </Card>
+        <Card padding="sm" radius="md" className={styles.cartao}>
           <div className={styles.cartaoRotulo}>{t('ragCoverage.localLabel')}</div>
           <div className={styles.cartaoValor}>{coverage.local.filesIndexed}</div>
           <div className={styles.cartaoNota}>
@@ -75,7 +76,7 @@ export function RagCoveragePanel({ coverage }: { coverage: RagCoverage }) {
               </>
             )}
           </div>
-        </div>
+        </Card>
       </div>
       <div className={styles.rodape}>
         {t('ragCoverage.chunksInIndex', { count: coverage.chunksTotal })}

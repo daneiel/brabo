@@ -221,7 +221,7 @@ export function CredentialsSection() {
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><KeyRound aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('credentials.title')}</h2>
+        <h2 className={styles.title}><KeyRound aria-hidden="true" className={styles.tituloIcone} />{t('credentials.title')}</h2>
         <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
         <Ajuda assunto={t('credentials.title')}>
           {t('credentials.subtitle.before')}
@@ -247,7 +247,7 @@ export function CredentialsSection() {
               key={id}
               variant="outline"
               size="sm"
-              className="flex-wrap"
+              className={styles.quebraLinha}
               style={{ ['--conector-cor' as string]: cor } as CSSProperties}
             >
               <ItemMedia>

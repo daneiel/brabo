@@ -21,6 +21,7 @@ import {
   type ItemDaPaleta,
 } from '../lib/paleta-de-comandos';
 import { ABAS_DO_PROJETO } from '../routes/project-tabs';
+import styles from './PaletaDeComandos.module.css';
 
 interface Props {
   onClose: () => void;
@@ -81,8 +82,8 @@ export default function PaletaDeComandos(p: Props) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && p.onClose()}>
-      <DialogContent showCloseButton={false} className="top-[20%] -translate-y-0 p-0">
-        <DialogTitle className="sr-only">{t('palette.title')}</DialogTitle>
+      <DialogContent showCloseButton={false} className={styles.caixa}>
+        <DialogTitle className={styles.somenteLeitor}>{t('palette.title')}</DialogTitle>
         <Command items={grupos} itemToStringValue={(i: unknown) => (i as ItemDaPaleta).rotulo}>
           <CommandInput placeholder={t('palette.placeholder')} aria-label={t('palette.title')} />
           <CommandEmpty>{t('palette.empty')}</CommandEmpty>

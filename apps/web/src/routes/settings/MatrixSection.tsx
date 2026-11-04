@@ -20,7 +20,7 @@ export function MatrixSection() {
   return (
     <section className={styles.section}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Grid3x3 aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('matrix.title')}</h2>
+        <h2 className={styles.title}><Grid3x3 aria-hidden="true" className={styles.tituloIcone} />{t('matrix.title')}</h2>
         <Ajuda assunto={t('matrix.title')}>{t('matrix.subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('matrix.eyebrow')}</span>
       </div>

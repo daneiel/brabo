@@ -170,7 +170,7 @@ export function MachineDeviceKeysSection() {
   return (
     <div className={styles.section} data-secao="machine-keys">
       <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}><Laptop aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('title')}</h2>
+        <h2 className={styles.sectionTitle}><Laptop aria-hidden="true" className={styles.tituloIcone} />{t('title')}</h2>
         <Ajuda assunto={t('title')}>{t('subtitle')}</Ajuda>
         <span className={styles.eyebrow}>{t('eyebrow')}</span>
       </div>

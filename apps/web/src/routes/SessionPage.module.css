@@ -1236,3 +1236,7 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.destinatarios { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.5rem 0.75rem 0; }
+.destinatarioChip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 0.375rem; background: var(--surface-2); font-size: 0.75rem; }
+.menuTexto { padding: 0.5rem 0.75rem 0; font-size: 0.75rem; }

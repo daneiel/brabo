@@ -45,6 +45,7 @@
     "empty": "此仓库中没有找到分支。",
     "truncated": "列表已在扩展分支的上限处截断。",
     "manualPlaceholder": "跳转到 tag 或确切的 sha",
+    "filterPlaceholder": "筛选分支",
     "manualAriaLabel": "跳转到 tag 或确切的 sha",
     "goButton": "前往",
     "prState": {

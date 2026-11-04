@@ -46,6 +46,7 @@
     "empty": "No branches found in this repository.",
     "truncated": "The list was cut at the enriched-branches cap.",
     "manualPlaceholder": "go to an exact tag or sha",
+    "filterPlaceholder": "Filter branches",
     "manualAriaLabel": "Go to an exact tag or sha",
     "goButton": "Go",
     "prState": {

@@ -44,19 +44,6 @@
 .input {
   flex: 1;
   min-width: 0;
-  height: 34px;
-  padding: 0 10px;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
-}
-
-.input:focus-visible {
-  outline: none;
-  border-color: var(--border-strong);
-  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .escoposFiltro {
@@ -76,18 +63,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.avisoVetor {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--warning-soft);
-  border: 1px solid var(--warning);
-  border-radius: var(--radius-md);
-  color: var(--warning);
-  font-size: var(--fs-body);
 }
 
 .listaResultados {

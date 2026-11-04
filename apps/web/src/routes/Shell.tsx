@@ -201,7 +201,7 @@ function MenuDoUsuario({
           </div>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side={colapsado ? 'right' : 'top'} align="end" className="min-w-48">
+      <DropdownMenuContent side={colapsado ? 'right' : 'top'} align="end" className={styles.menuDoUsuario}>
         <DropdownMenuItem render={<Link to="/account" />}>
           <CircleUser aria-hidden="true" />
           {tComum('sidebar.account')}
@@ -997,7 +997,7 @@ export function Shell() {
           >
             <XIcon size={18} />
           </button>
-          <Sidebar collapsible="none" className="w-full">
+          <Sidebar collapsible="none" className={styles.larguraTotal}>
             {conteudo}
           </Sidebar>
         </aside>

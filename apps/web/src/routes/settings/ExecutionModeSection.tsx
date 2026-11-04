@@ -368,7 +368,7 @@ export function ExecutionModeSection({ projectId }: { projectId: string }) {
   return (
     <SecaoDeConfiguracoes chave="execution-mode">
       <div className={styles.sectionHead}>
-        <h2 className={styles.title}><Server aria-hidden="true" className="mr-2 inline size-4 align-[-2px]" />{t('executionMode.title')}</h2>
+        <h2 className={styles.title}><Server aria-hidden="true" className={styles.tituloIcone} />{t('executionMode.title')}</h2>
         <Ajuda assunto={t('executionMode.title')}>
           {t('executionMode.subtitle')}
           {descricaoDoModo ? ` ${t(descricaoDoModo)}` : null}
