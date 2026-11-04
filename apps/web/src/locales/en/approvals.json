@@ -209,6 +209,16 @@
       "covered": "Coverage",
       "coveredYes": "covered",
       "coveredNo": "no test"
+    },
+    "tests": {
+      "title": "Tests run",
+      "passed": "Passed: {{n}}",
+      "failed": "Failed: {{n}}",
+      "skipped": "Skipped: {{n}}",
+      "omitted": "Showing {{shown}} of {{total}} cases; {{n}} left out.",
+      "sem_relatorio": "The gate produced no test report.",
+      "relatorio_invalido": "The test report could not be read.",
+      "modo_runner": "Runner-mode project: the server does not read the test report."
     }
   },
   "approvalsTab": {

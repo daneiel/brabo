@@ -217,6 +217,16 @@
       "covered": "Cobertura",
       "coveredYes": "coberta",
       "coveredNo": "sem teste"
+    },
+    "tests": {
+      "title": "Testes executados",
+      "passed": "Passaram: {{n}}",
+      "failed": "Falharam: {{n}}",
+      "skipped": "Pulados: {{n}}",
+      "omitted": "Mostrando {{shown}} de {{total}} casos; {{n}} ficaram de fora.",
+      "sem_relatorio": "O gate não gerou relatório de testes.",
+      "relatorio_invalido": "O relatório de testes não pôde ser lido.",
+      "modo_runner": "Projeto em modo runner: o relatório de testes não é lido pelo servidor."
     }
   },
   "approvalsTab": {

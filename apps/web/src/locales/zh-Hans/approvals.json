@@ -201,6 +201,16 @@
       "covered": "覆盖",
       "coveredYes": "已覆盖",
       "coveredNo": "无测试"
+    },
+    "tests": {
+      "title": "已运行的测试",
+      "passed": "通过:{{n}}",
+      "failed": "失败:{{n}}",
+      "skipped": "跳过:{{n}}",
+      "omitted": "显示 {{total}} 个用例中的 {{shown}} 个;{{n}} 个未显示。",
+      "sem_relatorio": "该关卡没有生成测试报告。",
+      "relatorio_invalido": "无法读取测试报告。",
+      "modo_runner": "runner 模式项目:服务器不读取测试报告。"
     }
   },
   "approvalsTab": {
