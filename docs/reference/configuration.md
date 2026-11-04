@@ -515,6 +515,7 @@ boot. As `VITE_*` são o fallback de desenvolvimento.
 | `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
 | `VITE_LOG_LEVEL` | nível do logger JSON do navegador (default `info`). Num cluster manda a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve no `/config.js` — `VITE_*` só conta num build local |
 | `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é de build por escolha, não por limitação** — veja abaixo |
+| `VITE_BRABO_REPO` | `dono/nome` do repositório do produto (default `daneiel/brabo`); de build. Dele saem o comando do instalador no painel do runner e o endereço do site de documentação (AT-691) |
 | `VITE_BRABO_AMBIENTE` | `dev`, `prd` ou `local`; de build, vinda do `AMBIENTE` do `docker-bake.hcl` (default vazio). Só `local` monta o acesso rápido por papel na tela de login (ADR 0245); as Actions passam `dev` ou `prd` |
 
 Página em branco depois do deploy é quase sempre o `/config.js` apontando para
@@ -864,7 +865,7 @@ ninguém perceba.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventário extraído do código: **184 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **185 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
@@ -1005,10 +1006,11 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 5 variáveis · produto
+**web** — 6 variáveis · produto
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
+- `VITE_BRABO_REPO` <sub>(apps/web/src/components/RunnerOnboardingPanel.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>

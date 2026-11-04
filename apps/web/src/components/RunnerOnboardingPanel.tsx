@@ -67,8 +67,8 @@ interface RunnerOnboardingPanelProps {
  * `bootstrap.sh`, e `scripts/dev/install-invocacao.spec.ts` reprova esta cópia
  * se ela divergir das outras.
  */
-export const COMANDO_DO_INSTALADOR =
-  'curl -fsSLO https://github.com/daneiel/brabo/releases/latest/download/install.sh && bash install.sh';
+const REPO_DO_PRODUTO = import.meta.env.VITE_BRABO_REPO || 'daneiel/brabo';
+export const COMANDO_DO_INSTALADOR = `curl -fsSLO https://github.com/${REPO_DO_PRODUTO}/releases/latest/download/install.sh && bash install.sh`;
 
 /**
  * Onboarding de instalação do Runner — painel compartilhado por TRÊS lugares:

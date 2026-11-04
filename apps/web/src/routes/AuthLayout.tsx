@@ -14,7 +14,7 @@ import styles from './AuthLayout.module.css';
  * do Brabo é um único site público, o mesmo para qualquer instalação. O valor
  * espelha `url` + `baseUrl` de produção em `website/docusaurus.config.ts`.
  */
-const URL_DOCUMENTACAO = 'https://daneiel.github.io/brabo/';
+const URL_DOCUMENTACAO = `https://${(import.meta.env.VITE_BRABO_REPO || 'daneiel/brabo').split('/')[0]}.github.io/brabo/`;
 
 interface AuthLayoutProps {
   /** Título do card — o que a tela faz ("Entrar", "Criar conta"). */

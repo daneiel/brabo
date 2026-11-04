@@ -550,7 +550,7 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从代码中提取的清单：运行时读取 **184 个变量**。全部都在上方表格中有描述。
+从代码中提取的清单：运行时读取 **185 个变量**。全部都在上方表格中有描述。
 
 每个来源都标记为 **产品**——运维安装的人在部署 `.env` 中设置的内容——或 **工具**，仅由 CI 和开发产品的人读取。工具变量绝不应出现在运维人员的 `.env` 中。
 
@@ -691,10 +691,11 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 5 个变量 · 产品
+**web** — 6 个变量 · 产品
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_AMBIENTE` <sub>(apps/web/src/routes/LoginPage.tsx)</sub>
+- `VITE_BRABO_REPO` <sub>(apps/web/src/components/RunnerOnboardingPanel.tsx)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
