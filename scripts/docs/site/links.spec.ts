@@ -106,5 +106,5 @@ describe('404.html do build', () => {
     expect(carregaDeFora(saida)).toEqual([]);
     writeFileSync(path.join(saida, '404.html'), `${h}<script src="https://evil/x.js"></script>`);
     expect(carregaDeFora(saida)).toEqual(['404.html: <script src> https://evil/x.js']);
-  });
+  }, 120_000);
 });

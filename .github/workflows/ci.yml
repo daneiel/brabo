@@ -544,12 +544,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `website/` tem lockfile PRÓPRIO (ADR 0117) e os specs de
-      # `scripts/docs/site/` importam a árvore do Redoc 3 (ADR 0253).
-      - name: Instalar dependências do website
-        working-directory: website
-        run: pnpm install --frozen-lockfile
-
       # Os scripts de CI são lógica pura, sem banco — mas rodam no mesmo job
       # porque compartilham o `pnpm install` acima.
       - name: Testes dos scripts de CI
