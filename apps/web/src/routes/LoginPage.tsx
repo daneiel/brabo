@@ -112,13 +112,14 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
       rodapeDoCartao={
         <>
           {t('loginPage.footer.noAccessPrompt')}{' '}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={styles.link}
             onClick={() => irPara('/registrar')}
           >
             {t('loginPage.footer.createAccount')}
-          </button>
+          </Button>
         </>
       }
     >
@@ -151,13 +152,14 @@ export function LoginPage({ onEntrar, irPara, erroOAuth }: LoginPageProps) {
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           acaoNoLabel={
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={`${styles.link} ${styles.linkPequeno}`}
               onClick={() => irPara('/esqueci-senha')}
             >
               {t('loginPage.form.forgotPassword')}
-            </button>
+            </Button>
           }
         />
         <div className={styles.acoes}>

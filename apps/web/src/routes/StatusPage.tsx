@@ -6,6 +6,8 @@ import type { HealthStatus } from '@brabo/shared';
 import { API_URL, ENGINE_URL, fetchHealth } from '../lib/health';
 import { pollQueParaNoErro } from '../lib/query-policy';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Table, type TableColumn } from '../components/ui/Table';
 
 /**
  * O instante do `/health` na língua de quem lê (AT-327): antes a coluna
@@ -20,58 +22,33 @@ function formatarInstanteDoStatus(iso: string | undefined, idioma: string): stri
   return data.toLocaleString(idioma, { dateStyle: 'short', timeStyle: 'medium' });
 }
 
-function StatusRow({
-  icone,
-  label,
-  query,
-}: {
+interface LinhaDoStatus {
+  chave: string;
   icone: ReactNode;
   label: string;
   query: ReturnType<typeof useHealthQuery>;
-}) {
-  const { t, i18n } = useTranslation('dashboard');
+}
+
+function EstadoDoServico({ query }: { query: LinhaDoStatus['query'] }) {
+  const { t } = useTranslation('dashboard');
   const { data, isLoading, isError } = query;
   const status: HealthStatus['status'] | 'checking' = isLoading
     ? 'checking'
     : isError
       ? 'error'
       : (data?.status ?? 'error');
-
-  const statusColor: Record<typeof status, string> = {
-    ok: 'var(--success)',
-    error: 'var(--danger)',
-    checking: 'var(--text-muted)',
-  };
-
   return (
-    <tr style={{ borderTop: '1px solid var(--border)' }}>
-      <td style={{ padding: 'var(--space-2) var(--space-3)' }}>
-        <span aria-hidden="true" style={{ marginRight: 8, verticalAlign: -2, display: 'inline-flex' }}>{icone}</span>
-        {label}
-      </td>
-      <td
-        style={{
-          padding: 'var(--space-2) var(--space-3)',
-          fontFamily: 'var(--font-mono)',
-          color: statusColor[status],
-        }}
-      >
-        {t(`status.state.${status}`)}
-      </td>
-      <td
-        style={{
-          padding: 'var(--space-2) var(--space-3)',
-          fontFamily: 'var(--font-mono)',
-          color: 'var(--text-muted)',
-          fontSize: '0.85em',
-        }}
-      >
-        {isLoading
-          ? '…'
-          : (formatarInstanteDoStatus(data?.timestamp, i18n.language) ?? t('status.noTimestamp'))}
-      </td>
-    </tr>
+    <Badge tone={status === 'ok' ? 'success' : status === 'error' ? 'danger' : 'muted'}>
+      {t(`status.state.${status}`)}
+    </Badge>
   );
+}
+
+function UltimaChecagem({ query }: { query: LinhaDoStatus['query'] }) {
+  const { t, i18n } = useTranslation('dashboard');
+  const { data, isLoading } = query;
+  if (isLoading) return <>…</>;
+  return <>{formatarInstanteDoStatus(data?.timestamp, i18n.language) ?? t('status.noTimestamp')}</>;
 }
 
 function useHealthQuery(name: string, baseUrl: string) {
@@ -108,6 +85,23 @@ export function StatusPage({
   const { t } = useTranslation('dashboard');
   const apiHealth = useHealthQuery('api', API_URL);
   const engineHealth = useHealthQuery('engine', ENGINE_URL);
+  const linhas: LinhaDoStatus[] = [
+    { chave: 'api', icone: <Server size={16} />, label: t('status.services.api'), query: apiHealth },
+    { chave: 'engine', icone: <Cog size={16} />, label: t('status.services.engine'), query: engineHealth },
+  ];
+  const colunas: TableColumn<LinhaDoStatus>[] = [
+    {
+      key: 'servico',
+      label: t('status.columns.service'),
+      render: (l) => (
+        <>
+          <span aria-hidden="true">{l.icone}</span> {l.label}
+        </>
+      ),
+    },
+    { key: 'estado', label: t('status.columns.status'), render: (l) => <EstadoDoServico query={l.query} /> },
+    { key: 'checagem', label: t('status.columns.lastCheck'), render: (l) => <UltimaChecagem query={l.query} /> },
+  ];
 
   return (
     <main
@@ -126,45 +120,13 @@ export function StatusPage({
           quebram texto longo em vez de alargar a coluna. */}
       <div
         data-testid="rolagem-da-tabela-de-status"
-        style={{ maxWidth: '100%', overflowX: 'auto' }}
+        style={{ maxWidth: '100%', overflowX: 'auto', overflowWrap: 'anywhere' }}
       >
-        <table
-          style={{
-            width: '100%',
-            overflowWrap: 'anywhere',
-            borderCollapse: 'collapse',
-            background: 'var(--surface-1)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                background: 'var(--surface-2)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 12,
-                color: 'var(--text-secondary)',
-                textAlign: 'left',
-              }}
-            >
-              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-                {t('status.columns.service')}
-              </th>
-              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-                {t('status.columns.status')}
-              </th>
-              <th style={{ padding: 'var(--space-2) var(--space-3)' }}>
-                {t('status.columns.lastCheck')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <StatusRow icone={<Server size={16} />} label={t('status.services.api')} query={apiHealth} />
-            <StatusRow icone={<Cog size={16} />} label={t('status.services.engine')} query={engineHealth} />
-          </tbody>
-        </table>
+        <Table
+          columns={colunas}
+          rows={linhas}
+          rowKey={(l) => l.chave}
+        />
       </div>
       <p style={{ marginTop: 'var(--space-4)' }}>
         {/* AT-327: um botão de verdade, não um link de 33×20 px. */}

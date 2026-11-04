@@ -77,13 +77,14 @@ export function ForgotPasswordPage({
       rodapeDoCartao={
         <>
           {t('forgotPasswordPage.form.rememberedPrompt')}{' '}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={styles.link}
             onClick={() => irPara('/login')}
           >
             {t('forgotPasswordPage.form.backToLogin')}
-          </button>
+          </Button>
         </>
       }
     >

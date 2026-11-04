@@ -122,9 +122,8 @@ describe('StatusPage — layout estreito (AT-330)', () => {
     const rolagem = screen.getByTestId('rolagem-da-tabela-de-status');
     expect(rolagem.style.overflowX).toBe('auto');
     expect(rolagem.style.maxWidth).toBe('100%');
-    const tabela = screen.getByRole('table');
-    expect(rolagem).toContainElement(tabela);
-    expect(tabela.style.overflowWrap).toBe('anywhere');
+    expect(rolagem).toContainElement(screen.getByText(instante('2026-09-30T00:00:00Z')));
+    expect(rolagem.style.overflowWrap).toBe('anywhere');
   });
 
   it('caso de falha: com um serviço fora, a linha de erro continua dentro do mesmo invólucro', async () => {

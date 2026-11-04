@@ -16,6 +16,7 @@ import {
   opcoesDeIdioma,
 } from '../lib/idioma-da-resposta';
 import type { UserPreferences } from '../lib/api-types';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from '../components/shadcn/item';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Ajuda } from '../components/ui/Ajuda';
@@ -103,10 +104,10 @@ export function ResponseLanguageSection() {
         <span className={styles.eyebrow}>{t('account.eyebrow')}</span>
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.cardInfo}>
-          <div className={styles.cardTitle}>{t('account.label')}</div>
-          <div className={styles.cardHint} data-testid="idioma-efetivo">
+      <Item variant="outline">
+        <ItemContent>
+          <ItemTitle>{t('account.label')}</ItemTitle>
+          <ItemDescription data-testid="idioma-efetivo">
             {isPending && t('account.loading')}
             {isError && t('account.loadError')}
             {data &&
@@ -119,16 +120,16 @@ export function ResponseLanguageSection() {
                     ),
                     origem: t(`origin.${data.effectiveResponseLanguage.origin}`),
                   }))}
-          </div>
+          </ItemDescription>
           {data?.detectedLanguage && (
-            <div className={styles.cardHint}>
+            <ItemDescription>
               {t('account.detectedNote', {
                 idioma: nomeDoIdioma(data.detectedLanguage, idiomaDaInterface),
               })}
-            </div>
+            </ItemDescription>
           )}
-        </div>
-        <div className={styles.cardControl}>
+        </ItemContent>
+        <ItemActions className={styles.cardControl}>
           <Select
             value={digitando ? OPCAO_OUTRO_CODIGO : (data?.responseLanguage ?? '')}
             disabled={!data || salvar.isPending}
@@ -143,8 +144,8 @@ export function ResponseLanguageSection() {
             ))}
             <option value={OPCAO_OUTRO_CODIGO}>{t('account.otherCode')}</option>
           </Select>
-        </div>
-      </div>
+        </ItemActions>
+      </Item>
 
       {digitando && (
         <form

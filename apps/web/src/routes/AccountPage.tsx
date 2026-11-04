@@ -8,6 +8,7 @@ import { temCatalogo } from '../lib/i18n';
 import { useToast } from '../components/ui/ToastProvider';
 import { CabecalhoDePagina } from '../components/shadcn/cabecalho-de-pagina';
 import { Select } from '../components/ui/Select';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from '../components/shadcn/item';
 import styles from './AccountPage.module.css';
 import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
 import { ResponseLanguageSection } from './ResponseLanguageSection';
@@ -86,18 +87,18 @@ export function AccountPage() {
           acoes={<span className={styles.eyebrow}>{t('account.language.eyebrow')}</span>}
         />
 
-        <div className={styles.card}>
-          <div className={styles.cardInfo}>
-            <div className={styles.cardTitle}>{t('account.language.title')}</div>
-            <div className={styles.cardHint}>
+        <Item variant="outline">
+          <ItemContent>
+            <ItemTitle>{t('account.language.title')}</ItemTitle>
+            <ItemDescription>
               {salvando
                 ? t('account.language.saving')
                 : temCatalogo(idiomaAtual)
                   ? ROTULO_NATIVO[idiomaAtual]
                   : `${ROTULO_NATIVO[idiomaAtual]} — ${t('account.language.inProgress')}`}
-            </div>
-          </div>
-          <div className={styles.cardControl}>
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions className={styles.cardControl}>
             <Select
               value={idiomaAtual}
               disabled={salvando}
@@ -112,8 +113,8 @@ export function AccountPage() {
                 </option>
               ))}
             </Select>
-          </div>
-        </div>
+          </ItemActions>
+        </Item>
       </div>
 
       <ResponseLanguageSection />

@@ -18279,7 +18279,7 @@ serviço que não respondia.
   `apps/web/src/lib/poll-do-bootstrap.ts:33` (`pollDoBootstrap`),
   `apps/web/src/lib/poll-do-bootstrap.ts:47` (`bootstrapTerminou`),
   `apps/web/src/routes/ProvisioningPage.tsx:41` (`acompanharBootstrap`),
-  `apps/web/src/routes/StatusPage.tsx:85` (`pollQueParaNoErro`)
+  `apps/web/src/routes/StatusPage.tsx:62` (`pollQueParaNoErro`)
 - **Teste:** `apps/web/src/routes/SessionPage.streaming-isolado.test.tsx` (vinte
   tokens depois do primeiro não re-renderizam a página; o fim do turno
   re-renderiza), `apps/web/src/lib/streaming-do-turno.test.ts`,
