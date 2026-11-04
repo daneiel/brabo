@@ -42,27 +42,6 @@
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-.botao {
-  height: 30px;
-  padding: 0 12px;
-  background: var(--accent);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--on-accent);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.botao:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.botao:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
 .resultados {
   flex: 1;
   min-height: 0;
@@ -82,17 +61,6 @@
   gap: 6px;
   font-size: 12px;
   color: var(--danger);
-}
-
-.botaoTentar {
-  align-self: flex-start;
-  padding: 4px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 11px;
-  cursor: pointer;
 }
 
 .lista {

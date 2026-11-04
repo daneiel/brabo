@@ -96,18 +96,18 @@ h3 {
 /* O preflight (ADR 0237) zera tamanho dos títulos, margem de parágrafo/lista e
    marcador; aqui volta o padrão do navegador, só para o elemento SEM classe
    (o que tem classe é do módulo CSS ou do utilitário do shadcn). */
-h1 { font-size: 2em; }
-h2 { font-size: 1.5em; }
-h3 { font-size: 1.17em; }
-h4,
-h5,
-h6 {
+h1:not([class]) { font-size: 2em; }
+h2:not([class]) { font-size: 1.5em; }
+h3:not([class]) { font-size: 1.17em; }
+h4:not([class]),
+h5:not([class]),
+h6:not([class]) {
   font-weight: 700;
   margin: 1.33em 0;
 }
-h4 { font-size: 1em; }
-h5 { font-size: 0.83em; }
-h6 { font-size: 0.67em; }
+h4:not([class]) { font-size: 1em; }
+h5:not([class]) { font-size: 0.83em; }
+h6:not([class]) { font-size: 0.67em; }
 p:not([class]),
 ul:not([class]),
 ol:not([class]) {

@@ -127,13 +127,6 @@
   color: var(--text-muted);
 }
 
-.meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
 .urgency {
   display: inline-flex;
   align-items: center;
@@ -427,14 +420,6 @@
   font-family: var(--font-body);
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 
 /*

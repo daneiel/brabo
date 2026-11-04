@@ -542,6 +542,12 @@
   color: var(--text-secondary);
 }
 
+/* So o layout do InputGroup do composer; a aparencia fica no shadcn. */
+.composerEntrada {
+  flex: 1 1 320px;
+  min-width: min(100%, 240px);
+}
+
 .textarea {
   flex: 1 1 320px;
   min-width: min(100%, 240px);
@@ -906,26 +912,6 @@
   max-width: 100%;
 }
 
-.structuredQuestionForm {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.structuredQuestionField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.structuredQuestionFieldLabel {
-  font-size: var(--fs-body);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
 /* Estado somente-leitura, depois de enviado — pergunta e resposta lado a
    lado, sem os campos de formulário. */
 .structuredQuestionAnswers {
@@ -1073,11 +1059,6 @@
 
 /* O balão de falha. Mesma forma do balão normal — é o agente falando —, com a
    borda em `danger` para não se confundir com resposta do modelo. */
-.bubbleFalha {
-  border: 1px solid var(--danger-line);
-  background: var(--danger-soft);
-  color: var(--text-primary);
-}
 
 /* O convite que ocupa o chat vazio. Não é erro nem aviso: é a explicação de
    quem fala primeiro, que antes só existia na cabeça de quem construiu. */
@@ -1123,42 +1104,9 @@
 }
 
 /* O exemplo é clicável: preenche o campo em vez de mandar a pessoa digitar. */
-.conviteExemplo {
-  display: block;
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  line-height: 1.6;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.conviteExemplo:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
-}
-
-.conviteRodape {
-  margin: var(--space-3) 0 0;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--text-muted);
-}
 
 /* O balão de resposta vazia herdada. Discreto de propósito: é arqueologia, não
    um problema para resolver agora. */
-.bubbleVazio {
-  border: 1px dashed var(--border-strong);
-  background: transparent;
-  color: var(--text-muted);
-  font-style: italic;
-}
 
 /* --- Painel "Artefatos gerados" agrupado por agente (RN-159) --- */
 

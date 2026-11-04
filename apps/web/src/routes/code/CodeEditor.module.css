@@ -201,21 +201,6 @@
   font-size: var(--fs-sm);
 }
 
-.blameTentar {
-  flex-shrink: 0;
-  padding: 3px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.blameTentar:hover {
-  color: var(--text-primary);
-}
-
 .pre {
   margin: 0;
   padding: 8px 0 24px;

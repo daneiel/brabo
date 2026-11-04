@@ -81,17 +81,6 @@
   color: var(--danger);
 }
 
-.botaoTentar {
-  align-self: flex-start;
-  padding: 4px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 11px;
-  cursor: pointer;
-}
-
 .truncado,
 .truncadoFilho {
   padding: 6px 14px;

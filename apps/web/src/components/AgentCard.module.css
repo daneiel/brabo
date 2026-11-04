@@ -185,29 +185,10 @@
  * horizontal não muda, só ganha `display: inline-flex` para centralizar o
  * texto na altura nova.
  */
-.autonomyOption {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  border: none;
-  background: none;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 3px 9px;
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
-  cursor: pointer;
-}
 
 .autonomyHint {
   margin: 0;
   font-size: 11px;
   line-height: 1.4;
   color: var(--text-muted);
-}
-
-.autonomyOption.active {
-  background: var(--accent);
-  color: var(--on-accent);
 }

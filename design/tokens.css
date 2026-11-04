@@ -225,11 +225,7 @@
   --r-lg: var(--radius-lg); /* card, tabela */
   --r-pill: var(--radius-full);
 
-  /* Métricas do shell (handoff). Estavam soltas em cada módulo CSS que
-     desenha a sidebar, o header e a régua de abas. */
-  --sidebar-w: 264px;
-  --sidebar-w-collapsed: 62px;
-  --header-h: 60px;
+  /* Métrica do shell: a régua de abas. */
   --tabs-h: 42px;
 
   /* Tintas semânticas (AT-285). Os módulos repetiam ~110 `color-mix()` sobre

@@ -17,8 +17,6 @@
       "metaHypotheses_zero": "{{count}} hipóteses",
       "metaHypotheses_one": "{{count}} hipótese",
       "metaHypotheses_other": "{{count}} hipóteses",
-      "reanalyzeButton": "Reanalisar",
-      "reanalyzeTitleDisabled": "O Psicólogo está pausado globalmente",
       "reanalyzeTitleEnabled": "Roda a análise de novo e gasta orçamento; a anterior fica no histórico"
     },
     "pausedNotice": "O Psicólogo está pausado globalmente por decisão do time — sem reanálise nova por enquanto. As hipóteses já emitidas continuam aqui.",

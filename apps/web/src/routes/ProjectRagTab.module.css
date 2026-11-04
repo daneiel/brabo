@@ -24,14 +24,6 @@
   color: var(--text-primary);
 }
 
-.subtitulo {
-  margin: 0;
-  max-width: 60ch;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .estado {
   padding: 14px 0;
   font-size: 13px;
