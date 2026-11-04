@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Pendências CONHECIDAS, declaradas: destinos que ainda não existem. Sai quando a A3 (referência da API) entrar. */
-export const PENDENTES = ['reference/api'];
+export const PENDENTES = [];
 
 /** RNs que as traduções ainda não trazem (defasagem de tradução, não link quebrado do gerador); só valem fora do pt-BR. Saem quando o lote de tradução as cobrir. */
 export const RNS_SEM_TRADUCAO = ['rn-907', 'rn-914', 'rn-915', 'rn-917', 'rn-918', 'rn-924', 'rn-928', 'rn-929', 'rn-930', 'rn-950', 'rn-952'];
@@ -91,7 +91,7 @@ function main() {
   if (r.paginas === 0) { console.error(`links: CEGO — nenhum .html em ${dir}.`); process.exit(2); }
   const fora = carregaDeFora(dir);
   console.log(`links: ${r.paginas} páginas, ${r.links} links, ${r.ancoras} âncoras verificados.`);
-  if (r.pendentes.length) console.log(`links: ${r.pendentes.length} pendência(s) DECLARADA(S) (${PENDENTES.join(', ')} até a A3; RNs sem tradução: ${RNS_SEM_TRADUCAO.join(', ')}).`);
+  if (r.pendentes.length) console.log(`links: ${r.pendentes.length} pendência(s) DECLARADA(S) (${PENDENTES.join(', ')} ; RNs sem tradução: ${RNS_SEM_TRADUCAO.join(', ')}).`);
   for (const e of [...r.erros, ...fora]) console.error(`  ${e}`);
   if (r.erros.length || fora.length) { console.error(`links: ${r.erros.length} link(s)/âncora(s) quebrados, ${fora.length} recurso(s) de fora.`); process.exit(1); }
 }

@@ -42,7 +42,7 @@ describe('verificarLinks (mutação)', () => {
 
   it('pendência declarada não reprova, mas é listada; o que não está na lista reprova', () => {
     const d = site((f) => { f['a.html'] += '<a href="reference/api.html">api</a><a href="reference/outra.html">o</a>'; });
-    const r = verificarLinks(d);
+    const r = verificarLinks(d, { pendentes: ['reference/api'] });
     expect(r.pendentes).toEqual(['a.html: link quebrado -> reference/api.html']);
     expect(r.erros).toEqual(['a.html: link quebrado -> reference/outra.html']);
   });
