@@ -1650,6 +1650,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/agent-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists each agent's identity, project instruction and tools
+         * @description Read-only (RN-995). Identity and tools come from the engine; the instruction is the current `agent_instructions` row. No composed prompt, no tool schema. Engine down: identity/tools are null with `motivoSemCatalogo`, instructions still come.
+         */
+        get: operations["AgentCatalogController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/agent-costs": {
         parameters: {
             query?: never;
@@ -4903,6 +4923,15 @@ export interface components {
             agent: string;
             versions: components["schemas"]["InstructionVersionResponseDto"][];
         };
+        AgenteDoCatalogoResponseDto: {
+            /** @example dev-api */
+            agente: string;
+            /** @description Code identity; null when the engine is unreachable. */
+            identidade: string | null;
+            instrucoesDoProjeto: components["schemas"]["InstrucoesDoProjetoResponseDto"] | null;
+            /** @description FULL catalog; the per-step cut (Jev) may show less to the model. null = unknown (engine down), never "no tools". */
+            ferramentas: components["schemas"]["FerramentaDoAgenteResponseDto"][] | null;
+        };
         AgentTokenUsageResponseDto: {
             /**
              * @description The agent's slug, or the user's id.
@@ -5569,6 +5598,11 @@ export interface components {
              *       ...
              */
             containerDiagram: string;
+        };
+        CatalogoDeAgentesResponseDto: {
+            agentes: components["schemas"]["AgenteDoCatalogoResponseDto"][];
+            /** @enum {string} */
+            motivoSemCatalogo?: "engine_indisponivel";
         };
         ChatSseEventResponseDto: {
             /**
@@ -7014,6 +7048,12 @@ export interface components {
              */
             modules: string[];
         };
+        FerramentaDoAgenteResponseDto: {
+            /** @example write_file */
+            nome: string;
+            /** @description Description the model reads (pt-BR), cut at 1000 chars. */
+            descricao: string;
+        };
         FirstAccountInternalDto: {
             /**
              * @description The owner e-mail, typed at the TTY. Normalized before anything is written; it is what the installer records in its marker, since an e-mail identifies and is not a secret.
@@ -7532,6 +7572,14 @@ export interface components {
             title: string;
             /** @description The content comes from the `proposed_action`'s own payload: an infra artifact NEVER touches a worktree, same as ADRs. */
             files: components["schemas"]["InfraPrFileResponseDto"][];
+        };
+        InstrucoesDoProjetoResponseDto: {
+            /** @example 3 */
+            versao: number;
+            /** @description Current instruction text, cut at 8000 chars. */
+            conteudo: string;
+            /** @description Real length, present only when cut. */
+            conteudoTotal?: number;
         };
         InstructionVersionResponseDto: {
             /** @example 01JC4Z0000VERSAO00000000001 */
@@ -15478,6 +15526,48 @@ export interface operations {
             };
             /** @description Scope not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentCatalogController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogoDeAgentesResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
