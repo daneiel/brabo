@@ -53,34 +53,6 @@
   max-width: 62ch;
 }
 
-.card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.cardInfo {
-  flex: 1;
-  min-width: 220px;
-}
-
-.cardTitle {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.cardHint {
-  font-size: var(--fs-body);
-  color: var(--text-muted);
-  margin-top: 2px;
-  max-width: 62ch;
-}
-
 .cardControl {
   width: 220px;
 }
