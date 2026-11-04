@@ -97,7 +97,7 @@
    (coluna): `flex: 1` passou a repartir LARGURA com o trilho, e `min-width:
    0` é o que impede um filho largo (tabela, terminal) de empurrar o trilho
    para fora da tela. Desde o ADR 0244 a coluna fica à ESQUERDA, junto do cabeçalho
-   (sem `margin: auto`), com a largura máxima de leitura. */
+   (sem `margin: auto`), e sem largura máxima (ADR 0248). */
 .body {
   flex: 1;
   min-height: 0;
@@ -107,10 +107,10 @@
   padding: 24px;
 }
 
-/* A largura de leitura mora AQUI, dentro de quem rola: o `.body` vai até a
-   borda direita, então a barra fica na borda e a roda rola em qualquer ponto. */
+/* Largura inteira (ADR 0248, revisa o 0244): sem `max-width`. A coluna mora
+   dentro de quem rola; o `.body` vai até a borda direita. */
 .coluna {
-  max-width: 1040px;
+  width: 100%;
 }
 
 /* Aba que desenha até a borda (`semRespiro` no registro): quem rola é ela, e

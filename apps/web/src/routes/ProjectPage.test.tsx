@@ -173,7 +173,7 @@ describe('ProjectPage — falha de carga não vira tela branca', () => {
 
   // jsdom não mede layout: prova-se a ESTRUTURA. Quem rola (`.body`) contém o
   // elemento de largura máxima (`.coluna`), que contém o painel.
-  it('a coluna de leitura é filha do contêiner que rola, que não leva a largura máxima', async () => {
+  it('a coluna de leitura é filha do contêiner que rola, sem largura máxima (ADR 0248)', async () => {
     getProject.mockResolvedValue(PROJETO);
     montar();
     const painel = await screen.findByText('aba visão geral');
@@ -183,8 +183,10 @@ describe('ProjectPage — falha de carga não vira tela branca', () => {
     expect(body.className).toMatch(/body/);
     expect(body.className).not.toMatch(/coluna/);
     const css = readFileSync(resolve(__dirname, 'ProjectPage.module.css'), 'utf8');
-    expect(css).toMatch(/\.coluna\s*\{[^}]*max-width:\s*1040px/);
-    expect(css).not.toMatch(/\.body\s*\{[^}]*max-width/);
+    expect(css).not.toMatch(/^\.coluna\s*\{[^}]*max-width/m);
+    const conta = readFileSync(resolve(__dirname, 'AccountPage.module.css'), 'utf8');
+    expect(conta).not.toMatch(/\.page\s*\{[^}]*max-width/m);
+    expect(css).not.toMatch(/\.body\s*\{[^}]*max-width/m);
   });
 
   it('a utilidade no-scrollbar existe no CSS do shadcn', () => {
