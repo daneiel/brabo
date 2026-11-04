@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **api**: a capability `reasoningText` fica `true` no OpenRouter e na Anthropic, provada por smoke com credencial em 2026-11-03 (AT-676, RN-993); o smoke do OpenRouter passa a usar `deepseek/deepseek-r1-0528`.
+- **api**: a Anthropic pede `thinking` adaptive com `display: summarized` nos modelos atuais (o `enabled` com budget dava 400) e mantém `enabled` nos antigos (AT-676, RN-993).
+- **engine**: o raciocínio do turno é gravado inteiro em `agent.response.payload.raciocinio` (fora do `content`, nunca devolvido ao modelo) e vai ao vivo como `agent.reasoning_delta` só para o socket de `developer` ou mais (AT-676, RN-993).
+- **api**: o raciocínio do modelo no contrato de LLM: chunk `reasoning` (OpenRouter `reasoning`, `reasoning_content` e `thinking` da Anthropic, com os blocos assinados devolvidos no laço de ferramentas), frame `raciocinio` ao vivo e `raciocinio` inteiro no `final` do `llm-turn`; `payload.raciocinio` de `agent.response` sai das leituras de evento para quem está abaixo de `developer`; capability `reasoningText` `false` em todos até o smoke (AT-676, RN-993, ADR 0249).
+- **web**: o fio mostra o raciocínio do agente num bloco "Raciocínio" recolhido antes da resposta, e a faixa do turno mostra "Raciocinando…" ao vivo enquanto ele chega (AT-676, RN-993, ADR 0249). Só aparece para quem tem papel `developer` ou acima, porque a api e o canal já filtram o campo.
 - **api/engine**: uma mensagem para vários agentes (`POST /projects/:projectId/sessions/:sessionId/messages`, `developer`): UM `chat.message` com `destinatarios`, uma entrega por agente com o mesmo `mensagemId` e `recusada` com motivo para quem não a recebe; a rota de um agente só passa a gravar `destinatarios: [agent]`; entregue/cancelada na fila valem só para o agente da cópia (AT-717, RN-991, ADR 0247).
 - **web**: menus `@` e `/` no composer com o autocompletar do shadcn (`Command` em `Popover`): `@` escolhe vários destinatários entre os agentes da sessão (chips; dois ou mais usam `POST .../messages`) e `/` dispara `/pronto`, `/arquitetura`, `/handoff`, `/perguntas`, `/parar`, `/aprovar` (com confirmação, tetos só levam ao card), `/resumo`, `/plano` e `/ajuda`, com nome localizado (AT-717, RN-992).
 - **api**: capability `vision` ligada só no OpenRouter, provada por smoke real em 2026-11-03 com `google/gemini-2.5-flash` (AT-715, RN-989); os outros providers seguem `false`.
@@ -27,6 +32,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - **web**: o conteúdo das abas do projeto e da Conta ocupa a largura inteira da área à direita da sidebar, sem a coluna de 1040px nem os 720px (ADR 0248, revisa o 0244).
+- **web**: as listas do chat voltam a ter marcador e número, e os títulos dos diálogos voltam ao tamanho do kit; tokens `--sidebar-w`, `--sidebar-w-collapsed` e `--header-h` removidos (AT-659).
 - **web**: as abas do projeto rolam na largura inteira (a largura de leitura passou para um elemento interno, e a barra fica na borda) e a sidebar ganha a utilidade `no-scrollbar` que faltava.
 - **web**: ajustes das telas da R3 (AT-721): o "?" das pendências fica na linha das abas, a explicação de "Reabrir" vai para um "?", o rótulo da falha não cola no nome do agente e os gráficos de gasto sem consumo mostram texto de vazio.
 - Os "Passos do turno" da Sessão passam a mostrar a saída das ferramentas dos dev agents (AT-718): o `tool.result` do `ToolLoop` traz `result` em vez de `resultado`, e antes essa saída nunca aparecia (RN-974).

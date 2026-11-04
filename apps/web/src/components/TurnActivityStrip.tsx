@@ -8,6 +8,7 @@ import { Shimmer } from './ui/Shimmer';
 import { ChatIcon } from './ui/icons';
 import { Tool } from './ai-elements/tool';
 import { ChainOfThought } from './ai-elements/chain-of-thought';
+import { Reasoning } from './ai-elements/reasoning';
 import { Plan, type EstadoDoPasso } from './ai-elements/plan';
 import { TraceIcon, TraceLine, TraceTitle } from './shadcn/trace';
 import type { PlanoDoAgente } from '../routes/RetomarTurnoInterrompido';
@@ -56,7 +57,7 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: Tu
   const bruta = estado.corrente !== '' ? estado.corrente : (ultimaLinha?.texto ?? null);
   const previa = bruta === null ? null : textoPlanoDoMarkdown(bruta);
 
-  if (previa === null && !pensandoVisivel) return null;
+  if (previa === null && !pensandoVisivel && !estado.raciocinio) return null;
 
   const linhasParaExpandir = [
     ...estado.linhas,
@@ -78,6 +79,9 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: Tu
         <div className={styles.previa} title={previa ?? undefined}>
           {previa ?? <Shimmer>{t('turno.pensando')}</Shimmer>}
         </div>
+        {estado.raciocinio && (
+          <Reasoning titulo={t('turno.raciocinando')} texto={estado.raciocinio} emCurso />
+        )}
         {plano && plano.passos.length > 0 && (
           <Plan
             objetivo={plano.objetivo}

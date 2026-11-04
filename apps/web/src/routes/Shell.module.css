@@ -94,16 +94,6 @@
  * cor deixaria de carregar — que é o certo de qualquer jeito, já que cor
  * sozinha nunca deve ser o único sinal.
  */
-.navErroBotao {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--text-primary);
-  text-decoration: underline;
-}
 
 /* O nome e, quando ele se repete, a linha de desempate — empilhados. */
 .navText {

@@ -73,3 +73,13 @@ describe('reduzirAtividadeDoTurno', () => {
     );
   });
 });
+
+describe('raciocínio ao vivo (AT-676)', () => {
+  it('acumula, sobrevive ao tool_call e some no reset', () => {
+    let e = reduzirAtividadeDoTurno(ESTADO_INICIAL_DA_ATIVIDADE, { tipo: 'raciocinio', texto: 'a' });
+    e = reduzirAtividadeDoTurno(e, { tipo: 'raciocinio', texto: 'b' });
+    e = reduzirAtividadeDoTurno(e, { tipo: 'tool_call', frase: 'x' });
+    expect(e.raciocinio).toBe('ab');
+    expect(reduzirAtividadeDoTurno(e, { tipo: 'reset' }).raciocinio).toBeUndefined();
+  });
+});

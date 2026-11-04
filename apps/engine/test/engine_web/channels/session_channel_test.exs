@@ -143,4 +143,43 @@ defmodule EngineWeb.SessionChannelTest do
     # vivo, não foi queimado por uma tentativa que nem chegou a validá-lo.
     assert Engine.Repo.get!(SocketTicket, linha.id).consumed_at == nil
   end
+
+  # AT-676: raciocínio só para quem o ticket marcou como developer+.
+  defp entrar(session_id, project_id, ticket, pode) do
+    insert_ticket!(ticket, %{session_id: session_id, project_id: project_id})
+
+    {:ok, _, joined} =
+      %{ticket: ticket, project_id: project_id, pode_ver_raciocinio: pode}
+      |> socket_com_assigns()
+      |> Phoenix.ChannelTest.subscribe_and_join("session:#{session_id}", %{})
+
+    joined
+  end
+
+  test "intercept: sem a flag não há delta e o agent.response perde o raciocínio; com a flag vêm os dois" do
+    session_id = Ecto.UUID.generate()
+    project_id = Ecto.UUID.generate()
+    {:ok, _pid} = SessionSupervisor.start_session(session_id, project_id)
+    on_exit(fn -> stop_session(session_id) end)
+    topic = "session:#{session_id}"
+
+    entrar(session_id, project_id, "t-sem", false)
+    EngineWeb.Endpoint.broadcast(topic, "agent.reasoning_delta", %{text: "x"})
+
+    EngineWeb.Endpoint.broadcast(topic, "agent.response", %{
+      content: "c",
+      raciocinio: "r",
+      raciocinioTotal: 1
+    })
+
+    assert_push "agent.response", resp
+    assert resp == %{content: "c"}
+    refute_push "agent.reasoning_delta", _
+
+    entrar(session_id, project_id, "t-com", true)
+    EngineWeb.Endpoint.broadcast(topic, "agent.reasoning_delta", %{text: "y"})
+    EngineWeb.Endpoint.broadcast(topic, "agent.response", %{content: "c", raciocinio: "r"})
+    assert_push "agent.reasoning_delta", %{text: "y"}
+    assert_push "agent.response", %{raciocinio: "r"}
+  end
 end

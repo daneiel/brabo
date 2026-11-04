@@ -1,7 +1,5 @@
 {
   "summary": {
-    "title": "On this page",
-    "ariaLabel": "Settings summary",
     "groups": {
       "projeto": "Project and execution",
       "modelos": "Models",
@@ -558,7 +556,6 @@
       "throughput": "highest throughput",
       "latency": "lowest latency"
     },
-    "notSupported": "No routing preference: the {{provider}} provider does not declare that capability — it is only declared after being proven against the real API.",
     "inherited": "Routing: {{valor}} (from the {{nivel}} level)",
     "inheritedHint": "To set it here, pick a model of its own for this row.",
     "toast": {

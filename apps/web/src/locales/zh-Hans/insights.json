@@ -11,8 +11,6 @@
       "sessionLabel": "会话 {{id}}",
       "metaEvents_other": "{{count}} 个事件",
       "metaHypotheses_other": "{{count}} 个假设",
-      "reanalyzeButton": "重新分析",
-      "reanalyzeTitleDisabled": "Psicólogo 已全局暂停",
       "reanalyzeTitleEnabled": "重新运行分析并消耗预算；之前的分析保留在历史中"
     },
     "pausedNotice": "根据团队决定，Psicólogo 已全局暂停 —— 暂时不会进行新的重新分析。已生成的假设仍保留在这里。",

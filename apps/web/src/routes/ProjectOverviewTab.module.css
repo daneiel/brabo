@@ -125,20 +125,6 @@
   border-left: 2px solid var(--border);
 }
 
-.areaToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  border: none;
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px 0;
-}
-
 .areaMembersList {
   display: flex;
   flex-direction: column;

@@ -42,14 +42,6 @@
   margin-bottom: 20px;
 }
 
-.promotionHint {
-  margin: -4px 0 12px;
-  font-size: 12px;
-  /* Texto de apoio a 12px vale a exigência de 4.5:1 do WCAG AA — mesma razão
-     documentada em Input.module.css para o `.hint` não usar `--text-muted`. */
-  color: var(--text-secondary);
-}
-
 /* Mesmos tokens da barra do ProjectApprovalsTab: é o mesmo gesto. */
 .selectionBar {
   display: flex;

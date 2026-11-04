@@ -12,25 +12,6 @@
   flex-wrap: wrap;
 }
 
-.botaoVoltar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  height: 26px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.botaoVoltar:hover {
-  background: var(--surface-1);
-}
-
 .tituloDiff {
   display: flex;
   align-items: baseline;
@@ -209,17 +190,6 @@
   gap: 6px;
   font-size: var(--fs-body);
   color: var(--danger);
-}
-
-.botaoTentar {
-  align-self: flex-start;
-  padding: 4px 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 11px;
-  cursor: pointer;
 }
 
 .lista {

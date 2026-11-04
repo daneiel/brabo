@@ -115,18 +115,6 @@
    triplicava a altura da linha. A linha curta é o `<summary>`; o detalhe,
    que nomeia a variável para o operador, abre sob demanda. `<details>` é
    nativo e acessível por teclado — nada de `title` num botão desabilitado. */
-.motivoComDetalhe {
-  margin: 0;
-}
-
-.motivoComDetalhe > summary {
-  cursor: pointer;
-}
-
-.porque {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
 
 .detalheDoMotivo {
   font-size: 12px;

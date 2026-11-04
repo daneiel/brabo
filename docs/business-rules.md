@@ -14426,7 +14426,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1189`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1213`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14635,7 +14635,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1077` (`avisar_canal`);
+  `:607`, `:630`, `:1101` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14818,11 +14818,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1155`
-  (`narrar_recusa_de_sessao_encerrada`), `:1507` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1179`
+  (`narrar_recusa_de_sessao_encerrada`), `:1531` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1155`
-  (`narrar_recusa_de_sessao_encerrada`), `:1507` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1179`
+  (`narrar_recusa_de_sessao_encerrada`), `:1531` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:471` (`abandonar`);
@@ -14929,7 +14929,7 @@ motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vi
 toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
-- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:214`
   (`reopen`); `apps/web/src/lib/api-client.ts:634` (`reopenSession`);
   `apps/web/src/routes/SessionPage.tsx:158` (`podeReabrir`);
   `apps/web/src/lib/session-acoes-da-sessao.ts:77` (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
@@ -15813,9 +15813,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:241` (`TETO_DE_MUTACAO_MS`), `:253` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:306` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:96` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:2038` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2048` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:2038` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2048` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15899,9 +15899,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:241` (`TETO_DE_MUTACAO_MS`),
   `:205` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:264` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1915` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1945` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1915` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1945` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16849,10 +16849,10 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`@sem_orientacao`), `:301` (`texto_do_turno`), `:326`
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
-  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:828` (`IdiomaDaResposta`);
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
-  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:828` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:527`
   (`idioma_da_resposta`);
@@ -16950,10 +16950,10 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`@forma_curta`), `:301` (`texto_do_turno`), `:319` (`grava_artefato?`),
   `:320` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
-  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:828` (`IdiomaDaResposta`);
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
-  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:828` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17209,18 +17209,18 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:272` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:177`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:197`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:190`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:212`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
-  (`llm_turn`), `:814` (`llm_turn_stream`);
+  (`llm_turn`), `:819` (`llm_turn_stream`);
 
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
-  (`llm_turn`), `:814` (`llm_turn_stream`);
+  (`llm_turn`), `:819` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17312,7 +17312,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
 - **Código:** `apps/web/src/components/ApprovalCard.tsx:236` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
-  (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
+  (`turnoEmCursoNoLog`), `:536` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:71`
@@ -17926,7 +17926,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1254`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1278`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -18739,7 +18739,7 @@ do bloco. O painel "precisa de você" NÃO usa este caminho: ele não lê log
 nenhum e abrir não dispara consulta, então o cartão ali segue calado, como a
 [RN-614](#rn-614) já dizia — decisão, não lacuna. Nenhum teto muda.
 
-- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:256`
+- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:260`
   (`listEvents`);
   `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:61`
   (o filtro);
@@ -19304,13 +19304,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1241` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:236` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1241` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1225` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1241` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -21287,7 +21287,7 @@ turno continua.
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
   (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:377` (`run_direct`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:381` (`run_direct`);
   `apps/engine/lib/engine/agents/arquiteto_server.ex:357`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
@@ -21618,9 +21618,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:86` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:256`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:270`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:288`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:305`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
@@ -21838,10 +21838,10 @@ sem dizer qual.
   escopo, declarado).
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:314`
   (`cortadaPeloTeto`),
-  `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:248`
+  `apps/api/src/infrastructure/llm/anthropic-provider.ts:235` (`finalMessage`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:234`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:280`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:301`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -21895,7 +21895,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:618` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:634` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21965,7 +21965,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:624` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:640` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22013,7 +22013,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2141`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2171`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22148,8 +22148,8 @@ sem dizer qual.
   120px da RN-173, porque o cartão de aprovação é o que a pessoa precisa ver.
   Reabrir a sessão com uma espera antiga não rola nada além da abertura de
   sempre.
-- **Onde:** `apps/web/src/lib/session-channel.ts:232` (`awaiting_approval`),
-  `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
+- **Onde:** `apps/web/src/lib/session-channel.ts:239` (`awaiting_approval`),
+  `apps/web/src/lib/session-turno.ts:422` (`awaiting_approval`),
   `seqDaEsperaPorAprovacao` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `esperaPorAprovacao` (removido)
 - **Teste:** `apps/web/src/lib/session-channel.test.ts` (`onAgentStatus repassa
@@ -22270,7 +22270,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1915`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1945`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:85`
   (`resultado_de_teto_do_terminal`)
@@ -22664,8 +22664,8 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:187`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:640`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:200`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22747,7 +22747,7 @@ sem dizer qual.
   o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:250`
   (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
   (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
@@ -22775,9 +22775,9 @@ sem dizer qual.
   turno fechar.
 - **Onde:** `apps/api/src/domain/llm/chamada-em-texto.ts:10`
   (`marcacaoDeChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:329`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:347`
   (`semChamadaEmTexto`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:365`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:386`
   (`semChamadaEmTexto`)
 - **Teste:** `apps/api/test/domain/llm/chamada-em-texto.spec.ts`,
   `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` e
@@ -23215,7 +23215,7 @@ sem dizer qual.
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
   `codigo` e desarmou o dev. A correção pós-gate segue a mesma régua
   (AT-621, [RN-864](#rn-864)).
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:275`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:279`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:119`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
@@ -23949,7 +23949,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:504` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1262` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1278` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -25082,7 +25082,7 @@ sem dizer qual.
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`conversacional`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1084` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
@@ -25147,7 +25147,7 @@ sem dizer qual.
 ### RN-914 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-914}
 
 - **Regra:** revisa a [RN-782](#rn-782) ([ADR 0223](adr/0223-orcamento-de-raciocinio-por-modelo.md)). Modelo com `models.reasoning_budget` preenchido (curado à mão, nunca pelo sync) e `supportsReasoning` manda `reasoning: { max_tokens: N }` e `max_tokens` = saída visível + N ([RN-741](#rn-741)); só no provider que sabe controlar o raciocínio (hoje o OpenRouter) e nunca no agente com raciocínio desligado ([RN-783](#rn-783)). Hoje só `qwen/qwen3.7-flash` (N = 2048), provado em 22/10: 1024 pedidos, 1024 gastos. Modelo sem orçamento segue a RN-782, corpo byte a byte. `deepseek/deepseek-v4.1-flash` fica sem orçamento: `reasoning.max_tokens`, `effort` e `reasoning_effort` foram ignorados (8192 de raciocínio). `effort` nunca é enviado. O limite contém o raciocínio mas não garante a tool call.
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:624` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:640` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-914)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
 - **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)
 
@@ -25343,7 +25343,7 @@ sem dizer qual.
 ### RN-946 — O corte pelo teto no meio do texto também é nomeado pelos agentes de QA {#rn-946}
 
 - **Regra:** estende a RN-945/RN-780: resposta `truncated` COM texto e sem chamada (o raciocínio comeu o teto e o texto saiu cortado) não é "o modelo parou": o `ToolLoop` devolve `corte_com_texto: true`, chave PRÓPRIA (não `corte_pelo_teto`, que o dev agent e a RN-780 casam), e `QaEstrategiaAgent` e `QaAutomacaoAgent` narram, com origem `modelo`, que o teto cortou a resposta no meio do texto antes da ferramenta de término (`MotivoDoCorte.texto_com_texto`). Não há retentativa nova (mudaria laço e custo); resposta não cortada com texto segue "parou sem chamar ...". A mesma lacuna no dev agent fica fora.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246` (`parada_sem_chamada`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:9` (`texto_com_texto`).
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:250` (`parada_sem_chamada`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:9` (`texto_com_texto`).
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`, `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
 - **Origem:** AT-620 (EP-030), TP-01 (22ª) de 31/10/2026.
 
@@ -25364,7 +25364,7 @@ sem dizer qual.
 ### RN-950 — O 9Router recebe as ferramentas, o vínculo confere a capability do provider e ferramenta sem capability lança {#rn-950}
 
 - **Regra:** revisa a [RN-909](#rn-909) e completa a [RN-040](business-rules/custo.md#rn-040) com a SEGUNDA camada do ADR 0041. (1) `nineRouterConfig` declara `toolCalling: true`, provado por smoke com chave real em 31/10: 3/3 chamadas em `cc/claude-haiku-5-5` voltaram com `tool_calls` estruturado, 10/10 consistente a temperatura 0 e laço de 3 voltas íntegro. Antes, a capability `false` fazia o `buildBody` descartar `tools` em silêncio e o Criativo escrevia a chamada como XML no fio (AT-637). (2) `assertModelFitsBindingScope` confere também o PROVIDER nos escopos `agent` e `area`: vínculo cujo provider declara `toolCalling: false` é recusado com 422 (`ModelNotFitForAgentScopeError`, causa `provider`), com frase própria. `workspace`, `project` e `session` seguem livres. (3) `buildBody` com ferramentas pedidas e capability `false` LANÇA erro nomeado em vez de descartar. Providers afetados: só o `opencode-zen` tem `toolCalling: false` além do 9Router de antes; vínculos novos de agente/área a ele passam a ser 422 e o chat sem ferramenta segue igual. Vínculo antigo a ele continua gravado e o turno do agente falha nomeado.
-- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:171` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:617` (`buildBody`)
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:171` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:633` (`buildBody`)
 - **Teste:** `apps/api/test/domain/llm/model-capabilities.spec.ts` (recusa por provider em `agent`/`area`; escopos livres), `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (capability `true`), `apps/api/test/contract/llm-provider.contract.ts` (provider sem capability lança nomeado); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-637 (EP-026), TP-01 de 31/10 e medição da AT-631.
 
@@ -25385,7 +25385,7 @@ sem dizer qual.
 ### RN-955 — GET interno com conexão envenenada do pool é repetido UMA vez {#rn-955}
 
 - **Regra:** complementa a [RN-742](#rn-742) (AT-428). A resposta atrasada de um pedido que estourou o `receive_timeout` fica no socket de uma conexão do pool do Finch; o GET seguinte que a pega lê a resposta ANTIGA e lança `CaseClauseError {:status, ref, _}`, que a checagem de trabalho pendente da [RN-064](business-rules/custo.md#rn-064) lia como "api fora do ar" e encerrava a sessão ativa. O `req_get` repete o MESMO GET uma vez quando o erro é esse (o Finch já descartou a conexão); só GET, porque POST pode ter tido efeito. Erro de transporte verdadeiro NÃO é repetido, e a RN-064 não muda.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2155` (`get_repetindo`).
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2186` (`get_repetindo`).
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs` (repete e devolve; falha na segunda não tem terceira; timeout verdadeiro não repete).
 - **Origem:** AT-642 (EP-030).
 
@@ -25525,7 +25525,7 @@ sem dizer qual.
 ### RN-982 — As fontes de uma resposta são as leituras ok do próprio turno, registradas pelo servidor, nunca pelo texto do modelo {#rn-982}
 
 - **Regra:** irmã da [RN-731](business-rules.md#rn-731). O servidor anota cada leitura `ok` do turno (listagens de regras, backlog, métricas, ADRs e contratos, `read_file` e os trechos do `rag_search`) e o `agent.response` leva `fontes` FORA do `content`: `{tipo, rotulo, ref?, searchId?, chunkId?}`, teto de 10, com `fontesTotal` quando corta (ADR 0060). Sem leitura, o campo não existe. Leitura com falha não é fonte. A tela diz "consultado", nunca "usado": é o que o agente leu, não o que ele aproveitou. Não muda o `content`, a reidratação (RN-580), o `tool.result` (RN-589) nem o voto do RAG (RN-479..481).
-- **Onde:** `apps/engine/lib/engine/agents/fontes_do_turno.ex:37` (`anotar`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:387` (`anotar`).
+- **Onde:** `apps/engine/lib/engine/agents/fontes_do_turno.ex:37` (`anotar`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:391` (`anotar`).
 - **Teste:** `apps/engine/test/engine/agents/fontes_do_turno_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-982"), `apps/engine/test/engine/agents/retomada_dos_seis_test.exs` e `apps/engine/test/engine/infra/infra_lead_server_test.exs` (a ferramenta nos sete).
 - **Conversacionais (fatia 2):** os SETE agentes conversacionais oferecem o MESMO `rag_search` dos dev agents (`Engine.Harness.Tools.RagSearch`, escopo do projeto, sem parâmetro de escopo, teto de `top_k` da ferramenta, ADR 0060), despachado por `ArgumentosDeFerramenta.executar/4` (RN-719) e com o resultado no `tool.result` (RN-589). Entra na spec e no despacho de cada servidor: `criativo_server.ex:121`/`:469`, `po_server.ex:153`/`:437`, `arquiteto_server.ex:125`/`:402`, `dev_lead_server.ex:187`/`:580`, `ux_designer_server.ex:121`/`:350`, `staff_server.ex:121`/`:304`, `infra/infra_lead_server.ex:239`/`:1149`.
 - **Origem:** AT-716 fatias 1 e 2 (EP-031).
@@ -25540,7 +25540,7 @@ sem dizer qual.
 ### RN-985 — A citação inline é marcada pelo modelo e validada contra as fontes do próprio turno; índice inventado não é mostrado {#rn-985}
 
 - **Regra:** quando o turno já tem fonte (RN-982), uma mensagem `system` EFÊMERA no fim da chamada (mesmo caminho da RN-622, nunca em `state.messages`, sem nomear idioma, RN-667) lista as fontes como `[n] rótulo` (até 10, na ordem de `fontes`) e pede "cite com [n]; não cite o que não está na lista" (teto de 250 tokens; 10 fontes medem ~55). No fecho, o servidor extrai os `[n]` do texto e grava `citacoes` no `agent.response` só com os que existem em `fontes` (`1 <= n <= fontes.length`), sem repetição e em ordem. O `content` NÃO é reescrito (RN-731): o marcador inválido fica no texto e a tela o descarta. Sem fontes, ou sem marcador válido, o campo não existe.
-- **Onde:** `apps/engine/lib/engine/harness/citacao_das_fontes.ex:22` (`anexar`) e `:43` (`marcar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:739` (`llm_turn`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:206` (`marcar`).
+- **Onde:** `apps/engine/lib/engine/harness/citacao_das_fontes.ex:22` (`anexar`) e `:43` (`marcar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:744` (`llm_turn`), `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`), `apps/engine/lib/engine/harness/tool_loop.ex:206` (`marcar`).
 - **Teste:** `apps/engine/test/engine/harness/citacao_das_fontes_test.exs`, `apps/engine/test/engine/harness/tool_loop_test.exs` ("RN-985").
 - **Origem:** AT-716 fatia 3 (EP-031).
 ### RN-986 — O anexo do chat aceita texto/código e imagem, com tipo pelos bytes e tetos {#rn-986}
@@ -25567,7 +25567,7 @@ sem dizer qual.
 ### RN-989 — Imagem só vai a modelo com visão provada; sem ela, o agente é avisado {#rn-989}
 
 - **Regra:** o `llm-turn` aceita no `content` de uma mensagem uma lista de partes `{type:'text',text}` e `{type:'anexo',id}` (o engine manda o id, nunca bytes). A api troca o id pelo anexo da MESMA sessão (`ChatAttachmentRepository.find`): imagem vira parte `image` (data URL no formato OpenAI) SÓ quando o provider declara `capabilities.vision` E o modelo tem `supports_vision` — as duas camadas do ADR 0041; `vision` nasce `false` em todos e só vira `true` com smoke real: hoje é `true` SÓ no OpenRouter, PROVADO em 2026-11-03 por `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (AT-715) com `google/gemini-2.5-flash` e um PNG 8x8 vermelho — o modelo respondeu "red". Os outros dez seguem `false`. Sem as duas, a imagem não sai da api e entra no lugar o texto `[imagem <nome> não enviada: o modelo atual não lê imagem]`, que é o aviso ao agente. Anexo de texto vai delimitado (`[anexo: <nome>]` … `[fim do anexo: <nome>]`) com ou sem visão; id que não resolve vira `[anexo <id> indisponível]`. Texto puro continua `string`. Os tokens da imagem entram no metering pelo `usage` do provider (ADR 0188), sem código novo.
-- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:160` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:171` (`resolverAnexos`).
+- **Onde:** `apps/api/src/domain/llm/anexos-no-turno.ts:23` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:173` (`resolverAnexos`), `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:186` (`resolverAnexos`).
 - **Teste:** `apps/api/test/domain/llm/anexos-no-turno.spec.ts`, `apps/api/test/infrastructure/llm/openai-compatible-provider.visao.spec.ts`; prova da capability: `apps/api/test/infrastructure/llm/openrouter-provider.visao.smoke.spec.ts` (manual, com credencial).
 - **Origem:** AT-715 fatia 1, lane L2 (EP-031), ADR 0246.
 
@@ -25591,3 +25591,12 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/comandos-do-composer.ts:110` (`gatilhoNoCursor`), `apps/web/src/lib/comandos-do-composer.ts:127` (`destinoDoAprovar`), `apps/web/src/lib/use-menu-do-composer.ts:24` (`useMenuDoComposer`), `apps/web/src/components/ai-elements/menu-do-composer.tsx:15` (`MenuDoComposer`).
 - **Teste:** `apps/web/src/routes/SessionComposer.menu.test.tsx` (menu, filtro, Enter sem enviar, Esc, `/aprovar` comum e de teto, `/resumo`, `@` da sessão, chips e rota nova), `apps/web/src/lib/comandos-do-composer.test.ts`.
 - **Origem:** AT-717 (EP-031), lane web.
+
+
+### RN-993 — O raciocínio do modelo é gravado inteiro fora do `content`, aparece ao vivo e só `developer` ou mais o lê; nunca volta ao modelo {#rn-993}
+
+- **Regra:** o provider devolve o TEXTO do raciocínio como chunk `reasoning` (`delta.reasoning` do OpenRouter, `delta.reasoning_content` do dialeto DeepSeek/vLLM, `thinking_delta` da Anthropic) e nunca no `content`. O `stream-llm-turn` repassa cada pedaço como frame `raciocinio` e o frame `final` leva `raciocinio` com o texto INTEIRO do passo, sem corte; o `llm-turn` sem stream devolve o mesmo campo. A Anthropic recebe `thinking` quando o modelo raciocina e o raciocínio não foi desligado: `adaptive` com `display: "summarized"` e sem `budget_tokens` nos modelos atuais (4.6 em diante e a família 5; o `display` padrão devolveria texto vazio, e o texto que chega é um RESUMO, nunca o bruto), `enabled` com `budget_tokens` nos antigos (`pensamentoAdaptativo`, `apps/api/src/infrastructure/llm/anthropic-provider.ts:406`); `reasoningOff` não manda `thinking`. Os blocos `thinking` assinados voltam em `message.thinkingBlocks` para o engine devolvê-los intactos no turno `assistant` que pediu ferramentas. O engine grava o texto em `agent.response.payload.raciocinio` (lane do engine) e ele não entra na reidratação, no RAG nem no grafo. As leituras de evento da sessão (`GET .../events`, `GET .../events/:eventId` e o evento por id da Anamnese) tiram `payload.raciocinio` de `agent.response` para papel efetivo abaixo de `developer` (`projectRole ?? workspaceRole`, RN-471), por UM filtro de saída. A capability `reasoningText` é `false` em todos os providers até haver smoke com credencial (ADR 0041).
+- **Capability:** `reasoningText` é `true` só na Anthropic e no OpenRouter, PROVADA com credencial real em 2026-11-03: `anthropic-provider.raciocinio.smoke.spec.ts` (`claude-haiku-5-5` e `claude-sonnet-5-5`, saída 0 nos dois; o texto é o RESUMO do raciocínio, `display: summarized`, nunca o bruto) e `openrouter-provider.raciocinio.smoke.spec.ts` (`deepseek/deepseek-r1-0528`, o `deepseek/deepseek-r1` saiu do OpenRouter e dá 404). Os outros nove providers seguem `false`; ligar outro exige o smoke equivalente com credencial.
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:381` (`textoDoRaciocinio`), `apps/api/src/infrastructure/llm/anthropic-provider.ts:398` (`toThinkingBlocks`), `apps/api/src/domain/sessions/raciocinio-do-evento.ts:16` (`filtrarRaciocinio`), `apps/api/src/interfaces/http/sessions/sessions.controller.ts:260` (`listEvents`), `:333` (`getEvent`), `apps/api/src/application/use-cases/sessions/create-socket-ticket.use-case.ts:69` (`podeVerRaciocinio` no ticket do socket, coluna `session_socket_tickets.pode_ver_raciocinio`, que o engine lê ao consumi-lo, RN-108). Engine (AT-676): o `RaciocinioDoTurno` acumula o raciocínio do turno e `TextoDoTurno.payload_do_turno` o grava como `raciocinio`/`raciocinioTotal` fora do `content`; devolve os `thinkingBlocks` na mensagem `assistant` com `toolCalls` (`apps/engine/lib/engine/agents/raciocinio_do_turno.ex:34` (`anexar_blocos`)); o frame `raciocinio` do stream vira o evento efêmero `agent.reasoning_delta` (`apps/engine/lib/engine/sessions/engine_api_client.ex:1827` (`consume_sse`)); e o `intercept` do canal `session:<id>` só entrega o delta, e só deixa `raciocinio` no `agent.response`, ao socket cujo ticket tem `pode_ver_raciocinio` (`apps/engine/lib/engine_web/channels/session_channel.ex:42` (`handle_out`)). Coluna ausente ou nula conta como falso.
+- **Teste:** `apps/api/test/infrastructure/llm/raciocinio-texto.spec.ts` (os dois campos, `thinking_delta`, adaptive/summarized × enabled por modelo, blocos devolvidos no corpo seguinte, `reasoningText` falso), `apps/api/test/domain/sessions/raciocinio-do-evento.spec.ts` (`viewer` não recebe, `developer`+ recebe), `apps/api/test/application/use-cases/sessions/create-socket-ticket.use-case.spec.ts` (ticket `true` para `developer`, `false` para `viewer`), `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` e `run-llm-turn.use-case.spec.ts` (frame `raciocinio`, `final` com o texto inteiro, `content` intacto); smoke manual `openrouter-provider.raciocinio.smoke.spec.ts`. Engine: `apps/engine/test/engine/agents/raciocinio_do_turno_test.exs` (frame acumula e `final` substitui, payload com `content` intacto, reidratação sem raciocínio, `thinkingBlocks` na 2ª chamada) e `apps/engine/test/engine_web/channels/session_channel_test.exs` (`intercept` com e sem a flag).
+- **Origem:** AT-676 (EP-031), lane api; ADR 0249.

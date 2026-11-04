@@ -61,23 +61,3 @@
   gap: 5px;
   padding: 6px 0 2px;
 }
-
-.linha {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  color: var(--text-secondary);
-}
-
-.linhaIconeFerramenta {
-  flex-shrink: 0;
-  color: var(--msg-color);
-}
-
-.linhaIconeNarracao {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}

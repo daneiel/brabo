@@ -739,10 +739,13 @@ defmodule Engine.Sessions.EngineApiClient do
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
       |> Engine.Harness.CitacaoDasFontes.anexar()
 
+    enviadas = Engine.Agents.RaciocinioDoTurno.anexar_blocos(enviadas)
+
     impl().llm_turn(project_id, session_id, agent, enviadas, tools, [])
     |> repetir_com_catalogo_inteiro(tools, fn ->
       impl().llm_turn(project_id, session_id, agent, enviadas, tools, catalogo_completo: true)
     end)
+    |> registrar_raciocinio()
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
     |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
@@ -825,15 +828,36 @@ defmodule Engine.Sessions.EngineApiClient do
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
       |> Engine.Harness.CitacaoDasFontes.anexar()
 
-    impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta, [])
+    enviadas = Engine.Agents.RaciocinioDoTurno.anexar_blocos(enviadas)
+
+    # AT-676: o raciocínio ao vivo sai por evento EFÊMERO do canal (nunca no log).
+    ao_vivo = fn text ->
+      EngineWeb.Endpoint.broadcast("session:" <> session_id, "agent.reasoning_delta", %{
+        text: text,
+        agent: agent
+      })
+    end
+
+    impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta,
+      on_raciocinio: ao_vivo
+    )
     |> repetir_stream_sem_texto(tools, fn ->
       impl().llm_turn_stream(project_id, session_id, agent, enviadas, tools, on_delta,
-        catalogo_completo: true
+        catalogo_completo: true,
+        on_raciocinio: ao_vivo
       )
     end)
+    |> registrar_raciocinio()
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
     |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
+
+  defp registrar_raciocinio({:ok, resp} = r) do
+    Engine.Agents.RaciocinioDoTurno.registrar(resp)
+    r
+  end
+
+  defp registrar_raciocinio(outro), do: outro
 
   # No stream só se repete quando NADA foi escrito para a pessoa: um delta já
   # entregue não se desfaz, e duplicar texto é pior que o menu errado.
@@ -1760,7 +1784,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     Process.put(key, %{buffer: "", final: nil})
 
     into = fn {:data, data}, {req, resp} ->
-      Process.put(key, consume_sse(Process.get(key), data, on_delta))
+      Process.put(key, consume_sse(Process.get(key), data, on_delta, opts[:on_raciocinio]))
       {:cont, {req, resp}}
     end
 
@@ -1799,7 +1823,8 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   # Parseia frames SSE (`data: <json>\n\n`) de um chunk, chamando `on_delta`
   # por delta de texto e guardando o evento `final`. Mantém no `buffer` o
   # resto de um frame ainda incompleto entre chunks.
-  defp consume_sse(state, data, on_delta) do
+  @doc false
+  def consume_sse(state, data, on_delta, on_raciocinio) do
     buffer = state.buffer <> data
     parts = String.split(buffer, "\n\n")
     {frames, [rest]} = Enum.split(parts, -1)
@@ -1811,6 +1836,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
             on_delta.(text)
             acc
 
+          {:ok, %{"type" => "raciocinio", "text" => text}} when is_function(on_raciocinio, 1) ->
+            on_raciocinio.(text)
+            acc
+
+          # `final.raciocinio` é o texto INTEIRO e vale sobre o que veio ao vivo.
           {:ok, %{"type" => "final"} = f} ->
             f
 
