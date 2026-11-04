@@ -223,8 +223,8 @@ describe('SessionTopbar pela largura (AT-317)', () => {
 
     // Esc fecha e devolve o foco ao gatilho.
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByTestId('painel-dos-ajustes')).toBeNull();
-    expect(document.activeElement).toBe(gatilho);
+    await vi.waitFor(() => expect(screen.queryByTestId('painel-dos-ajustes')).toBeNull());
+    await vi.waitFor(() => expect(document.activeElement).toBe(gatilho));
   });
 
   it('clique fora fecha o painel', async () => {
@@ -233,8 +233,9 @@ describe('SessionTopbar pela largura (AT-317)', () => {
     larguraDaBarra(1176);
     fireEvent.click(screen.getByTestId('ajustes-da-sessao'));
     expect(screen.getByTestId('painel-dos-ajustes')).toBeTruthy();
-    fireEvent.mouseDown(document.body);
-    expect(screen.queryByTestId('painel-dos-ajustes')).toBeNull();
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
+    await vi.waitFor(() => expect(screen.queryByTestId('painel-dos-ajustes')).toBeNull());
   });
 
   it('a 760px o controle fica só com o ícone e "Encerrar" vira ícone — os dois com nome acessível', async () => {

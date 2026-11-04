@@ -23,6 +23,7 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Alert as AlertShadcn } from '../components/shadcn/alert';
 import { MensagemDeConversa } from '../components/ai-elements/message';
 import { Reasoning } from '../components/ai-elements/reasoning';
 import { ArtifactCard } from '../components/ai-elements/artifact';
@@ -341,7 +342,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     if (promocoesPendentes.length === 1) {
       const p = promocoesPendentes[0];
       return (
-        <div className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
+        <AlertShadcn variant="success" className={styles.handoffCard} key={`leva-unica-${p.storyId}`}>
           <Badge tone="muted" size="md">
             <StackIcon size={13} />
             {t('historia.pendente', { titulo: p.titulo })}
@@ -375,7 +376,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             {t('compartilhado.verNoBacklog')}
             <ChevronRightIcon size={11} />
           </Link>
-        </div>
+        </AlertShadcn>
       );
     }
     const slides: CarouselSlide[] = promocoesPendentes.map((p) => ({
@@ -603,7 +604,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         // acionável e divisor mudo): a leitura errada é a mesma.
         desfecho: true,
         node: isOfertaAtual ? (
-          <div className={styles.handoffCard} key={event.id}>
+          <AlertShadcn variant="success" className={styles.handoffCard} key={event.id}>
             <Badge tone="muted" size="md">
               {origem}
               <ChevronRightIcon size={13} />
@@ -664,7 +665,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                 </Link>
               </>
             )}
-          </div>
+          </AlertShadcn>
         ) : (
           <div className={styles.handoffDivider} key={event.id}>
             <Badge tone="muted" size="md">

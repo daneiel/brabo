@@ -31,6 +31,7 @@ import { useRegistrarAcoesNoBloco } from '../lib/acoes-no-bloco';
 import { Disclosure } from './ui/Disclosure';
 import { PaginadorDaFila } from './PaginadorDaFila';
 import { paginar } from '../lib/paginacao-de-fila';
+import { ToggleGroup, ToggleGroupItem } from './shadcn/toggle-group';
 import styles from './PendenciasDeOutrasSessoes.module.css';
 
 type ChaveDeFila = 'perguntas' | 'aprovacoes' | 'merges' | 'prontas' | 'bloqueadas';
@@ -352,23 +353,23 @@ export function PendenciasDeOutrasSessoes({
             )}
           </p>
         )}
-        <div className={styles.abas} role="group" aria-label={t('pendencias.abas')}>
+        <ToggleGroup
+          className={styles.abas}
+          variant="outline"
+          size="sm"
+          aria-label={t('pendencias.abas')}
+          value={aberta ? [aberta] : []}
+          onValueChange={(v) => setAberta((v[0] as ChaveDeFila | undefined) ?? null)}
+        >
           <Ajuda assunto={t('pendencias.abas')}>{t('pendencias.nota')}</Ajuda>
           {(['perguntas', 'aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
             .filter((chave) => contagens[chave] > 0 || (chave === 'perguntas' && respondidas.length > 0))
             .map((chave) => (
-              <Button
-                key={chave}
-                type="button"
-                size="sm"
-                variant={aberta === chave ? 'primary' : 'secondary'}
-                aria-pressed={aberta === chave}
-                onClick={() => setAberta(aberta === chave ? null : chave)}
-              >
+              <ToggleGroupItem key={chave} value={chave}>
                 {t(`pendencias.filas.${chave}`)} {contagens[chave]}
-              </Button>
+              </ToggleGroupItem>
             ))}
-        </div>
+        </ToggleGroup>
         <div className={styles.lista}>
           {painel('perguntas', <PerguntasEmAberto
             projectId={projectId}
