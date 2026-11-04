@@ -41,6 +41,7 @@ keywords: [scripts, pnpm, make, commands]
 | `pnpm docs:build` | `pnpm --dir website build` |
 | `pnpm docs:serve` | `pnpm --dir website serve` |
 | `pnpm docs:clear` | `pnpm --dir website clear` |
+| `pnpm docs:site` | `node scripts/docs/site/build.mjs` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
 | `pnpm docs:openapi-textos` | `node scripts/docs/openapi-textos.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
@@ -202,4 +203,4 @@ keywords: [scripts, pnpm, make, commands]
 
 ---
 
-共 137 条命令。没有 `## 描述` 注释的 Makefile 目标不会出现在这里——请在源码中添加注释。
+共 138 条命令。没有 `## 描述` 注释的 Makefile 目标不会出现在这里——请在源码中添加注释。

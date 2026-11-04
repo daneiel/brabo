@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **docs**: o ADR 0253 decide tirar o site do Docusaurus por um gerador próprio; o núcleo (`pnpm docs:site`, `scripts/docs/site/`) roda ao lado, com as mesmas URLs e âncoras (AT-662, lane A1).
 - **docs**: o contexto lido em toda sessão perde dois blocos de área (socket e orçamento do web; chaves de dispositivo e instalador), que viraram regras de caminho em `.claude/rules/`, sem perder texto.
 - **docs**: o ADR 0252 registra a decisão de separar o monorepo em repositórios `brabo-*` em `viralabs-dev`, com o mapa no contexto do Claude; estado decidido, em migração (AT-690).
 - **infra**: o dono do repositório deixa de estar fixo no `install.sh`, na rota do runner, na unit, no site e no workflow de docs: `BRABO_REPO` e `BRABO_RUNNER_RELEASES_REPO` (padrão `daneiel/brabo`) e `github.repository` (AT-691)

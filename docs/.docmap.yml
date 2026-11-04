@@ -266,6 +266,7 @@ rules:
   - id: mecanismo-de-documentacao
     watch:
       - "scripts/docs/*.mjs"
+      - "scripts/docs/site/*.mjs"
     docs:
       - "docs/explanation/documentation-workflow.md"
     severity: warn

@@ -41,6 +41,7 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm docs:build` | `pnpm --dir website build` |
 | `pnpm docs:serve` | `pnpm --dir website serve` |
 | `pnpm docs:clear` | `pnpm --dir website clear` |
+| `pnpm docs:site` | `node scripts/docs/site/build.mjs` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
 | `pnpm docs:openapi-textos` | `node scripts/docs/openapi-textos.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
@@ -202,4 +203,4 @@ Source: each package's `package.json` and the root `Makefile`.
 
 ---
 
-137 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
+138 commands total. A Makefile target without a `## description` annotation doesn't appear here — annotate it at the source.
