@@ -73,3 +73,4 @@ main { min-width: 0; padding: var(--space-4) var(--space-5); }
   body.menu-aberto .site-side { display: block; }
   main { padding: var(--space-3); }
 }
+.site-pager { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); }

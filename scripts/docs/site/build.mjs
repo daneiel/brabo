@@ -25,23 +25,18 @@ import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { construirNavegacao, lerRotulosDaBarra, listaPlana } from './navegacao.mjs';
-import { LOCALES, descobrirPaginas, historicoDoGit, urlRelativa } from './paginas.mjs';
-import { criarRenderizador, esc } from './render.mjs';
+import { LOCALES, descobrirPaginas, historicoDoGit } from './paginas.mjs';
+import { copiarAssets, renderizarPagina } from './layout.mjs';
+import { gravarIndice, tagDeBusca } from './busca.mjs';
+import { criarRenderizador } from './render.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
-async function carregarLayout() {
-  const arq = path.join(path.dirname(fileURLToPath(import.meta.url)), 'layout.mjs');
-  return existsSync(arq) ? (await import(pathToFileURL(arq).href)).renderizarPagina : molduraMinima;
-}
-
-function molduraMinima({ pagina, corpo, locale, noindex }) {
-  const raiz = urlRelativa(pagina.url, 'index.html').replace(/index\.html$/, '');
-  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${noindex ? '<meta name="robots" content="noindex">' : ''}<title>${esc(pagina.titulo)}</title></head><body><nav><a href="${raiz}index.html">Brabo</a></nav><main>${corpo.temH1 ? '' : `<h1>${esc(pagina.titulo)}</h1>`}${corpo.html}</main></body></html>`;
-}
+const GRAU = { main: 'prd', dev: 'dev' }; // DOCS_BRANCH -> degrau; o resto é local (qa foi aposentada, ADR 0235)
 
 export async function construir({ raiz = RAIZ, saida = path.join(raiz, 'build/docs-site'), degrau = process.env.DOCS_BRANCH ?? 'dev', repo = process.env.GITHUB_REPOSITORY ?? 'daneiel/brabo', git = true } = {}) {
-  const layout = await carregarLayout();
+  const layout = renderizarPagina;
+  const grau = GRAU[degrau] ?? 'local';
   const historico = git ? historicoDoGit(raiz) : new Map();
   rmSync(saida, { recursive: true, force: true });
   const resultado = { saida, locales: {} };
@@ -51,23 +46,33 @@ export async function construir({ raiz = RAIZ, saida = path.join(raiz, 'build/do
     const navegacao = construirNavegacao({ raiz, repo, rotulos: lerRotulosDaBarra(raiz, locale) });
     const ordem = listaPlana(navegacao);
     const porSlug = new Map(paginas.map((p) => [p.slug, p]));
+    const sem = (u) => (locale === 'pt-BR' ? u : u.slice(locale.length + 1));
+    const renderizadas = new Map(paginas.map((p) => [p.slug, render(p)]));
     for (const pagina of paginas) {
       const i = ordem.findIndex((o) => o.slug === pagina.slug);
       const vizinho = (o) => (o && porSlug.get(o.slug) ? { ...o, url: porSlug.get(o.slug).url } : null);
       const h = historico.get(`docs/${pagina.relativo}`);
       const html = layout({
-        locale, locales: LOCALES, pagina, corpo: render(pagina), navegacao,
+        locale, locales: LOCALES, pagina, corpo: renderizadas.get(pagina.slug), navegacao,
+        urlDe: (sl) => (porSlug.get(sl) ? sem(porSlug.get(sl).url) : null), rotuloDe: (sl) => porSlug.get(sl)?.rotulo,
+        extraScripts: tagDeBusca({ locale, base: '../'.repeat(sem(pagina.url).split('/').length - 1) }),
         anterior: i > 0 ? vizinho(ordem[i - 1]) : null, proximo: i >= 0 ? vizinho(ordem[i + 1]) : null,
-        degrau, noindex: degrau !== 'main', repo,
+        degrau: grau, noindex: degrau !== 'main', repo,
         edicao: { url: `https://github.com/${repo}/blob/dev/docs/${pagina.relativo}`, atualizadoEm: h?.data ?? null, autor: h?.autor ?? null },
       });
       const destino = path.join(saida, pagina.url);
       mkdirSync(path.dirname(destino), { recursive: true });
       writeFileSync(destino, html);
     }
+    await gravarIndice(path.join(saida, locale === 'pt-BR' ? '' : locale), locale, paginas.map((p) => ({ slug: p.slug || 'index', titulo: p.titulo, texto: renderizadas.get(p.slug).texto })));
     resultado.locales[locale] = { paginas, navegacao };
   }
   // imagens: o site espelha docs/, então o caminho relativo da fonte vale em cada locale
+  copiarAssets(saida);
+  for (const l of LOCALES) cpSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'assets/busca.js'), path.join(saida, l === 'pt-BR' ? '' : l, 'assets/busca.js')); // a tag da busca é relativa ao locale
+  const er = {};
+  const p404 = { locale: 'pt-BR', url: '404.html', titulo: '404', traduzida: true };
+  writeFileSync(path.join(saida, '404.html'), renderizarPagina({ locale: 'pt-BR', pagina: p404, corpo: { html: '<p><a href="index.html">Brabo</a></p>', toc: [], temH1: false }, navegacao: [], urlDe: () => null, rotuloDe: () => null, anterior: null, proximo: null, degrau: grau, edicao: er }));
   for (const l of LOCALES) if (existsSync(path.join(raiz, "docs/assets"))) cpSync(path.join(raiz, "docs/assets"), path.join(saida, l === "pt-BR" ? "" : l, "assets"), { recursive: true });
   writeFileSync(path.join(saida, '.nojekyll'), '');
   return resultado;
