@@ -21,6 +21,7 @@ import {
 import { BOOTSTRAP_STEPS, deriveStepStates } from '../lib/bootstrap';
 import { BootstrapSteps } from '../components/BootstrapSteps';
 import { Button } from '../components/ui/Button';
+import { Alert, AlertIcone, AlertTexto } from '@/components/shadcn/alert';
 import { AlertIcon, CheckIcon } from '../components/ui/icons';
 import styles from './ProvisioningPage.module.css';
 
@@ -189,16 +190,16 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
       </div>
 
       {status === 'provisioned' && (
-        <div className={[styles.banner, styles.bannerOk].join(' ')}>
-          <CheckIcon size={16} />
-          <span>{t('provisioningPage.successBanner')}</span>
-        </div>
+        <Alert variant="success">
+          <AlertIcone><CheckIcon size={16} /></AlertIcone>
+          <AlertTexto>{t('provisioningPage.successBanner')}</AlertTexto>
+        </Alert>
       )}
 
       {status === 'provision_failed' && (
-        <div className={[styles.banner, styles.bannerFail].join(' ')}>
-          <AlertIcon size={16} />
-          <div>
+        <Alert variant="danger">
+          <AlertIcone><AlertIcon size={16} /></AlertIcone>
+          <AlertTexto>
             <div className={styles.bannerTitle}>
               {/* Sem passo, título sem passo. `failedStep` é `null` quando o
                   que falhou foi a CRIAÇÃO do repositório — nenhum dos seis
@@ -214,38 +215,38 @@ export function ProvisioningPage({ projectId, provider }: ProvisioningPageProps)
                 {t('provisioningPage.protectionFailureNote')}
               </div>
             )}
-          </div>
-        </div>
+          </AlertTexto>
+        </Alert>
       )}
 
       {/* O erro do POST, que antes era engolido. Vem ANTES do "Iniciando…":
           quando ele existe, não há nada iniciando. */}
       {erroDoProvision && status !== 'provision_failed' && (
-        <div className={[styles.banner, styles.bannerFail].join(' ')}>
-          <AlertIcon size={16} />
-          <div>
+        <Alert variant="danger">
+          <AlertIcone><AlertIcon size={16} /></AlertIcone>
+          <AlertTexto>
             <div className={styles.bannerTitle}>
               {t('provisioningPage.failedBannerTitleNoStep')}
             </div>
             <div className={styles.bannerError}>{erroDoProvision}</div>
-          </div>
-        </div>
+          </AlertTexto>
+        </Alert>
       )}
 
       {/* Teto estourado sem convergir e sem erro: a tela diz o que sabe e o
           que NÃO sabe, em vez de girar. Mesma régua da RN-474. */}
       {expirou && !erroDoProvision && status !== 'provisioned' && (
-        <div className={[styles.banner, styles.bannerFail].join(' ')}>
-          <AlertIcon size={16} />
-          <div>
+        <Alert variant="danger">
+          <AlertIcone><AlertIcon size={16} /></AlertIcone>
+          <AlertTexto>
             <div className={styles.bannerTitle}>
               {t('provisioningPage.timedOut', { minutes: TETO_MS / 60_000 })}
             </div>
             <div className={styles.bannerError}>
               {t('provisioningPage.timedOutDetail')}
             </div>
-          </div>
-        </div>
+          </AlertTexto>
+        </Alert>
       )}
 
       {status === null && !erroDoProvision && !expirou && (

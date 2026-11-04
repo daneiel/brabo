@@ -27,28 +27,6 @@
   margin: 0;
 }
 
-.banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-}
-
-.bannerOk {
-  color: var(--success);
-  background: var(--success-soft);
-  border: 1px solid var(--success-line);
-  align-items: center;
-}
-
-.bannerFail {
-  color: var(--danger);
-  background: var(--danger-soft);
-  border: 1px solid var(--danger-line);
-}
-
 .bannerTitle {
   font-weight: 600;
 }

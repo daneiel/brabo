@@ -6,6 +6,7 @@ import { TokenMeter } from './TokenMeter';
 import { Badge } from './ui/Badge';
 import type { BadgeTone } from './ui/Badge';
 import { Skeleton } from './ui/Skeleton';
+import { Card } from '@/components/shadcn/card';
 import { GitHubIcon, GitLabIcon, LocalRepoIcon } from './ui/icons';
 import styles from './ProjectCard.module.css';
 
@@ -88,7 +89,20 @@ export function ProjectCard({
       : null;
 
   return (
-    <button type="button" className={styles.card} onClick={onClick}>
+    <Card
+      padding="none"
+      role="button"
+      tabIndex={0}
+      className={styles.card}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
       <div className={styles.header}>
         <span className={styles.providerIcon}>
           <ProviderIcon size={17} />
@@ -177,14 +191,14 @@ export function ProjectCard({
         <span className={styles.activityDot} />
         <span className={styles.activityText}>{lastActivityText}</span>
       </div>
-    </button>
+    </Card>
   );
 }
 
 /** Placeholder no formato do card, enquanto a lista de projetos carrega. */
 export function ProjectCardSkeleton() {
   return (
-    <div className={styles.card} data-testid="project-card-skeleton">
+    <Card padding="none" className={styles.card} data-testid="project-card-skeleton">
       <div className={styles.header}>
         <Skeleton width={34} height={34} radius={8} />
         <div className={styles.titleBlock}>
@@ -194,6 +208,6 @@ export function ProjectCardSkeleton() {
       </div>
       <Skeleton height={26} radius={8} />
       <Skeleton height={44} radius={8} />
-    </div>
+    </Card>
   );
 }
