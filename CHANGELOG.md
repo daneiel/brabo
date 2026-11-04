@@ -52,6 +52,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **web**: as opções em cartão do assistente de novo projeto (modo, provider, visibilidade, credencial) voltam a quebrar linha e crescer: o item do `ToggleGroup` do kit tem `h-8` e `nowrap`, e cortava título e descrição com rolagem horizontal.
 - **web**: os utilitários do Tailwind usados fora do kit (47 em 25 arquivos; 11 classes nem existiam no CSS) viram CSS Module e passam a valer: grade 2/3 + 1/3 e altura dos gráficos em Gastos, alinhamento do ícone dos títulos, posição do ⌘K e largura do menu do usuário; um teste reprova a volta (ADR 0232, AT-655 V0).
 - **web**: o chat da Sessão (fio, composer, avisos e pendências) ocupa a largura inteira, sem a coluna de 780px (ADR 0250).
 
