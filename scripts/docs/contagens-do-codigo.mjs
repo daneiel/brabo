@@ -24,6 +24,7 @@
  * por extenso cai no algarismo — que a frase então não vai dizer, e reprova
  * como DESATUAL em vez de passar calado.
  */
+import { arquivosDeRn } from './regras-de-negocio.mjs';
 
 const EN = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
@@ -222,7 +223,7 @@ export const FONTES = {
 export const HOSPEDEIRO_RN = 'docs/business-rules.md';
 
 function hospedeiroDe(ctx, padrao) {
-  const achado = (ctx.arquivosDeRn?.() ?? [])
+  const achado = (ctx.arquivosDeRn?.() ?? arquivosDeRn(ctx.listar))
     .filter((a) => !a.includes('/i18n/'))
     .find((a) => padrao.test(ctx.ler(a)));
   return achado ?? HOSPEDEIRO_RN;

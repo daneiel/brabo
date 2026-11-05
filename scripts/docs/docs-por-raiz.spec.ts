@@ -75,7 +75,7 @@ describe('links-do-locale na união', () => {
 describe('paridade de tradução na união', () => {
   it('lê fonte e tradução de cada raiz, e a mesma página em duas raízes reprova', () => {
     const { dir, escrever } = fixture(REGRA_API);
-    escrever('docs/reference/openapi.json', '{"openapi":"3.0.0","paths":{}}');
+    escrever('apps/api/docs/reference/openapi.json', '{"openapi":"3.0.0","paths":{}}');
     escrever('apps/api/docs/i18n/en/b.md', '---\ntitle: B\n---\n# B\n');
     const run = (...a: string[]) => execFileSync('git', a, { cwd: dir, encoding: 'utf8' });
     run('init', '-q');
