@@ -74,3 +74,11 @@ main { min-width: 0; padding: var(--space-4) var(--space-5); }
   main { padding: var(--space-3); }
 }
 .site-pager { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); }
+
+/* Referência da API (Redoc 3 estático, AT-725): sem JS nada abre, busca ou navega no Redoc, então a barra lateral, a busca e a lista "Show N more" saem (a navegação é a do site) e a operação usa a coluna inteira, com os exemplos abaixo. */
+.menu-content, [data-testid='floating-button'], [data-testid='items-navigation-list'], [data-testid='show-more-operations'], [data-testid='color-mode-switcher'], [data-component-name='Sidebar/SidebarActions'] { display: none !important; }
+main :is([data-testid='middle-panel'], [data-testid='right-panel']) { width: 100% !important; max-width: none !important; flex: none !important; }
+main :has(> [data-testid='middle-panel']) { display: flex !important; flex-direction: column !important; }
+main, #api-content { max-width: 100%; overflow-wrap: anywhere; }
+main pre, main table { max-width: 100%; overflow-x: auto; }
+@media (max-width: 760px) { .site-nav { gap: var(--space-1); padding: 0 var(--space-2); } .site-nav input { min-width: 0; flex: 1 1 60px; width: 60px; } .site-nav select { min-width: 0; max-width: 84px; } }

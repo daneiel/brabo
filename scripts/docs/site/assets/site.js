@@ -29,6 +29,7 @@
   if (alt) alt.addEventListener('click', function () {
     var novo = d.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     d.documentElement.setAttribute('data-theme', novo);
+    d.documentElement.classList.toggle('dark', novo === 'dark');
     try { window.localStorage.setItem('brabo.docs.theme', novo); } catch (e) {}
     mermaidTema();
   });
