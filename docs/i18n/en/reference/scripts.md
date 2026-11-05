@@ -104,8 +104,8 @@ Source: each package's `package.json` and the root `Makefile`.
 | `pnpm --filter web lint` | `oxlint` |
 | `pnpm --filter web preview` | `vite preview` |
 | `pnpm --filter web test` | `vitest run` |
-| `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
-| `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
+| `pnpm --filter web openapi:types` | `openapi-typescript ../api/docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
+| `pnpm --filter web openapi:types:check` | `openapi-typescript ../api/docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
 
 ## runner — `apps/runner/package.json`
 
