@@ -6,4 +6,5 @@
     if (s === 'dark' || s === 'light') tema = s;
   } catch (e) {}
   document.documentElement.setAttribute('data-theme', tema);
+  document.documentElement.classList.toggle('dark', tema === 'dark'); // o Redoc da referência da API lê a classe
 })();
