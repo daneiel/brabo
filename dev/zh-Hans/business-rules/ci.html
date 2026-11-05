@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="zh-Hans" data-locale="zh-Hans" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regras de negócio — CI | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="菜单">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="搜索" aria-label="搜索" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="语言"><option value="../../business-rules/ci.html">pt-BR</option><option value="../../en/business-rules/ci.html">en</option><option value="../../ru/business-rules/ci.html">ru</option><option value="../../zh-Hans/business-rules/ci.html" selected>zh-Hans</option></select>
+<select data-seletor aria-label="环境"><option value="../../../dev/zh-Hans/business-rules/ci.html" selected>dev</option><option value="../../../prd/zh-Hans/business-rules/ci.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="切换主题">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 从这里开始</h2><ul><li><a href="../index.html">简介</a></li><li><a href="../getting-started.html">快速开始</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">从零到交付物</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ 架构</h2><ul><li><a href="../architecture.html">架构</a></li><li><a href="../adr.html">决策（ADR）</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — GitProvider 规范化契约的形态</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — GitProvider 错误的规范化</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — 远程 provider 的重试策略</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — 用户 git 凭据的登记</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — 幂等且可恢复的 Gitflow bootstrap</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — 分支保护：provider 之间的分歧与审批矩阵</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — 机制化的分支策略</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — 采纳现有仓库，以及作为关口的计划</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — engine 在远程仓库上工作</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — 流水线合并的告警获得接收方，以及 `dev` 的规则</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — QA 处于测试阶段时，`dev` → `qa` 自动晋升</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — agent 的 harness：确定性的上下文组装</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — 会话的类型是创建时的数据，而执行仍然是事件</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — 一致的传输限制与有效的压缩窗口</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — 点击在**接受**命令时响应，轮次经由通道继续</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — 回答的语言存放在三个地方——账户、会话和项目——采用开放的 BCP-47 列表，绝不放在 `users.locale` 中</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — 循环向 Jev 询问用哪个工具，用户的模型只看到剩下的菜单</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — 已结束的会话可以重新打开：终止状态的专属出口，通向 `active`，带新事件</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — 在轮次进行中到达的消息进入持久化队列，并在轮次结束时被读取</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — harness 中的对话式 Criativo agent + handoff 的基础</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — PO agent、backlog（epics/stories/tasks）与可追溯性</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Arquiteto agent：通过真实 PR 的 ADR、module_map 和交叉验证</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent 与实时团队面板（Fase 4a 收尾）</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — 真正的 Psicólogo：ToolLoop、带证据的假设与成本分诊</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese：熟练度画像、指令补丁与闭环</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — 阶段 4b 的收尾（第 1 次会话）：能送达的证据、能显示的成本、能在 kill 之后存活的分析</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — 阶段 4b 的收尾（第 2 次会话）：能工作的目录、能区分谁拒绝的去重，以及能在一轮之后存活的队列</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — agent 的层级：领域、lead 与委派</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — 由用户拥有权限的故事晋升</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead 作为区域，以及由用户授权的并行</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Arquiteto 的 C4 图</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — 有条件地合并 handoff 的接受与执行的启用</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — 角色流作为声明式登记（fluxo.yml）</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — Dev Lead 的计划挂起轮次以等待审批</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer 作为对话式 agent 加入</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff：代码就绪，自动触发处于休眠</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` 和 `delivery-metricas` 成为报表脚本</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — `dbre` 角色变成两个脚本：迁移 linter 和备份报告</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Dev Lead → dev 的委派成为数据，`parecerArtifactId` 被重新定义</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — 向任选 agent 的手动 handoff 复用&quot;提供 + 接受&quot;，绝不引入第三种 handoff 状态</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — handoff 提议获得生命周期：每个目标一个待处理，以及 `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — 已归档的故事：一列，而不是状态机中的一个状态</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — PR 的 gate：QAAgent 和 SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — 解锁 QA 与 SecOps 的 gate：在工作树上运行 gitleaks、经过校验的意见书，以及文本形式的 tool call</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — 阶段 4a 的收尾：真正做校验的 infra gate，以及说真话的面板</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — gate 作为声明式登记</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — gate agent 等待审批，就像 dev 那样等待</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — gate 在重启后存活</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA 策略和 AppSec 作为第二个**时刻**，而不是新 agent</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` 作为基于 `rate_limit_hits` 的报告脚本</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — gate `necessidade-validada` 由单独的人工确认关闭，而不是由 Criativo 自我验证</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — 为 QA Automação agent 的语义判断建立回归用例 golden-set</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — 停滞超过 2 小时的 gate 周期会被搁置，只有人工操作才能恢复</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — 悬而未决的问题成为待解决的待办</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — 项目的决定传达到 dev 和 QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — dev agent 的基础设施：worktree、git 执行器和合并锁</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — 真正的 DevAgent：ToolLoop、按 task 的预算与阻塞纪律</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — 工作区初始化锁、dev agent 的 Monitor 以及上限继承</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent 作为永久的执行模式</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — 解锁真实的 DevAgent：写入、终端、按模块的 ADR 和按项目的预算</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — dev agent 的按事件重新调度，以及熔断器</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — dogfooding 之后的可运维性：Fase 12 的收尾</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — event log 中的决定，以及 gate 的顺序</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — dev agent 在循环中途等待审批</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — 终端策略中的路径范围</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — 修订 ADR 0065：外部效果的边界不再是 `deny`，而是绝对上限</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — 自动模式放行路径范围，而且只有它放行</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — 自动驾驶：自动模式批准一切（上限除外），作用域与真实执行目录比较，&quot;始终允许&quot;记录动词 + 子命令</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — 自动模式放行 push 和 PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — 可读的 workspace 文件夹名称</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — 项目选择代码存放在哪里：用户目录还是托管目录</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` 取三个值，由 runner 负责验证时 workspace 以 `unverified` 诞生</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — 通过 Runner 浏览本地文件夹</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — 在 `runner` 模式下，项目在点击“Navegar pasta...”时诞生，而不只是在确认时</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — 转换已有项目的 `execution_mode`：dev agent 活动时拒绝，迁移 `permissions.json`，退役容器行</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — 挂载项目的唯一 base，按同一路径挂载</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — 挂载 workspace 的验证推迟到实体化时进行</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — 在 bootstrap 中经同意设定的 base，以及 `mounted` 作为本地默认值</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — 每个项目一个容器：边界不再是策略</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — 容器生命周期：状态表，没有编排器</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — 终端标签页获得生命周期的真实使用者，而不是终端</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Docker 端口，以及选定实现的打包证明</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — dev agent 在项目的真实容器**内部**执行，终端在其中获得一个自动批准的下限</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` 在用户的机器上启动项目容器</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — dev agent 只在容器之后</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — broker 的第二个根，以及选择它的可辨识定位符</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — 项目容器以文件夹所有者身份运行，由 api 测量</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra 在接受 handoff 时启动容器，由服务器执行这一步并预置自主度，并由它交接给 Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra 继承 Arquiteto 声明的网络</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — 本地 runner：通过带一次性 ticket 的 Phoenix 通道在用户机器上执行</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — 给 runner 的 Personal Access Token（`brb_…`），按构造限定到一条路由</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — 通过 `tsup` 和 `npm publish` 分发 `@brabo/runner`，版本只在 CI 中注入</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — 通过 `bun build --compile` 构建 `@brabo/runner` 的独立二进制，原生插件 `.node` 通过真实解压到临时目录的方式嵌入</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — 通过浏览器配置 runner：Ed25519 设备密钥作为 `runner-ticket` 的第二种凭据、GitHub Releases 的二进制代理，以及用 File System Access API 一键配置文件夹</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker 成为 `runner` 模式的真正前提</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — 一个本地 agent，在连接时声明能力</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — runner 中经同意的基础目录，以及通过通道创建文件夹</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — 机器级的设备密钥</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — runner 的独立二进制不再承诺 Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — runner 的独立二进制不再承诺 Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — 通过浏览器配置 runner 的流程退役，路径改为安装程序</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — engine 所缺的 CORS，以及端口作为契约的一部分</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — 凭据总是被加密；验证成为显式动作</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — api 中封闭的 CSP，以及约束在根内的项目范围</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — 签署 git OAuth `state` 的密钥没有默认值</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — 社交登录（GitHub/GitLab），修订 ADR 0031/0032 的 backlog</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — `MailSender` 中的真实 SMTP，置于显式开关之后</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — `project_members` 中的两道降级上限，覆盖关系保留</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — 自我降级上限同样适用于移除项目成员</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — workspace 成员的移除诞生，由同一条款保护</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — 仪表盘的货币：暂用 USD，按 workspace 的手动汇率推迟</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — 活目录、模型生命周期与可审计的价格</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — 在基础之上的六个 LLM provider，Fase 9b 终于关闭</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — 按 workspace 的模型策展</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — 已证明的能力维度；“用来做什么”是策展</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — 同一笔花费的两种受众：owner 的账单与成员的消耗</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — 模型级联中的领域范围，以及全局的 agent 绑定</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — LLMProvider 合约中的 embedding</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` 重新成为花费维度，约束改由类型承担</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — 按能力的模型排名，不编造评分</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — 按区域的预算是叠加的，与项目/会话并列——不是级联，也不是新表</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — 在开发引导中检测原生 Ollama：只问一次，持久化到 `.env`，把 compose 的服务放到 profile 之后</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — 从 Hugging Face 拉取模型：独立的表、两步确认以及官方发布者 allowlist——绝不使用 `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — 路由偏好住在模型 binding 中，随它一起传递，并在计量中冻结</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — provider 返回的真实成本成为计量的数字</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — 故事与规则的语义重复通过带阈值的 embedding 提醒，花费进入计量</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — chunk 表：向量与 `tsvector` 在同一行</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — 混合搜索：权重、阈值，以及什么算引用</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG：混合搜索的独立标签页，不重命名“Chat”</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j 作为知识图谱和 prompt 模板，驱动放在 api 中</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — 面向 agent 的 `rag_search`，以及启动时确保存在的 Ollama 模型</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — 关系记忆作为事件日志的投影；在不触碰 GenServer 的情况下使用模板</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — 附加的本地目录成为 `chunks.scope = 'local'`，由**浏览器**读取，绝不是主机路径</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — RAG 搜索的遥测是**表**，权重冻结在行中</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — RAG 命中率的 golden-set，以及 gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — 重新启用的 Anamnese：没有主体就不运行，被接受的假设成为画像事实</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — 忠实于设计的认证界面，以及三种无法加载的字体</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — 代码的读取面，受约束且有预算</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — 可切换的主题，以及 CSP 下的启动</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — 界面框架，以及标签页注册表刻意偏离 handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — 为仪表盘的“N 个 agent 在线”直接读取 engine 的 schema</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType`（以及将来的类型）由 OpenAPI 契约生成，而不是手工复制</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` 拆分为五个机械式 PR，并事先声明</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — 轮次通道的状态分组抽取到 `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — 把 `ProjectSettingsTab.tsx` 拆分为每个分区一个文件，置于一个 barrel 之后</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — 项目页面通过垂直轨道导航，代码标签页不再自行折叠侧边栏</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — 深色主题变为中性黑，对比度债务结束</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — 用 `motion` 做文本动画</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — 只有一种导航：侧边栏吸收项目轨道</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — 阶段 5（第 1 次会话）：生产镜像、compose.prod、CI 与冒烟测试</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — 阶段 5（第 2 次会话）：使用 Kustomize 部署 Kubernetes、队列指标与本地 overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — 阶段 5（第 3 次会话）：优雅关闭、OpenTelemetry、指标、日志与仪表盘</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — 备份/还原、api 加固、暴露面与发布</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — 没有 collector 的 trace，以及日志中跨层的路径</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — 本地 Compose 中的可观测性：指标和日志，没有 trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — 一行安装程序，带可选来源和标记文件</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — 针对 compose 的卷备份与恢复</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — 第一个账户在终端中诞生，本地 agent 启动时即已配对</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — 安装程序的 compose 随它一起传送，作为已签名的 asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — 本地 overlay 的 S3 目标不再是 MinIO，改为 SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — 开发用 compose 改名为 `brabo-dev`，开发环境拒绝在安装旁边启动</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — engine 升级到 Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint 与生成的 CI 管道的验证</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — 每个正式 tag 都把镜像发布到 GHCR，生产 overlay 按 digest 固定</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — 针对生产 compose 的浏览器 E2E，放在 workspace 之外的包中</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — schema 按领域聚合拆分，置于一个 barrel 之后</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — `pnpm audit` 反复超时是承担的风险；发现问题仍然失败</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — 已发布工件的签名</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — 第三方镜像的 tag 住在引用**之内**，位于 digest 之前</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — 文档的持续同步</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — API 参考由代码产出，表格测试对元数据提出要求</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — 按阶梯发布的文档，位于 Pages 的子目录中</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — 按阶梯对称发布，以及一个供选择的根</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — 发布路径命名的是环境，而不是分支</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` 拥有自己的 lockfile，脱离产品的 `pnpm audit`</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — API 参考变成一个 Redoc 页面</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — 四种语言，以 pt-BR 作为**来源**和默认：文档与界面提供葡萄牙语、英语、俄语和简体中文</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — 每个 ADR 都命名为“ADR NNNN — 标题”</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — 参考文档纳入翻译</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — API 页面按目录翻译</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 规则</h2><ul><li><a href="../business-rules.html">业务规则</a></li><li><a href="../business-rules/custo.html">成本与计量</a></li><li><a href="../business-rules/autenticacao.html">认证</a></li><li><a href="../business-rules/api.html">API</a></li><li><a href="../business-rules/broker.html">Broker</a></li><li><a href="../business-rules/ci.html" aria-current="page">CI</a></li><li><a href="../business-rules/contracts.html">Contratos</a></li><li><a href="../business-rules/engine.html">Engine</a></li><li><a href="../business-rules/infra.html">Infra</a></li><li><a href="../business-rules/produto.html">Produto</a></li><li><a href="../business-rules/runner.html">Runner</a></li><li><a href="../business-rules/web.html">Web</a></li></ul></section><section><h2>📖 参考</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">api 的暴露面</a></li><li><span>API 参考</span></li></ul></section><section><h2>💡 解释</h2><ul><li><span>流程与流水线</span><ul><li><a href="../explanation/documentation-workflow.html">文档同步</a></li><li><a href="../explanation/branching-policy.html">分支策略</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">CI 的供应链</a></li><li><a href="../explanation/gates.html">gates，以及如何测量它们</a></li><li><a href="../explanation/observability.html">可观测性</a></li><li><a href="../explanation/modelo-de-time.html">团队模型与交付物流程</a></li></ul></li><li><span>验证与测量</span><ul><li><a href="../explanation/primeiro-dogfooding.html">第一次 dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">真实执行（hello world）</a></li><li><a href="../explanation/achados-execucao-real.html">流水线真实执行中的发现</a></li><li><a href="../explanation/validacao-fase-12.html">Fase 12 的验证</a></li><li><a href="../explanation/validacao-real.html">真实验证（13b）</a></li><li><a href="../explanation/aceite-providers.html">provider 的验收</a></li><li><a href="../explanation/medicao-do-idioma.html">语言启发式的测量</a></li><li><a href="../explanation/medicao-do-jev.html">Jev 工具路由器的测量</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">审计：fluxo.yml × 代码（v3，ADR 0085）</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">视觉审计：Rodada 29 之前与之后</a></li></ul></li><li><span>阶段历史</span><ul><li><a href="../explanation/historico-de-fases.html">阶段历史</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — 用户的目录</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — 一行命令安装</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30——机器的本地智能体</a></li><li><a href="../explanation/backlog.html">已分类的 backlog</a></li></ul></li><li><span>本地化</span><ul><li><a href="../explanation/localizacao.html">本地化</a></li><li><a href="../explanation/localizacao-en.html">本地化——英语（en）</a></li><li><a href="../explanation/localizacao-ru.html">本地化——俄语（ru）</a></li><li><a href="../explanation/localizacao-zh-hans.html">本地化——简体中文（zh-Hans）</a></li></ul></li><li><span>技术笔记</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI——未采用</a></li></ul></li></ul></section><section><h2>🛠️ 运维</h2><ul><li><a href="../runbook.html">运维手册</a></li></ul></section><section><h2>📚 词汇</h2><ul><li><a href="../glossary.html">术语表</a></li></ul></section><section><h2>🤝 贡献</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">如何贡献</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">在哪里求助</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">报告漏洞</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="ci">CI</h1>
+<h2 id="pr-gates">PR Gates</h2>
+<h3 id="rn-037">RN-037 — Infra 成为一个领域：Workflows 按提供方生成 CI，Lead 整合为单个 PR</h3>
+<p>ADR 0038 模型的第二个实例，继 QA 领域（RN-036）之后——有一个结构性区别：Infra 领域的两个委派<strong>总是</strong>运行（Dockerfile/compose 由 Lead 自己完成——“委派给自己”；CI 流水线由 Workflows 子智能体完成），从不豁免其中之一。<code>Workflows</code> 根据上下文的 <code>gitProvider</code> 决定流水线格式
+（<code>GetInfraContextUseCase</code>，从 <code>project_repositories.provider</code> 读取——<strong>不是</strong>从 <code>GitProvider</code> 的 <code>capabilities</code> 读取，后者对 GitHub 和 GitLab 是<strong>相同</strong>的）：<code>&quot;gitlab&quot;</code> 生成 <code>.gitlab-ci.yml</code>；任何其他值
+（<code>&quot;github&quot;</code>、<code>&quot;local&quot;</code> 或未知）生成 <code>.github/workflows/ci.yml</code>。
+每个文件在完成前都经过 <code>validate_infra_file</code>——Dockerfile 用 hadolint，GitHub Actions 工作流用 <code>actionlint</code>
+（<a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039</a>；
+<code>.gitlab-ci.yml</code> 没有本地校验，这是有文档记录的缺口，而不是半个方案）。</p>
+<p>整合：两个委派者的文件按 <code>path</code> 合并（冲突时 Workflows 胜出）为<strong>单个</strong> PR——提议 PR 的机制
+（<code>propose_infra_pr</code>）从“工具直接调用 api”变为“工具通知 Lead，由它整合并调用一次”——api 收到的
+<code>open_infra_pr</code> 与往常<strong>相同</strong>，逐字节一致
+（<code>ExecuteInfraPrUseCase</code> 未动）。任何委派者失败（来源
+<code>infra</code>/<code>modelo</code>/<code>codigo</code>/<code>politica</code>）<strong>永远不会</strong>打开部分 PR——与 RN-036 相同的规则，再往上一层。</p>
+<p>每个委派者（即使是对自己委派的 Lead）都被作为一行 <code>delegations</code> 追踪——完全按 RN-036 留下的样子复用，只有<strong>一处</strong>修正：
+<code>task_id</code> 列变为<strong>可空</strong>（Infra 领域在<strong>会话</strong>上委派，infra PR 背后没有 backlog 任务），路由
+<code>POST /internal/sessions/:sessionId/delegations</code> 不再嵌套在
+<code>/tasks/:taskId</code> 之下——<code>taskId</code> 现在放在请求体中，可选。循环 K
+和预算在 Infra 领域没有专门的列（原来的 InfraAgent 从来没有按任务的预算，这项工作也没有引入）。</p>
+<ul>
+<li><strong>位置：</strong> <code>apps/engine/lib/engine/infra/infra_lead.ex</code>（<code>consolidar/2</code>）、
+<code>infra_lead_server.ex</code>（接线）、<code>workflows_agent.ex</code>、
+<code>tools/validate_infra_file.ex</code>（按扩展名分派）、
+<code>apps/api/src/application/use-cases/execution/get-infra-context.use-case.ts</code>
+（<code>gitProvider</code>）、<code>record-delegation.use-case.ts</code>（<code>taskId</code> 可选）</li>
+<li><strong>测试：</strong> <code>apps/engine/test/engine/infra/infra_lead_test.exs</code>（合并与阻塞，纯函数）、<code>infra_lead_server_test.exs</code>（接线：单个 PR 包含两组文件、两个委派、<code>gitProvider: &quot;gitlab&quot;</code> →
+<code>.gitlab-ci.yml</code>、Workflows 失败 → 没有 PR）、<code>workflows_agent_test.exs</code>
+——以及 <code>ExecuteInfraPrUseCase</code>/<code>InfraGateRunner</code>
+契约未改变的证明：<code>execute-infra-pr.use-case.spec.ts</code> 和
+<code>infra_gate_runner_test.exs</code> <strong>完全不修改</strong>即通过</li>
+<li><strong>来源：</strong> <a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038</a>、<a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039</a></li>
+</ul>
+<p>在 <code>apps/web</code> 一侧（第 8d 阶段）：团队面板以与 QA（RN-036）相同的方式分组 <code>infra</code>/
+<code>infra-workflows</code>，信息流叙述该领域的委派——使用 <code>apps/web/src/lib/agents.ts</code> 中同一个 <code>AREAS</code>/<code>areaFor</code> 注册表，UI 中没有 Infra 专用代码。</p>
+<hr>
+<h2 id="dbre-角色变成两个机械脚本rn-400403adr-0093"><code>dbre</code> 角色变成两个机械脚本（RN-400..403，ADR 0093）</h2>
+<h3 id="rn-401">RN-401 — linter 不是 CI gate：它扫描整个仓库，而不是 PR 的 diff</h3>
+<p>针对仓库中真实的迁移运行 <code>pnpm --filter api lint:migracao</code> 会在已合并并接受的迁移中<strong>发现</strong>三处（<code>0006_whole_princess_powerful.sql:22</code> 和 <code>0034_quick_saracen.sql:33</code>——
+<code>DROP COLUMN</code>；<code>0007_groovy_bullseye.sql:2</code>——<code>ALTER COLUMN ... SET DATA TYPE</code>）。这不是要顺手修正的缺陷（与 CLAUDE.md 中保护 Z/AD/AE 发现的规则相同）：这些是已被接受的迁移，删除它们会抹去为什么做出该决定的证据。这也是为什么脚本以 <code>!= 0</code> 退出，却<strong>没有</strong>接入
+<code>.github/workflows/ci.yml</code>——一个使整个仓库失败的 gate 会永远让每个 PR 失败，原因却是一个不属于该 PR 的发现。要成为真正的阻断 gate，需要把范围限定到针对 PR 基线的 <strong>DIFF</strong>（与
+<code>scripts/ci/pr-police.ts</code> 相同的技术），留待 <code>dbre</code> 需要<strong>阻断</strong>合并时再做——如今它是手动意见，不是自动判定。</p>
+<ul>
+<li><strong>位置：</strong> <code>apps/api/scripts/lint-migracao.ts</code>（<code>principal</code>，文件末尾的退出码）；决定记录在文件头和 ADR 中</li>
+<li><strong>测试：</strong> 不适用于 CI（没有步骤）；针对真实仓库的手动运行记录在 ADR 0093 的“后果”一节</li>
+<li><strong>ADR：</strong> <a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">0093</a></li>
+</ul>
+<h2 id="仪表盘上的n-个智能体在线实时状态从不是历史在场rn-409adr-0097">仪表盘上的“N 个智能体在线”——<strong>实时</strong>状态，从不是历史在场（RN-409，ADR 0097）</h2>
+<h3 id="rn-411">RN-411 — 第四个待处理工作信号：dev agent 说的是 <code>dev.*</code>，而不是 <code>agent.status</code></h3>
+<p>这是通过<strong>真实</strong>使用而非测试发现的：在一个执行会话中，五个 dev agent 启动后变为 <code>idle_tripped</code>（<a href="engine.html#rn-047">RN-047</a> 的熔断器，卡住等待用户手动解除某个任务的阻塞），而 30 秒的心跳
+（<code>Engine.Sessions.SessionServer.handle_info(:heartbeat_timeout, state)</code>）在工作——以及对人的决定的等待——仍在继续时，从底下关闭了会话。</p>
+<p><code>GetSessionPendingWorkUseCase</code> 针对同一问题早已有第三个信号
+（<a href="web.html#rn-064">RN-064</a>）：智能体已激活、之后没有 <code>idle</code>，就会保持会话。但这个信号只读取 <code>agent.status</code>，即<strong>对话型</strong>智能体（Criativo/PO/Arquiteto/Dev
+Lead/UX Designer/Staff/Infra）的词汇。<code>Engine.Dev.DevAgentServer</code>（经由
+<code>Engine.Dev.AgentIo</code>）从不发出 <code>agent.status</code>——它在会话事件日志中使用<strong>自己的</strong>词汇：<code>dev.started</code>、<code>dev.working</code>、
+<code>dev.awaiting_gate</code>、<code>dev.awaiting_approval</code>、<code>dev.idle</code>、
+<code>dev.idle_tripped</code>、<code>dev.blocked</code>、<code>dev.blocked_by_container</code>、
+<code>dev.error</code>。一个有 dev agent 正在工作<strong>或</strong>卡住的执行会话，按第三个信号总是返回 <code>pending: false</code>，因为它根本没有 <code>agent.status</code>。</p>
+<p><strong>第四个</strong>信号查找会话中已出现的每个 <code>actor.id</code>
+（<code>dev-&lt;modulo&gt;</code>/<code>dev-&lt;modulo&gt;-2</code>，与
+<a href="web.html#rn-195">RN-195</a> 相同的键）的<strong>最后一个</strong> <code>dev.*</code> 事件——与第三个信号相同，但针对多种事件类型而不是一种，因为 dev agent 的状态不是<strong>一个</strong>带可变 <code>payload.status</code> 的类型，而是每次转换各自不同的事件<strong>类型</strong>。标准：当最后一个是 <code>dev.working</code>、<code>dev.blocked</code> 或 <code>dev.idle_tripped</code> 时 <code>pending: true</code>——三者都意味着“有工作在进行，或需要人来行动”，而卡住等待解除阻塞<strong>就是</strong>待处理工作（这正是会话在真实执行中被关闭时用户正在做的事）。只有
+<code>dev.idle</code>（没有任何任务可取，真正排空了）不计入。</p>
+<p><code>dev.awaiting_gate</code> 和 <code>dev.awaiting_approval</code> 作为最后一个事件，最初<strong>不</strong>触发这个信号——它们被排除在当时决定的标准之外。<code>awaiting_gate</code> 是一个<strong>已知</strong>的残余缺口；<a href="api.html#rn-412">RN-412</a> 关闭了它，连同 <code>awaiting_approval</code>（通过一个新论据，而不是原来的那个——见 RN-412）。</p>
+<p><code>dev.blocked_by_container</code> 是<strong>之后</strong>加入的，基于同样的论据和同样真实的发现。该类型诞生于
+<a href="engine.html#rn-502">RN-502</a>/<a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143</a>——dev agent 在项目有已记录的 <code>running</code> 容器之前不认领任务——而用例的 <code>DEV_EVENT_TYPES</code> 列表没有跟上。由于用例<strong>查询</strong>的正是这个列表，该事件变得不可见：api 甚至看不到它来忽略它。在 <code>exp004</code> 的真实运行中（会话
+<code>f782257e</code>），五个 dev agent 在 22:41:38 发出了 <code>dev.started</code> 和
+<code>dev.blocked_by_container</code>，engine 在 22:42:07 因
+<code>heartbeat_timeout</code> 关闭——整整 30 秒——而该会话的事件在 13 分钟和 32 分钟后仍在到达。每个智能体最后一个<strong>可见</strong>的事件是 <code>dev.started</code>，它被有意排除在标准之外。五个智能体都在等待一个<strong>人</strong>启动容器，这正是其他信号已在使用的待处理工作的定义。</p>
+<p>关于该列表是“完整的词汇，经直接阅读 engine 代码确认”的断言，在写下时是真的——而正是它悄悄地过时了。现在让它保持为真的是<strong>机制</strong>：<code>scripts/ci/vocabulario-de-eventos-dev.spec.ts</code> 从 <code>apps/engine/lib/**/*.ex</code> 提取 <code>dev.*</code> 类型，并在它们与用例的两个列表不一致时失败，指出缺少的类型。它<strong>比较</strong>而不是<strong>生成</strong>（<code>agent-areas.ts</code> 的先例），因为这一对中只有一半是可推导的：<code>DEV_EVENT_TYPES</code> 是机械的，<code>DEV_PENDING_TYPES</code> 是判断——哪些状态意味着“需要人来行动”。</p>
+<p><strong>同一种</strong>漂移在 <strong>WEB</strong> 中还有第三个实例，该机制已经把它也覆盖了。<code>DEV_STATUS_EVENTS</code>
+（<code>apps/web/src/lib/agent-status.ts</code>），团队面板用它来说明每个 dev agent 的状态，也不认识
+<code>dev.blocked_by_container</code> 和 <code>dev.awaiting_approval</code>——而在那里后果不是不可见，而是<strong>撒谎</strong>：两者都落入 <code>switch</code> 的
+<code>default: return 'trabalhando'</code>，于是在 <code>exp004</code> 中，面板说五个已经停了好几个<strong>小时</strong>、等待人启动容器的 dev agent 正在工作。两者都映射到
+<code>aguardando</code>，与 <code>dev.awaiting_gate</code> 已经使用的状态相同（智能体在它<strong>之外</strong>的某件事发生之前不会继续），<code>AgentStatus</code> 中没有新状态；<code>dev.error</code> 以前不在任何列表中，因而让面板回退到之前的 <code>dev.working</code>，现在映射到 <code>falhou</code>。列表不再是列表：它变成了<strong>映射</strong> <code>tipo -&gt; AgentStatus</code>，这去掉了 <code>default</code>，使得不回答一个类型意味着什么就无法添加它。交叉测试获得了 engine × web 这一对，还有一项 api 没有的要求——对每个类型做出<strong>显式决定</strong>，要么映射，要么在 <code>DEV_STATUS_EVENTS_FORA</code> 中声明（<code>tipo -&gt; motivo</code>，目前为空）——因为在面板中，某个 <code>dev.*</code> 类型<strong>可以</strong>合理地无关紧要；不可以的是因为遗忘而被排除。</p>
+<ul>
+<li><strong>位置：</strong> <code>apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts</code></li>
+<li><strong>测试：</strong> <code>apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts</code>
+（dev agent 以 <code>dev.working</code>/<code>dev.blocked</code>/<code>dev.idle_tripped</code>/<code>dev.blocked_by_container</code>
+作为最后一个事件 → <code>pending: true</code>，包括 <code>exp004</code> 场景中的五个智能体，以及 <code>dev.blocked_by_container</code> 胜过之前的
+<code>dev.idle</code>；<code>dev.idle</code> → <code>pending: false</code>；没有 <code>dev.*</code> 事件的会话保持之前的行为；只有每个智能体的<strong>最后</strong>一个事件重要；<code>dev-&lt;modulo&gt;-2</code> 也能保持会话；会话之间的隔离）、<code>scripts/ci/vocabulario-de-eventos-dev.spec.ts</code>（engine 的 <code>dev.*</code> 词汇 × api 的两个列表<strong>以及</strong> × 面板的映射，外加证明 <code>DEV_STATUS_EVENTS_FORA</code> 这一阀门的三个构造用例，如今没有任何真实数据会用到它）以及
+<code>apps/web/src/lib/agent-status.test.ts</code>（<code>dev.blocked_by_container</code> 和
+<code>dev.awaiting_approval</code> → <code>aguardando</code>，<code>dev.error</code> → <code>falhou</code>，从不是
+<code>trabalhando</code>；以及最新的事件继续起决定作用）</li>
+<li><strong>来源：</strong> 通过真实使用发现——一个真实执行会话，五个 dev agent 处于 <code>idle_tripped</code>，在用户仍在手动解除任务阻塞时被心跳关闭；以及后来在 <code>exp004</code> 中，五个处于 <code>blocked_by_container</code> 的 dev agent，同样的机制</li>
+</ul>
+<hr>
+<h2 id="rag-检索留下痕迹痕迹冻结权重rn-479481">RAG 检索留下痕迹，痕迹冻结权重（RN-479..481）</h2>
+<h3 id="rn-498">RN-498 — RAG 的 golden-set 在 CI 中真正运行，<strong>定时</strong>——gate 仍然是 <code>warn</code></h3>
+<p>RN-490 记录了 RAG 的 golden-set（ADR 0132）以手动 <code>mix golden_set.rag</code> 诞生、“从不在 CI 中”，原因与 QA 的 golden-set（ADR 0123）相同：没有 API LLM 的密钥或新的基础设施，就无法在 CI runner 中运行真正的 Ollama。这条 RN 关闭了这一半——只针对 RAG，从不针对 QA——用一个专门的工作流
+（<code>.github/workflows/golden-set-rag.yml</code>，<code>schedule</code> + <code>workflow_dispatch</code>），在真实的 Ollama 服务中拉取 <code>nomic-embed-text</code>（与产品其余部分固定的版本相同，如今是 <code>0.34.4</code>），并真正运行 <code>mix golden_set.rag</code>。</p>
+<p><strong>让这对 RAG 可行而对 QA 不可行的区别：</strong> RAG 的 golden-set 只调用 <strong>embedding</strong> 模型——CPU、确定性、没有采样——从不调用做判断的<strong>聊天</strong>模型，而那正是 QA 的 golden-set 所需要的（昂贵，本质上测量的是非确定性的东西，正如 ADR 0123 本身记录的真实轮次在 6 次中命中 1 到 5 次不等）。<code>ubuntu-latest</code>，没有任何 GPU，在这里足够——对 QA 则不够。QA 的 golden-set 因这条 RN <strong>没有任何改变</strong>：仍然完全手动，在 CLAUDE.md 中是 <code>TODO(humano)</code>。</p>
+<p><strong><code>severidade: warn</code>（<code>docs/gates.yml</code>）<strong>仍然</strong>是 <code>warn</code>，而原因变了。</strong> 不再是“没有带 LLM 的 CI”——而是节奏：工作流是<strong>定时</strong>的（每晚 + 手动触发），从不按 <code>pull_request</code> 运行。<code>block</code> 会承诺一个并不存在的合并锁——与第 2 步时已经成立的推理相同，现在应用于正确的原因。检索命中率的回退会在 24 小时内（或立即，通过 <code>workflow_dispatch</code>）变成可见的趋势信号，从不是阻断 PR 的 gate——这一权衡被产品负责人明确接受，考虑到每个窗口都要拉取模型并运行 17 次检索（几分钟）的成本。</p>
+<p><strong>工作流中不需要生成任何密钥。</strong> <code>seed-golden-set-rag.ts</code>
+从不定义 <code>NODE_ENV</code>，而 api 在生产中会以示例字面值拒绝的四个密钥（RN-114）只在
+<code>NODE_ENV === 'production'</code> 时才检查——脚本落入开发分支，毫无怨言地使用开发字面值，不同于 <code>docker/smoke.sh</code>，它有意以 <code>NODE_ENV=production</code> 启动，因此用
+<code>openssl rand</code> 生成自己的密钥。</p>
+<p><strong><code>test_helper.exs</code> 中对 <code>:golden_set_rag</code> 标签的永久排除（RN-490）不变。</strong> 它保护普通的 <code>mix test</code>——包括任何有 Ollama 运行的开发者的机器——从不保护新的工作流，后者显式调用 <code>mix golden_set.rag</code>，与一直以来手动运行时所需的方式相同。</p>
+<p><strong>测量后修正：上面的工作流一次都没有绿过。</strong> 连续五次定时运行（2026年9月5日至9日）都失败了，而且有<strong>三个</strong>叠加的缺陷，每一个都掩盖了下一个：</p>
+<ol>
+<li><strong><code>mix golden_set.rag</code> 是一个调用 <code>test</code> 的别名，而 Mix 在 <code>:test</code> 环境之外拒绝这样做</strong>——<code>** (Mix) &quot;mix test&quot; is running in the &quot;dev&quot; environment</code>——在运行任何东西之前。<code>apps/engine/mix.exs</code> 中的 <code>def cli</code> 改为为<strong>两个</strong> golden-set 任务声明 <code>preferred_envs</code>：正是这一点让这条简短的、各处唯一记录的命令无需环境前缀就能工作。要求调用者使用 <code>MIX_ENV=test</code>，就是把修正转嫁给所有教授这条命令的文字——以及再次忘记的人。</li>
+<li><strong>作业从未启动 api</strong>，而当 <code>API_URL</code> 无响应时测试会<strong>跳过</strong>（ADR 0132 中声明的环境前提）。修正第 1 项之后，作业会在什么都没测量的情况下变绿。现在它真正启动 api（构建、<code>node dist/main.js</code>、等待 <code>/health</code>）——满足前提，而从不放宽测试，那会是为了适应 CI 而改变判断。真正做工作的仍然是 <code>seed-golden-set-rag.ts</code>，它启动自己的 Nest 上下文；这个实例的存在是为了响应 <code>/health</code>。</li>
+<li><strong>种子因镜像门槛的 409 而死。</strong> 它把项目创建为 <code>runner</code> 恰恰是为了<strong>逃避</strong>门槛（RN-105），依赖的是 RN-169/RN-421 给予 <code>mounted</code>/<code>runner</code> 的豁免——该豁免<strong>已被 RN-494 撤销</strong>（ADR 0135），而脚本的注释仍在引用它。现在种子通过真实路径<strong>穿过</strong>门槛：通过 <code>DecidirImagemDoProjetoUseCase</code> 决定镜像，即 Arquiteto 的 <code>choose_project_image</code> 所用的同一个用例，在它打开的一个 <code>consultiva</code> 会话中进行（决定事件需要 <code>session_id</code>，它是 <code>NOT NULL</code>）——从不手工 INSERT 制品，那会让 golden-set 针对一个生产无法产生的状态进行测量。</li>
+</ol>
+<p><strong>作业改为要求 golden-set 确实</strong>测量<strong>了。</strong> 守卫是结果行（<code>N/N casos acertaram</code>），它只在 17 个用例运行之后才打印；没有它，该步骤会失败并点名原因。它是必要的，因为测试从<strong>正文</strong>返回的 <code>{:skip, motivo}</code> <strong>是惰性的</strong>——ExUnit 中不存在运行时跳过，看到的是 <code>Result: 1 passed</code>。测量时恰恰就是这样：种子因 409 而死时，测试通过了。<code>excluded</code> 在这里<strong>不能</strong>作为信号，与 <code>ci.yml</code> 中姊妹守卫所检查的相反：合法的输出带有一千多个被排除项，即 engine 的所有其他测试，因标签而被排除。</p>
+<p>三项修正之后，在这台机器上沿作业将要走的路径测量：<strong>top-5 中 17/17</strong>，与记录下限的两轮手动运行相同。</p>
+<ul>
+<li><strong>位置：</strong> <code>.github/workflows/golden-set-rag.yml</code>、<code>docs/gates.yml</code>
+（<code>rag-acertivo</code>）、<code>apps/engine/mix.exs</code>、
+<code>apps/api/scripts/seed-golden-set-rag.ts</code></li>
+<li><strong>ADR：</strong> <a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">0138</a></li>
+<li><strong>来源：</strong> 产品负责人的计划，第 2 部分 / 第 3 步</li>
+</ul>
+<h2 id="fase-29--一行安装为所发布的东西签名">FASE 29 — 一行安装：为所发布的东西签名</h2>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>系统的做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无效的状态转换</td>
+<td>类型化错误（<code>InvalidSessionTransitionError</code> 等），转换为 4xx——绝不写入不一致的状态</td>
+</tr>
+<tr>
+<td>代理超出迭代或 token 上限</td>
+<td>终止并记录带有失败来源的阻塞产物</td>
+</tr>
+<tr>
+<td>Task 耗尽 K 次循环</td>
+<td>带原因地阻塞，不会永远打转（RN-015）</td>
+</tr>
+<tr>
+<td>LLM provider 中途宕机</td>
+<td>记录为<strong>基础设施</strong>失败，绝不是「模型停了」（RN-023）</td>
+</tr>
+<tr>
+<td>同一假设上的两个并发决定</td>
+<td>显式冲突（RN-022）</td>
+</tr>
+<tr>
+<td>engine 副本宕机</td>
+<td>会话被另一个副本接管，或以 <code>closed_abnormally / node_shutdown</code> 结束——绝不成为孤儿</td>
+</tr>
+<tr>
+<td><code>QaLeadServer</code>/<code>SecOpsAgentServer</code> 在 gate 循环中途宕机</td>
+<td><code>Engine.Gates.GateRescuer</code> 自行恢复——重启区域（未记录裁决）或重新发送丢失的调用（裁决已记录）——无需人工干预（RN-140）</td>
+</tr>
+<tr>
+<td>速率限制不可用</td>
+<td>请求<strong>放行</strong>：守卫防的是滥用，不是越权访问</td>
+</tr>
+<tr>
+<td>速率限制<strong>超出</strong>（429）</td>
+<td>界面说出 api 的回应，轮询停止；应用绝不以更多流量回应限制（RN-088）</td>
+</tr>
+<tr>
+<td>凭据错误、账户不存在或账户被锁定</td>
+<td><strong>同样</strong>的 401 回应，argon2 成本相同（RN-032）</td>
+</tr>
+<tr>
+<td>重新提交已使用过的 refresh</td>
+<td>族被吊销并产生安全事件；合法用户也会被登出（RN-030）</td>
+</tr>
+<tr>
+<td>没有服务密钥的内部流量</td>
+<td>api 返回 403，engine 返回 401——绝不到达 controller（RN-035）</td>
+</tr>
+<tr>
+<td>provider 在目录同步期间拒绝密钥</td>
+<td>该 provider 被<strong>跳过</strong>并附失败来源；没有任何模型被标记为消失（RN-041）</td>
+</tr>
+<tr>
+<td>binding 的模型从 provider 中消失</td>
+<td>级联落到下一层并「提示」跳过了哪个作用域——绝不静默更换模型（RN-041）</td>
+</tr>
+<tr>
+<td>模型价格变动</td>
+<td>从现在起生效；已记录的成本以及产生它的价格保持不变（RN-042）</td>
+</tr>
+<tr>
+<td>创建 handoff 失败（Criativo→PO，Arquiteto→Infra/Dev Lead）</td>
+<td>持久的 <code>agent.error</code>，代理进程「继续」存活；之前已记录的内容（product_brief、规则）不会丢失（RN-116）</td>
+</tr>
+<tr>
+<td><strong>挂载文件夹</strong>项目路径位于 <code>BRABO_PROJECTS_BASE</code> 之外</td>
+<td>创建被<strong>拒绝</strong>（400），点名基目录并建议 <code>&lt;base&gt;/&lt;nome&gt;</code>——项目不会诞生后再卡住（RN-170/RN-501）</td>
+</tr>
+<tr>
+<td>Infra 启动容器时<strong>挂载文件夹</strong>项目文件夹不可达</td>
+<td><code>container_start</code> 以「点名」的 <code>failed</code> 结束（变量、路径、文件夹所有者、下一步），生命周期<strong>不会</strong>进入 <code>provisioning</code>（RN-501）</td>
+</tr>
+<tr>
+<td>缺少 <code>BRABO_PROJECTS_BASE</code></td>
+<td>api 回应 <code>projectsBase: null</code>，项目创建<strong>不提供</strong>挂载文件夹模式——绝不提供安装无法兑现的模式（RN-500）</td>
+</tr>
+<tr>
+<td>文件夹浏览器收到基目录之外的 <code>path</code>（包括前缀陷阱 <code>&lt;base&gt;2</code>）</td>
+<td><strong>400</strong> 并点名基目录——格式错误，而不是 403：没有任何角色可以浏览基目录之外（RN-504）</td>
+</tr>
+<tr>
+<td>文件夹浏览器收到基目录之内、但 api 无法打开的 <code>path</code></td>
+<td><strong>404</strong> 并说明是两者中的「哪一个」（不存在 / 存在但无法读取）——绝不是带 <code>fs</code> 消息的 500（RN-504）</td>
+</tr>
+<tr>
+<td>浏览的文件夹只有文件、symlink，或超过 500 个子文件夹</td>
+<td>列表带着 <code>arquivos</code>/<code>simbolicos</code>/<code>truncado</code> 返回，界面「说明」排除了什么——满是代码的文件夹绝不会显示为空（RN-504）</td>
+</tr>
+<tr>
+<td><code>BRABO_PROJECTS_BASE</code> 与 Brabo 的检出重叠（两个方向）</td>
+<td><code>pnpm dev</code> <strong>拒绝启动</strong>，点名两个路径。api 的任何校验都抓不到这一点：它对照的是 <code>process.cwd()</code>，在它的容器中是 <code>/workspace</code>（RN-500）</td>
+</tr>
+<tr>
+<td>broker 中缺少 <code>BRABO_PROJECTS_HOST_BASE</code> 且 <code>mounted</code> 项目执行 <code>container_start</code></td>
+<td>拒绝并<strong>点名变量</strong>（503，来源 <code>infra</code>），不触碰任何容器——绝不落到另一个根，那会指向另一个项目的文件夹（RN-503）</td>
+</tr>
+<tr>
+<td>文件夹位于基目录之外的「遗留」<code>mounted</code> 项目</td>
+<td>spec 返回 <code>localizacao.tipo: 'indisponivel'</code>，原因点名基目录和路径；broker 以 409 拒绝，修复办法是<strong>移动文件夹</strong>，而不是更换模式（RN-503）</td>
+</tr>
+<tr>
+<td>broker 宕机（它在 <code>profiles</code> 下启动，默认「不」启动）且 <code>mounted</code> 项目执行 <code>container_start</code></td>
+<td>操作以 <code>failed</code> 结束，原因为 <code>BrokerIndisponivelError</code> 的原因，绝不是异常——生命周期中没有任何转换（RN-503）</td>
+</tr>
+<tr>
+<td>数据库中项目位置不一致（模式/路径对在创建之外被写入）</td>
+<td>执行激活以 <strong>400</strong> 拒绝并附 pt-BR 原因，绝不是没有正文的 500（RN-478）</td>
+</tr>
+<tr>
+<td>社交登录：provider 的邮箱匹配现有账户但「未」验证</td>
+<td>以 403 拒绝，不记录任何关联——未验证的邮箱不是身份证明（RN-274）</td>
+</tr>
+<tr>
+<td>社交登录：<code>state</code> 无效/过期，或属于另一种「用途」（git 连接流程）</td>
+<td>拒绝，不调用 provider，也不写数据库（RN-273）</td>
+</tr>
+<tr>
+<td>会话中没有任何 <code>product_brief</code> 就校验需求</td>
+<td>在记录任何事件「之前」拒绝（400）——还没有可校验的东西（RN-406）</td>
+</tr>
+<tr>
+<td>在 dev agent 工作中或卡住时转换 <code>execution_mode</code></td>
+<td>在触碰 permissions.json 或容器生命周期「之前」拒绝（409）——绝不迁移一个活着的代理（RN-447）</td>
+</tr>
+<tr>
+<td>附加的本地文件夹超出文件数或总字节数上限</td>
+<td>拒绝（400），整批——绝不静默截断（RN-456）</td>
+</tr>
+<tr>
+<td>本地文件夹中的单个文件过大或扩展名不可识别</td>
+<td>只是被「跳过」（<code>filesSkipped</code>），绝不拖垮整个上传（RN-456）</td>
+</tr>
+<tr>
+<td>确认一个已不再处于 <code>pending_confirmation</code> 的模型拉取请求</td>
+<td>拒绝（409）——确认不可重复执行（RN-462）</td>
+</tr>
+<tr>
+<td>Hugging Face 模型拉取在 Ollama 中失败</td>
+<td>请求以 <code>failed</code> 结束并声明来源（基础设施/模型），目录中不激活任何东西（RN-462）</td>
+</tr>
+<tr>
+<td>通过浏览器配置期间 runner 二进制不可用（发布没有资产、GitHub 宕机）</td>
+<td>选定的文件夹和两个配置文件「保留」；界面说明原因，并把指引换成 <code>npm install -g @brabo/runner</code> 路径（RN-473）</td>
+</tr>
+<tr>
+<td>runner 未在等待上限内连接</td>
+<td>界面说明没有看到，声明这不是缺席的证明，并指向代码标签页——绝不会永远「核实中」（RN-474）</td>
+</tr>
+<tr>
+<td>runner 文件夹中存在无效的设备密钥（JSON 损坏，或没有 <code>kid</code>）</td>
+<td>CLI 拒绝并「点名」文件和原因，提供两条出路——绝不是用法块，那是对什么都没配置的人的回答（RN-475）</td>
+</tr>
+<tr>
+<td>在存在 bootstrap 行之前创建仓库就失败</td>
+<td>状态端点报告 <code>provision_failed</code>，原因读自 <code>proposed_action</code>，<code>failedStep</code> 为「空」——没有尝试任何 Gitflow 步骤，点名一个就是捏造（RN-477）</td>
+</tr>
+<tr>
+<td>bootstrap 的 <code>step.check</code> 失败（令牌过期、403、超时）</td>
+<td>行中变为 <code>status: 'failed'</code> + <code>lastError</code>，event log 中有 <code>bootstrap.step_failed</code>——以前它在不触碰任何东西的情况下抛出，界面永远轮询下去（RN-477）</td>
+</tr>
+<tr>
+<td>配置在界面上限内未收敛</td>
+<td>等待在 3 分钟时「停止」，声明这不证明失败，并提供再次查找——不会触发第二个 POST（RN-477）</td>
+</tr>
+<tr>
+<td>把一个模型应用到所有代理而 api 拒绝了「其中一部分」</td>
+<td>通过的行保持已记录并被重新读取；提示说明多少中的多少，并「点名」留下的那些——绝不说「已保存」或「未保存」，那两者都是谎言（RN-476）</td>
+</tr>
+<tr>
+<td>RAG 搜索遥测的 INSERT 失败</td>
+<td>搜索<strong>照样回应</strong>，带 <code>searchId: null</code>，失败变成来源为 <code>infra</code> 的日志——测量工具不会拖垮它所测量的东西，也不会悄无声息地消失（RN-479）</td>
+</tr>
+<tr>
+<td>对那次搜索未返回的 <code>searchId</code>/<code>chunkId</code> 投票</td>
+<td>有指导意义的 400，不记录任何东西——没有排名的投票无法区分「索引贫乏」与「权重错误」，没有意义的数字比没有数字更糟（RN-480）</td>
+</tr>
+<tr>
+<td>在 <code>vector_available</code> 一直为 <code>false</code> 的窗口中运行 <code>medir:rag</code></td>
+<td><strong>否决（exit 1）</strong>：测量的不是混合搜索，而是它的词法一半，对照它来校准向量权重就是对照另一个系统校准（RN-479）</td>
+</tr>
+<tr>
+<td>在没有当前有效 <code>module_map</code>、列表为空、模块重复、模块不在映射中或镜像无效（<code>latest</code>/无 tag/<code>rationale</code> 过短）时调用 <code>route_modules_to_infra</code></td>
+<td>400 点名缺少什么或什么有误——对代理而言是模型会改正的错误 tool-result，绝不崩溃（RN-487）</td>
+</tr>
+<tr>
+<td><code>container_start</code> 选定了不在 Arquiteto 当前有效路由候选中的镜像</td>
+<td>操作变为 <code>failed</code>，点名被拒绝的镜像并列出有效候选——既不决定镜像也不调用 broker（RN-491）</td>
+</tr>
+<tr>
+<td>启动容器时 broker 拒绝或不可用（<code>BrokerRecusouError</code>/<code>BrokerIndisponivelError</code>）</td>
+<td>操作变为 <code>failed</code> 并附 broker 的消息——绝不传播，绝不悬而未决（RN-491）</td>
+</tr>
+<tr>
+<td><code>type: decision_record</code> 的 <code>emit_artifact</code> 缺少 <code>context</code>/<code>options</code>/<code>choice</code>/<code>consequences</code></td>
+<td>错误 tool-result 点名缺少的键——模型在循环的下一轮改正，绝不崩溃（RN-505）</td>
+</tr>
+<tr>
+<td>已核实且已连接的 <code>runner</code> 项目中的终端/worktree，但「没有」<code>running</code> 容器</td>
+<td>「点名」的拒绝（<code>RunnerReadiness</code>），绝不落到裸宿主机——Docker 是真实的前置条件，没有回退（RN-507）</td>
+</tr>
+<tr>
+<td><code>RunnerGit</code> 在没有 RN-507 三个前置条件的情况下尝试实体化 worktree</td>
+<td>在任何 <code>exec</code> 「之前」以点名消息抛出——绝不盲目尝试、让频道超时来解释（RN-507）</td>
+</tr>
+<tr>
+<td>worktree 清理的周期性作业遇到没有连接 runner 或没有 <code>running</code> 容器的 <code>runner</code> 项目</td>
+<td>本轮「跳过」该项目，悄无声息——绝不是错误，绝不停止修剪其他项目（RN-507）</td>
+</tr>
+<tr>
+<td>为 <code>container</code>/<code>mounted</code> 项目，或没有连接 runner 的 <code>runner</code> 项目提议 <code>container_start_via_runner</code></td>
+<td>Infra Lead 在本地「拒绝」并点名原因，一次也不调用 <code>propose_action</code>（RN-508）</td>
+</tr>
+<tr>
+<td>没有已决定镜像时批准 <code>container_start_via_runner</code>（RN-105）</td>
+<td>操作变为 <code>failed</code>，点名缺少决定——绝不调用 engine（RN-508）</td>
+</tr>
+<tr>
+<td>runner 连接到一个项目，其 <code>execution_mode</code> 要求一项它在 <code>join</code> 中未声明的能力</td>
+<td>join <strong>被拒绝</strong>，点名该能力并要求更新二进制——致命拒绝，不重试，绝不静默降级（RN-514）</td>
+</tr>
+<tr>
+<td>runner 声明了「本」服务器不认识的能力</td>
+<td>该名字被<strong>忽略</strong>，join 通过——比 engine 更新的 runner 可以连接（RN-514）</td>
+</tr>
+<tr>
+<td><code>exec</code> 被分派给未声明 <code>exec</code> 能力的 runner</td>
+<td>以相同的 <code>exec_result</code> 格式回应调用方，<code>exitCode</code> 126，原因放在 <code>output</code> 中——绝不让 <code>RunnerRouter</code> 等到超时（RN-514）</td>
+</tr>
+<tr>
+<td><code>pty_*</code> 被转发给未声明 <code>pty</code> 能力的 runner</td>
+<td>消息「不」被投递，<code>:web</code> 收到点名的 <code>pty_error</code>——绝不会永远「加载中」（RN-514）</td>
+</tr>
+<tr>
+<td>镜像目标位于项目的 <code>workspacePath</code> 之内，或包含它</td>
+<td><strong>400</strong> 点名环的方向——两者是同一个拒绝，比较按「段」进行，所以 <code>/base-outra</code> 「不」算在 <code>/base</code> 之内（RN-515）</td>
+</tr>
+<tr>
+<td>在 <code>execution_mode: container</code> 项目中声明镜像目标</td>
+<td><strong>400</strong> 并「点名」原因（源头是服务器上的卷，本地代理看不到它）——绝不接受，也绝不复制（RN-515）</td>
+</tr>
+<tr>
+<td>请求体中没有 <code>mirrorPath</code> 键的 <code>PUT .../mirror-path</code></td>
+<td><strong>400</strong>——省略会与请求「清除」无法区分，而静默清除就是缺陷；清除是显式的 <code>null</code>（RN-515）</td>
+</tr>
+<tr>
+<td>以 root 运行 <code>brabo-runner service install</code></td>
+<td><strong>点名的拒绝</strong>，不写文件也不运行命令——服务按设计属于用户，root 会打破产品三道边界的前提（RN-518）</td>
+</tr>
+<tr>
+<td>在 Windows（或 Linux/macOS 之外的任何平台）上运行 <code>brabo-runner service &lt;qualquer&gt;</code></td>
+<td><strong>拒绝并点名平台</strong>，说明这是已声明的决定并指向前台运行——绝不是沉默的失败，绝不是什么都没装的「已安装」（RN-518）</td>
+</tr>
+<tr>
+<td>在没有有效设备密钥的文件夹中运行 <code>service install</code></td>
+<td><strong>拒绝并点名文件</strong>——服务以密钥认证，绝不用令牌，令牌会留在 unit 中的磁盘上（RN-518）</td>
+</tr>
+<tr>
+<td><code>service install</code> 期间 <code>systemctl</code>/<code>launchctl</code> 不可用</td>
+<td>unit 文件<strong>保留</strong>，回答说明没有激活，并点名待执行的命令——删除它会变成「什么都没发生」，而这是假的（RN-518）</td>
+</tr>
+<tr>
+<td>没有已安装的 unit 且没有 <code>--dir</code> 时运行 <code>service uninstall</code></td>
+<td>回答「未安装」且<strong>不碰任何文件</strong>：没有 unit 的记录，按 <code>cwd</code> 猜测会删掉另一个项目的密钥（RN-518）</td>
+</tr>
+<tr>
+<td>在 PATH 中没有服务管理器的机器上运行 <code>service status</code></td>
+<td>回答「已安装，但「无法」询问」并使用自己的退出码——「不知道」绝不变成「已停止」（RN-518）</td>
+</tr>
+<tr>
+<td><code>/containers</code> 页面上从未配置过容器的 workspace 项目</td>
+<td>以 <code>registrado: null</code> 和文字 <strong>&quot;nunca provisionado&quot;</strong> 出现在列表中——绝不是 <code>stopped</code>，绝不是「未观察」，也绝不消耗 broker 的 20 次核实之一（RN-521）</td>
+</tr>
+<tr>
+<td>在没有已决定 <code>artifact.project_image</code> 的项目上点击「启动」</td>
+<td>按钮甚至不会激活：界面以文字「说明」还需要决定镜像，而不是提议一个已知会以失败告终的操作（RN-521/RN-105）</td>
+</tr>
+<tr>
+<td>在 <code>workspaceVerifiedAt</code> 为空的 <code>runner</code> 项目上点击「启动」</td>
+<td>按钮惰性，有「自己的」原因（「从来没有本地代理确认过文件夹」）——绝不与「没有已决定的镜像」坍缩（RN-521）</td>
+</tr>
+<tr>
+<td>在文件夹已确认但 runner 可能已关闭的 <code>runner</code> 项目上点击「启动」</td>
+<td>界面「提供」按钮并写下保留说明：文件夹的确认不是代理的存在（RN-468），如果它没在运行，操作在被批准时失败（RN-521）</td>
+</tr>
+<tr>
+<td><code>/containers</code> 页面上角色低于 <code>maintainer</code></td>
+<td>控件惰性，原因以文字说明「一次」；状态、镜像和资源仍然「可见」（RN-521/RN-102，ADR 0064）</td>
+</tr>
+<tr>
+<td><code>brabo-runner --base &lt;caminho&gt;</code> 的路径是相对路径、带 <code>..</code>、等于 <code>/</code>、指向文件，或（在 Linux 上）位于 <code>$HOME</code> 之外</td>
+<td><strong>拒绝并点名原因</strong>，以代码 2 退出——现在输入的、无法兑现的明确请求，与被拒绝的 <code>--dir</code> 处置相同（RN-529）</td>
+</tr>
+<tr>
+<td><code>--base</code> 位于本项目文件夹「之内」，或与之相等</td>
+<td>拒绝 <code>base-dentro-da-raiz</code>：每个新项目都会诞生在这个项目之内。「相反」方向（项目文件夹在基目录之内）是正常安排，可以通过（RN-529）</td>
+</tr>
+<tr>
+<td><code>$XDG_CONFIG_HOME/brabo/runner.json</code> 损坏，或带有守卫拒绝的基目录</td>
+<td>拒绝在 <code>stderr</code> 中「说明」，点名失去的东西，runner <strong>在没有基目录的情况下继续运行</strong>——因为一个它还没用到的配置而拖垮正在服务某个项目的代理是不相称的（RN-529）</td>
+</tr>
+<tr>
+<td>存在但未声明 <code>base</code> 的基目录文件</td>
+<td>这是<strong>缺席</strong>，不是拒绝：没有同意基目录的配置，而不是损坏的配置——runner 照常运行（RN-529）</td>
+</tr>
+<tr>
+<td>文件夹（<code>--dir</code>）位于所配置基目录「之外」的项目</td>
+<td>仍然<strong>有效</strong>，没有警告：基目录是创建规则，<code>--dir</code> 的词法是永久的——与 <code>project-workspaces-root.ts</code> 中写下的禁令相同（RN-529/RN-501）</td>
+</tr>
+<tr>
+<td>项目段是「绝对」的、带 <code>..</code>、指向基目录本身，或通过 symlink 逃出基目录</td>
+<td>以自己的原因点名拒绝，在双遍检查（词法和 <code>realpath</code>）中——绝不接受后重新解释，因为穿过网络的是「段」（RN-529，ADR 0130）</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="出错时">出错时</h2>
+<p><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28</a> 明文拒绝了一行安装程序，只要产物尚未签名（BRB-005），这就是为什么 <a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29</a> 在安装<strong>之前</strong>先签名。第 2 次会话，<a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149</a>。</p>
+<h3 id="rn-524">RN-524 — 发布的产物由工作流身份签名，在同一次运行中校验，校验失败时拒绝而不是警告</h3>
+<p>每个正式 tag 都为它发布的东西签名，并<strong>在发布 Release 之前校验所签的东西</strong>：</p>
+<ul>
+<li><strong>五个镜像</strong>按 <strong>DIGEST</strong> 签名（本规则写下时是四个；第五个 broker 随 <a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162</a> 加入），读自 <code>.release/images.json</code>——绝不按 tag。tag 是可移动的指针：为 <code>:5.0.0</code> 签名，证明的是签名那一刻该 tag 指向的东西，而不是有人下载时它所指向的东西。digest 是清单早已记录、生产 overlay 早已应用的东西（ADR 0119）；</li>
+<li>runner 的<strong>二进制</strong>（本规则诞生时是五个目标，自 <a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174</a> 去掉 <code>darwin-x64</code> 后是<strong>四个</strong>）由<strong>一个</strong>签名的 <code>checksums.txt</code> 覆盖，而不是每个二进制一个签名——校验了三个而忘了第四个的人无从知道自己忘了；</li>
+<li>签名是 <strong>keyless</strong> 的（GitHub Actions 的 OIDC）：签名的身份就是工作流本身，不存在托管的私钥。自有密钥对意味着又一个 CI 密钥，而本仓库已经见过一个 PAT 悄无声息地过期并否决了两次 <code>tag-release</code> 运行（<a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139</a>）；</li>
+<li><strong>校验失败是点名的拒绝，绝不是警告。</strong> 点一下就能接受的警告，就是不存在的校验。</li>
+</ul>
+<p>清单<strong>声明它覆盖了什么</strong>。矩阵有意设为 <code>fail-fast: false</code>，所以一个没有构建成功的目标不会妨碍其他四个拥有清单——但作业会在日志中点名被排除的目标，因为列出四个而对第五个沉默的 <code>checksums.txt</code> 比没有更糟：校验了四个的人会以为自己校验了整个发布。这一半曾是<strong>书面意图加上没有兑现它的机制</strong>：在 <code>needs: build</code> 下，一个构建失败的目标不是不妨碍，而是把它「推迟」了一天——见 <a href="#rn-565">RN-565</a>，它让这一半成真并测出了这个数字。</p>
+<p><strong>位置：</strong> <code>.github/workflows/release.yml</code>（步骤「Instalar o cosign」和「Assinar
+as imagens publicadas」，<code>permissions</code> 块中带 <code>id-token: write</code>）；
+<code>.github/workflows/build-runner-binaries.yml</code>（作业 <code>checksums</code>，自 <a href="#rn-565">RN-565</a> 起<strong>没有</strong> <code>needs:</code>——等待的是资产，并有上限）。</p>
+<p><strong>测试：</strong> <code>scripts/ci/actions-pinadas.spec.ts</code> 覆盖 <code>sigstore/cosign-installer</code> 按 SHA 的固定（旁边带版本注释，它告诉人和 Dependabot 那个哈希是哪个版本）。签名本身只能在真实的 tag 中证明——已声明，与发布流水线的其余部分一样。</p>
+<p><strong>来源：</strong> FASE 29，第 2 次会话。为镜像和二进制关闭 <strong>BRB-005</strong>。「不」覆盖二进制的操作系统<em>代码签名</em>（macOS 公证、Windows Authenticode），那需要付费身份，仍在待办中。</p>
+<h2 id="installsh-完成安装rn-547fase-30"><code>install.sh</code> 完成安装（RN-547，FASE 30）</h2>
+<h3 id="rn-549">RN-549 — 干净机器上的 E2E 证明「整个」安装：五个环节、在运行中等待的代理，以及无人回到终端即被接手的第一个项目</h3>
+<p><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30</a> 的第 8 次会话，最后一次——也是唯一能回答整个阶段所追问问题的一次：<em>在一台干净的机器上，<code>install.sh</code> 结束时本地代理是否在运行且已配对，人是否无需回到终端就能以 Runner 模式创建第一个项目？</em> 在此之前，答案是一个书面意图：<a href="produto.html#rn-547">RN-547</a> 串联了五个命令，并以书面形式声明在它的测试中 <code>brabo-runner</code> 是 shell 替身、api 是 <code>node:http</code>——<em>&quot;o que se prova é o ENCADEAMENTO, nunca a integração&quot;</em>。</p>
+<p><strong>测试装置不是在这里诞生的：它被「扩展」了。</strong> <code>.github/workflows/install-e2e.yml</code> 自 FASE 29（<a href="produto.html#rn-534">RN-534</a>）起就存在，已经在 Actions 的临时 runner 中运行已发布的安装程序——字面意义上就是一台干净的机器，没有 Brabo、没有 <code>.env</code>、没有标记。它证明的东西止步于 <code>.env</code>：计划、状态、三个绝不删除的承诺、无 TTY 路径，以及在模拟 TTY 下的启动。第二个工作流会为了测量便宜的一面而重复昂贵的一面（等待 Release、下载、校验签名）。</p>
+<p><strong>它「不」在 <code>pull_request</code> 中运行，后果是声明出来的，而不是藏起来的。</strong> 安装程序对照 Release 的<strong>已签名</strong> <code>checksums.txt</code> 校验自身来源（<a href="produto.html#rn-526">RN-526</a>），后者只在正式 tag 之后存在；让它在 PR 中运行的唯一方式是给它一扇「跳过」校验的门——<a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150</a> 拒绝的那扇门，一旦打开就对任何人有效，而不只是 CI。因此：<strong>写下这个 E2E 的 PR 并没有执行它</strong>，它的检查在没有演练其新增内容任何一行的情况下通过。这与 RAG golden-set 的决定（<a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138</a>）相同，原因也相同。</p>
+<p><strong>由此有了在 PR 中「运行」的那一半，这就是它存在的理由。</strong> 只在 tag 中运行的工作流，其错误会在 tag 中出现，那时发布已在推出，没人再看那个弄坏它的 PR。<code>scripts/dev/install-e2e.spec.ts</code> 测量这个 E2E 悄无声息地腐烂的两种已知方式：有人<strong>放宽</strong>闸门（在触发器中加上 <code>pull_request</code>，或传入一个跳过校验的标志），以及有人<strong>改写</strong> <code>install.sh</code> 中的一句话——于是工作流中的每个 <code>grep</code> 都不再匹配任何东西，断言不是失败，而是「消失」。提示的金丝雀是推导出来的，而不是背下来的：TTY 的回答按文件、<strong>按顺序</strong>传入，安装程序中新增的一个 <code>read -r</code> 会让之后的所有回答错位——基目录会变成密码——，所以测试会数提示的个数，并让人去看回答文件。</p>
+<p><strong>E2E 开始证明的东西，每条断言都有归属。</strong> <a href="produto.html#rn-547">RN-547</a> 的五个环节，逐一针对「真实」的 api 和二进制——账户（<a href="produto.html#rn-546">RN-546</a>）、在机器上生成的密钥对和盖上的 <code>kid</code>（<a href="runner.html#rn-551">RN-551</a>）、公钥的登记（<a href="api.html#rn-552">RN-552</a>）以及按机器的 unit（<a href="runner.html#rn-545">RN-545</a>）。再加上在「磁盘」而不是输出上测量的 <a href="web.html#rn-475">RN-475</a> 不变量（runner 读取的文件有 <code>kid</code>、有 <code>d</code>，并且 <code>finish</code> 完成时 <code>.parcial</code> 已消失），<code>.env</code>、标记和日志中都没有密码，以及标记中存在 <code>ownerEmail</code>。</p>
+<p><strong>「否定」证明最有价值，那就是待办块的缺席。</strong> <a href="produto.html#rn-547">RN-547</a> 要求在一个点名的最终块中报告每个失败的环节——并照样以 <strong>0</strong> 退出。一个看退出码的 E2E 会在五个环节坏了四个的情况下给出绿色。<em>&quot;Nenhuma pendência&quot;</em> 是断言五个都完成的唯一方式，包括工作流说不出名字的那些。</p>
+<p><strong>代理「在运行」并等待的信号是那「一行」，绝不是管理器的状态——这一选择是本 E2E 的核心决定。</strong>
+<code>perguntarEstado</code> 把 <code>activating</code> 映射为 <code>rodando</code>（<a href="web.html#rn-088">RN-088</a>，有道理：「启动中」不是「已停止」），所以 <code>systemctl is-active</code> 和 <code>brabo-runner service status --machine</code> 都会对一个两秒后就会死掉的进程回答<em>在运行</em>。这恰恰是固定的 <code>sleep</code> 所掩盖的竞态，而在这里测量错误的产物——磁盘上的一个二进制、一个写好的 unit——是 E2E 不证明任何东西就给出绿色的最容易的方式。所选的信号是进程在「进入」等待时写下的那一行（<a href="runner.html#rn-550">RN-550</a>）：它只在代理从磁盘读取了机器密钥、拿到票据、和真实的 api 对话并收到一个「空」列表之后才存在——一次性证明了配对和等待。而且它不是
+状态采样：它是已经写进 journal、不会撤销的事实。所以带上限地等待它不是竞态——要么它出现，要么上限耗尽，该步骤失败并显示整个 journal。<code>service status --machine</code> 在它<strong>之后</strong>进入，作为退出码回答了运维者将看到的内容的确认，绝不取代它。</p>
+<p><strong>阶段的结果由 API 测量，而不是由浏览器。</strong> 断言的主体是「代理」，不是页面：它观察的是 <code>GET /runner/projects</code>（<a href="produto.html#rn-543">RN-543</a>），api 的一个事实。浏览器会通过「同一」路由创建项目，多一层会因与承诺无关的原因失败的东西——而且不会让断言更强，因为断言仍然是代理 journal 中的那一行。浏览器层是存在的（<code>e2e/</code>，<a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120</a>），它回答的是另一个问题（三个源、<code>httpOnly</code> cookie、CSRF），有自己的 lockfile，并假定生产 compose 在运行：把它拖到这里，会让安装程序的 E2E 依赖于在一台本应干净的机器上安装的第二个测试装置。证明向导是 web 套件的工作，那里已经覆盖了。这一步测量的是整条链：在终端中诞生的账户<strong>通过登录</strong>，无需任何验证链接；<a href="api.html#rn-410">RN-410</a> 的个人 workspace 存在；项目以 <code>runner</code> 诞生；代理在 <a href="runner.html#rn-550">RN-550</a> 的 15s/30s/60s 节奏内自行接手它。</p>
+<p><strong>幂等性由 E2E 无需重新安装就能到达的那一半来测量。</strong> api 对第二次 <code>first-account</code> 确实回应 <code>409</code>——使用「生成」的密码，绝不是常量，因为 <code>exigirSenhaValida</code> 在冲突「之前」运行，弱密码会得到 <code>400</code>，测量的就是错误的东西。安装程序如何「处理」这个 <code>409</code>（保持沉默，而不变成待办）是 HTTP 状态码的分类，在 <code>install-fechamento.spec.ts</code> 中针对测试服务器覆盖：在这里重复它需要第二次完整安装，那会走「迁移」路径（<a href="infra.html#rn-530">RN-530</a>）——经证明的备份、删除、重建——是另一项交付。</p>
+<p><strong>这个 runner 与干净机器之间唯一的分歧来自「环境」，并已点名。</strong> 在真实机器上，安装者有登录会话，<code>systemd --user</code> 已经在运行；Actions 作业以非交互方式运行，没有会话，没有会话时 <code>systemctl --user</code> 没有可以对话的总线——<code>service install --machine</code> 会因为一个不属于产品的原因变成待办，而 E2E 会「证明」一个实验室故障。<code>loginctl enable-linger</code> 让用户管理器运行起来；它不是安装程序的标志，不跳过任何校验，也不改变 unit 的行为。</p>
+<p><strong>编写它时出现了两个缺陷，两者都是不可见的，因为工作流从未运行过。</strong> 第一个在测试装置本身：回答文件以 <code>nao-migrar</code> 开头，在干净机器上它会落到「标记」的问题上——它不匹配 <code>s|S|sim|SIM</code>，脚本说 <em>&quot;Nada foi gravado&quot;</em> 并以 0 退出，而紧随其下的标记断言就会失败。迁移问题位于 <code>if [ -n &quot;$marcador&quot; ] || [ -n &quot;$sinais&quot; ]</code> 之下，而在干净机器上两者都为空：这个问题不会出现。已更正为「七个」真实回答。</p>
+<p><strong>第二个是「发现」，有意没有在这里修复。</strong> 已发布的 <code>install.sh</code> <strong>无法在干净机器上独自启动任何东西</strong>：它用 <code>docker compose -f docker/docker-compose.install.yml</code> 启动栈，这是一个相对于其运行目录的「相对」路径——而这个文件<strong>不是 Release 的资产，不进入已签名的 <code>checksums.txt</code>（<a href="#rn-524">RN-524</a>），脚本也不在任何地方下载它</strong>（它唯一下载的是 <code>cosign</code>、清单、自身哈希和 runner 二进制）。compose 还 bind-mount 了 <code>./postgres/init.sql</code>，所以是「三个」文件而不是一个。按照 runbook 的 <code>sh -c &quot;$(curl … install.sh)&quot;</code> 操作的人，会在已经校验签名、选定基目录并写入 <code>.env</code> <strong>之后</strong>，死于 <em>&quot;no such file or directory&quot;</em>。修复意味着决定 compose 是成为已签名的资产，还是安装程序改为克隆——这是另一项交付，不是在发现这个漏洞的 E2E 中顺手要做的事。工作流按 tag 手工带来这三个文件，在一个「说明」这是发现的步骤中；PR 中的测试要求两半（该步骤存在，并且安装程序仍在不下载的情况下使用 compose），而安装程序自行获取它们的那一天，测试会失败——那时正确的做法是删除这个步骤，而不是放宽测试。</p>
+<p><strong>「未」纳入的：</strong> 任何跳过来源校验的门；<code>apps/</code> 未被触碰（发现变成了报告，而不是顺手的修复）；没有第二个安装程序 E2E 工作流；没有放宽任何闸门——尤其是，E2E 仍然不在 <code>pull_request</code> 中。</p>
+<ul>
+<li><strong>代码：</strong> <code>.github/workflows/install-e2e.yml:16</code>（仍然没有 <code>pull_request</code> 的触发器）、<code>:111</code>（发现的那一步——安装程序不下载的三个文件）、<code>:172</code>（systemd 的用户会话，已声明的分歧）、<code>:204</code>（带「七个」回答的完整安装）、<code>:241</code>–<code>:245</code>（RN-547 的五个环节，每行一个）、<code>:253</code>（否定证明——没有待办）、<code>:267</code>–<code>:274</code>（<code>kid</code>、<code>d</code> 和 <code>.parcial</code>，在「磁盘」而不是输出上测量）、<code>:278</code>（没有泄露的密码）、<code>:307</code>（代理在运行，凭 journal 的那一行而不是管理器）、<code>:354</code>（通过 api 的第一个项目，以及代理接手它）、<code>:415</code>（第二个账户的 <code>409</code>）</li>
+<li><strong>测试：</strong> <code>scripts/dev/install-e2e.spec.ts</code>——在 PR 中运行的那一半：从「文档」读取的触发器（而不是从文本，那会匹配到解释为什么没有 <code>pull_request</code> 的注释）、两个文件中都没有跳过校验的标志、工作流与 <code>install.sh</code> 之间的语句契约（五个环节加上一贯的四个）、断言所依赖的 <code>apps/runner</code> 的两行、交互提示的金丝雀、journal 行与 <code>service status --machine</code> 之间的「顺序」，以及 compose 发现的两半。经变异验证：改写安装程序的一句话以及在触发器中加入 <code>pull_request</code> 都会失败</li>
+<li><strong>已「声明」的缺口：</strong> 这个 E2E <strong>不在写下它的 PR 中运行</strong>，它的任何检查都不证明所新增内容的任何一行——第一次真实执行是下一个正式 tag。同样不在范围内，而且不是因为遗忘：经由「迁移」路径（<a href="infra.html#rn-530">RN-530</a>）的第二次安装程序执行——备份、恢复证明、删除和重建——、macOS（完整步骤是 Linux 的：<code>launchd</code>，以及托管 runner 没有的 Docker），以及浏览器</li>
+<li><strong>ADR：</strong> <a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">0155</a></li>
+<li><strong>来源：</strong> FASE 30，第 8 次会话——
+<a href="../explanation/fase-30-runner-por-maquina.html">阶段的范围划定</a></li>
+</ul>
+<h2 id="设备密钥获得界面界面说明吊销的范围rn-561">设备密钥获得界面，界面说明吊销的范围（RN-561）</h2>
+<h3 id="rn-565">RN-565 — 已签名的清单随 Release「已有」的东西发出，不等待永远构建不出来的平台</h3>
+<p>已签名的 <code>checksums.txt</code>（<a href="#rn-524">RN-524</a>）是另外两条规则的前提：没有它，<code>GET /runner-releases/binary</code> 以 <code>release_sem_manifesto</code> 拒绝（<a href="produto.html#rn-525">RN-525</a>），<code>install.sh</code> 拒绝它自己（<a href="produto.html#rn-526">RN-526</a>）——<strong>在所有平台上，包括那些正常附加了二进制的平台</strong>。一个延迟的清单不是延迟的清单：对在这段间隔内安装的人来说，它就是缺失的清单。</p>
+<p><strong>测量，针对现有的三个 tag。</strong> 在 <code>v4.0.0</code>、<code>v4.0.1</code> 和 <code>v5.0.0</code> 中，<code>darwin-x64</code> 目标（<code>macos-13</code>）在队列中停留了 <strong>24h00m01s</strong>，被 Actions 的上限取消——三个中都是「同一个」数字，这说明它从未被调度。其他四个作业最多在 <strong>4m18s</strong> 内结束（<code>v4.0.1</code> 中的 <code>linux-x64</code>，17:38:28Z → 17:42:44Z）。<code>checksums</code> 作业带有 <code>needs: build</code>：<code>always()</code> 保证它会「运行」（被取消的依赖也覆盖在内），却从不保证「何时」运行。</p>
+<p><strong>规则：</strong> 清单作业<strong>不依赖矩阵</strong>。它等待的是 Release 的<strong>资产</strong>，而不是<strong>作业</strong>——带上限——，并发布存在的东西，在日志中点名它没有覆盖的内容。一个目标的缺失是预期的结果（<code>::notice::</code>），绝不是错误；<strong>Release</strong> 的缺失仍然是点名的错误，因为这个工作流只「附加」、从不创建；而<strong>没有任何</strong>附加的二进制仍然是错误，因为一个空的 <code>checksums.txt</code> 会断言发布没有二进制，而实际发生的是整个矩阵都失败了。</p>
+<p><strong>二进制的上限是 1200 秒，这个数字不是随意的：</strong> 它是 <code>build</code> 作业本身的 <code>timeout-minutes: 20</code>——一个<strong>有 runner</strong> 的目标在开始后最多可能花费的时间。它有意不覆盖的是<strong>排队</strong>时间，而不覆盖排队时间正是全部要点。所有目标都到达时循环会提前退出，这是正常路径。</p>
+<p><strong>作业「所做」的事情一样都没变。</strong> 它仍然从资产（而不是那里为空的 <code>dist-bin/</code>）组装清单，用 <code>cosign</code> keyless 签名，并在附加之前校验——<a href="#rn-524">RN-524</a> 不变，一个清单而不是五个签名。而在上限「之后」才附加的目标也不会成为孤儿：<code>--clobber</code> 本来就是为此存在的，重做清单就是用同一个 tag 执行一次 <code>workflow_dispatch</code>。</p>
+<p><strong>本规则「不」做的：</strong> <code>darwin-x64</code> 仍然构建不出来。更换标签、去掉该平台或为 runner 付费是负责人的决定，而清单不能依赖它——正是因为依赖它，清单才一直发不出来。</p>
+<blockquote>
+<p>之后在 AT-065 中测量（2026-09-13，通过演练用的 <code>workflow_dispatch</code>）：
+<code>macos-13</code> 是没有 runner 的标签（GitHub 已于 2025 年 12 月退役该镜像；在队列中 30 分钟，被取消，run <code>34769280227</code>）。<code>macos-15-intel</code> 在 3–22 秒内调度并构建，但在 <code>--self-test-pty</code> 上失败，因为在 Bun 下，<code>node-pty</code> 的 <code>onData</code> 不交付子进程的输出（oven-sh/bun#25822，仍开放）；同样的证明在同一 runner 上在 Node 下通过（run <code>34770476634</code>）。
+待定的决定不再是关于 runner 的，而是等待 Bun 还是去掉该平台。上面的规则不因此改变。</p>
+</blockquote>
+<blockquote>
+<p><strong>于 2026-09-27 决定（<a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174</a>，AT-065）：
+该平台已移除。</strong> 矩阵变为「四个」目标，<code>ALVOS_ESPERADOS</code> 随之调整——缺失正是对照它来声明的，把 <code>darwin-x64</code> 留在那里会让每个清单永远宣布一个本是决定的缺失。Mac Intel 使用 <code>npm install -g @brabo/runner</code>（在 Node 下，同样的证明能通过）：<code>install.sh</code> 说明这一点而不尝试下载，代理 <code>GET /runner-releases/binary</code> 以指向 npm 的自己的 400 拒绝 <code>darwin-x64</code>，浏览器面板甚至不请求下载。本 RN 的规则不变：它仍适用于任何失去 runner 的目标，而当矩阵、api 的列表、安装程序的 <code>case</code> 和浏览器的列表出现分歧时，<code>scripts/ci/alvos-do-runner.spec.ts</code> 会失败。</p>
+</blockquote>
+<ul>
+<li><strong>代码：</strong> <code>.github/workflows/build-runner-binaries.yml:283</code>（作业，现在没有 <code>needs:</code>）、<code>:318</code>（<code>timeout-minutes: 40</code>，容得下两次等待）、<code>:335</code>（作业级的 <code>ALVOS_ESPERADOS</code>，让两个步骤读取同一个列表）、<code>:397</code>（等待的步骤）、<code>:401</code>/<code>:402</code>（两个上限）、<code>:410</code>（缺失的 Release，这是错误）、<code>:433</code>（二进制的上限，这是 <code>notice</code>）、<code>:499</code>（点名未覆盖内容的清单）</li>
+<li><strong>测试：</strong> <code>scripts/ci/checksums-nao-espera-a-matriz.spec.ts</code>——作业没有 <code>needs:</code>、两个上限都存在、二进制的上限由 <code>build</code> 的 <code>timeout-minutes</code> 推导（而不是复制）、它容得进作业自身的 <code>timeout-minutes</code>、目标缺失是 <code>notice</code> 而 Release 缺失是 <code>error</code>、<code>ALVOS_ESPERADOS</code> 与矩阵一致，以及本次改动不触及的 ADR 0149 的四项保证（一个签名、附加之前校验、<code>id-token: write</code>、清单中的 <code>install.sh</code>）。它是「静态」的，其局限在文件顶部声明：该作业只能在正式 tag 中证明，而它从未在任何 tag 中运行过</li>
+<li><strong>已「声明」的缺口：</strong> 自 <a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187</a> 起矩阵有「三个」目标（<code>win32-x64</code> 按 ADR 0174 的同一模式移除，<code>ALVOS_ESPERADOS</code> 随之调整），而 Release 仍然收到<strong>两个</strong>——<code>darwin-arm64</code> 已在演练中证明（<a href="runner.html#rn-688">RN-688</a>），只差一个正式 tag 来演练它。清单诞生时将覆盖两个，并会<strong>说明</strong>这一点，这就是部分与沉默之间的区别。而当整个矩阵都失败时，作业会在拒绝之前耗尽两次等待</li>
+<li><strong>ADR：</strong> <a href="../adr/0149-assinatura-dos-artefatos-publicados.html">0149</a></li>
+<li><strong>来源：</strong> AT-051（EP-009/HS-035）</li>
+</ul>
+<nav class="site-pager"><a href="../business-rules/broker.html"></a><a href="../business-rules/contracts.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/scripts/ci/docs/business-rules/ci.md">编辑此页</a><span>更新于 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>本页内容</h2><ul><li class="n2"><a href="#pr-gates">PR Gates</a></li><li class="n3"><a href="#rn-037">RN-037 — Infra 成为一个领域：Workflows 按提供方生成 CI，Lead 整合为单个 PR</a></li><li class="n2"><a href="#dbre-角色变成两个机械脚本rn-400403adr-0093">dbre 角色变成两个机械脚本（RN-400..403，ADR 0093）</a></li><li class="n3"><a href="#rn-401">RN-401 — linter 不是 CI gate：它扫描整个仓库，而不是 PR 的 diff</a></li><li class="n2"><a href="#仪表盘上的n-个智能体在线实时状态从不是历史在场rn-409adr-0097">仪表盘上的“N 个智能体在线”——实时状态，从不是历史在场（RN-409，ADR 0097）</a></li><li class="n3"><a href="#rn-411">RN-411 — 第四个待处理工作信号：dev agent 说的是 dev.*，而不是 agent.status</a></li><li class="n2"><a href="#rag-检索留下痕迹痕迹冻结权重rn-479481">RAG 检索留下痕迹，痕迹冻结权重（RN-479..481）</a></li><li class="n3"><a href="#rn-498">RN-498 — RAG 的 golden-set 在 CI 中真正运行，定时——gate 仍然是 warn</a></li><li class="n2"><a href="#fase-29--一行安装为所发布的东西签名">FASE 29 — 一行安装：为所发布的东西签名</a></li><li class="n2"><a href="#出错时">出错时</a></li><li class="n3"><a href="#rn-524">RN-524 — 发布的产物由工作流身份签名，在同一次运行中校验，校验失败时拒绝而不是警告</a></li><li class="n2"><a href="#installsh-完成安装rn-547fase-30">install.sh 完成安装（RN-547，FASE 30）</a></li><li class="n3"><a href="#rn-549">RN-549 — 干净机器上的 E2E 证明「整个」安装：五个环节、在运行中等待的代理，以及无人回到终端即被接手的第一个项目</a></li><li class="n2"><a href="#设备密钥获得界面界面说明吊销的范围rn-561">设备密钥获得界面，界面说明吊销的范围（RN-561）</a></li><li class="n3"><a href="#rn-565">RN-565 — 已签名的清单随 Release「已有」的东西发出，不等待永远构建不出来的平台</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-zh-Hans.json" data-base="../"></script></body>
+</html>

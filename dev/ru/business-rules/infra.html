@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ru" data-locale="ru" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regras de negócio — Infra | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Меню">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Поиск" aria-label="Поиск" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Язык"><option value="../../business-rules/infra.html">pt-BR</option><option value="../../en/business-rules/infra.html">en</option><option value="../../ru/business-rules/infra.html" selected>ru</option><option value="../../zh-Hans/business-rules/infra.html">zh-Hans</option></select>
+<select data-seletor aria-label="Среда"><option value="../../../dev/ru/business-rules/infra.html" selected>dev</option><option value="../../../prd/ru/business-rules/infra.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Сменить тему">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Начните здесь</h2><ul><li><a href="../index.html">Введение</a></li><li><a href="../getting-started.html">Первые шаги</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">С нуля до готового результата</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Архитектура</h2><ul><li><a href="../architecture.html">Архитектура</a></li><li><a href="../adr.html">Решения (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Формат нормализованного контракта GitProvider</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — Нормализация ошибок GitProvider</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Политика повторов для удалённых providers</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Регистрация git-учётных данных пользователя</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Идемпотентный и возобновляемый bootstrap Gitflow</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Защита веток: расхождение между providers и матрица одобрения</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Механизированная политика веток</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Усыновление существующего репозитория и план как шлюз</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — Engine работает в удалённом репозитории</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — Сигнал тревоги о merge конвейера получает адресата и правило для `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — Репозиторий рождается при принятии handoff Arquiteto, и исполнение без него не начинается</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Автоматическое продвижение `dev` → `qa`, пока QA находится в тестовой фазе</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness агентов: детерминированная сборка контекста</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, инструменты, ContextManager (harness с LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — Тип сессии — это данные создания, а выполнение остаётся событием</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Согласованные пределы транспорта и эффективное окно сжатия</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — Клик отвечает при ПРИНЯТИИ команды, а ход продолжается через канал</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — Язык ответов живёт в трёх местах — учётная запись, сессия и проект, — в открытом списке BCP-47 и никогда в `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — Цикл спрашивает Jev, какой инструмент, а модель пользователя видит только оставшееся меню</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — Закрытую сессию можно открыть снова: собственный выход из терминальных состояний, в `active`, с новым событием</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Повторное открытие сессии: три решения владельца, и `developer` открывает снова</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — Сообщение, пришедшее во время идущего хода, попадает в сохраняемую очередь и читается в конце хода</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Разговорный агент Criativo в harness + фундамент handoffs</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Агент PO, backlog (epics/stories/tasks) и прослеживаемость</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Агент Arquiteto: ADR через настоящую PR, module_map и перекрёстная валидация</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent и живая панель команды (закрытие Фазы 4a)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Настоящий Psicólogo: ToolLoop, гипотезы с доказательствами и сортировка по стоимости</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: профиль владения навыками, патчи инструкций и замкнутый цикл</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Закрытие Фазы 4b (сессия 1): доказательство, которое доходит, стоимость, которая видна, анализ, который переживает kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Закрытие Фазы 4b (сессия 2): работающий каталог, дедупликация, различающая, кто отказал, и очередь, переживающая раунд</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Иерархия агентов: области, leads и делегирование</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Продвижение истории с полномочиями пользователя</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead как область и параллелизм, разрешённый пользователем</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Диаграмма C4 Arquiteto</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Условное слияние принятия handoff с включением выполнения</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Поток ролей как декларативный реестр (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — План Dev Lead приостанавливает ход до одобрения</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer входит как разговорный агент</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: код готов, спящий для автоматического запуска</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` и `delivery-metricas` становятся скриптом отчёта</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` рождается как скрипт отчёта по требованию, а не агент</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — Роль `dbre` становится двумя скриптами: линтер миграций и отчёт о резервном копировании</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Делегирование Dev Lead → dev становится данными, с переопределённым `parecerArtifactId`</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Ручной handoff агенту по выбору переиспользует предложение+принятие, а не третье состояние handoff</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — Предложение handoff получает жизненный цикл: одно ожидающее на получателя и `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — «Estou pronto — a necessidade está validada»: один клик закрывает готовность, gate `necessidade-validada` и принятие PO</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — Handoff от PO к Arquiteto принимается без клика, когда backlog покрыт и репозиторий локальный</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Одобрение плана Dev Lead активирует выполнение, а задача получает модуль, который он назначает</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — Архивированная история: колонка, а не состояние машины</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — Результат работает на машине пользователя через compose от Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates PR: QAAgent и SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Разблокировать gates QA и SecOps: gitleaks по рабочему дереву, валидируемые заключения и tool call в тексте</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Закрытие Фазы 4a: gate infra, который проверяет, и панель, которая говорит правду</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates как декларативный реестр</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — Агент gate ждёт одобрения, как ждёт dev</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — Gate переживает перезапуск</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-стратегия и AppSec как второй МОМЕНТ, а не новый агент</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` как скрипт отчёта по `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — Gate `necessidade-validada` закрывается отдельным подтверждением человека, а не самопроверкой Criativo</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set регрессионных случаев для семантического суждения агента QA Automação</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — Golden-set QA начинает работать в CI, по расписанию и еженедельно</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — План тестирования рождается после сдачи dev, а gate `implementavel` начинает судить по истории и `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Цикл gate, простаивающий более 2 ч, паркуется, и возобновить его может лишь жест человека</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Открытый вопрос становится ожидающим решения пунктом</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — Решение проекта доходит до dev и QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Инфраструктура dev agents: worktrees, git-исполнители и замок merge</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — Настоящий DevAgent: ToolLoop, бюджет на task и дисциплина блокировки</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Блокировка инициализации workspace, Monitor dev agents и наследование пределов</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent как постоянный режим выполнения</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Разблокировать реальный DevAgent: запись, терминал, ADR по модулю и бюджет по проекту</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Перепланирование dev agent по событию и circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Эксплуатируемость после dogfooding: закрытие Фазы 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — Решение в event log и порядок gate</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — Dev agent ждёт одобрения посреди цикла</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Область пути в политике терминала</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Пересмотр ADR 0065: граница внешнего эффекта перестаёт быть `deny` и становится абсолютным пределом</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — Автоматический режим снимает область путей, и только он</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — Автопилот: автоматический режим одобряет всё, кроме потолков, область сравнивается с реальной папкой исполнения, а «Всегда разрешать» записывает глагол + подкоманду</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — Автоматический режим разрешает push и PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Читаемое имя папки workspace</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — Проект выбирает, где живёт код: папка пользователя или управляемая папка</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` с тремя значениями, и workspace рождается `unverified`, когда проверяет его runner</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Навигация по локальной папке через Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — В режиме `runner` проект рождается при клике на &quot;Navegar pasta...&quot;, а не только при подтверждении</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Конвертация `execution_mode` существующего проекта: отказ при активном dev agent, перемещение `permissions.json`, вывод из эксплуатации строки контейнера</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — Единая база монтируемых проектов, смонтированная по тождеству</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — Проверка смонтированного workspace откладывается до материализации</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — База, согласованная в bootstrap, и `mounted` как локальный режим по умолчанию</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Контейнер на проект: граница перестаёт быть политикой</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Жизненный цикл контейнера: таблица состояния, без оркестратора</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — Вкладка Terminal получает реального потребителя жизненного цикла, а не терминал</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Порт Docker и доказательство упаковки, которое выбрало реализацию</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — Broker контейнеров: кто говорит с Docker сервера и почему он не принимает спецификацию</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto направляет модули в инфраструктуру: он ВЫДВИГАЕТ кандидатов, Infra ВЫБИРАЕТ</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra выбирает среди кандидатов маршрутизации, и выбор становится новой версией `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents выполняются ВНУТРИ реального контейнера проекта, а terminal получает там нижнюю границу автоодобрения</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Шлюз образа от Arquiteto (RN-105) начинает действовать во всех трёх режимах выполнения</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Глобальная страница контейнеров: потолок на загрузку в broker и `container_remove` в абсолютном потолке</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` поднимает контейнер проекта на машине пользователя</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Агенты dev только после контейнера</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — Второй корень broker и дискриминированный локатор, который его выбирает</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — Контейнер проекта работает от владельца папки, измеренного api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra поднимает контейнер при принятии handoff, шагом сервера и с засеянной автономией, и именно она передаёт работу Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — Минимальный ресурс контейнера выводится из `module_map`: каждый модуль объявляет свой, а Infra поднимает с суммой</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra наследует сеть, объявленную Arquiteto</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Локальный runner: выполнение на машине пользователя через канал Phoenix с одноразовым тикетом</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) для runner, ограниченный по построению одним маршрутом</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Распространение `@brabo/runner` через `tsup` и `npm publish`, версия внедряется только в CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Автономный бинарник `@brabo/runner` через `bun build --compile`, со встроенным нативным аддоном `.node` через реальное извлечение во временный каталог</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Настройка runner через браузер: ключ устройства Ed25519 как вторая учётная запись `runner-ticket`, прокси GitHub Releases для бинарника и File System Access API для папки, настраиваемой одним кликом</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker становится реальным предусловием режима `runner`</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — Один локальный агент, возможности, объявляемые при подключении</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — Согласованная база в runner и создание папки через канал</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — Ключ устройства машины</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — Автономный бинарник runner перестаёт обещать Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — Автономный бинарник runner перестаёт обещать Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — Git с учётными данными выполняется на ХОСТЕ runner; код выполняется в контейнере</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — Отзыв нацелен на КЛЮЧ, а не на пару `{проект, пользователь}`</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — Поток runner через браузер выводится из употребления, путь — установщик</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Собственная аутентификация: argon2id, EdDSA и ротация refresh</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — Отказ от Keycloak: собственный эмитент, service token и сессия в cookie</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — CORS, которого не было у engine, и порт как часть контракта</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Учётные данные всегда зашифрованы; проверка становится явным действием</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — Закрытый CSP в api и область проекта, удержанная в корне</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — У ключа, подписывающего `state` git OAuth, нет значения по умолчанию</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Социальный вход (GitHub/GitLab), пересматривающий backlog ADR 0031/0032</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — Настоящий SMTP в `MailSender`, за явным переключателем</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Два потолка понижения в `project_members`, а перекрытие остаётся</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — Потолок самопонижения также при удалении участника проекта</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — Потолок самоперемещения в upsert workspace и самоповышение, которое было брешью</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — Id мастер-ключа, записанный в конверте, как наблюдаемость и никогда как полномочие</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — Удаление участника workspace рождается, защищённое тем же условием</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Валюта дашборда: пока USD, ручной курс по workspace отложен</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Живой каталог, жизненный цикл модели и проверяемая цена</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Шесть providers LLM поверх базы, и Фаза 9b наконец закрыта</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Курирование моделей по workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Доказанные грани capability; &quot;для чего годится&quot; — это курирование</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Две аудитории для одного и того же расхода: счёт owner и потребление участника</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Область как уровень каскада модели и глобальный binding агента</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings в контракте LLMProvider</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` снова становится измерением расходов, а сдерживание переходит к типу</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Рейтинг моделей по возможностям, без выдуманной оценки</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Бюджет по области АДДИТИВЕН, рядом с проектом/сессией — не каскад и не новая таблица</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Обнаружение нативного Ollama в dev bootstrap: спросить один раз, сохранить в `.env`, поставить сервисы compose за profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull модели из Hugging Face: собственная таблица, подтверждение в два шага и allowlist официальных издателей — никогда `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — Предпочтение маршрутизации живёт в binding модели, путешествует вместе с ним и замораживается в metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — Реальная стоимость, которую возвращает provider, становится числом metering</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — О семантическом дубликате истории и правила предупреждает embedding с порогом, а расход попадает в metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Таблица chunks: вектор и `tsvector` в одной строке</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Гибридный поиск: веса, порог и что такое цитата</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: собственная вкладка гибридного поиска, без переименования &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j как граф знаний и шаблоны prompt, драйвер в api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` для агентов и модели Ollama, гарантированные при загрузке</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Реляционная память как проекция event log; шаблоны потребляются без трогания GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Локальная папка, приложенная через браузер, становится `chunks.scope = 'local'`, читаемым БРАУЗЕРОМ, никогда путём хоста</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — Телеметрия поиска RAG — это ТАБЛИЦА, с весами, замороженными в строке</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set попаданий RAG и gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — Golden-set RAG начинает работать в CI, по расписанию — и остаётся `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Артефакты агентов, спроецированные в файлы, в папку `docs/`</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — Anamnese снова включена: не работает без субъекта, а принятая гипотеза становится фактом профиля</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — Контракт между модулями становится версионируемым артефактом Arquiteto, и dev agent читает его вместо чужого worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Отклонение агента, которое наблюдает Anamnese, становится сигналом продукта, без персональных данных</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Экраны аутентификации, верные дизайну, и три шрифта, которые не загружались</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — Поверхность чтения кода, ограниченная и с бюджетом</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Достижимая тема и загрузка под CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Рамка экрана, и реестр вкладок намеренно расходится с handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Прямое чтение схемы engine для &quot;N агентов онлайн&quot; на дашборде</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (и будущие типы) генерируются из контракта OpenAPI, а не копируются вручную</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx`, разделённый на пять механических PR, объявленных заранее</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Группировка состояния канала хода, извлечённая в `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` разделён на файл на раздел, за barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — Страница проекта навигируется вертикальной рейкой, а вкладка Código перестаёт сама сворачивать sidebar</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` меньше 1 000 строк, за десять механических PR, а замок — только после</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — Тёмная тема становится нейтрально-чёрной, и долг контраста заканчивается</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Анимация текста с `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Одна навигация: боковая панель поглощает рельс проекта</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Фаза 5 (сессия 1): production-образы, compose.prod, CI и smoke-тест</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Фаза 5 (сессия 2): деплой в Kubernetes с Kustomize, метрика очереди и локальный overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Фаза 5 (сессия 3): graceful shutdown, OpenTelemetry, метрики, логи и дашборды</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, усиление api, открытая поверхность и релиз</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace без коллектора и путь между слоями в логе</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Наблюдаемость в локальном Compose: метрики и журналы, без трассировки</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — Установщик одной строкой, с выбранным источником и маркером</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Резервное копирование и восстановление томов для compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: триггер, который упоминают десять документов и не создаёт ни один</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — Первая учётная запись рождается в терминале, а локальный агент поднимается сопряжённым</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — Compose установщика едет вместе с ним, как подписанный asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — Экран предлагает только тот режим, который выполняет установка, а у установки через Release нет broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — Broker становится пятым опубликованным образом, а установщик СПРАШИВАЕТ, включать ли его</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — Назначением S3 локального overlay перестаёт быть MinIO и становится SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — Dev-compose становится `brabo-dev`, и dev отказывается подниматься рядом с установкой</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — Engine переходит на Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint и валидация генерируемого конвейера CI</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Образы, публикуемые в GHCR с каждым финальным тегом, и production overlay, закреплённый по digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — Браузерный E2E против продакшен-compose, в пакете вне workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — Схема, разделённая по доменным агрегатам, за barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Повторяющийся timeout `pnpm audit` — принятый риск; находка по-прежнему отклоняет</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Подпись опубликованных артефактов</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Сторонний образ входит по digest, и lint проваливает того, кто забудет</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — Релиз сканирует Trivy то, что публикует, по digest, до подписи</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — Тег стороннего образа живёт ВНУТРИ ссылки, перед digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — Образ workflows берётся из compose, и Dependabot для образов включается</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Непрерывная синхронизация документации</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — Справочник API выводится из кода, а табличный тест требует метаданных</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Документация, публикуемая по ступеням, в подкаталоге Pages</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Симметричная публикация по ступеням и корень, который предлагает выбор</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — Публикуемый путь называет окружение, а не ветку</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` получает собственный lockfile, вне `pnpm audit` продукта</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — Индекс ADR по темам, с темой вне ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — Справочник API становится страницей Redoc</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Четыре языка, с pt-BR как ИСТОЧНИКОМ и языком по умолчанию: документация и интерфейс на португальском, английском, русском и упрощённом китайском</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Каждый ADR называется «ADR NNNN — заголовок»</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — Справочник входит в перевод</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — Страница API переводится по каталогу</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 Правила</h2><ul><li><a href="../business-rules.html">Бизнес-правила</a></li><li><a href="../business-rules/custo.html">Стоимость и metering</a></li><li><a href="../business-rules/autenticacao.html">Аутентификация</a></li><li><a href="../business-rules/api.html">API</a></li><li><a href="../business-rules/broker.html">Broker</a></li><li><a href="../business-rules/ci.html">CI</a></li><li><a href="../business-rules/contracts.html">Contratos</a></li><li><a href="../business-rules/engine.html">Engine</a></li><li><a href="../business-rules/infra.html" aria-current="page">Infra</a></li><li><a href="../business-rules/produto.html">Produto</a></li><li><a href="../business-rules/runner.html">Runner</a></li><li><a href="../business-rules/web.html">Web</a></li></ul></section><section><h2>📖 Справочник</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Открытая поверхность api</a></li><li><span>Справочник API</span></li></ul></section><section><h2>💡 Пояснения</h2><ul><li><span>Процесс и конвейер</span><ul><li><a href="../explanation/documentation-workflow.html">Синхронизация документации</a></li><li><a href="../explanation/branching-policy.html">Политика веток</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">Цепочка поставок CI</a></li><li><a href="../explanation/gates.html">Gates и то, как они измеряются</a></li><li><a href="../explanation/observability.html">Наблюдаемость</a></li><li><a href="../explanation/modelo-de-time.html">Модель команды и поток результатов</a></li></ul></li><li><span>Проверки и измерения</span><ul><li><a href="../explanation/primeiro-dogfooding.html">Первый dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Реальное выполнение (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Находки реального прогона конвейера</a></li><li><a href="../explanation/validacao-fase-12.html">Проверка Фазы 12</a></li><li><a href="../explanation/validacao-real.html">Реальная валидация (13b)</a></li><li><a href="../explanation/aceite-providers.html">Приёмка providers</a></li><li><a href="../explanation/medicao-do-idioma.html">Измерение эвристики языка</a></li><li><a href="../explanation/medicao-do-jev.html">Измерение маршрутизатора инструментов Jev</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Аудит: fluxo.yml × код (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Визуальный аудит до и после Rodada 29</a></li></ul></li><li><span>История фаз</span><ul><li><a href="../explanation/historico-de-fases.html">История фаз</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">ФАЗА 28 — папка пользователя</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — установка одной строкой</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — локальный агент машины</a></li><li><a href="../explanation/backlog.html">Backlog после триажа</a></li></ul></li><li><span>Локализация</span><ul><li><a href="../explanation/localizacao.html">Локализация</a></li><li><a href="../explanation/localizacao-en.html">Локализация — английский (en)</a></li><li><a href="../explanation/localizacao-ru.html">Локализация — русский (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Локализация — упрощённый китайский (zh-Hans)</a></li></ul></li><li><span>Технические заметки</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — не принят</a></li></ul></li></ul></section><section><h2>🛠️ Эксплуатация</h2><ul><li><a href="../runbook.html">Руководство по эксплуатации</a></li></ul></section><section><h2>📚 Словарь</h2><ul><li><a href="../glossary.html">Глоссарий</a></li></ul></section><section><h2>🤝 Участие</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Как внести вклад</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Где попросить помощи</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Сообщить об уязвимости</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="infra">Infra</h1>
+<h3 id="rn-224">RN-224 — Миграция сама создаёт расширение pgvector, идемпотентно</h3>
+<p>Миграция <code>0045</code> выполняет <code>CREATE EXTENSION IF NOT EXISTS vector</code> до создания
+таблицы, вместо того чтобы предполагать, что <code>docker/postgres/init.sql</code> уже
+отработал, — этот файл выполняется только при ПЕРВОЙ инициализации тома
+Postgres, и в окружении со старым томом расширения может не быть.
+<code>IF NOT EXISTS</code> идемпотентен: локальное окружение (где расширение уже было
+установлено) и новое проходят через одну и ту же строку без разницы в
+поведении.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/api/src/db/migrations/0045_shallow_randall.sql</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">0079</a></li>
+</ul>
+<h2 id="роль-dbre-становится-двумя-механическими-скриптами-rn-400403-adr-0093">Роль <code>dbre</code> становится двумя механическими скриптами (RN-400..403, ADR 0093)</h2>
+<h3 id="rn-402">RN-402 — Отчёт о бэкапе перечитывает ровно логику <code>collectBackup()</code>, никогда второй способ вычисления</h3>
+<p><code>relatorio-backup.ts</code> — не новый gauge Prometheus, а ТО ЖЕ чтение
+<code>backup_runs</code>, которое уже делает <code>DomainGaugesCollector.collectBackup()</code>
+(последний УСПЕХ — для возраста и размера; ПОСЛЕДНЕЕ выполнение — чтобы
+поймать случай, когда он уже несколько дней сбоит при наличии более старого
+хорошего бэкапа), по запросу. <code>avaliarBackup</code> чиста — получает две строки и
+текущий момент, возвращает <code>status</code>
+(<code>ok</code>|<code>atrasado</code>|<code>nunca_houve</code>|<code>falha_recente_com_sucesso_antigo</code>). Порог
+&quot;просрочен&quot; (26 ч = <code>BACKUP_AGE_ATRASADO_SEGUNDOS</code>) ТОТ ЖЕ, что у алерта
+<code>brabo-backup-atrasado</code>
+(<code>deploy/k8s/observability/alerts/brabo-alerts.yaml</code>), продублирован (не
+импортирован — YAML Grafana не читается процессом Node) и может разойтись,
+если одна сторона изменится без другой.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/api/scripts/relatorio-backup.ts</code> (<code>avaliarBackup</code>, строка
+82; <code>BACKUP_AGE_ATRASADO_SEGUNDOS</code>, строка 54)</li>
+<li><strong>Тест:</strong> <code>apps/api/test/scripts/relatorio-backup.spec.ts</code> — бэкапа не
+было никогда, бэкап в порядке, просрочен, ровно на пороге (не считается
+просроченным), недавний сбой при старом успехе, просрочка имеет приоритет
+над недавним сбоем, возраст никогда не отрицателен</li>
+<li><strong>ADR:</strong> <a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">0093</a></li>
+</ul>
+<h3 id="rn-403">RN-403 — Отчёт о бэкапе НЕ выполняет восстановление повторно; он указывает на уже проверенную процедуру</h3>
+<p>Процедура реального восстановления (<code>make test-restore</code> /
+<code>deploy/k8s/test-restore.sh</code>) уже выполнялась и задокументирована в
+<code>docs/runbook.md#restore</code>, с реальным RTO (~40 с против базы ~108 КБ),
+записанным в разделе &quot;Последнее проверенное выполнение&quot; того документа.
+<code>relatorio-backup.ts</code> отвечает на более узкий и более частый вопрос — &quot;тот
+бэкап, который использовало бы это восстановление, сейчас здоров?&quot; — и
+ссылается на runbook для того, кому действительно нужно восстановить,
+вместо того чтобы дублировать процедуру или выполнять её повторно.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/api/scripts/relatorio-backup.ts</code> (итоговое сообщение
+<code>imprimir</code>, ссылающееся на <code>docs/runbook.md#restore</code>)</li>
+<li><strong>Тест:</strong> неприменимо (это статический текст, указывающий на runbook, а не
+логика); существование проверенной процедуры — это RN самого
+<code>docs/runbook.md#restore</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">0093</a></li>
+</ul>
+<hr>
+<h2 id="n-агентов-онлайн-на-дашборде--статус-в-реальном-времени-никогда-историческое-присутствие-rn-409-adr-0097">&quot;N агентов онлайн&quot; на дашборде — статус В РЕАЛЬНОМ ВРЕМЕНИ, никогда историческое присутствие (RN-409, ADR 0097)</h2>
+<h3 id="rn-413">RN-413 — Шаблоны промптов живут вне кода, версионируемые в графе</h3>
+<p>До этой поставки каждый промпт агента был встроенным heredoc на Elixir —
+идентичности (<code>Engine.Harness.Agents</code>), kickoff у PO/Arquiteto/Dev
+Lead/UX/Infra, промпт суммаризации <code>ContextManager</code>. Шаблон промпта теперь
+может жить как <code>(:PromptTemplate {name})-[:HAS_VERSION]-&gt; (:PromptVersion {version, body, hash, active})</code> в Neo4j, записываемый через
+<code>POST /internal/graph/prompt-templates</code> и читаемый через <code>GET /internal/graph/prompt-templates/:name</code>. Upsert идемпотентен по хэшу —
+двойная запись ОДНОГО И ТОГО ЖЕ содержимого не создаёт новую версию,
+возвращается только уже существующая версия с тем же хэшем.</p>
+<p>Первая партия извлечена в <code>prompts/*.md</code> (front-matter <code>name</code>/<code>version</code>,
+плейсхолдеры задокументированы в разделе &quot;Variáveis&quot; для фрагментов, которые
+в исходном <code>.ex</code> были интерполяцией): <code>ux-designer-identity</code>,
+<code>psychologist-kickoff</code>, <code>anamnese-kickoff</code>, <code>context-manager-summarize</code>.
+<code>scripts/dev/seed-prompts.ts</code> читает <code>prompts/*.md</code>, вычисляет sha256-хэш тела
+и отправляет его на эндпоинт выше. <strong>Ни один <code>.ex</code> в этой поставке не
+редактировался</strong> — четыре GenServer по-прежнему содержат встроенный текст;
+потребление шаблонов из графа (источник <code>:graph</code> у <code>InstructionFiles</code>,
+приоритет <code>db &gt; graph &gt; dir &gt; root</code>) — следующая Волна, объявленная вне
+этого.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/api/src/application/use-cases/graph/upsert-prompt-template.use-case.ts</code>,
+<code>get-prompt-template.use-case.ts</code>; <code>apps/api/src/interfaces/http/internal/internal-graph.controller.ts</code>;
+<code>prompts/*.md</code>, <code>prompts/README.md</code>; <code>scripts/dev/seed-prompts.ts</code>
+(<code>SECAO_DE_DOCUMENTACAO</code>, <code>corpoSemDocumentacao</code>, <code>parseFrontMatter</code>)</li>
+<li><strong>Тест:</strong> сценарии использования с замоканным <code>GraphStore</code> (upsert с тем
+же хэшем не дублирует) + интеграционный тест против реального Neo4j,
+корректно пропускаемый при недоступности; <code>scripts/dev/seed-prompts.spec.ts</code>
+(разбор front-matter, детерминированный хэш, некорректный шаблон
+проваливается с понятным сообщением; и начиная с AT-244 — обход ВСЕХ
+<code>prompts/*.md</code>: засеянное тело не содержит раздела документации, каждый
+плейсхолдер встречается в нём ровно один раз, а суммаризатор получает ходы
+ровно один раз тем же render, что у engine)</li>
+</ul>
+<blockquote>
+<p><strong>Начиная с AT-244</strong> раздел &quot;## Variáveis&quot; каждого файла НЕ засевается: тело
+шаблона заканчивается на строке <code>## Variáveis</code>, и сидер отбрасывает всё с
+неё и далее. Раньше тело несло весь раздел — документацию, цитирующую те же
+<code>{{placeholders}}</code>, что и тело, — и поскольку каждый потребитель заменяет
+ВСЕ вхождения (<code>String.replace/3</code>), при включённом <code>graph_templates_enabled?</code>
+модель получала документацию и данные ДВАЖДЫ: суммаризатор <code>ContextManager</code>
+— ходы вдвойне, kickoff Psicólogo и Anamnese — журнал событий вдвойне, а
+идентичность UX (за <code>graph_instruction_templates_enabled?</code>) — документацию в
+каждом ходе. Форма была у всех четырёх файлов; разрез живёт в СИДЕРЕ, а не в
+render, потому что render у каждого потребителя свой, а вопрос &quot;что есть
+тело&quot; — о файле, который читает только сидер. Версии повышены
+(<code>anamnese-kickoff</code> и <code>ux-designer-identity</code> до <code>&quot;2&quot;</code>,
+<code>psychologist-kickoff</code> и <code>context-manager-summarize</code> до <code>&quot;3&quot;</code>) с ТЕМ ЖЕ
+текстом промпта. <strong>Само по себе не закрывается в уже засеянной
+установке</strong>: АКТИВНАЯ версия в графе остаётся старой, с документацией, пока
+<code>scripts/dev/seed-prompts.ts</code> не будет запущен снова — хэш тела изменился,
+поэтому сидер создаёт новую версию и деактивирует предыдущую. При
+выключенных флагах (по умолчанию) дефекта никогда не было: действует
+встроенный текст, у которого этого раздела никогда не было.</p>
+</blockquote>
+<ul>
+<li><strong>Источник:</strong> решение владельца продукта, вдохновлённое репозиторием
+<a href="https://github.com/ErickWendel/neo4j-ai-experiments">ErickWendel/neo4j-ai-experiments</a>
+(см. <a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099</a>)</li>
+</ul>
+<hr>
+<h3 id="rn-415">RN-415 — Модели Ollama гарантированы при загрузке, деградация RAG объявлена</h3>
+<p><code>nomic-embed-text</code> (<code>RAG_EMBEDDING_MODEL</code>) никогда не подтягивался
+автоматически — реальный баг, не только этой функции: entrypoint сервиса
+<code>ollama</code> подтягивал только <code>llama3.2:1b</code>, и RAG в любом чистом окружении
+МОЛЧА деградировал до только-лексики, без какого-либо признака того, что это
+происходит. Новый сервис <code>ollama-model-loader</code> (одноразовый,
+<code>docker-compose.yml</code> dev и prod), читающий <code>OLLAMA_REQUIRED_MODELS</code> (по
+умолчанию <code>gemma3:1b,yi-coder:1.5b,nomic-embed-text</code>), добавочный к
+существующему сервису <code>ollama</code> — его entrypoint остаётся нетронутым.</p>
+<p>Деградация перестала быть молчаливой: <code>rag_search</code> (RN-414) и гибридный поиск
+api уже возвращали <code>degraded: true</code>, когда эмбеддинг сбоил, — не хватало
+ПОТРЕБИТЕЛЯ, который сделал бы этот флаг видимым. Теперь, когда инструмент
+существует, сама модель видит предупреждение в отформатированном тексте, а
+model-loader снижает вероятность деградации изначально.</p>
+<ul>
+<li><strong>Где:</strong> <code>docker/docker-compose.yml</code>, <code>docker/docker-compose.prod.yml</code>,
+<code>docker/ollama/pull-models.sh</code>; <code>deploy/k8s/base/neo4j/</code>,
+<code>deploy/k8s/base/ollama/job-model-loader.yaml</code> (шаблон, НЕ подключённый ни
+к одной kustomization — в <code>deploy/k8s/</code> ещё нет Service <code>ollama</code>, на
+который можно указать, и подключение сегодня вызвало бы CrashLoopBackOff
+при каждом реальном деплое)</li>
+<li><strong>Тест:</strong> <code>scripts/dev/verificar-modelos-ollama.sh</code>, выполненный сквозным
+образом с реальной маленькой моделью (<code>all-minilm</code>), чтобы не платить
+стоимость в несколько ГБ из продакшен-списка на общей машине</li>
+<li><strong>Источник:</strong> находка при закладке графа знаний — см.
+<a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100</a></li>
+</ul>
+<hr>
+<h2 id="терминал-локального-runner-навсегда-застрявший-в-открытие-терминала-rn-433">Терминал локального runner, навсегда застрявший в &quot;Открытие терминала...&quot; (RN-433)</h2>
+<p>Найдено при тестировании нового проекта в режиме <code>runner</code> (ADR 0103/0104) и
+открытии Code → Dev → Терминал: экран никогда не выходил из скелета загрузки,
+а консоль показывала <code>socket do terminal com erro</code>/<code>socket do terminal fechado</code> в цикле, с растущей задержкой до стабилизации на ~5-6 с — паттерн
+backoff ПО УМОЛЧАНИЮ у <code>phoenix.js</code>.</p>
+<h3 id="rn-433">RN-433 — Сокет терминала сдаётся после таймаута, значение по умолчанию <code>ENGINE_PUBLIC_URL</code> достижимо ИЗ БРАУЗЕРА, а эндпоинт не дублирует путь</h3>
+<p>Три наложенных дефекта. Первые два найдены при расследовании симптома;
+ТРЕТИЙ проявился только после исправления первых двух — без них браузер
+никогда не достигал engine, чтобы обнаружить баг пути под ними. Исправление
+лишь одного оставляет остальные в силе:</p>
+<ol>
+<li>У <code>ENGINE_PUBLIC_URL</code> (RN-419) никогда не было никакого значения по
+умолчанию в <code>docker/docker-compose.yml</code> — только <code>ENGINE_URL</code>
+(<code>http://engine:4000</code>, имя хоста, которое разрешается ТОЛЬКО внутри сети
+Compose). Запасной вариант кода (<code>process.env.ENGINE_PUBLIC_URL ?? process.env.ENGINE_URL ?? …</code>, <code>request-runner-ticket.use-case.ts</code>) молча
+падал в неверное значение, и браузер пытался открыть WebSocket к имени
+хоста, которое он никогда не разрешит. <code>docker/docker-compose.yml</code> получил
+<code>ENGINE_PUBLIC_URL: ${ENGINE_PUBLIC_URL:-http://localhost:4000}</code> в
+сервисе <code>api</code> — ТО ЖЕ значение по умолчанию, что <code>VITE_ENGINE_URL</code> уже
+использует в сервисе <code>web</code>, по той же причине.</li>
+<li>Даже с правильным URL у транспорта, который НИКОГДА не открывается
+(engine не работает, firewall, неверная будущая перенастройка), не было
+никакого потолка: <code>apps/web/src/lib/terminal-channel.ts</code> никогда не
+передавал <code>reconnectAfterMs</code> в <code>Socket</code>, поэтому <code>phoenix.js</code> падал в свой
+backoff ПО УМОЛЧАНИЮ и пытался переподключаться сам вечно — сам докблок
+модуля уже объявлял намерение &quot;без автоматического переподключения&quot; (та
+же линейка, что у <code>session-channel.ts</code>/RN-108), но на практике оно
+никогда не выполнялось. Без <code>onError</code>/<code>onClose</code>, вызывающих
+<code>handlers.onErro</code>, <code>TerminalPanel</code> застревал в <code>'carregando'</code> (RN-088 —
+каждый экран различает загрузку/ошибку/пустоту — молча нарушена).
+Исправлено через <code>reconnectAfterMs</code>, возвращающий значение, которое
+практически никогда не срабатывает (24 ч, тот же паттерн, что у
+<code>session-channel.ts</code>), и СОБСТВЕННЫЙ таймаут 8 с
+(<code>TIMEOUT_CONEXAO_MS</code>): если <code>onOpen</code> не сработает раньше, модуль
+вызывает <code>handlers.onErro</code> с практичным сообщением и отключается.</li>
+<li><strong>Дефект, который реально мешал подключению, замаскированный двумя
+вышеописанными</strong>: <code>terminal-channel.ts</code> добавлял <code>'/runner/websocket'</code> к
+<code>engineWsUrl</code>, который api уже возвращает ГОТОВЫМ — <code>ws://host:порт/runner</code>
+(<code>engineWsUrlPublico()</code>), — а САМ <code>Socket</code> у <code>phoenix.js</code> ещё и добавляет
+<code>/websocket</code> сам в конструкторе
+(<code>this.endPoint = ${endPoint}/websocket</code>). Результат приходил в engine
+как <code>GET /runner/runner/websocket/websocket</code>, который
+<code>Phoenix.Router.NoRouteError</code> отклоняет, — подтверждено в журнале engine
+(<code>docker logs brabo-engine-1</code>) при сквозной проверке этого исправления.
+<code>apps/runner/src/channel.ts</code> (сторона CLI) уже делал правильно — передаёт
+<code>engineWsUrl</code> прямо в <code>Socket</code>, не трогая, — а тест <code>terminal-channel.ts</code>
+этого не ловил, потому что мок <code>getTerminalTicket</code> использовал
+<code>engineWsUrl</code> (<code>http://engine.local</code>, без <code>/runner</code>), не отражающий
+реальный контракт api; исправлено заодно. Исправление:
+<code>terminal-channel.ts</code> начинает использовать <code>engineWsUrl</code> (только с
+защитным <code>.replace(/^http/, 'ws')</code>) напрямую, не добавляя никакого пути.</li>
+</ol>
+<p>Проверено СКВОЗНЫМ образом против <code>exp001</code> (режим <code>runner</code>, без
+подключённого реального <code>brabo-runner</code>): до исправления вкладка крутилась
+вечно; после — журнал engine показывает <code>CONNECTED TO EngineWeb.RunnerSocket</code>
+→ <code>JOINED terminal:&lt;projectId&gt;</code> → <code>pty_resize descartado — sem runner conectado</code>, а экран показывает <code>RunnerOnboardingPanel</code> с командой
+<code>brabo-runner</code> меньше чем за 1 с — никогда не 8-секундный таймаут из пункта
+2, который остаётся страховочной сетью на случай, если engine действительно
+недоступен.</p>
+<ul>
+<li><strong>Где:</strong> <code>docker/docker-compose.yml</code>, <code>.env.example</code>,
+<code>apps/web/src/lib/terminal-channel.ts</code></li>
+<li><strong>Тест:</strong> <code>apps/web/src/lib/terminal-channel.test.ts</code> (сокет, который
+никогда не открывается, вызывает <code>onErro</code> в пределах таймаута, без
+автоматического переподключения phoenix; <code>engineWsUrl</code> мока исправлен,
+чтобы отражать реальный контракт — уже с <code>/runner</code>, без <code>/websocket</code>, — а
+утверждение счастливого пути теперь требует, чтобы URL, используемый в
+<code>Socket</code>, был РАВЕН <code>engineWsUrl</code> ticket, без конкатенации)</li>
+<li><strong>ADR:</strong> нет — исправление бага, восстанавливающее поведение, которое ADR
+0103/0104 и сам докблок модуля уже объявляли намерением</li>
+<li><strong>Источник:</strong> найдено при ручном тестировании нового проекта в режиме
+<code>runner</code>; пункт 3 проявился только при сквозной проверке исправления
+пунктов 1/2 в браузере против реального engine</li>
+</ul>
+<hr>
+<h2 id="нативный-ollama-в-dev-bootstrap-и-pull-модели-hugging-face-rn-461463-adr-01140115">Нативный Ollama в dev-bootstrap и pull модели Hugging Face (RN-461..463, ADR 0114/0115)</h2>
+<h3 id="rn-461">RN-461 — Нативный Ollama: спрашивает один раз, ответ сохраняется в <code>.env</code>, никогда не спрашивает снова</h3>
+<p><code>scripts/dev/preflight.mjs</code> обнаруживает нативный Ollama, уже слушающий
+<code>OLLAMA_PORT</code> (то же значение по умолчанию, 11434, что у нативной
+установки), подтверждая по HTTP (<code>GET /api/tags</code>), что это действительно
+Ollama, а не любой процесс на порту. После подтверждения он ОДИН раз
+СПРАШИВАЕТ, использовать ли этот экземпляр, — по умолчанию &quot;Да&quot;, когда нет
+TTY (<code>bootstrap.sh</code> намеренно запускает команду со stdin из <code>/dev/null</code>,
+чтобы не отбирать у пользователя стрелки), — и записывает ответ в <code>.env</code>
+(<code>OLLAMA_MODE=host|container</code>). С этого момента обнаружение даже не
+выполняется снова: при уже присутствующем <code>OLLAMA_MODE</code> функция возвращается
+рано. <code>ollama</code>/<code>ollama-model-loader</code> входят в <code>profiles: [&quot;local-llm&quot;]</code> в compose, чтобы не подниматься, когда режим <code>host</code>.
+ЕДИНСТВЕННЫЙ способ заново открыть вопрос — отдельный пункт меню &quot;Docker ›
+Перенастроить Ollama&quot;, который стирает записанные ключи, — никогда не
+самопроизвольный вопрос снова, пока они существуют.</p>
+<ul>
+<li><strong>Где:</strong> <code>scripts/dev/env-file.mjs:41</code> (<code>escreverEnv</code>),
+<code>scripts/dev/preflight.mjs:157</code> (<code>ehOllama</code>),
+<code>scripts/dev/preflight.mjs:202</code> (<code>perguntarUsoDoOllama</code>),
+<code>scripts/dev/preflight.mjs:238</code> (<code>detectarOllamaNativo</code>),
+<code>scripts/dev/reconfigurar-ollama.sh</code>, <code>scripts/dev/perfil-ollama.sh</code>,
+<code>docker/docker-compose.yml:82,119</code> (<code>profiles: [&quot;local-llm&quot;]</code>)</li>
+<li><strong>Тест:</strong> <code>scripts/dev/bootstrap.spec.ts</code> (покрывает связку меню —
+условный профиль в Deploy › All/Create и отдельный пункт &quot;Перенастроить
+Ollama&quot;). Сама логика обнаружения/сохранения
+(<code>detectarOllamaNativo</code>/<code>escreverEnv</code>) была проверена сквозным образом
+вручную против фиктивного HTTP-сервера и против реального Ollama этой
+машины (см. ADR 0114) — <strong>объявленный пробел</strong>: собственного
+автоматизированного набора для <code>preflight.mjs</code> сегодня нет.</li>
+<li><strong>ADR:</strong> <a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">0114</a></li>
+<li><strong>Источник:</strong> просьба владельца продукта, реальная находка во время
+выполнения (конфликт порта с нативным Ollama)</li>
+</ul>
+<h2 id="согласие-на-базу-на-хосте-rn-511">Согласие на базу, на хосте (RN-511)</h2>
+<h3 id="rn-511">RN-511 — Базу СОГЛАСОВЫВАЮТ один раз на хосте, общий доступ доказывается МОНТИРОВАНИЕМ, а без терминала шаг сообщает, а не соглашается</h3>
+<p><a href="api.html#rn-500">RN-500</a> построила базу и сказала, что делать, когда её нет, —
+<code>projectsBase: null</code>, и режим &quot;Смонтированная папка&quot; не предлагается. Не
+хватало того, кто <strong>попросил</strong> бы её настроить: в продукте этого не делало
+ничто, и в результате готовый режим оказался недостижим для тех, кто
+устанавливает.</p>
+<p>Шаг согласия живёт в <code>pnpm bootstrap</code> (<code>Docker › Base de projetos</code>), предлагает <strong><code>$HOME/projetos-brabo</code></strong> и принимает другой введённый
+путь. Имя — не предпочтение: <code>.env.example</code> уже использует <code>~/brabo-projetos</code>
+как пример <code>PROJECT_WORKSPACES_HOST_DIR</code>, корня, которым управляет ПРОДУКТ, и
+предложение одного и того же имени для двух переменных было бы шагом внутрь
+коллизии, которую отверг ADR 0141, — <code>&lt;base&gt;/loja</code> попал бы в ту же физическую
+папку, что проект <code>container</code>, чей <code>workspace_dir_name</code> тоже <code>loja</code>, и
+bootstrap сделал бы <code>git init</code> внутри чужого проекта.</p>
+<p><strong>Имя — лишь уклонение; защита — механизм.</strong> <code>validarBase</code> отклоняет любого
+кандидата, пересекающегося — в ОБОИХ направлениях — с checkout Brabo (защита,
+которая уже была у RN-500) <strong>или</strong> с <code>PROJECT_WORKSPACES_HOST_DIR</code> (новое
+правило), а также отклоняет <code>~</code>, относительный путь и корень. Отказ действует
+для ВВЕДЁННОГО пути, а не только для значения по умолчанию; хорошо выбранное
+значение по умолчанию лишь избавляет пользователя от того, чтобы отказ был
+первым, что он видит.</p>
+<p><strong>Общий доступ Docker Desktop доказывается МОНТИРОВАНИЕМ, никогда не чтением
+<code>settings.json</code>.</strong> Этот файл не задокументирован, меняется между версиями и
+между macOS и Windows и описывает то, что пользователь НАСТРОИЛ, а не то, что
+сделает демон. Это та же линейка &quot;capability объявляется только тогда, когда
+доказана выполнением&quot; из ADR 0041/0042, применённая к хосту. Доказательство —
+<strong>сторожевой файл</strong>, а не сухой <code>ls</code>: пустая папка и папка без общего доступа
+дают одинаковый пустой листинг, поэтому скрипт пишет файл и спрашивает, видит
+ли его контейнер. Только в macOS и Windows (<code>process.platform</code>); в Linux нет
+списка общего доступа, и проверка — существование и запись. Это ВТОРАЯ
+платформенная защита продукта, симметричная первой
+(<code>validarDirDentroDoHomeNoLinux</code>, в runner): каждая ограничивает лишь там, где
+ограничение что-то значит.</p>
+<p>У доказательства <strong>три исхода, и они не схлопываются</strong>: доказано; провалено
+(переменная <strong>не</strong> записывается, а отказ называет путь и где его добавить); и
+<em>не удалось доказать</em> — нет локального образа Docker для монтирования, — что
+записывает переменную и <strong>громко говорит, что доказательство не
+выполнялось</strong>, с командой, чтобы выполнить его позже. &quot;Не смог посмотреть&quot;,
+ставшее &quot;всё в порядке&quot;, — ровно то, как база без общего доступа дошла бы до
+пользователя в виде контейнера, поднимающегося с пустой папкой, вдали от
+экрана, где был сделан выбор.</p>
+<p><strong>Без TTY шаг СООБЩАЕТ и ничего не делает.</strong> Пункт меню <code>bootstrap.sh</code>
+выполняется со stdin из <code>/dev/null</code> — намеренно, иначе всё, что читает stdin,
+отбирает у пользователя стрелки, — поэтому оттуда скрипт может только
+сообщить, а вывод называет команду, которая спрашивает. Это тот же дизайн,
+что у <code>perguntarUsoDoOllama</code>, который без терминала применяет значение по
+умолчанию и предупреждает, а не зависает. Скрипт согласия, который
+&quot;соглашается&quot; сам в CI-конвейере, — отрицание самого слова. По той же причине
+<code>preflight.mjs</code> <strong>сообщает</strong> состояние базы и никогда не спрашивает: ответ — это
+путь на чьём-то диске, и не существует значения по умолчанию, которое можно
+применить молча.</p>
+<p><code>mkdir -p</code> происходит только <strong>после</strong> согласия и проверки — создавать папку
+по пути, ещё не прошедшему отказы, значит создавать папку где угодно, куда
+дотягивается процесс. А уже присутствующее значение никогда не
+перезаписывается без подтверждения.</p>
+<ul>
+<li><strong>Где:</strong> <code>scripts/dev/consentir-base.mjs</code> (I/O: спросить, доказать,
+создать, записать); <code>scripts/dev/base-de-projetos.mjs:143</code> (<code>basePadrao</code>),
+<code>:177</code> (<code>validarBase</code>) и <code>:208</code> (<code>exigeProvaDeCompartilhamento</code>) — чистое
+решение; <code>scripts/dev/env-file.mjs</code> (<code>lerEnv</code>/<code>escreverEnv</code>, извлечённые из
+<code>preflight.mjs</code>, который выполняет <code>await main()</code> на верхнем уровне и
+поэтому не может быть импортирован); <code>scripts/dev/bootstrap.sh</code> (пункт
+<code>1.6</code>); <code>scripts/dev/preflight.mjs</code> (<code>relatarBaseDeProjetos</code>)</li>
+<li><strong>Тест:</strong> <code>scripts/dev/base-de-projetos.spec.ts</code> (<code>describe('basePadrao')</code>,
+<code>describe('validarBase')</code> — счастливый путь и шесть отказов — и
+<code>describe('exigeProvaDeCompartilhamento')</code>); <code>scripts/dev/bootstrap.spec.ts</code>
+(дерево меню, 25 листьев)</li>
+<li><strong>ADR:</strong> <a href="../adr/0146-base-consentida-no-bootstrap.html">0146</a></li>
+<li><strong>Источник:</strong> ФАЗА 28, сессия 2</li>
+</ul>
+<hr>
+<h2 id="брокер-по-умолчанию-поднимается-в-локальном-compose-rn-512">Брокер по умолчанию поднимается в локальном compose (RN-512)</h2>
+<h3 id="rn-512">RN-512 — Брокер выходит из <code>profiles</code> в ЛОКАЛЬНОМ compose и только в нём, а <code>DOCKER_GID</code> начинает сообщаться в preflight</h3>
+<p>Брокер родился под <code>profiles: [&quot;container-broker&quot;]</code> с обоснованием, которое
+написал сам ADR 0130: <em>&quot;дать доступ к Docker хоста процессу, который ещё
+ничто не вызывает, было бы изменением позиции для каждой машины разработки
+взамен ни на что&quot;</em>. Обе половины умерли. <strong>&quot;Ничто его не вызывает&quot; — ложь</strong>
+начиная с ADR 0133/0134/0136 — у брокера четыре реальных вызывающих. А
+<strong>&quot;взамен ни на что&quot; перестало описывать обмен</strong>, когда ADR 0144 заставил
+<code>mounted</code> поднимать контейнер ЧЕРЕЗ БРОКЕР, а ADR 0146 сделал <code>mounted</code>
+локальным значением по умолчанию: с выключенным профилем режим по умолчанию
+заканчивается <code>BrokerIndisponivelError</code>.</p>
+<p>Поэтому он выходит из <code>profiles</code> в <code>docker/docker-compose.yml</code> — и <strong>только
+там</strong>. В <code>docker/docker-compose.prod.yml</code> профиль ОСТАЁТСЯ, и два файла
+начинают намеренно расходиться.</p>
+<p><strong>Асимметрия — в том, что означает сокет на каждой стороне.</strong> Тот, кто
+запускает <code>pnpm dev</code>, <strong>уже имеет сокет Docker</strong> — он запускает
+<code>docker compose</code> против демона собственного хоста, — поэтому получение его
+брокером не даёт ничего, чего у оператора уже нет. Предельная поверхность —
+HTTP самого брокера, который не публикует порт, живёт в сети <code>internal: true</code>,
+достижимой только api, и сравнивает <code>BRABO_SERVICE_TOKEN</code> за постоянное время.
+В продакшене расчёт противоположный: сокет — настоящая граница привилегий,
+оператор — не разработчик, и ничто в этой фазе не меняет режим по умолчанию
+продакшен-установки.</p>
+<p><strong>Пять слоёв сдерживания не затрагиваются.</strong> Это меняет то, <strong>когда</strong>
+работает брокер, никогда то, <strong>что</strong> он принимает: он по-прежнему получает
+<code>projectId</code> и одну из пяти операций, по-прежнему идёт в api читать решение
+Arquiteto и по-прежнему не имеет никакого параметра, куда можно записать
+<code>privileged</code>, <code>cap_add</code>, <code>network: host</code> или свободный <code>-v</code>. Сдерживанием
+никогда не был профиль.</p>
+<p><strong>Следствие для окружения и почему оно получило сообщение.</strong> <code>DOCKER_GID</code>
+перестаёт иметь значение только для того, кто намеренно включал профиль, —
+человека, который по определению обращал на него внимание, — и начинает
+действовать для любого, кто запускает <code>pnpm dev</code>. Сокет на хосте —
+<code>root:docker</code>, а процесс брокера работает не от root; <code>group_add</code> в compose
+даёт ему группу, а значение по умолчанию <code>999</code> самое распространённое и
+неверно в нескольких дистрибутивах. Ошибка <strong>не ломает загрузку</strong> — брокер
+поднимается нормально, — она ломает ИСПОЛЬЗОВАНИЕ: каждая операция умирает с
+<code>permission denied</code> на сокете, а симптом появляется гораздо позже, когда
+кто-то предлагает <code>container_start</code>. Поэтому <code>preflight.mjs</code> начинает
+<strong>сообщать</strong> состояние при каждом <code>pnpm dev</code>.</p>
+<p>У сообщения <strong>три исхода, и они не схлопываются</strong>: совпадает; расходится (с
+источником действующего значения — <code>configurado</code> × <code>default</code>, — потому что
+оба требуют разных инструкций); и <strong>неприменимо</strong>, когда на машине нет группы
+<code>docker</code>. Третий — не ошибка и не &quot;не смог&quot;: в macOS и Windows Docker Desktop
+не использует unix-группу, а в rootless Docker сокет принадлежит самому
+пользователю. Считать отсутствие расхождением значило бы обвинить половину
+машин в дефекте, которого у них нет, — та же осторожность, что у
+<code>baseSobrepoeOCheckout</code>, возвращающего <code>false</code> для неизвестного checkout. И он
+<strong>сообщает, никогда не блокирует</strong>: <code>pnpm dev</code> поднимается так же.</p>
+<p><strong>Выйти из <code>profiles</code> было недостаточно, и дефект проявился лишь при первом
+подъёме по умолчанию.</strong> Образ разработки готовил pnpm через <code>corepack</code> от
+<strong>root</strong> при сборке и работал как uid 1000, который не читает этот кэш; без
+кэша corepack пытается <strong>скачать</strong> pnpm при старте, а единственная сеть
+брокера — <code>internal: true</code>, — попытка умирала с <code>getaddrinfo EAI_AGAIN registry.npmjs.org</code>, и контейнер выходил с 1 через пять секунд после
+подъёма. У сервиса также не было healthcheck, поэтому <code>up --wait</code> печатал
+<code>Healthy</code>, а полный сброс объявлял &quot;сброс завершён&quot; с мёртвым процессом. Пока
+сервис был под профилем, это не проявлялось: включал его тот, кто уже
+смотрел. Исправление <strong>убирает реестр с пути выполнения</strong> — <code>pnpm install</code>
+переезжает в шаг СБОРКИ, а <code>COREPACK_HOME</code> переходит в каталог, принадлежащий
+uid выполнения, — и <strong>не открывает сеть</strong>, которая является первым из пяти
+слоёв выше. Поскольку три <code>node_modules</code> — именованные тома, смонтированные
+поверх того, что установил образ, а Docker засевает только <strong>пустой</strong> том,
+<code>docker/broker/entrypoint.sh</code> согласует все три с копией, хранящейся вне
+<code>/workspace</code>, помеченной sha256 <code>pnpm-lock.yaml</code> сборки, — той же меткой,
+которая при сравнении с lockfile дерева предупреждает, что образ устарел, не
+отказываясь подниматься. Продакшен-compose от этого не страдал:
+<code>Dockerfile.prod</code> уже устанавливал на этапе сборки, удалял <code>corepack</code> из
+итогового образа и уже имел <code>HEALTHCHECK</code>. Начиная с AT-360 ни один образ не
+использует <code>corepack</code> (Node 25+ его не включает): pnpm устанавливается из
+tarball реестра, сверенного с sha512, записанным в Dockerfile, в
+<code>/usr/local/bin</code>, а <code>COREPACK_HOME</code> удалён из dev-брокера — при версии, равной
+<code>packageManager</code>, нет ни кэша для чтения, ни загрузки для попытки при старте
+(измерено под <code>--network none</code>).</p>
+<ul>
+<li><strong>Где:</strong> <code>docker/docker-compose.yml</code> (сервис <code>broker</code>, без <code>profiles</code>, с
+<code>healthcheck</code>) и <code>docker/docker-compose.prod.yml</code> (с <code>profiles</code> и примечанием,
+не дающим унифицировать два файла); <code>docker/broker/Dockerfile</code> (pnpm,
+закреплённый по sha512, <code>pnpm install</code> при сборке и копия в
+<code>/opt/broker-deps</code>); <code>docker/broker/entrypoint.sh</code> (согласование трёх томов и
+предупреждение о lockfile); <code>scripts/dev/docker-gid.mjs</code> (<code>avaliarDockerGid</code>,
+<code>mensagemDoDockerGid</code>, <code>GID_PADRAO_DO_COMPOSE</code> — чистое решение);
+<code>scripts/dev/preflight.mjs</code> (<code>relatarDockerGid</code>, <code>gidDoGrupoDocker</code>)</li>
+<li><strong>Тест:</strong> <code>scripts/dev/docker-gid.spec.ts</code> — счастливый путь, два
+расхождения (отсутствующее значение по умолчанию и неверное значение),
+&quot;неприменимо&quot; без группы docker и значение по умолчанию, которое случайно
+ПОПАДАЕТ</li>
+<li><strong>ADR:</strong> <a href="../adr/0146-base-consentida-no-bootstrap.html">0146</a>, пункт 3</li>
+<li><strong>Источник:</strong> ФАЗА 28, сессия 4</li>
+</ul>
+<hr>
+<h2 id="fase-29--a-instalação-de-uma-linha-assinar-o-que-se-publica">ФАЗА 29 — установка одной строкой: подписывать то, что публикуется</h2>
+<h3 id="rn-527">RN-527 — Установка поднимается из СОБСТВЕННОГО compose, по выбранному образу, и проверяет здоровье, прежде чем сказать, что установила</h3>
+<blockquote>
+<p><strong>Пересмотрено <a href="produto.html#rn-575">RN-575</a> (ADR 0162):</strong> сервис <code>broker</code> появился в
+этом compose, выключенный под profile <code>container-broker</code> и включаемый
+установщиком только с согласием; обязательных образов ПЯТЬ. Остальное в этом
+правиле действует как есть.</p>
+</blockquote>
+<p><code>docker/docker-compose.install.yml</code> — то, что работает на машине того, кто
+установил, и это <strong>не</strong> <code>docker-compose.prod.yml</code>. Три различия, у каждого своя
+причина:</p>
+<ul>
+<li>пять образов берутся из <strong>обязательной переменной</strong> (<code>${BRABO_API_IMAGE:?…}</code>),
+без значения по умолчанию. Со значением по умолчанию отсутствующая
+переменная подняла бы половину стека с образом, который никто не выбирал, а
+ошибка проявилась бы как странное поведение, а не как отказ;</li>
+<li><strong>блока <code>build:</code> нет</strong> нигде: этот файл не собирает, и в этом его смысл;</li>
+<li>сервиса <strong><code>broker</code> здесь нет</strong>, потому что его образ не публикуется
+(<code>docker-bake.hcl</code> имеет четыре цели). Заявленное следствие: с
+<code>--source=ghcr</code> проект <code>mounted</code> не поднимает контейнер (ADR 0150, решение 7).</li>
+</ul>
+<p><code>docker-compose.prod.yml</code> остаётся <strong>нетронутым</strong> — он объявляет себя compose
+<strong>проверки</strong>, его использует <code>docker/smoke.sh</code>, намеренно собирая локально, и
+его продвижение сломало бы это использование. Цена двух файлов заявлена, а
+потолок против расхождения <strong>механический</strong>:
+<code>scripts/dev/composes-em-conformidade.spec.ts</code> падает, если compose установки
+получит сервис, том или порт, которого нет в compose проверки, если уцелеет
+какой-либо <code>build:</code> или если образ третьей стороны ослабится до другого тега.</p>
+<p><strong>Источник образа — выбор, а «официальный» — результат проверки.</strong>
+<code>--source=ghcr</code> (по умолчанию) разрешает по <strong>digest</strong> из <code>images.json</code>
+Release; <code>--source=local</code> запускает <code>docker buildx bake</code> и <strong>требует чистого
+дерева на теге</strong> — образ, собранный из грязного дерева, не является версией,
+которой себя называет, и маркер записал бы ложь.</p>
+<p><strong>Секреты рождаются один раз и сохраняются.</strong> Пять из
+<a href="api.html#rn-114">RN-114</a> плюс <code>NEO4J_PASSWORD</code>, генерируемые
+<code>openssl rand</code> по тому же образцу, что <code>docker/smoke.sh:31-57</code>, — включая
+деталь, что <code>NEO4J_PASSWORD</code> — <code>-hex</code>, а не <code>-base64</code>, потому что <code>/</code> ломает
+разбор <code>NEO4J_AUTH</code>. <code>.env</code> создаётся <strong>пустым и с режимом 600 ДО</strong> получения
+содержимого: создать с umask пользователя и ужесточить потом значило бы
+оставить секреты читаемыми на какое-то окно, а это именно тот файл, у которого
+такого окна быть не может.
+<strong>А <code>.env</code> — файл, который разбирает COMPOSE, и доказывается он против него</strong>
+(AT-083). <code>SECRET_KEY_BASE</code> выходил из <code>openssl rand -base64 64</code>, который
+ПЕРЕНОСИТ строку на 64 символах: 88 символов секрета шли в две строки, и вторая
+висела в <code>.env</code> сама по себе. Измерено на 100 генерациях: Compose отклонил 49
+(<em>&quot;unexpected character in variable name&quot;</em>) и ПРИНЯЛ 51 — с секретом,
+обрезанным до 64 символов, что всё ещё минимум Phoenix, поэтому поднималось без
+предупреждения. Весь base64 теперь проходит через <code>segredo_base64</code>
+(<code>| tr -d '\n'</code>), а файл пишется <code>escrever_env</code> — функцией, а не телом <code>main</code>,
+чтобы spec записывал ТОТ ЖЕ файл, что и установка.</p>
+<p><strong>Шага migrate нет, и не должно быть:</strong> compose связывает <code>api</code> →
+<code>migrate-api</code> через <code>service_completed_successfully</code>, и <code>up --wait</code> ждёт.
+Второе место, командующее миграцией, было бы вторым источником той же истины.</p>
+<p><strong>И установщик спрашивает, прежде чем утверждать.</strong> После <code>up --wait</code> — который
+уже ждёт healthcheck — он стучится в <code>/health</code> api и engine и только тогда
+говорит, что установил. Это правило, которое <code>reset-total.sh</code> выучил дорогой
+ценой: он объявлял «reset completo» с api в <code>Exited (1)</code>.</p>
+<p><strong>Где:</strong> <code>install.sh</code> (корень), <code>docker/docker-compose.install.yml</code>.
+<strong>Тест:</strong> <code>scripts/dev/install.spec.ts</code> (план, без TTY и без эффекта) и
+<code>scripts/dev/composes-em-conformidade.spec.ts</code> (расхождение между двумя
+compose); <code>scripts/dev/install-env.spec.ts</code> генерирует секреты и <code>.env</code>
+настоящими функциями, пропускает файл через <code>docker compose config</code> против
+compose установки и требует, чтобы КАЖДЫЙ секрет дошёл до сервисов ЦЕЛИКОМ
+(пропускается с названной причиной без <code>docker compose</code>), со старой генерацией,
+зафиксированной как отклонённая.
+<strong>Источник:</strong> ФАЗА 29, сессия 4 (<a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150</a>).
+Установка runner (сессия 7) и миграция предыдущей установки (сессия 6)
+остаются вне, и <code>--print-plan</code> объявляет их <code>nao-nesta-versao</code>.</p>
+<h2 id="o-backup-cobre-os-dois-volumes-que-são-fonte-de-verdade-e-roda-sem-cluster-rn-528">Резервная копия покрывает ОБА тома, являющихся источником истины, и работает без кластера (RN-528)</h2>
+<h3 id="rn-528">RN-528 — <code>git_local_repos</code> входит в резервную копию, назначением может быть диск, а restore для compose переиспользует ТЕ ЖЕ три проверки</h3>
+<p>Резервная копия покрывала <strong>одну</strong> базу и работала в <strong>одном</strong> месте. Три
+следствия, и третье стоит кода: <code>make test-restore</code> требует <code>kubectl</code>, кластер
+и CronJob <code>brabo-backup</code> в namespace, а в <code>docker-compose.prod.yml</code> не было
+никакого сервиса <code>backup</code> — образ собирался bake и использовался только в k8s.
+У миграции установки на compose не было <strong>доказанного</strong> пути.</p>
+<p><strong>Классифицировать до копирования.</strong> Лёгким ходом было бы «сделать резервную
+копию всех томов», и он неверен: из семи <code>neo4j_data</code> и <code>project_workspaces</code> —
+ПРОИЗВОДНЫЕ, <code>ollama_data</code> можно получить заново, а <code>brabo_projects_base</code>
+принадлежит пользователю. Их копирование создаёт впечатление покрытия, не
+добавляя восстановления. Источников истины ДВА: <code>pgdata</code> — который уже
+копировался, как логический дамп и никогда как копия каталога данных
+работающего Postgres, — и <strong><code>git_local_repos</code></strong>, который <strong>не покрывала ни одна
+резервная копия</strong>. Проект с провайдером <code>local</code> хранит там <em>bare</em>-репозиторий,
+и он НЕ восстанавливается из Postgres: event log хранит повествование, а не
+объекты git. Проза runbook утверждала обратное («the real repositories live in
+GitHub/GitLab»), и именно эта фраза объясняет, как том годами оставался без
+покрытия, — она верна для <code>github</code>/<code>gitlab</code>, а для <code>local</code> никакого upstream
+нет.</p>
+<p><strong>Гарантия архива репозиториев заявлена, и она меньше, чем «snapshot».</strong> Ничто
+не quiesced. Гарантируется согласованность ПО ССЫЛКЕ — git записывает объекты
+до перемещения ref и меняет ref атомарным rename, так что <code>tar</code>, пересекающий
+<code>git push</code>, получает старое или новое значение, никогда половину. НЕ
+гарантируются глобальный момент (<code>tar</code> обходит дерево в течение периода) и
+связность объектов (в образе намеренно нет git). А параллельный <code>gc</code>, удаляющий
+packfile, становится СБОЕМ, а не частичным архивом: статус <code>tar</code> записывается в
+файл, потому что в POSIX <code>sh</code> статус конвейера — это статус последней команды,
+— без этого неполный архив объявлял бы себя хорошим, а лгущая резервная копия
+хуже падающей, потому что только вторая становится тревогой. <code>*.lock</code>
+исключается: восстановление осиротевшего lock даёт репозиторий, в котором
+любой <code>git</code> отказывается работать.</p>
+<p><strong>Назначение на диске, S3 по желанию.</strong> Пять переменных S3 перестают быть
+обязательными и становятся тем, чем уже были на практике, — настройкой ОДНОГО
+из назначений. Заданная <code>BACKUP_DIR</code> выбирает диск; отсутствующая — S3, и
+именно так CronJob в k8s продолжает работать без единой строки изменений.
+Вывод (вместо обязательной переменной назначения) и сохраняет тот путь
+нетронутым: явное назначение сломало бы CronJob в день деплоя, а не в день
+коммита. Четыре префикса, а не два (<code>daily/</code>, <code>weekly/</code>, <code>git-daily/</code>,
+<code>git-weekly/</code>), потому что хранение — по КОЛИЧЕСТВУ: два типа архивов под одним
+префиксом сделали бы «хранить 7» означающим три с половиной резервные копии.</p>
+<p><strong>Restore для compose меняет оболочку, никогда суждение.</strong>
+<code>test-restore-compose.sh</code> запускает НАСТОЯЩУЮ резервную копию тем же образом и
+той же командой, что в продакшене, и вызывает ТОТ ЖЕ <code>brabo-restore</code> с ТЕМИ ЖЕ
+тремя проверками (список таблиц против источника, количество в критичных в окне
+резервной копии, плотная непрерывность <code>seq</code> в <code>session_events</code>).
+<code>deploy/k8s/test-restore.sh</code> остаётся <strong>нетронутым</strong> — их объединение заставило
+бы путь compose зависеть от <code>kubectl</code>, а это зависимость, отсутствие которой —
+смысл его существования. И <code>restore.sh</code> по-прежнему не трогает ИСХОДНУЮ базу —
+свойство, не обсуждаемое ради удобства миграции. Шаг, который может требовать
+только compose, — третий: проверить архив репозиториев, потому что в k8s этот
+том даже не монтируется в pod (пропуск верен), а под compose монтируется
+(пропуск был бы ложно-зелёным).</p>
+<p><strong>Восстановление репозиториев — команда-БРАТ, а не фаза другой</strong> — это два
+артефакта с двумя суждениями, и их объединение заставило бы сбой git провалить
+проверку event log. По умолчанию она проверяет и пишет только с <code>--restaurar</code>;
+отказывается распаковывать поверх существующих репозиториев (смесь двух
+состояний не поднимает никакой ошибки и проявляется только в <code>fetch</code> с
+неправильной историей); и — находка реального прогона — отказывает ДО <code>tar</code>,
+когда том не принимает запись, называя <code>--user 0:0</code>. <code>git_local_repos</code> делят
+три образа с разными uid, и у него владелец того, кто смонтировал его первым
+(измерено: <code>1000:1000</code>, режим 0755), тогда как этот образ работает как uid 70.
+Когда распаковка идёт от root, извлечённое возвращается владельцу КАТАЛОГА и
+никогда не остаётся root: иначе том вернулся бы целым и бесполезным, а api и
+engine не смогли бы писать в только что восстановленное.</p>
+<p><strong>Neo4j получает перепроекцию, а не резервную копию.</strong> Восстановление,
+возможно, устаревшей проекции рядом с Postgres, восстановленным на другой
+момент, даёт два производных состояния из разных моментов без ничего, что их
+согласует. Перепроекция <strong>здесь не построена</strong> (это BRB-018): пока её нет,
+мигрированная установка рождается с ПУСТЫМ графом — известная и названная
+деградация, а не потеря данных, потому что RAG живёт в pgvector и приходит в
+дампе. С <a href="api.html#rn-569">RN-569</a> она существует (<code>grafo:reprojetar</code>), и пустой граф
+длится, пока кто-нибудь её не запустит.</p>
+<ul>
+<li><strong>Где:</strong> <code>docker/backup/lib.sh:28</code> (<code>destino_tipo</code>, вывод, сохраняющий
+CronJob нетронутым), <code>:65</code> (<code>destino_esperar</code>, спрашивающий о ЗАПИСИ, а не о
+существовании), <code>:105</code> (<code>destino_enviar</code>, запись в <code>.parcial</code> и rename),
+<code>:181</code> (гарантия bare-репозиториев, записанная рядом с порождающим её кодом),
+<code>:221</code> (<code>git_arquivar</code>, статус <code>tar</code> в файле), <code>:259</code>
+(<code>git_restaurar</code>, возврат владельца) и <code>:273</code> (<code>git_raiz_gravavel</code>);
+<code>docker/backup/backup.sh:31</code> (<code>destino_preparar</code> — пять переменных S3
+перестают быть обязательными), <code>:149</code> (три итога тома репозиториев без
+слияния «не смонтирован» с «пуст»), <code>:170</code> (проверка статуса <code>tar</code>) и <code>:220</code>
+(очистка четырёх префиксов);
+<code>docker/backup/restore.sh:28</code> (то же назначение, что у резервной копии) и
+<code>:120</code>, <code>:184</code>, <code>:215</code> (три проверки и вердикт, без единой строки изменений);
+<code>docker/backup/restore-git.sh:43</code> (проверка по умолчанию), <code>:109</code> (отказ
+распаковывать поверх) и <code>:123</code> (отказ по записи с названным исправлением);
+<code>docker/backup/test-restore-compose.sh:60</code> (<code>--profile</code> в <code>config</code>, а не в
+<code>run</code>);
+<code>docker/docker-compose.prod.yml:392</code> (сервис <code>backup</code> под <code>profiles</code> и
+<code>restart: &quot;no&quot;</code>) и <code>:550</code> (том, который НЕ входит в классификацию семи);
+<code>docker/backup/Dockerfile.prod:80</code> (<code>/backups</code>, созданный и <code>chown</code>-нутый ДО
+<code>USER</code>);
+<code>Makefile:54</code> (<code>test-restore-compose</code>)</li>
+<li><strong>Тест:</strong> <code>scripts/ci/backup-lib.spec.ts</code> — функции в настоящем <code>sh</code> против
+настоящего каталога: пять операций дискового назначения; отсутствующий
+объект размером 0; атомарная запись и <code>.parcial</code>, игнорируемый листингом;
+соседние префиксы, не смешивающиеся; существующее назначение, НЕ принимающее
+запись (случай сбоя); «не смонтирован» × «смонтирован и пуст»; архив
+репозиториев со статусом 0 и перечитанным содержимым; <code>*.lock</code> и
+<code>objects/tmp_*</code> исключены; цикл архивировать→восстановить, возвращающий байт
+в байт; отказ восстанавливать туда, где нельзя писать; и обрезанный tar,
+падающий при ЧТЕНИИ, никогда по размеру</li>
+<li><strong>ADR:</strong> <a href="../adr/0152-backup-de-volumes-contra-compose.html">0152</a></li>
+<li><strong>Источник:</strong> ФАЗА 29, сессия 5. Реально проверено против dev compose с
+реальными данными (55 таблиц, 422 события, bare-репозитории <code>exp001</code> и
+<code>exp004</code>), включая восстановление в новый том, проверенное <code>git fsck</code>, —
+запись в <code>docs/runbook.md</code>, раздел «Last verified run — compose, disk
+destination». Заявлено и НЕ сделано: путь <strong>S3</strong> адаптера не имеет
+автоматизированного покрытия (потребовался бы endpoint) и остаётся той же
+командой <code>aws</code>, что и раньше; перепроекция Neo4j — это BRB-018; и ничто здесь
+не планирует резервную копию в compose — запускает её человек или установщик
+(сессия 6)</li>
+</ul>
+<hr>
+<h2 id="fase-29--a-instalação-de-uma-linha-assinar-o-que-se-publica">ФАЗА 29 — установка одной строкой: подписывать то, что публикуется</h2>
+<h3 id="rn-530">RN-530 — Миграция требует ДОКАЗАННОЙ резервной копии: установщик получает право удалять только после восстановления</h3>
+<p>Установка поверх существующей установки <strong>не предлагается</strong>: либо миграция,
+либо остановка. <code>up</code> поверх томов другой версии — тот вид ущерба, который не
+предупреждает.</p>
+<p>У миграции есть порядок, и смысл ему придаёт средний шаг:
+<strong>резервная копия → ДОКАЗАТЬ, что восстанавливается → спросить → удалить →
+установить → восстановить.</strong></p>
+<p>Доказательство — не перестраховка. Резервная копия, которую никто не пытался
+восстановить, — это просто файл, и узнавать это нужно не после <code>down -v</code> —
+поэтому установщик запускает <code>docker/backup/test-restore-compose.sh</code> (ТЕ ЖЕ три
+проверки <code>restore.sh</code>, ADR 0152) до любого удаления. Упавшая резервная копия
+или упавшее доказательство <strong>прерывают миграцию, ничего не удаляя</strong>, а
+сообщение говорит, где осталась резервная копия.</p>
+<p><strong>Назначение резервной копии — папка ХОСТА</strong>, и в этой детали разница между
+миграцией и потерей: по умолчанию в compose — именованный том <code>backup_local</code>,
+который <code>down -v</code> удалил бы <strong>вместе</strong> с тем, что нужно сохранить.</p>
+<p><strong>Что миграция удаляет</strong>: именованные тома установки (включая <code>pgdata</code>),
+контейнеры и сеть. <strong>Что она никогда не удаляет</strong>: базу проектов — когда
+<code>BRABO_PROJECTS_BASE</code> указывает на папку хоста, строка compose — это
+<strong>bind-mount</strong>, а <code>down -v</code> bind не трогает, — папку зеркала (RN-516) и только
+что доказанную резервную копию.</p>
+<p>Дамп Postgres <strong>не</strong> восстанавливается автоматически поверх новой базы:
+<code>brabo-restore</code> проверяет на тестовой базе и никогда не перезаписывает источник
+(ADR 0152), а восстановление поверх уже заполненной базы — разрушительная
+операция, которую установщик сам не выполняет. Локальные git-репозитории —
+да: они источник истины, который родился бы пустым.</p>
+<p><strong>Где:</strong> <code>install.sh</code>, <code>migrar_instalacao_anterior</code> и <code>restaurar_apos_migrar</code>.
+<strong>Тест:</strong> <code>scripts/dev/install.spec.ts</code> — план объявляет
+<code>apagar-sem-backup-provado: nunca</code>, а тест проверяет, что вызов доказательства
+идёт в коде <strong>до</strong> вызова удаления.
+<strong>Источник:</strong> ФАЗА 29, сессия 6 (<a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150</a>,
+<a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152</a>).</p>
+<h2 id="o-repositório-nasce-no-aceite-do-handoff-ao-arquiteto-e-a-execução-não-começa-sem-ele-rn-582">Репозиторий рождается при принятии handoff к Arquiteto, а выполнение без него не начинается (RN-582)</h2>
+<h3 id="rn-599">RN-599 — В dev compose api находит брокер сама, а отсутствие управляемой папки называется при каждом подъёме</h3>
+<p>Брокер поднимается по умолчанию в dev compose с <a href="#rn-512">RN-512</a>, но api
+получала пустой <code>BROKER_URL</code> (<code>${BROKER_URL:-}</code>, а строка в <code>.env.example</code> была
+закомментирована). Результат, измеренный в тесте владельца 26.09: при брокере,
+работающем рядом, <code>brokerConfigurado</code> приходил <code>false</code>, и создание проекта
+разрешало только <code>runner</code> (<a href="api.html#rn-573">RN-573</a>). Два правила закрывают это:</p>
+<ol>
+<li><strong>У <code>BROKER_URL</code> есть значение по умолчанию в dev compose, и только в нём.</strong>
+Значение по умолчанию — <code>http://broker:8090</code> — сервис и порт (<code>BROKER_PORT</code>),
+которые объявляет ТОТ ЖЕ файл, и тест закрепляет их вместе: значение,
+указывающее в другое место, сменило бы «нет брокера» на «брокер
+недостижим». Значение из <code>.env</code> по-прежнему побеждает. Compose ПРОДАКШЕНА и
+УСТАНОВКИ остаются с <code>${BROKER_URL:-}</code> намеренно: там брокер под
+<code>profiles: [&quot;container-broker&quot;]</code>, и URL записывает тот, кто его включает
+(<code>install.sh</code>, спрашивая, — <a href="produto.html#rn-575">RN-575</a>). Значение по умолчанию там
+заставило бы api установки без брокера утверждать, что он есть.</li>
+<li><strong><code>preflight.mjs</code> СООБЩАЕТ об управляемой папке, по образцу <code>DOCKER_GID</code>.</strong>
+Без <code>PROJECT_WORKSPACES_HOST_DIR</code> api и engine используют управляемый том
+<code>project_workspaces</code> (без пути хоста), брокер остаётся без
+<code>PROJECT_WORKSPACES_HOST_ROOT</code> — dev compose ВЫВОДИТ её из той, — стек
+поднимается здоровым, а <code>container_start</code> режима <code>container</code>, режима по
+умолчанию, заканчивается отказом. У отчёта четыре итога, которые не
+сливаются: <code>ausente</code>, <code>ok</code>, <code>nao-absoluta</code> (<code>~</code>: Compose раскрывает его в
+источнике bind-mount api/engine, но НЕ в переменной, которую получает
+брокер, — измерено через <code>docker compose config</code>) и <code>divergente</code> (явная
+<code>PROJECT_WORKSPACES_HOST_ROOT</code>, отличная от папки, которую монтируют api и
+engine, включая случай, когда они монтируют том). Каждое сообщение говорит
+симптом и исправление. Он НИКОГДА не отклоняет подъём и НИКОГДА не пишет
+<code>.env</code>: ответ — путь на чьём-то диске, а замена тома папкой прячет то, что
+уже в томе (данные остаются там, лишь перестают быть видны), — сообщение
+говорит и это.</li>
+</ol>
+<p><strong>Что остаётся открытым:</strong> <code>pnpm bootstrap</code> НЕ предлагает папку. Это было бы
+вторым <code>consentir-base.mjs</code> (спросить в TTY, создать папку с нужным владельцем,
+записать ОБЕ переменные вместе, решить, что делать с томом
+<code>project_workspaces</code>, в котором уже есть данные), а это отдельный фронт.</p>
+<ul>
+<li><strong>Код:</strong> <code>docker/docker-compose.yml:266</code> (значение по умолчанию
+<code>BROKER_URL</code>), <code>:571</code> (вывод <code>PROJECT_WORKSPACES_HOST_ROOT</code>);
+<code>scripts/dev/pasta-gerenciada.mjs:63</code> (<code>avaliarPastaGerenciada</code>), <code>:89</code>
+(<code>mensagemDaPastaGerenciada</code>); <code>scripts/dev/preflight.mjs:424</code>
+(<code>relatarPastaGerenciada</code>)</li>
+<li><strong>Тест:</strong> <code>scripts/dev/broker-url-no-dev.spec.ts:42</code> (значение по умолчанию
+существует), <code>:47</code> (указывает на сервис и порт файла), <code>:64</code> (продакшн и
+установка без значения по умолчанию); <code>scripts/dev/pasta-gerenciada.spec.ts:31</code>
+(отсутствует), <code>:51</code> (<code>~</code>), <code>:67</code> (расходится с томом), <code>:75</code> (сообщение
+говорит симптом, исправление и то, что не мигрирует), <code>:113</code> (preflight
+вызывает отчёт, не выходя из-за него)</li>
+<li><strong>Источник:</strong> AT-213 — тест владельца 2026-09-26</li>
+</ul>
+<nav class="site-pager"><a href="../business-rules/engine.html"></a><a href="../business-rules/produto.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/deploy/docs/business-rules/infra.md">Редактировать страницу</a><span>Обновлено 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>На этой странице</h2><ul><li class="n3"><a href="#rn-224">RN-224 — Миграция сама создаёт расширение pgvector, идемпотентно</a></li><li class="n2"><a href="#роль-dbre-становится-двумя-механическими-скриптами-rn-400403-adr-0093">Роль dbre становится двумя механическими скриптами (RN-400..403, ADR 0093)</a></li><li class="n3"><a href="#rn-402">RN-402 — Отчёт о бэкапе перечитывает ровно логику collectBackup(), никогда второй способ вычисления</a></li><li class="n3"><a href="#rn-403">RN-403 — Отчёт о бэкапе НЕ выполняет восстановление повторно; он указывает на уже проверенную процедуру</a></li><li class="n2"><a href="#n-агентов-онлайн-на-дашборде--статус-в-реальном-времени-никогда-историческое-присутствие-rn-409-adr-0097">&quot;N агентов онлайн&quot; на дашборде — статус В РЕАЛЬНОМ ВРЕМЕНИ, никогда историческое присутствие (RN-409, ADR 0097)</a></li><li class="n3"><a href="#rn-413">RN-413 — Шаблоны промптов живут вне кода, версионируемые в графе</a></li><li class="n3"><a href="#rn-415">RN-415 — Модели Ollama гарантированы при загрузке, деградация RAG объявлена</a></li><li class="n2"><a href="#терминал-локального-runner-навсегда-застрявший-в-открытие-терминала-rn-433">Терминал локального runner, навсегда застрявший в &quot;Открытие терминала...&quot; (RN-433)</a></li><li class="n3"><a href="#rn-433">RN-433 — Сокет терминала сдаётся после таймаута, значение по умолчанию ENGINE_PUBLIC_URL достижимо ИЗ БРАУЗЕРА, а эндпоинт не дублирует путь</a></li><li class="n2"><a href="#нативный-ollama-в-dev-bootstrap-и-pull-модели-hugging-face-rn-461463-adr-01140115">Нативный Ollama в dev-bootstrap и pull модели Hugging Face (RN-461..463, ADR 0114/0115)</a></li><li class="n3"><a href="#rn-461">RN-461 — Нативный Ollama: спрашивает один раз, ответ сохраняется в .env, никогда не спрашивает снова</a></li><li class="n2"><a href="#согласие-на-базу-на-хосте-rn-511">Согласие на базу, на хосте (RN-511)</a></li><li class="n3"><a href="#rn-511">RN-511 — Базу СОГЛАСОВЫВАЮТ один раз на хосте, общий доступ доказывается МОНТИРОВАНИЕМ, а без терминала шаг сообщает, а не соглашается</a></li><li class="n2"><a href="#брокер-по-умолчанию-поднимается-в-локальном-compose-rn-512">Брокер по умолчанию поднимается в локальном compose (RN-512)</a></li><li class="n3"><a href="#rn-512">RN-512 — Брокер выходит из profiles в ЛОКАЛЬНОМ compose и только в нём, а DOCKER_GID начинает сообщаться в preflight</a></li><li class="n2"><a href="#fase-29--a-instalação-de-uma-linha-assinar-o-que-se-publica">ФАЗА 29 — установка одной строкой: подписывать то, что публикуется</a></li><li class="n3"><a href="#rn-527">RN-527 — Установка поднимается из СОБСТВЕННОГО compose, по выбранному образу, и проверяет здоровье, прежде чем сказать, что установила</a></li><li class="n2"><a href="#o-backup-cobre-os-dois-volumes-que-são-fonte-de-verdade-e-roda-sem-cluster-rn-528">Резервная копия покрывает ОБА тома, являющихся источником истины, и работает без кластера (RN-528)</a></li><li class="n3"><a href="#rn-528">RN-528 — git_local_repos входит в резервную копию, назначением может быть диск, а restore для compose переиспользует ТЕ ЖЕ три проверки</a></li><li class="n2"><a href="#fase-29--a-instalação-de-uma-linha-assinar-o-que-se-publica">ФАЗА 29 — установка одной строкой: подписывать то, что публикуется</a></li><li class="n3"><a href="#rn-530">RN-530 — Миграция требует ДОКАЗАННОЙ резервной копии: установщик получает право удалять только после восстановления</a></li><li class="n2"><a href="#o-repositório-nasce-no-aceite-do-handoff-ao-arquiteto-e-a-execução-não-começa-sem-ele-rn-582">Репозиторий рождается при принятии handoff к Arquiteto, а выполнение без него не начинается (RN-582)</a></li><li class="n3"><a href="#rn-599">RN-599 — В dev compose api находит брокер сама, а отсутствие управляемой папки называется при каждом подъёме</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-ru.json" data-base="../"></script></body>
+</html>

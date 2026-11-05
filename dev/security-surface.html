@@ -21,7 +21,7 @@
 <button type="button" data-tema-alternar aria-label="Alternar tema">&#9680;</button>
 </header>
 <div class="site-corpo">
-<nav class="site-side" aria-label="docs"><section><h2>🚀 Comece aqui</h2><ul><li><a href="index.html">Introdução</a></li><li><a href="getting-started.html">Primeiros passos</a></li><li><a href="tutorials/from-zero-to-deliverable.html">Do zero a um entregável</a></li><li><a href="tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Arquitetura</h2><ul><li><a href="architecture.html">Arquitetura</a></li><li><a href="adr.html">Decisões (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="adr/0001-git-provider-contract-shape.html">ADR 0001 — Formato do contrato normalizado do GitProvider</a></li><li><a href="adr/0002-git-error-normalization.html">ADR 0002 — Normalização de erros do GitProvider</a></li><li><a href="adr/0003-git-provider-retry-policy.html">ADR 0003 — Política de retry para providers remotos</a></li><li><a href="adr/0004-git-credential-registration.html">ADR 0004 — Cadastro de credenciais de git do usuário</a></li><li><a href="adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Bootstrap de Gitflow idempotente e retomável</a></li><li><a href="adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação</a></li><li><a href="adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Política de branches mecanizada</a></li><li><a href="adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Adoção de repositório existente, e o plano como portão</a></li><li><a href="adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — O engine trabalha em repositório remoto</a></li><li><a href="adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`</a></li><li><a href="adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele</a></li><li><a href="adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste</a></li><li><a href="adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness de agentes: montagem determinística de contexto</a></li><li><a href="adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)</a></li><li><a href="adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — O tipo da sessão é dado da criação, e a execução continua sendo evento</a></li><li><a href="adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Limites de transporte e janela efetiva de compactação coerentes</a></li><li><a href="adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal</a></li><li><a href="adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — O Infra Lead conversa pelo composer, e antes o turno dele passa pelo `TurnoAssincrono`</a></li><li><a href="adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — O idioma das respostas mora em três lugares — conta, sessão e projeto —, em lista aberta de BCP-47 e nunca no `users.locale`</a></li><li><a href="adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — O laço pergunta ao Jev qual ferramenta, e o modelo do usuário vê só o menu que sobra</a></li><li><a href="adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo</a></li><li><a href="adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Reabrir sessão: as três decisões do dono, e `developer` reabre</a></li><li><a href="adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — A mensagem que chega com turno em curso entra numa fila persistida e é lida no fim do turno</a></li><li><a href="adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Agente Criativo conversacional no harness + fundação de handoffs</a></li><li><a href="adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Agente PO, backlog (epics/stories/tasks) e rastreabilidade</a></li><li><a href="adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Agente Arquiteto: ADRs via PR real, module_map e validação cruzada</a></li><li><a href="adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent e painel do time ao vivo (fechamento da Fase 4a)</a></li><li><a href="adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Psicólogo real: ToolLoop, hipóteses com evidência e triagem de custo</a></li><li><a href="adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: perfil de proficiência, patches de instrução e loop fechado</a></li><li><a href="adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Fechamento da Fase 4b (sessão 1): evidência que chega, custo que aparece, análise que sobrevive ao kill</a></li><li><a href="adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Fechamento da Fase 4b (sessão 2): catálogo que funciona, dedup que distingue quem negou, e fila que sobrevive à rodada</a></li><li><a href="adr/0038-hierarquia-de-agentes.html">ADR 0038 — Hierarquia de agentes: áreas, leads e delegação</a></li><li><a href="adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Promoção de história com autoridade do usuário</a></li><li><a href="adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário</a></li><li><a href="adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Diagrama C4 do Arquiteto</a></li><li><a href="adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Fusão condicional do aceite do handoff com a ativação de execução</a></li><li><a href="adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Fluxo de papéis como registro declarativo (fluxo.yml)</a></li><li><a href="adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — O plano do Dev Lead suspende o turno para aprovação</a></li><li><a href="adr/0087-ux-designer-agente.html">ADR 0087 — O UX Designer entra como agente conversacional</a></li><li><a href="adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: código pronto, dormente para disparo automático</a></li><li><a href="adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` e `delivery-metricas` viram script de relatório</a></li><li><a href="adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` nasce como script de relatório sob demanda, não agente</a></li><li><a href="adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — O papel `dbre` vira dois scripts: linter de migration e relatório de backup</a></li><li><a href="adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — A delegação Dev Lead → dev vira dado, com `parecerArtifactId` redefinido</a></li><li><a href="adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Handoff manual a um agente à escolha reusa oferta+aceite, nunca um terceiro estado de handoff</a></li><li><a href="adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`</a></li><li><a href="adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;: um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO</a></li><li><a href="adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — O handoff do PO ao Arquiteto é aceito sem clique quando o backlog está coberto e o repositório é local</a></li><li><a href="adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Aprovar o plano do Dev Lead ativa a execução, e a tarefa ganha o módulo que ele atribui</a></li><li><a href="adr/0212-historia-arquivada.html">ADR 0212 — A história arquivada: uma coluna, não um estado da máquina</a></li><li><a href="adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — O entregável roda na máquina do usuário pelo compose da Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates de PR: QAAgent e SecOpsAgent</a></li><li><a href="adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Destravar os gates de QA e SecOps: gitleaks na árvore, pareceres validados e tool call em texto</a></li><li><a href="adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Fechamento da Fase 4a: gate de infra que valida, e painel que diz a verdade</a></li><li><a href="adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates como registro declarativo</a></li><li><a href="adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — O agente de gate espera a aprovação, como o dev espera</a></li><li><a href="adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — O gate sobrevive ao restart</a></li><li><a href="adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-estratégia e AppSec como segundo MOMENTO, não agente novo</a></li><li><a href="adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` como script de relatório sobre `rate_limit_hits`</a></li><li><a href="adr/0095-gate-necessidade-validada.html">ADR 0095 — O gate `necessidade-validada` se fecha com confirmação humana separada, não com o Criativo se autovalidando</a></li><li><a href="adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set de casos de regressão para o julgamento semântico do agente de QA Automação</a></li><li><a href="adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal</a></li><li><a href="adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — O plano de teste nasce depois da entrega do dev, e o gate `implementavel` passa a se julgar sobre a história e o `module_map`</a></li><li><a href="adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma</a></li><li><a href="adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Pergunta em aberto vira pendência a resolver</a></li><li><a href="adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — A decisão do projeto chega ao dev e ao QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Infraestrutura dos dev agents: worktrees, executores git e trava de merge</a></li><li><a href="adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — DevAgent real: ToolLoop, orçamento por task e disciplina de bloqueio</a></li><li><a href="adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Lock de inicialização do workspace, Monitor de dev agents e herança de teto</a></li><li><a href="adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent como modo de execução permanente</a></li><li><a href="adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Destravar o DevAgent real: escrita, terminal, ADR por módulo e orçamento por projeto</a></li><li><a href="adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Reagendamento por evento do dev agent, e o circuit breaker</a></li><li><a href="adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12</a></li><li><a href="adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — A decisão no event log, e a ordem do gate</a></li><li><a href="adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — O dev agent espera a aprovação no meio do laço</a></li><li><a href="adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Escopo de caminho na política de terminal</a></li><li><a href="adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Revisão do ADR 0065: a fronteira de efeito externo deixa de ser `deny` e vira teto absoluto</a></li><li><a href="adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — O modo automático libera o escopo de caminho, e só ele</a></li><li><a href="adr/0189-o-piloto-automatico.html">ADR 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e &quot;Sempre permitir&quot; grava verbo + subcomando</a></li><li><a href="adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — O modo automático libera push e PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Nome de pasta legível do workspace</a></li><li><a href="adr/0072-projeto-local-ou-container.html">ADR 0072 — O projeto escolhe onde o código mora: pasta do usuário ou pasta gerenciada</a></li><li><a href="adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` em três valores, e o workspace nasce `unverified` quando o runner é quem verifica</a></li><li><a href="adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Navegação de pasta local via o Runner</a></li><li><a href="adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — No modo `runner`, o projeto nasce ao clicar em &quot;Navegar pasta...&quot;, não só na confirmação</a></li><li><a href="adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Converter o `execution_mode` de um projeto existente: recusar com dev agent ativo, realocar o `permissions.json`, aposentar a linha do container</a></li><li><a href="adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — A base única dos projetos montados, montada por identidade</a></li><li><a href="adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — A validação do workspace montado é adiada até a materialização</a></li><li><a href="adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — A base consentida no bootstrap, e `mounted` como padrão local</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Container por projeto: a fronteira deixa de ser política</a></li><li><a href="adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Ciclo de vida do container: tabela de estado, sem orquestrador</a></li><li><a href="adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal</a></li><li><a href="adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — A porta de Docker, e a prova de empacotamento que escolheu a implementação</a></li><li><a href="adr/0130-broker-de-container.html">ADR 0130 — O broker de container: quem fala com o Docker do servidor, e por que ele não aceita especificação</a></li><li><a href="adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — O Arquiteto roteia módulos para infra: ele CANDIDATA, a Infra ELEGE</a></li><li><a href="adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — A Infra elege entre as candidatas do roteamento, e a eleição vira nova versão de `artifact.project_image`</a></li><li><a href="adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents executam DENTRO do container real do projeto, e o terminal ganha um piso de auto-aprovação lá dentro</a></li><li><a href="adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — O portão da imagem do Arquiteto (RN-105) passa a valer nos três modos de execução</a></li><li><a href="adr/0136-pagina-global-de-containers.html">ADR 0136 — Página global de containers: teto por carga no broker, e `container_remove` no teto absoluto</a></li><li><a href="adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — O `brabo-runner` sobe o container do projeto na máquina do usuário</a></li><li><a href="adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Agentes de dev só depois do container</a></li><li><a href="adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — A segunda raiz do broker, e o localizador discriminado que a escolhe</a></li><li><a href="adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — O container do projeto roda com o dono da pasta, medido pela api</a></li><li><a href="adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada, e é ela quem entrega ao Dev Lead</a></li><li><a href="adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — O recurso mínimo do container é derivado do `module_map`: cada módulo declara o seu, e a Infra sobe com a soma</a></li><li><a href="adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — A Infra herda a rede que o Arquiteto declarou</a></li><li><a href="adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Runner local: execução na máquina do usuário por canal Phoenix com ticket de uso único</a></li><li><a href="adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) pro runner, escopado por construção a uma rota</a></li><li><a href="adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Distribuição do `@brabo/runner` via `tsup` e `npm publish`, versão injetada só em CI</a></li><li><a href="adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Binário standalone do `@brabo/runner` via `bun build --compile`, com o addon nativo `.node` embutido por extração real para um diretório temporário</a></li><li><a href="adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Configuração do runner pelo navegador: uma chave de dispositivo Ed25519 como segunda credencial do `runner-ticket`, um proxy do GitHub Releases para o binário e a File System Access API para uma pasta configurada com um clique</a></li><li><a href="adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker vira pré-requisito real do modo `runner`</a></li><li><a href="adr/0147-agente-local-com-capacidades.html">ADR 0147 — Um agente local, capacidades declaradas na conexão</a></li><li><a href="adr/0151-base-consentida-no-runner.html">ADR 0151 — A base consentida no runner, e a criação de pasta pelo canal</a></li><li><a href="adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — A chave de dispositivo de máquina</a></li><li><a href="adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — O binário standalone do runner deixa de prometer o Mac Intel</a></li><li><a href="adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — O binário standalone do runner deixa de prometer o Windows</a></li><li><a href="adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — O git credenciado roda no HOST do runner; o código roda no container</a></li><li><a href="adr/0201-revogacao-por-chave.html">ADR 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`</a></li><li><a href="adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — O fluxo do runner pelo navegador é aposentado, e o caminho é o instalador</a></li><li><a href="adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh</a></li><li><a href="adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie</a></li><li><a href="adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — O CORS que o engine não tinha, e a porta como parte do contrato</a></li><li><a href="adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Credencial sempre cifrada; verificação vira ação explícita</a></li><li><a href="adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — CSP fechado na api, e o escopo de projeto contido na raiz</a></li><li><a href="adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — A chave que assina o `state` do OAuth de git não tem default</a></li><li><a href="adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Login social (GitHub/GitLab), revisando o backlog dos ADRs 0031/0032</a></li><li><a href="adr/0096-smtp-real-no-mailsender.html">ADR 0096 — SMTP real no `MailSender`, atrás de um toggle explícito</a></li><li><a href="adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Dois tetos de rebaixamento em `project_members`, e a sobreposição fica</a></li><li><a href="adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto</a></li><li><a href="adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — O teto de auto-movimento no upsert de workspace, e a auto-promoção que era brecha</a></li><li><a href="adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade</a></li><li><a href="adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula</a></li><li><a href="adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="adr/0040-moeda-do-dashboard.html">ADR 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado</a></li><li><a href="adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding</a></li><li><a href="adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável</a></li><li><a href="adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Seis providers de LLM sobre a base, e a Fase 9b finalmente fechada</a></li><li><a href="adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Curadoria de modelo por workspace</a></li><li><a href="adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Facetas de capability provadas; &quot;para que serve&quot; é curadoria</a></li><li><a href="adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Duas audiências para o mesmo gasto: a fatura do owner e o consumo do membro</a></li><li><a href="adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Escopo de área na cascata de modelo, e o binding de agente global</a></li><li><a href="adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings no contrato de LLMProvider</a></li><li><a href="adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` volta a ser dimensão de gasto, e a contenção passa a ser do tipo</a></li><li><a href="adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Ranking de modelos por capacidade, sem nota inventada</a></li><li><a href="adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Orçamento por área é ADITIVO, ao lado de projeto/sessão — não uma cascata, e não uma tabela nova</a></li><li><a href="adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Detecção de Ollama nativo no bootstrap de dev: perguntar uma vez, persistir no `.env`, pôr os serviços do compose atrás de um profile</a></li><li><a href="adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull de modelo do Hugging Face: tabela própria, confirmação em dois passos e allowlist de publicadores oficiais — nunca `proposed_actions`</a></li><li><a href="adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering</a></li><li><a href="adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — O custo real que o provider devolve vira o número do metering</a></li><li><a href="adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering</a></li><li><a href="adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Tabela de chunks: vetor e `tsvector` na mesma linha</a></li><li><a href="adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Busca híbrida: pesos, limiar e o que é citação</a></li><li><a href="adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: aba própria de busca híbrida, sem renomear &quot;Chat&quot;</a></li><li><a href="adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j como grafo de conhecimento e templates de prompt, driver na api</a></li><li><a href="adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` para agentes e modelos Ollama garantidos no boot</a></li><li><a href="adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Memória relacional como projeção do event log; templates consumidos sem tocar GenServers</a></li><li><a href="adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Pasta local anexada vira `chunks.scope = 'local'`, lida pelo NAVEGADOR, nunca um caminho do host</a></li><li><a href="adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha</a></li><li><a href="adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`</a></li><li><a href="adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`</a></li><li><a href="adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`</a></li><li><a href="adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — A Anamnese religada: não roda sem sujeito, e a hipótese aceita vira fato do perfil</a></li><li><a href="adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — O contrato entre módulos vira artefato versionado do Arquiteto, e o dev agent o lê em vez do worktree alheio</a></li><li><a href="adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — O desvio do agente que a Anamnese observa vira sinal do produto, sem dado pessoal</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam</a></li><li><a href="adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — A superfície de leitura de código, contida e com orçamento</a></li><li><a href="adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Tema alcançável, e o boot sob CSP</a></li><li><a href="adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Moldura de tela, e o registro de abas diverge do handoff de propósito</a></li><li><a href="adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Leitura direta do schema do engine para o &quot;N agentes online&quot; do dashboard</a></li><li><a href="adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (e tipos futuros) gerados do contrato OpenAPI, não copiados à mão</a></li><li><a href="adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` dividido em cinco PRs mecânicos, declarados de antemão</a></li><li><a href="adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Agrupamento de estado do canal de turno extraído para `useTurnoDoAgente`</a></li><li><a href="adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` dividido em um arquivo por seção, atrás de um barrel</a></li><li><a href="adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — A página do projeto navega por um trilho vertical, e a aba Código para de recolher a sidebar sozinha</a></li><li><a href="adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava só depois</a></li><li><a href="adr/0181-tema-preto-neutro.html">ADR 0181 — O tema escuro vira preto neutro, e a dívida de contraste acaba</a></li><li><a href="adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Animação de texto com `motion`</a></li><li><a href="adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Uma navegação só: a sidebar absorve o trilho do projeto</a></li><li><a href="adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Fase 5 (sessão 1): imagens de produção, compose.prod, CI e teste de fumaça</a></li><li><a href="adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Fase 5 (sessão 2): deploy Kubernetes com Kustomize, métrica de fila e overlay local</a></li><li><a href="adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Fase 5 (sessão 3): graceful shutdown, OpenTelemetry, métricas, logs e dashboards</a></li><li><a href="adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, hardening da api, superfície exposta e release</a></li><li><a href="adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace sem coletor, e o caminho entre camadas no log</a></li><li><a href="adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Observabilidade no Compose local: métrica e log, sem trace</a></li><li><a href="adr/0150-instalador-de-uma-linha.html">ADR 0150 — O instalador de uma linha, com fonte escolhida e marcador</a></li><li><a href="adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Backup e restore de volumes, contra compose</a></li><li><a href="adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria</a></li><li><a href="adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado</a></li><li><a href="adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — O compose do instalador viaja com ele, como asset assinado</a></li><li><a href="adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — A tela só oferece o modo que a instalação executa, e a instalação por Release não tem broker</a></li><li><a href="adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — O broker vira a quinta imagem publicada, e o instalador PERGUNTA se o liga</a></li><li><a href="adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — O destino S3 do overlay local deixa de ser o MinIO e passa a ser o SeaweedFS</a></li><li><a href="adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação</a></li><li><a href="adr/0209-engine-em-otp-29.html">ADR 0209 — O engine sobe para Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint e a validação do pipeline de CI gerado</a></li><li><a href="adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Imagens publicadas no GHCR a cada tag final, e o overlay de produção preso por digest</a></li><li><a href="adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — E2E de navegador contra o compose de produção, num pacote fora do workspace</a></li><li><a href="adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — O schema dividido por agregado de domínio, atrás de um barrel</a></li><li><a href="adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando</a></li><li><a href="adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Assinatura dos artefatos publicados</a></li><li><a href="adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer</a></li><li><a href="adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar</a></li><li><a href="adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest</a></li><li><a href="adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado</a></li><li><a href="adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Sincronização contínua da documentação</a></li><li><a href="adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — A referência de API sai do código, e o teste de tabela cobra os metadados</a></li><li><a href="adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Documentação publicada por degrau, em subdiretório do Pages</a></li><li><a href="adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Publicação simétrica por degrau, e uma raiz que escolhe</a></li><li><a href="adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — O caminho publicado nomeia o ambiente, não a branch</a></li><li><a href="adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` ganha lockfile próprio, fora do `pnpm audit` do produto</a></li><li><a href="adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — O índice de ADR por tema, com o tema fora do ADR</a></li><li><a href="adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — A referência da API vira uma página Redoc</a></li><li><a href="adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado</a></li><li><a href="adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Todo ADR se chama &quot;ADR NNNN — título&quot;</a></li><li><a href="adr/0219-referencia-entra-na-traducao.html">ADR 0219 — A referência entra na tradução</a></li><li><a href="adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — A página da API sai traduzida por catálogo</a></li><li><a href="adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li></ul></li></ul></li></ul></section><section><h2>📐 Regras</h2><ul><li><a href="business-rules.html">Regras de negócio</a></li><li><a href="business-rules/custo.html">Custo e metering</a></li><li><a href="business-rules/autenticacao.html">Autenticação</a></li></ul></section><section><h2>📖 Referência</h2><ul><li><a href="reference/configuration.html">Configuração</a></li><li><a href="reference/events.html">Eventos</a></li><li><a href="reference/permissions.html">Permissões</a></li><li><a href="reference/artifacts.html">Artefatos</a></li><li><a href="reference/git-providers.html">Provedores de git</a></li><li><a href="reference/internal-api.html">API interna</a></li><li><a href="reference/scripts.html">Scripts e comandos</a></li><li><a href="reference/rulesets.html">Rulesets do repositório</a></li><li><a href="reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="reference/brb.html">Registro BRB</a></li><li><a href="security-surface.html" aria-current="page">Superfície exposta da api</a></li><li><span>Referência da API</span></li></ul></section><section><h2>💡 Explicação</h2><ul><li><span>Processo e esteira</span><ul><li><a href="explanation/documentation-workflow.html">Sincronia da doc</a></li><li><a href="explanation/branching-policy.html">Política de branches</a></li><li><a href="explanation/cadeia-de-suprimentos-do-ci.html">Cadeia de suprimentos do CI</a></li><li><a href="explanation/gates.html">Os gates, e como eles são medidos</a></li><li><a href="explanation/observability.html">Observabilidade</a></li><li><a href="explanation/modelo-de-time.html">Modelo de time e fluxo de entregáveis</a></li></ul></li><li><span>Validações e medições</span><ul><li><a href="explanation/primeiro-dogfooding.html">Primeiro dogfooding</a></li><li><a href="explanation/execucao-real-hello-world.html">Execução real (hello world)</a></li><li><a href="explanation/achados-execucao-real.html">Achados da execução real da esteira</a></li><li><a href="explanation/validacao-fase-12.html">Validação da Fase 12</a></li><li><a href="explanation/validacao-real.html">Validação real (13b)</a></li><li><a href="explanation/aceite-providers.html">Aceite dos providers</a></li><li><a href="explanation/medicao-do-idioma.html">Medição da heurística de idioma</a></li><li><a href="explanation/medicao-do-jev.html">Medição do roteador de ferramentas Jev</a></li><li><a href="explanation/auditoria-fluxo-vs-codigo.html">Auditoria: fluxo.yml × código (v3, ADR 0085)</a></li><li><a href="explanation/auditoria-visual-rodada-29.html">Auditoria visual, antes e depois da Rodada 29</a></li></ul></li><li><span>História das fases</span><ul><li><a href="explanation/historico-de-fases.html">Histórico de fases</a></li><li><a href="explanation/fase-28-pasta-do-usuario.html">FASE 28 — pasta do usuário</a></li><li><a href="explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — instalação de uma linha</a></li><li><a href="explanation/fase-30-runner-por-maquina.html">FASE 30 — agente local da máquina</a></li><li><a href="explanation/backlog.html">Backlog triado</a></li></ul></li><li><span>Localização</span><ul><li><a href="explanation/localizacao.html">Localização</a></li><li><a href="explanation/localizacao-en.html">Localização — inglês (en)</a></li><li><a href="explanation/localizacao-ru.html">Localização — russo (ru)</a></li><li><a href="explanation/localizacao-zh-hans.html">Localização — chinês simplificado (zh-Hans)</a></li></ul></li><li><span>Notas técnicas</span><ul><li><a href="explanation/tanstack-ai.html">TanStack AI — não adotado</a></li></ul></li></ul></section><section><h2>🛠️ Operação</h2><ul><li><a href="runbook.html">Manual de operação</a></li></ul></section><section><h2>📚 Vocabulário</h2><ul><li><a href="glossary.html">Glossário</a></li></ul></section><section><h2>🤝 Contribuir</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Como contribuir</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Onde pedir ajuda</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Reportar vulnerabilidade</a></li></ul></section></nav>
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Comece aqui</h2><ul><li><a href="index.html">Introdução</a></li><li><a href="getting-started.html">Primeiros passos</a></li><li><a href="tutorials/from-zero-to-deliverable.html">Do zero a um entregável</a></li><li><a href="tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Arquitetura</h2><ul><li><a href="architecture.html">Arquitetura</a></li><li><a href="adr.html">Decisões (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="adr/0001-git-provider-contract-shape.html">ADR 0001 — Formato do contrato normalizado do GitProvider</a></li><li><a href="adr/0002-git-error-normalization.html">ADR 0002 — Normalização de erros do GitProvider</a></li><li><a href="adr/0003-git-provider-retry-policy.html">ADR 0003 — Política de retry para providers remotos</a></li><li><a href="adr/0004-git-credential-registration.html">ADR 0004 — Cadastro de credenciais de git do usuário</a></li><li><a href="adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Bootstrap de Gitflow idempotente e retomável</a></li><li><a href="adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação</a></li><li><a href="adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Política de branches mecanizada</a></li><li><a href="adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Adoção de repositório existente, e o plano como portão</a></li><li><a href="adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — O engine trabalha em repositório remoto</a></li><li><a href="adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`</a></li><li><a href="adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele</a></li><li><a href="adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste</a></li><li><a href="adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness de agentes: montagem determinística de contexto</a></li><li><a href="adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)</a></li><li><a href="adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — O tipo da sessão é dado da criação, e a execução continua sendo evento</a></li><li><a href="adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Limites de transporte e janela efetiva de compactação coerentes</a></li><li><a href="adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal</a></li><li><a href="adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — O Infra Lead conversa pelo composer, e antes o turno dele passa pelo `TurnoAssincrono`</a></li><li><a href="adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — O idioma das respostas mora em três lugares — conta, sessão e projeto —, em lista aberta de BCP-47 e nunca no `users.locale`</a></li><li><a href="adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — O laço pergunta ao Jev qual ferramenta, e o modelo do usuário vê só o menu que sobra</a></li><li><a href="adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo</a></li><li><a href="adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Reabrir sessão: as três decisões do dono, e `developer` reabre</a></li><li><a href="adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — A mensagem que chega com turno em curso entra numa fila persistida e é lida no fim do turno</a></li><li><a href="adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Agente Criativo conversacional no harness + fundação de handoffs</a></li><li><a href="adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Agente PO, backlog (epics/stories/tasks) e rastreabilidade</a></li><li><a href="adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Agente Arquiteto: ADRs via PR real, module_map e validação cruzada</a></li><li><a href="adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent e painel do time ao vivo (fechamento da Fase 4a)</a></li><li><a href="adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Psicólogo real: ToolLoop, hipóteses com evidência e triagem de custo</a></li><li><a href="adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: perfil de proficiência, patches de instrução e loop fechado</a></li><li><a href="adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Fechamento da Fase 4b (sessão 1): evidência que chega, custo que aparece, análise que sobrevive ao kill</a></li><li><a href="adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Fechamento da Fase 4b (sessão 2): catálogo que funciona, dedup que distingue quem negou, e fila que sobrevive à rodada</a></li><li><a href="adr/0038-hierarquia-de-agentes.html">ADR 0038 — Hierarquia de agentes: áreas, leads e delegação</a></li><li><a href="adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Promoção de história com autoridade do usuário</a></li><li><a href="adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário</a></li><li><a href="adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Diagrama C4 do Arquiteto</a></li><li><a href="adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Fusão condicional do aceite do handoff com a ativação de execução</a></li><li><a href="adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Fluxo de papéis como registro declarativo (fluxo.yml)</a></li><li><a href="adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — O plano do Dev Lead suspende o turno para aprovação</a></li><li><a href="adr/0087-ux-designer-agente.html">ADR 0087 — O UX Designer entra como agente conversacional</a></li><li><a href="adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: código pronto, dormente para disparo automático</a></li><li><a href="adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` e `delivery-metricas` viram script de relatório</a></li><li><a href="adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` nasce como script de relatório sob demanda, não agente</a></li><li><a href="adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — O papel `dbre` vira dois scripts: linter de migration e relatório de backup</a></li><li><a href="adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — A delegação Dev Lead → dev vira dado, com `parecerArtifactId` redefinido</a></li><li><a href="adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Handoff manual a um agente à escolha reusa oferta+aceite, nunca um terceiro estado de handoff</a></li><li><a href="adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`</a></li><li><a href="adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;: um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO</a></li><li><a href="adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — O handoff do PO ao Arquiteto é aceito sem clique quando o backlog está coberto e o repositório é local</a></li><li><a href="adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Aprovar o plano do Dev Lead ativa a execução, e a tarefa ganha o módulo que ele atribui</a></li><li><a href="adr/0212-historia-arquivada.html">ADR 0212 — A história arquivada: uma coluna, não um estado da máquina</a></li><li><a href="adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — O entregável roda na máquina do usuário pelo compose da Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates de PR: QAAgent e SecOpsAgent</a></li><li><a href="adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Destravar os gates de QA e SecOps: gitleaks na árvore, pareceres validados e tool call em texto</a></li><li><a href="adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Fechamento da Fase 4a: gate de infra que valida, e painel que diz a verdade</a></li><li><a href="adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates como registro declarativo</a></li><li><a href="adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — O agente de gate espera a aprovação, como o dev espera</a></li><li><a href="adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — O gate sobrevive ao restart</a></li><li><a href="adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-estratégia e AppSec como segundo MOMENTO, não agente novo</a></li><li><a href="adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` como script de relatório sobre `rate_limit_hits`</a></li><li><a href="adr/0095-gate-necessidade-validada.html">ADR 0095 — O gate `necessidade-validada` se fecha com confirmação humana separada, não com o Criativo se autovalidando</a></li><li><a href="adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set de casos de regressão para o julgamento semântico do agente de QA Automação</a></li><li><a href="adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal</a></li><li><a href="adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — O plano de teste nasce depois da entrega do dev, e o gate `implementavel` passa a se julgar sobre a história e o `module_map`</a></li><li><a href="adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma</a></li><li><a href="adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Pergunta em aberto vira pendência a resolver</a></li><li><a href="adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — A decisão do projeto chega ao dev e ao QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Infraestrutura dos dev agents: worktrees, executores git e trava de merge</a></li><li><a href="adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — DevAgent real: ToolLoop, orçamento por task e disciplina de bloqueio</a></li><li><a href="adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Lock de inicialização do workspace, Monitor de dev agents e herança de teto</a></li><li><a href="adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent como modo de execução permanente</a></li><li><a href="adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Destravar o DevAgent real: escrita, terminal, ADR por módulo e orçamento por projeto</a></li><li><a href="adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Reagendamento por evento do dev agent, e o circuit breaker</a></li><li><a href="adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12</a></li><li><a href="adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — A decisão no event log, e a ordem do gate</a></li><li><a href="adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — O dev agent espera a aprovação no meio do laço</a></li><li><a href="adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Escopo de caminho na política de terminal</a></li><li><a href="adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Revisão do ADR 0065: a fronteira de efeito externo deixa de ser `deny` e vira teto absoluto</a></li><li><a href="adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — O modo automático libera o escopo de caminho, e só ele</a></li><li><a href="adr/0189-o-piloto-automatico.html">ADR 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e &quot;Sempre permitir&quot; grava verbo + subcomando</a></li><li><a href="adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — O modo automático libera push e PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Nome de pasta legível do workspace</a></li><li><a href="adr/0072-projeto-local-ou-container.html">ADR 0072 — O projeto escolhe onde o código mora: pasta do usuário ou pasta gerenciada</a></li><li><a href="adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` em três valores, e o workspace nasce `unverified` quando o runner é quem verifica</a></li><li><a href="adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Navegação de pasta local via o Runner</a></li><li><a href="adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — No modo `runner`, o projeto nasce ao clicar em &quot;Navegar pasta...&quot;, não só na confirmação</a></li><li><a href="adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Converter o `execution_mode` de um projeto existente: recusar com dev agent ativo, realocar o `permissions.json`, aposentar a linha do container</a></li><li><a href="adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — A base única dos projetos montados, montada por identidade</a></li><li><a href="adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — A validação do workspace montado é adiada até a materialização</a></li><li><a href="adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — A base consentida no bootstrap, e `mounted` como padrão local</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Container por projeto: a fronteira deixa de ser política</a></li><li><a href="adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Ciclo de vida do container: tabela de estado, sem orquestrador</a></li><li><a href="adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal</a></li><li><a href="adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — A porta de Docker, e a prova de empacotamento que escolheu a implementação</a></li><li><a href="adr/0130-broker-de-container.html">ADR 0130 — O broker de container: quem fala com o Docker do servidor, e por que ele não aceita especificação</a></li><li><a href="adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — O Arquiteto roteia módulos para infra: ele CANDIDATA, a Infra ELEGE</a></li><li><a href="adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — A Infra elege entre as candidatas do roteamento, e a eleição vira nova versão de `artifact.project_image`</a></li><li><a href="adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents executam DENTRO do container real do projeto, e o terminal ganha um piso de auto-aprovação lá dentro</a></li><li><a href="adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — O portão da imagem do Arquiteto (RN-105) passa a valer nos três modos de execução</a></li><li><a href="adr/0136-pagina-global-de-containers.html">ADR 0136 — Página global de containers: teto por carga no broker, e `container_remove` no teto absoluto</a></li><li><a href="adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — O `brabo-runner` sobe o container do projeto na máquina do usuário</a></li><li><a href="adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Agentes de dev só depois do container</a></li><li><a href="adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — A segunda raiz do broker, e o localizador discriminado que a escolhe</a></li><li><a href="adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — O container do projeto roda com o dono da pasta, medido pela api</a></li><li><a href="adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada, e é ela quem entrega ao Dev Lead</a></li><li><a href="adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — O recurso mínimo do container é derivado do `module_map`: cada módulo declara o seu, e a Infra sobe com a soma</a></li><li><a href="adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — A Infra herda a rede que o Arquiteto declarou</a></li><li><a href="adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Runner local: execução na máquina do usuário por canal Phoenix com ticket de uso único</a></li><li><a href="adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) pro runner, escopado por construção a uma rota</a></li><li><a href="adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Distribuição do `@brabo/runner` via `tsup` e `npm publish`, versão injetada só em CI</a></li><li><a href="adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Binário standalone do `@brabo/runner` via `bun build --compile`, com o addon nativo `.node` embutido por extração real para um diretório temporário</a></li><li><a href="adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Configuração do runner pelo navegador: uma chave de dispositivo Ed25519 como segunda credencial do `runner-ticket`, um proxy do GitHub Releases para o binário e a File System Access API para uma pasta configurada com um clique</a></li><li><a href="adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker vira pré-requisito real do modo `runner`</a></li><li><a href="adr/0147-agente-local-com-capacidades.html">ADR 0147 — Um agente local, capacidades declaradas na conexão</a></li><li><a href="adr/0151-base-consentida-no-runner.html">ADR 0151 — A base consentida no runner, e a criação de pasta pelo canal</a></li><li><a href="adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — A chave de dispositivo de máquina</a></li><li><a href="adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — O binário standalone do runner deixa de prometer o Mac Intel</a></li><li><a href="adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — O binário standalone do runner deixa de prometer o Windows</a></li><li><a href="adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — O git credenciado roda no HOST do runner; o código roda no container</a></li><li><a href="adr/0201-revogacao-por-chave.html">ADR 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`</a></li><li><a href="adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — O fluxo do runner pelo navegador é aposentado, e o caminho é o instalador</a></li><li><a href="adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh</a></li><li><a href="adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie</a></li><li><a href="adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — O CORS que o engine não tinha, e a porta como parte do contrato</a></li><li><a href="adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Credencial sempre cifrada; verificação vira ação explícita</a></li><li><a href="adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — CSP fechado na api, e o escopo de projeto contido na raiz</a></li><li><a href="adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — A chave que assina o `state` do OAuth de git não tem default</a></li><li><a href="adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Login social (GitHub/GitLab), revisando o backlog dos ADRs 0031/0032</a></li><li><a href="adr/0096-smtp-real-no-mailsender.html">ADR 0096 — SMTP real no `MailSender`, atrás de um toggle explícito</a></li><li><a href="adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Dois tetos de rebaixamento em `project_members`, e a sobreposição fica</a></li><li><a href="adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto</a></li><li><a href="adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — O teto de auto-movimento no upsert de workspace, e a auto-promoção que era brecha</a></li><li><a href="adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade</a></li><li><a href="adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula</a></li><li><a href="adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="adr/0040-moeda-do-dashboard.html">ADR 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado</a></li><li><a href="adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding</a></li><li><a href="adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável</a></li><li><a href="adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Seis providers de LLM sobre a base, e a Fase 9b finalmente fechada</a></li><li><a href="adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Curadoria de modelo por workspace</a></li><li><a href="adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Facetas de capability provadas; &quot;para que serve&quot; é curadoria</a></li><li><a href="adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Duas audiências para o mesmo gasto: a fatura do owner e o consumo do membro</a></li><li><a href="adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Escopo de área na cascata de modelo, e o binding de agente global</a></li><li><a href="adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings no contrato de LLMProvider</a></li><li><a href="adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` volta a ser dimensão de gasto, e a contenção passa a ser do tipo</a></li><li><a href="adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Ranking de modelos por capacidade, sem nota inventada</a></li><li><a href="adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Orçamento por área é ADITIVO, ao lado de projeto/sessão — não uma cascata, e não uma tabela nova</a></li><li><a href="adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Detecção de Ollama nativo no bootstrap de dev: perguntar uma vez, persistir no `.env`, pôr os serviços do compose atrás de um profile</a></li><li><a href="adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull de modelo do Hugging Face: tabela própria, confirmação em dois passos e allowlist de publicadores oficiais — nunca `proposed_actions`</a></li><li><a href="adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering</a></li><li><a href="adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — O custo real que o provider devolve vira o número do metering</a></li><li><a href="adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering</a></li><li><a href="adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Tabela de chunks: vetor e `tsvector` na mesma linha</a></li><li><a href="adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Busca híbrida: pesos, limiar e o que é citação</a></li><li><a href="adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: aba própria de busca híbrida, sem renomear &quot;Chat&quot;</a></li><li><a href="adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j como grafo de conhecimento e templates de prompt, driver na api</a></li><li><a href="adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` para agentes e modelos Ollama garantidos no boot</a></li><li><a href="adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Memória relacional como projeção do event log; templates consumidos sem tocar GenServers</a></li><li><a href="adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Pasta local anexada vira `chunks.scope = 'local'`, lida pelo NAVEGADOR, nunca um caminho do host</a></li><li><a href="adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha</a></li><li><a href="adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`</a></li><li><a href="adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`</a></li><li><a href="adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`</a></li><li><a href="adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — A Anamnese religada: não roda sem sujeito, e a hipótese aceita vira fato do perfil</a></li><li><a href="adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — O contrato entre módulos vira artefato versionado do Arquiteto, e o dev agent o lê em vez do worktree alheio</a></li><li><a href="adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — O desvio do agente que a Anamnese observa vira sinal do produto, sem dado pessoal</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam</a></li><li><a href="adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — A superfície de leitura de código, contida e com orçamento</a></li><li><a href="adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Tema alcançável, e o boot sob CSP</a></li><li><a href="adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Moldura de tela, e o registro de abas diverge do handoff de propósito</a></li><li><a href="adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Leitura direta do schema do engine para o &quot;N agentes online&quot; do dashboard</a></li><li><a href="adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (e tipos futuros) gerados do contrato OpenAPI, não copiados à mão</a></li><li><a href="adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` dividido em cinco PRs mecânicos, declarados de antemão</a></li><li><a href="adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Agrupamento de estado do canal de turno extraído para `useTurnoDoAgente`</a></li><li><a href="adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` dividido em um arquivo por seção, atrás de um barrel</a></li><li><a href="adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — A página do projeto navega por um trilho vertical, e a aba Código para de recolher a sidebar sozinha</a></li><li><a href="adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava só depois</a></li><li><a href="adr/0181-tema-preto-neutro.html">ADR 0181 — O tema escuro vira preto neutro, e a dívida de contraste acaba</a></li><li><a href="adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Animação de texto com `motion`</a></li><li><a href="adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Uma navegação só: a sidebar absorve o trilho do projeto</a></li><li><a href="adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Fase 5 (sessão 1): imagens de produção, compose.prod, CI e teste de fumaça</a></li><li><a href="adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Fase 5 (sessão 2): deploy Kubernetes com Kustomize, métrica de fila e overlay local</a></li><li><a href="adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Fase 5 (sessão 3): graceful shutdown, OpenTelemetry, métricas, logs e dashboards</a></li><li><a href="adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, hardening da api, superfície exposta e release</a></li><li><a href="adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace sem coletor, e o caminho entre camadas no log</a></li><li><a href="adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Observabilidade no Compose local: métrica e log, sem trace</a></li><li><a href="adr/0150-instalador-de-uma-linha.html">ADR 0150 — O instalador de uma linha, com fonte escolhida e marcador</a></li><li><a href="adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Backup e restore de volumes, contra compose</a></li><li><a href="adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria</a></li><li><a href="adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado</a></li><li><a href="adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — O compose do instalador viaja com ele, como asset assinado</a></li><li><a href="adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — A tela só oferece o modo que a instalação executa, e a instalação por Release não tem broker</a></li><li><a href="adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — O broker vira a quinta imagem publicada, e o instalador PERGUNTA se o liga</a></li><li><a href="adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — O destino S3 do overlay local deixa de ser o MinIO e passa a ser o SeaweedFS</a></li><li><a href="adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação</a></li><li><a href="adr/0209-engine-em-otp-29.html">ADR 0209 — O engine sobe para Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint e a validação do pipeline de CI gerado</a></li><li><a href="adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Imagens publicadas no GHCR a cada tag final, e o overlay de produção preso por digest</a></li><li><a href="adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — E2E de navegador contra o compose de produção, num pacote fora do workspace</a></li><li><a href="adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — O schema dividido por agregado de domínio, atrás de um barrel</a></li><li><a href="adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando</a></li><li><a href="adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Assinatura dos artefatos publicados</a></li><li><a href="adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer</a></li><li><a href="adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar</a></li><li><a href="adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest</a></li><li><a href="adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado</a></li><li><a href="adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Sincronização contínua da documentação</a></li><li><a href="adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — A referência de API sai do código, e o teste de tabela cobra os metadados</a></li><li><a href="adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Documentação publicada por degrau, em subdiretório do Pages</a></li><li><a href="adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Publicação simétrica por degrau, e uma raiz que escolhe</a></li><li><a href="adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — O caminho publicado nomeia o ambiente, não a branch</a></li><li><a href="adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` ganha lockfile próprio, fora do `pnpm audit` do produto</a></li><li><a href="adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — O índice de ADR por tema, com o tema fora do ADR</a></li><li><a href="adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — A referência da API vira uma página Redoc</a></li><li><a href="adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado</a></li><li><a href="adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Todo ADR se chama &quot;ADR NNNN — título&quot;</a></li><li><a href="adr/0219-referencia-entra-na-traducao.html">ADR 0219 — A referência entra na tradução</a></li><li><a href="adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — A página da API sai traduzida por catálogo</a></li><li><a href="adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 Regras</h2><ul><li><a href="business-rules.html">Regras de negócio</a></li><li><a href="business-rules/custo.html">Custo e metering</a></li><li><a href="business-rules/autenticacao.html">Autenticação</a></li><li><a href="business-rules/api.html">API</a></li><li><a href="business-rules/broker.html">Broker</a></li><li><a href="business-rules/ci.html">CI</a></li><li><a href="business-rules/contracts.html">Contratos</a></li><li><a href="business-rules/engine.html">Engine</a></li><li><a href="business-rules/infra.html">Infra</a></li><li><a href="business-rules/produto.html">Produto</a></li><li><a href="business-rules/runner.html">Runner</a></li><li><a href="business-rules/web.html">Web</a></li></ul></section><section><h2>📖 Referência</h2><ul><li><a href="reference/configuration.html">Configuração</a></li><li><a href="reference/events.html">Eventos</a></li><li><a href="reference/permissions.html">Permissões</a></li><li><a href="reference/artifacts.html">Artefatos</a></li><li><a href="reference/git-providers.html">Provedores de git</a></li><li><a href="reference/internal-api.html">API interna</a></li><li><a href="reference/scripts.html">Scripts e comandos</a></li><li><a href="reference/rulesets.html">Rulesets do repositório</a></li><li><a href="reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="reference/brb.html">Registro BRB</a></li><li><a href="security-surface.html" aria-current="page">Superfície exposta da api</a></li><li><span>Referência da API</span></li></ul></section><section><h2>💡 Explicação</h2><ul><li><span>Processo e esteira</span><ul><li><a href="explanation/documentation-workflow.html">Sincronia da doc</a></li><li><a href="explanation/branching-policy.html">Política de branches</a></li><li><a href="explanation/cadeia-de-suprimentos-do-ci.html">Cadeia de suprimentos do CI</a></li><li><a href="explanation/gates.html">Os gates, e como eles são medidos</a></li><li><a href="explanation/observability.html">Observabilidade</a></li><li><a href="explanation/modelo-de-time.html">Modelo de time e fluxo de entregáveis</a></li></ul></li><li><span>Validações e medições</span><ul><li><a href="explanation/primeiro-dogfooding.html">Primeiro dogfooding</a></li><li><a href="explanation/execucao-real-hello-world.html">Execução real (hello world)</a></li><li><a href="explanation/achados-execucao-real.html">Achados da execução real da esteira</a></li><li><a href="explanation/validacao-fase-12.html">Validação da Fase 12</a></li><li><a href="explanation/validacao-real.html">Validação real (13b)</a></li><li><a href="explanation/aceite-providers.html">Aceite dos providers</a></li><li><a href="explanation/medicao-do-idioma.html">Medição da heurística de idioma</a></li><li><a href="explanation/medicao-do-jev.html">Medição do roteador de ferramentas Jev</a></li><li><a href="explanation/auditoria-fluxo-vs-codigo.html">Auditoria: fluxo.yml × código (v3, ADR 0085)</a></li><li><a href="explanation/auditoria-visual-rodada-29.html">Auditoria visual, antes e depois da Rodada 29</a></li></ul></li><li><span>História das fases</span><ul><li><a href="explanation/historico-de-fases.html">Histórico de fases</a></li><li><a href="explanation/fase-28-pasta-do-usuario.html">FASE 28 — pasta do usuário</a></li><li><a href="explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — instalação de uma linha</a></li><li><a href="explanation/fase-30-runner-por-maquina.html">FASE 30 — agente local da máquina</a></li><li><a href="explanation/backlog.html">Backlog triado</a></li></ul></li><li><span>Localização</span><ul><li><a href="explanation/localizacao.html">Localização</a></li><li><a href="explanation/localizacao-en.html">Localização — inglês (en)</a></li><li><a href="explanation/localizacao-ru.html">Localização — russo (ru)</a></li><li><a href="explanation/localizacao-zh-hans.html">Localização — chinês simplificado (zh-Hans)</a></li></ul></li><li><span>Notas técnicas</span><ul><li><a href="explanation/tanstack-ai.html">TanStack AI — não adotado</a></li></ul></li></ul></section><section><h2>🛠️ Operação</h2><ul><li><a href="runbook.html">Manual de operação</a></li></ul></section><section><h2>📚 Vocabulário</h2><ul><li><a href="glossary.html">Glossário</a></li></ul></section><section><h2>🤝 Contribuir</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Como contribuir</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Onde pedir ajuda</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Reportar vulnerabilidade</a></li></ul></section></nav>
 <main>
 
 <article class="doc">
@@ -90,7 +90,7 @@ HMAC (<code>GIT_OAUTH_STATE_SECRET</code>), e sem <code>state</code> válido a c
 <p>Essa garantia vale exatamente o que vale a chave, e é por isso que ela
 deixou de ter default: em produção a api <strong>recusa subir</strong> com a chave de
 exemplo do repositório, que é pública (ADR 0059,
-<a href="business-rules/custo.html#rn-093">RN-093</a>). Com chave conhecida, esta rota
+<a href="business-rules/api.html#rn-093">RN-093</a>). Com chave conhecida, esta rota
 volta a ser irrestrita na prática — qualquer um assina um <code>state</code> para o
 projeto que quiser.</p>
 <p><strong><code>GET /runner-releases/binary</code></strong> — faz proxy do binário standalone do
@@ -109,7 +109,7 @@ por alguns minutos, só para ficar abaixo do rate limit não autenticado do
 GitHub sob downloads concorrentes; desde a sessão 3 da FASE 29 o
 <code>checksums.txt</code> parseado — umas centenas de bytes de <em>texto</em> — é memoizado
 na mesma entrada, então hash e binário vêm sempre da mesma release.</p>
-<p>Desde a <a href="business-rules.html#rn-525">RN-525</a> (<a href="adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149</a>)
+<p>Desde a <a href="business-rules/produto.html#rn-525">RN-525</a> (<a href="adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149</a>)
 a rota não transmite mais bytes não verificados: ela confere o sha256 do
 que baixou contra o <code>checksums.txt</code> da release e responde <strong>502 com
 <code>motivo</code> nomeado</strong> quando não consegue — inclusive quando a release não
@@ -141,7 +141,7 @@ isenta as rotas <code>@Public()</code> — de propósito, para não estrangular 
 o <strong>bloqueio progressivo</strong> por email e por IP, dentro dos casos de uso.
 Não é reforço opcional: é a única defesa que existe aqui.
 Ver
-<a href="business-rules/autenticacao.html#rn-030">RN-030</a> e <a href="business-rules/autenticacao.html#rn-031">RN-031</a>.</p>
+<a href="business-rules/api.html#rn-030">RN-030</a> e <a href="business-rules/api.html#rn-031">RN-031</a>.</p>
 </blockquote>
 <p><strong><code>POST /auth/register</code></strong> — cadastro. Responde <code>202</code> tanto para endereço
 novo quanto para já cadastrado; no segundo caso nada é criado e o dono do
@@ -171,7 +171,7 @@ sair daqui é o componente <code>d</code> da JWK, travado por teste.</p>
 provedor (GitHub/GitLab). Pública pelo mesmo motivo estrutural das outras
 sete: é o próprio ponto de entrada, antes de existir sessão. O <code>state</code> que
 ela gera é assinado por HMAC com propósito PRÓPRIO
-(<code>signSocialOauthState</code>/<a href="business-rules.html#rn-273">RN-273</a>) — nunca o
+(<code>signSocialOauthState</code>/<a href="business-rules/api.html#rn-273">RN-273</a>) — nunca o
 mesmo <code>state</code> do <code>GET /git/oauth/:provider/callback</code> acima, embora as duas
 rotas assinem com a MESMA chave <code>GIT_OAUTH_STATE_SECRET</code>. O campo
 <code>purpose</code> no payload é o que impede um <code>state</code> de um fluxo de ser aceito
@@ -187,7 +187,7 @@ detalhar o motivo na URL.</p>
 <li>
 <p><strong>Anexos do chat: SEM antivírus, lacuna declarada</strong>
 (<a href="adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246</a>,
-<a href="business-rules.html#rn-986">RN-986</a>/<a href="business-rules.html#rn-988">RN-988</a>).
+<a href="business-rules/api.html#rn-986">RN-986</a>/<a href="business-rules/api.html#rn-988">RN-988</a>).
 <code>POST .../attachments</code> (<code>developer</code>) confere o tipo pelos bytes e os tetos
 (5 MB imagem, 512 KB texto), mas não varre o conteúdo. Os bytes nunca
 executam: ficam num <code>bytea</code>, nunca em disco nem no worktree, e saem em
@@ -201,8 +201,8 @@ escrever, e é por isso que é uma rota de superfície de segurança, não só
 de cadastro</strong>
 (<a href="adr/0072-projeto-local-ou-container.html">ADR 0072</a>/
 <a href="adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104</a>,
-<a href="business-rules/autenticacao.html#rn-169">RN-169</a>/<a href="business-rules.html#rn-421">RN-421</a>/
-<a href="business-rules.html#rn-422">RN-422</a>). O corpo ganhou <code>executionMode</code>
+<a href="business-rules/api.html#rn-169">RN-169</a>/<a href="business-rules/api.html#rn-421">RN-421</a>/
+<a href="business-rules/api.html#rn-422">RN-422</a>). O corpo ganhou <code>executionMode</code>
 (<code>container</code> — o padrão e o comportamento de sempre —, <code>mounted</code>, o
 antigo <code>local</code>, renomeado, ou <code>runner</code>) e <code>workspacePath</code>. Em <code>mounted</code>/
 <code>runner</code> o caminho absoluto informado vira a <strong>raiz do escopo do
@@ -211,7 +211,7 @@ escrever. Nenhuma rota nova, e nenhuma mudança de papel
 (<code>RequireRole('maintainer')</code>, como já era) — o que mudou é o alcance do
 que a rota concede.</p>
 <p>Desde o <a href="adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142</a>
-(<a href="business-rules.html#rn-501">RN-501</a>) os DOIS modos que não são
+(<a href="business-rules/api.html#rn-501">RN-501</a>) os DOIS modos que não são
 <code>container</code> validam a MESMA coisa na criação: só a forma LÉXICA —
 absoluto, sem <code>..</code>, nunca a raiz nem uma pasta de sistema, nunca
 sobreposto ao checkout do Brabo em nenhum dos sentidos (RN-422/RN-423) —
@@ -247,7 +247,7 @@ nenhuma.</p>
 <p><strong><code>GET /workspaces/:workspaceId/containers</code> agora lista TODO projeto do
 workspace, e a página que ele alimenta virou o caminho humano para SUBIR um
 container</strong>
-(<a href="business-rules.html#rn-521">RN-521</a>,
+(<a href="business-rules/api.html#rn-521">RN-521</a>,
 <a href="adr/0136-pagina-global-de-containers.html">ADR 0136</a>). O papel não mudou
 (<code>viewer</code>, como já era) e o escopo também não: ela continua respondendo só
 pelos projetos do workspace que o chamador enxerga. O que mudou foi o
@@ -262,27 +262,27 @@ tirar a vez de uma real.</p>
 <code>proposed_action</code>, sempre com um HUMANO clicando, nunca um agente, e nenhum
 teto de <code>decide.ts</code> é tocado: os dois tipos de subida exigem <code>maintainer</code>, e
 <code>container_remove</code> fica no teto absoluto da família de comando privilegiado
-(<a href="business-rules.html#rn-418">RN-418</a>) — nunca auto-aprovável, &quot;sempre
-permitir&quot; recusado na fonte. <code>container_recreate</code> (remove + sobe de novo, <a href="business-rules.html#rn-934">RN-934</a>) entra no mesmo teto. A rede declarada (<code>PUT .../container/network</code>, <code>maintainer</code>, <a href="business-rules.html#rn-932">RN-932</a>) só grava artefato — nada muda no Docker até a recriação aprovada. A tela ramifica a ação de subida por
+(<a href="business-rules/api.html#rn-418">RN-418</a>) — nunca auto-aprovável, &quot;sempre
+permitir&quot; recusado na fonte. <code>container_recreate</code> (remove + sobe de novo, <a href="business-rules/api.html#rn-934">RN-934</a>) entra no mesmo teto. A rede declarada (<code>PUT .../container/network</code>, <code>maintainer</code>, <a href="business-rules/api.html#rn-932">RN-932</a>) só grava artefato — nada muda no Docker até a recriação aprovada. A tela ramifica a ação de subida por
 <code>execution_mode</code> exatamente como o backend
-(<a href="business-rules.html#rn-497">RN-497</a>/<a href="business-rules.html#rn-503">RN-503</a>):
+(<a href="business-rules/produto.html#rn-497">RN-497</a>/<a href="business-rules/api.html#rn-503">RN-503</a>):
 <code>container</code>/<code>mounted</code> propõem <code>container_start</code> (broker) e <code>runner</code> propõe
 <code>container_start_via_runner</code> (agente local), com o payload que o schema de
 cada um de fato aceita.</p>
 <p>As recusas da própria tela são honestidade, não imposição: ela não oferece o
 botão sem imagem decidida (o portão da RN-105, válido nos TRÊS modos desde a
-<a href="business-rules.html#rn-494">RN-494</a>), nem para um projeto <code>runner</code> cuja pasta
+<a href="business-rules/broker.html#rn-494">RN-494</a>), nem para um projeto <code>runner</code> cuja pasta
 nenhum agente local jamais confirmou, nem para papel abaixo de <code>maintainer</code> —
 e diz qual dos três é, em texto. <strong>Quem recusa de verdade continua sendo o
 <code>RolesGuard</code> e os casos de uso.</strong> O papel lido aqui é o de WORKSPACE, não o
 papel efetivo do projeto (<code>projectRole ?? workspaceRole</code>,
-<a href="business-rules.html#rn-471">RN-471</a>): um membro rebaixado dentro de um projeto
+<a href="business-rules/web.html#rn-471">RN-471</a>): um membro rebaixado dentro de um projeto
 ainda vê o botão e recebe 403, um custo declarado de não pagar um N+1 de
 <code>project_members</code> numa página que atravessa projetos.</p>
 </li>
 <li>
 <p><strong><code>PUT /projects/:projectId/mirror-path</code> grava um caminho na máquina do
-USUÁRIO, e a api nunca vê essa máquina</strong> (<a href="business-rules.html#rn-515">RN-515</a>,
+USUÁRIO, e a api nunca vê essa máquina</strong> (<a href="business-rules/api.html#rn-515">RN-515</a>,
 <a href="adr/0147-agente-local-com-capacidades.html">ADR 0147</a>, ponto 4). Ela guarda
 o destino para onde a capacidade <code>espelho</code> copia o trabalho do projeto — uma
 pasta FORA da base montada, que é justamente por que um bind mount não a
@@ -294,7 +294,7 @@ de arquivos do operador, não de metadado de projeto.</p>
 recusa diz isso. Ela reusa <code>caminhoDeWorkspaceLocalValido</code> — absoluto, sem
 <code>..</code>/<code>.</code>, nunca a raiz, nunca uma pasta de sistema, nunca sobreposto ao
 checkout do próprio Brabo — exatamente como a criação em <code>runner</code> faz
-(<a href="business-rules.html#rn-423">RN-423</a>), e pelo mesmo motivo: não há disco aqui
+(<a href="business-rules/runner.html#rn-423">RN-423</a>), e pelo mesmo motivo: não há disco aqui
 a quem perguntar. Ela NÃO exige <code>BRABO_PROJECTS_BASE</code>, porque estar fora da
 base é o objetivo.</p>
 <p>Duas recusas são próprias desta rota. O destino não pode estar dentro de
@@ -316,13 +316,13 @@ declarou, não um agente pedindo para agir.</p>
 </li>
 <li>
 <p><strong><code>GET /projects/:projectId/mirror-state</code> é <code>viewer</code>, um degrau abaixo da
-rota que GRAVA o destino</strong> (<a href="business-rules.html#rn-517">RN-517</a>,
+rota que GRAVA o destino</strong> (<a href="business-rules/api.html#rn-517">RN-517</a>,
 <a href="adr/0147-agente-local-com-capacidades.html">ADR 0147</a>, ponto 7). Ela devolve
 o que a última rodada do espelho fez: qual dos três estados vale agora
 (<code>never</code> | <code>synced</code> | <code>failed</code>), a última sincronização bem-sucedida com as
 contagens dela, o destino congelado daquela rodada e o último erro.</p>
 <p>A assimetria com <code>PUT .../mirror-path</code> (<code>maintainer</code>) é deliberada e é a
-regra da <a href="business-rules/custo.html#rn-102">RN-102</a> aplicada: o mínimo é do
+regra da <a href="business-rules/api.html#rn-102">RN-102</a> aplicada: o mínimo é do
 ENDPOINT, e este só LÊ. O próprio destino já vai em toda leitura do projeto
 (<code>GET /projects/:projectId</code>, <code>viewer</code>), então exigir <code>maintainer</code> aqui
 trancaria uma informação de quem já a vê no mesmo projeto — o pior dos dois
@@ -336,7 +336,7 @@ contagens.</p>
 topologia do sistema de arquivos do operador, e é por isso que não é
 <code>viewer</code></strong>
 (<a href="adr/0141-base-unica-dos-projetos-montados.html">ADR 0141</a>,
-<a href="business-rules.html#rn-500">RN-500</a>). Ela devolve
+<a href="business-rules/api.html#rn-500">RN-500</a>). Ela devolve
 <code>{ projectsBase: string | null }</code> — a única pasta do host montada por
 identidade nos containers <code>api</code> e <code>engine</code>, sob a qual vive todo projeto
 <code>mounted</code>. <code>null</code> é o estado normal de uma instalação que não oferece o
@@ -350,13 +350,13 @@ workspace, sem capacidade nenhuma em troca. <code>workspaceId</code> não entra 
 cálculo: a base é configuração da <strong>instalação</strong>, idêntica para todo
 workspace, e o parâmetro está lá só para dar um escopo ao <code>RolesGuard</code>.</p>
 <p>Desde o <a href="adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161</a>
-(<a href="business-rules.html#rn-573">RN-573</a>) a resposta também leva
+(<a href="business-rules/api.html#rn-573">RN-573</a>) a resposta também leva
 <code>brokerConfigurado: boolean</code> — se <code>BROKER_URL</code> está definido, lido por
 <code>ContainerBrokerPort.configurado()</code>. Ela revela um bit da topologia da
 instalação (existe ou não um broker com o socket do Docker), nunca o
 endereço dele, e o mínimo continua <code>maintainer</code>. O mesmo bit vai em toda
 linha de <code>GET /workspaces/:workspaceId/containers</code> (<code>viewer</code>,
-<a href="business-rules.html#rn-574">RN-574</a>), um alargamento deliberado: aquela
+<a href="business-rules/api.html#rn-574">RN-574</a>), um alargamento deliberado: aquela
 página precisa dizer ANTES do clique que <code>container</code>/<code>mounted</code> não sobem
 aqui, e quem consegue ver a página já podia inferir a ausência por
 <code>naoObservado: broker-nao-configurado</code> sempre que uma linha está
@@ -366,7 +366,7 @@ responde.</p>
 <li>
 <p><strong><code>GET /workspaces/:workspaceId/project-folders</code> serve listagens de
 diretório a partir de um caminho informado pelo cliente, e toda a
-segurança dela é UMA contenção</strong> (<a href="business-rules.html#rn-504">RN-504</a>,
+segurança dela é UMA contenção</strong> (<a href="business-rules/web.html#rn-504">RN-504</a>,
 <a href="adr/0141-base-unica-dos-projetos-montados.html">ADR 0141</a>). Ela existe
 porque o assistente de projeto perdeu de uma vez os seus dois mecanismos
 de &quot;procurar uma pasta&quot;: <code>FolderBrowserModal</code> navegava pelo websocket do
@@ -390,7 +390,7 @@ entradas com prefixo de ponto excluídas, e symlinks informados mas nunca
 percorridos — então um link apontando para fora da base não é uma saída
 dela. O que é excluído é CONTADO (<code>arquivos</code>, <code>simbolicos</code>, <code>truncado</code>),
 então uma pasta cheia de código nunca volta parecendo vazia
-(<a href="business-rules/autenticacao.html#rn-180">RN-180</a>). Não há POST companheiro:
+(<a href="business-rules/web.html#rn-180">RN-180</a>). Não há POST companheiro:
 criar pasta é da materialização do workspace montado, nunca do seletor.</p>
 <p>O mínimo é <code>maintainer</code>, o mesmo de <code>POST /workspaces/:workspaceId/projects</code> e <code>projects-base</code> acima, e pelo mesmo
 motivo levado um passo adiante: <code>projects-base</code> revela UM caminho na
@@ -414,16 +414,16 @@ mais sensível do produto. Duas propriedades a mantêm defensável: o
 <code>origin</code> que ela devolve é <strong>limpo</strong> (a credencial vem num campo separado,
 nunca embutida na URL), e o consumidor é obrigado a injetá-la por
 invocação, nunca em arquivo — ver <code>Engine.Actions.GitAuth</code> e o raciocínio
-disso na <a href="business-rules/custo.html#rn-076">RN-076</a>. Se esta rota um dia
+disso na <a href="business-rules/engine.html#rn-076">RN-076</a>. Se esta rota um dia
 passar a devolver a URL já autenticada, o token acabaria em <code>.git/config</code>,
 dentro da pasta onde o dev agent tem leituras auto-aprovadas.</p>
 <p>No modo <code>runner</code> essa injeção por invocação viaja um salto a mais — o
-campo <code>env</code> da mensagem <code>exec</code> (<a href="business-rules.html#rn-507">RN-507</a>) — e
+campo <code>env</code> da mensagem <code>exec</code> (<a href="business-rules/runner.html#rn-507">RN-507</a>) — e
 ela para na fronteira do container: a porta de Docker do produto <strong>não tem
 campo <code>env</code></strong>, de propósito (<a href="adr/0130-broker-de-container.html">ADR 0130</a>),
 então um comando roteado para dentro do container por <code>docker exec</code> nunca
 consegue levar o token. Essa contenção se manteve; o que não se manteve foi
-o relato. Até a <a href="business-rules.html#rn-558">RN-558</a> o runner rodava esse
+o relato. Até a <a href="business-rules/runner.html#rn-558">RN-558</a> o runner rodava esse
 comando <strong>mesmo assim</strong>, com o credential helper instalado e as variáveis
 vazias, e a falha de autenticação resultante era indistinguível de um token
 ruim ou de uma rede quebrada — no caminho <em>comum</em>, já que o container
@@ -434,7 +434,7 @@ origem <code>politica</code> em vez de <code>codigo</code>. O texto da recusa n�
 variáveis nem os valores delas, só quantas eram. A credencial continua sem
 atravessar a fronteira do container, e desde o
 <a href="adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193</a>
-(<a href="business-rules.html#rn-676">RN-676</a>) ela não precisa: o engine marca o
+(<a href="business-rules/runner.html#rn-676">RN-676</a>) ela não precisa: o engine marca o
 <code>fetch</code> autenticado (<code>gitCredenciado: true</code>, posto de um lugar só,
 <code>RunnerRouter.exec_git_credenciado/5</code>) e o runner roda ESSE comando no
 host, onde o <code>env</code> chega ao processo filho; os comandos do dev agent
@@ -445,8 +445,8 @@ container. Nenhuma porta do ADR 0130 mudou.</p>
 </li>
 <li>
 <p><strong>As três rotas de leitura do PO</strong> — <code>GET /internal/projects/:projectId/business-rules</code>,
-<code>GET /internal/projects/:projectId/backlog</code> (<a href="business-rules/autenticacao.html#rn-164">RN-164</a>)
-e <code>GET /internal/projects/:projectId/product-metrics</code> (<a href="business-rules.html#rn-407">RN-407</a>) —
+<code>GET /internal/projects/:projectId/backlog</code> (<a href="business-rules/engine.html#rn-164">RN-164</a>)
+e <code>GET /internal/projects/:projectId/product-metrics</code> (<a href="business-rules/contracts.html#rn-407">RN-407</a>) —
 não devolvem segredo nenhum e <strong>não aceitam nada além do id do projeto</strong>:
 nenhum termo de busca, nenhuma paginação, nenhum filtro. É de propósito.
 Uma rota de leitura para agente é uma superfície que o modelo escolhe
@@ -458,7 +458,7 @@ produto).</p>
 </li>
 <li>
 <p><strong>A leitura de contratos do dev agent</strong> — <code>GET /internal/projects/:projectId/module-contracts</code>
-(<a href="business-rules.html#rn-684">RN-684</a>, <a href="adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200</a>)
+(<a href="business-rules/api.html#rn-684">RN-684</a>, <a href="adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200</a>)
 — segue a mesma regra: nenhum segredo, nada além do id do projeto, uma
 entrada por módulo do <code>module_map</code> vigente. A gêmea de escrita,
 <code>POST /internal/sessions/:sessionId/module-contracts</code>, recebe só a
@@ -476,7 +476,7 @@ da criação (<code>caminhoDeWorkspaceLocalValido</code>) — raiz do sistema e
 sobreposição com o checkout do Brabo continuam proibidas mesmo vindo do
 runner. <code>400</code> se o projeto não estiver no modo <code>runner</code>.</p>
 <p>Desde o <a href="adr/0151-base-consentida-no-runner.html">ADR 0151</a>
-(<a href="business-rules.html#rn-529">RN-529</a>) o runner pode TAMBÉM nascer com uma
+(<a href="business-rules/runner.html#rn-529">RN-529</a>) o runner pode TAMBÉM nascer com uma
 <strong>base</strong> — uma pasta daquela máquina sob a qual cada projeto é uma
 subpasta. Duas coisas sobre ela cabem nesta página. Primeiro, a base é
 <strong>local e nunca chega pela rede</strong>: vem de <code>--base</code> ou de
@@ -492,7 +492,7 @@ api: um projeto cuja pasta é anterior à base continua funcionando. A guarda
 <code>dentroDoEscopo</code>/<code>realpathMaisProximo</code>/<code>semBarraFinal</code> e a mesma passada
 dupla léxica-depois-<code>realpath</code> — e herda por escrito a mesma ressalva de
 TOCTOU: melhor esforço, nunca a fronteira de segurança.</p>
-<p>Desde a <a href="business-rules.html#rn-532">RN-532</a> (mesmo ADR, pontos 3 a 6) essa
+<p>Desde a <a href="business-rules/runner.html#rn-532">RN-532</a> (mesmo ADR, pontos 3 a 6) essa
 base tem um CONSUMIDOR: o par <code>workspace_create</code>/<code>workspace_create_result</code>.
 Três coisas sobre ele cabem nesta página. Primeiro, <strong>nenhuma rota de
 escrita nova nasceu</strong>: tendo criado a pasta, o runner empurra o
@@ -511,7 +511,7 @@ pedindo para agir: <strong>não</strong> é <code>proposed_action</code>, e nenh
 <code>decide.ts</code> ganha exceção.</p>
 </li>
 <li>
-<p><strong><code>POST /internal/projects/:projectId/container-exec</code></strong> (<a href="business-rules.html#rn-492">RN-492</a>,
+<p><strong><code>POST /internal/projects/:projectId/container-exec</code></strong> (<a href="business-rules/engine.html#rn-492">RN-492</a>,
 <a href="adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134</a>) é chamada
 só pelo engine, quando <code>Engine.Actions.TerminalExecutor</code> decidiu que um
 comando de terminal pertence ao container real do projeto. Ela repassa a
@@ -523,7 +523,7 @@ uma linha <code>running</code> nunca garante que o container está de pé agora)
 um container morto é um comando falho comum, não um 5xx.</p>
 </li>
 <li>
-<p><strong><code>POST /internal/projects/:projectId/mirror-sync-result</code></strong> (<a href="business-rules.html#rn-517">RN-517</a>,
+<p><strong><code>POST /internal/projects/:projectId/mirror-sync-result</code></strong> (<a href="business-rules/api.html#rn-517">RN-517</a>,
 <a href="adr/0147-agente-local-com-capacidades.html">ADR 0147</a>, ponto 7) é chamada
 só pelo engine, depois que o runner empurra <code>mirror_sync_result</code> pelo
 canal — nunca diretamente pelo runner, que não tem o service token. A mesma
@@ -541,20 +541,20 @@ recusa aqui só é registrada em log pelo engine.</p>
 <li>
 <p><strong><code>POST /internal/projects/:projectId/qa-environments/:taskId/start</code></strong>,
 <strong><code>POST /internal/projects/:projectId/qa-environments/:taskId/remove</code></strong> e
-<strong><code>POST /internal/qa-environments/sweep</code></strong> (<a href="business-rules.html#rn-935">RN-935</a>,
+<strong><code>POST /internal/qa-environments/sweep</code></strong> (<a href="business-rules/api.html#rn-935">RN-935</a>,
 <a href="adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229</a>) são chamadas só
 pelo engine (<code>engine-service</code>, <code>BRABO_SERVICE_TOKEN</code>). A api chama o broker e
 grava <code>project_qa_environments</code>; o corpo do <code>sweep</code> é só a lista de ids de
 tarefa em voo, e a remoção só alcança o que o broker rotula <code>brabo.papel=qa</code>.
 O <code>alvo</code> de QA do <code>container-exec</code> vem do engine, nunca do modelo. Desde a
-<a href="business-rules.html#rn-941">RN-941</a> o serviço de QA leva <code>user</code> (<code>&lt;uid&gt;:&lt;gid&gt;</code>,
+<a href="business-rules/contracts.html#rn-941">RN-941</a> o serviço de QA leva <code>user</code> (<code>&lt;uid&gt;:&lt;gid&gt;</code>,
 nunca 0) e <code>command</code> (argumentos depois da imagem, sem quebra de linha) no
 <code>qa</code> do <code>container-spec</code>, os dois validados pela api e de novo pelo broker
 antes de virar <code>docker run</code>.</p>
 </li>
 <li>
 <p><strong><code>GET /internal/projects/:projectId/container-spec</code></strong> (<a href="adr/0130-broker-de-container.html">ADR 0130</a>,
-<a href="business-rules.html#rn-485">RN-485</a>) é a única rota <code>engine-service</code> cujo
+<a href="business-rules/produto.html#rn-485">RN-485</a>) é a única rota <code>engine-service</code> cujo
 chamador NÃO é o engine — é o <strong>broker</strong> de containers, o único processo do
 produto com acesso a um daemon Docker. A classificação nomeia o MECANISMO
 (<code>BRABO_SERVICE_TOKEN</code> no cabeçalho próprio, comparado em tempo constante),
@@ -570,7 +570,7 @@ chamador estar certo. Ela <strong>não devolve caminho absoluto nenhum</strong> 
 do bind é resolvida pelo daemon contra o sistema de arquivos do HOST, então um
 caminho de dentro do container da api montaria em silêncio uma pasta vazia.
 O que viaja no lugar é <code>localizacao</code>
-(<a href="business-rules.html#rn-503">RN-503</a>,
+(<a href="business-rules/api.html#rn-503">RN-503</a>,
 <a href="adr/0144-a-segunda-raiz-do-broker.html">ADR 0144</a>): um localizador
 discriminado dizendo qual das DUAS raízes do broker resolve a pasta
 (<code>gerenciada</code> → <code>PROJECT_WORKSPACES_HOST_ROOT</code>, <code>montada</code> →
@@ -588,7 +588,7 @@ consumidor num <code>docker run</code>.</p>
 <p><strong><code>GET /internal/projects/:projectId/container-spec</code> ganhou
 <code>usuarioDaPasta</code>, e a classificação não mudou</strong> — continua
 <code>engine-service</code>, continua chamada só pelo broker (<a href="adr/0180-container-com-o-dono-da-pasta.html">ADR 0180</a>,
-<a href="business-rules.html#rn-627">RN-627</a>). O campo é o <code>{ uid, gid }</code> da pasta do
+<a href="business-rules/contracts.html#rn-627">RN-627</a>). O campo é o <code>{ uid, gid }</code> da pasta do
 projeto como a api a vê pelo <code>stat</code>, ou <code>null</code> (modo runner, pasta
 inalcançável, pasta de root). O broker o revalida (inteiros em
 1..2^31-1; <code>0</code> é recusado pelo nome) e o usa como <code>--user</code>; ele nunca lê um
@@ -619,7 +619,7 @@ o PRÓPRIO TOKEN autentica muda de mecanismo.</p>
 </li>
 <li>
 <p><strong><code>GET /runner/projects</code> é classificada <code>jwt</code> e NÃO aceita JWT de sessão
-nenhum</strong> (<a href="business-rules.html#rn-543">RN-543</a>,
+nenhum</strong> (<a href="business-rules/produto.html#rn-543">RN-543</a>,
 <a href="adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154</a>). É a rota pela qual
 um agente de MÁQUINA descobre os projetos que atende, e é a primeira rota
 <code>@RequirePatAuth()</code> sem <code>:projectId</code> no caminho — que é exatamente o que ela
@@ -648,7 +648,7 @@ emissor de sessão.</li>
 </li>
 <li>
 <p><strong><code>POST /runner/llm-credentials</code> é classificada <code>jwt</code> e só aceita chave de
-dispositivo de MÁQUINA</strong> (<a href="business-rules.html#rn-927">RN-927</a>,
+dispositivo de MÁQUINA</strong> (<a href="business-rules/api.html#rn-927">RN-927</a>,
 <a href="adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230</a>). É a PRIMEIRA rota
 em que uma credencial de máquina ESCREVE segredo de usuário: o
 <code>brabo-runner credentials import</code> grava a chave de API de LLM que a pessoa
@@ -664,10 +664,10 @@ revogação da chave de máquina.</p>
 verificação — nunca um caminho absoluto. O que atravessa o fio é o SEGMENTO,
 e a raiz é de quem executa, o mesmo invariante do broker (ADR 0144) e da base
 do runner (ADR 0151).</p>
-<p>Desde a <a href="business-rules.html#rn-544">RN-544</a> a rota tem o seu CONSUMIDOR:
+<p>Desde a <a href="business-rules/runner.html#rn-544">RN-544</a> a rota tem o seu CONSUMIDOR:
 rodado sem <code>--project</code>, o <code>brabo-runner</code> a chama no início e abre <strong>uma
 conexão por projeto listado</strong> — e, desde a
-<a href="business-rules.html#rn-550">RN-550</a>, quando essa lista volta <strong>vazia</strong> ele
+<a href="business-rules/runner.html#rn-550">RN-550</a>, quando essa lista volta <strong>vazia</strong> ele
 continua chamando, numa cadência declarada (15s, 30s, depois 60s repetindo),
 até o primeiro projeto aparecer. Essa espera tem teto do lado da falha, não
 do lado da espera: dez chamadas seguidas com falha e o processo sai com 1
@@ -681,8 +681,8 @@ isso pertencem a esta página. Primeiro, <strong>nada no engine mudou</strong>: 
 <code>terminal:&lt;projectId&gt;</code>, o id do socket e o ticket descrevem uma CONEXÃO, e N
 conexões os satisfazem byte a byte — a recusa de um segundo runner no mesmo
 projeto não foi tocada, nem o espelho
-(<a href="business-rules.html#rn-516">RN-516</a>) e o <code>workspace_create</code>
-(<a href="business-rules.html#rn-532">RN-532</a>), que já viajavam na concessão do join
+(<a href="business-rules/runner.html#rn-516">RN-516</a>) e o <code>workspace_create</code>
+(<a href="business-rules/runner.html#rn-532">RN-532</a>), que já viajavam na concessão do join
 DAQUELA conexão. Segundo, o JWT de descoberta <strong>não leva claim
 <code>projectId</code></strong> — a guarda compara <code>payload.projectId !== request.params.projectId</code>, e numa rota sem projeto no caminho os dois têm de
 ser <code>undefined</code>; assinar ali um id de projeto inventado seria recusado com um
@@ -698,7 +698,7 @@ consentiu; sem as duas, rodar sem <code>--project</code> continua imprimindo o u
 </li>
 <li>
 <p><strong>Um cliente do socket <code>/runner</code> NUNCA pode deixar o <code>phoenix.js</code> reconectar
-sozinho</strong> (<a href="business-rules/autenticacao.html#rn-108">RN-108</a>). O ticket é de
+sozinho</strong> (<a href="business-rules/web.html#rn-108">RN-108</a>). O ticket é de
 uso único, e o auto-reconnect embutido repete os MESMOS <code>params</code> — então um
 socket construído sem <code>reconnectAfterMs</code> tenta de novo um ticket morto para
 sempre. Isto não é hipotético: <code>apps/runner/src/channel.ts</code> saiu assim
@@ -721,10 +721,10 @@ comum</strong>, ao contrário do <code>runner-ticket</code> acima — quem chama
 seção de chaves de dispositivo das Configurações, e o
 <code>RunnerOnboardingPanel</code> reconhecendo uma máquina já pareada). Até o
 <a href="adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203</a>
-(<a href="business-rules.html#rn-687">RN-687</a>) havia uma terceira, um <code>POST</code> pelo
+(<a href="business-rules/web.html#rn-687">RN-687</a>) havia uma terceira, um <code>POST</code> pelo
 qual o navegador registrava a chave pública Ed25519 que acabara de gerar
 (ADR 0118). Esse fluxo foi aposentado e a rota saiu junto, porque não tinha
-outro chamador: as chaves agora nascem na máquina — <code>brabo-runner device-key create</code> (<a href="business-rules.html#rn-551">RN-551</a>) gera o par e grava a
+outro chamador: as chaves agora nascem na máquina — <code>brabo-runner device-key create</code> (<a href="business-rules/runner.html#rn-551">RN-551</a>) gera o par e grava a
 metade privada em disco, modo 600, em <code>$XDG_CONFIG_HOME/brabo/</code> (senão
 <code>~/.config/brabo/</code>) — e são registradas pelo instalador pela rota interna
 abaixo. A metade privada continua nunca atravessando o fio; só a JWK pública
@@ -738,7 +738,7 @@ que o leitor ignora, e <code>finish --id &lt;id&gt;</code> carimba e renomeia. C
 projeto registradas pelo navegador ANTES do ADR 0203 continuam valendo: o
 <code>PatAuthGuard</code> ainda as aceita, o <code>GET</code> as lista e o <code>DELETE</code> as revoga. O
 <code>GET</code> lista as chaves do próprio chamador, revogadas
-inclusive (<a href="business-rules.html#rn-519">RN-519</a>) — é o que torna a revogação
+inclusive (<a href="business-rules/api.html#rn-519">RN-519</a>) — é o que torna a revogação
 alcançável, e até ele existir uma chave órfã (aba fechada no meio do fluxo
 de configuração automática) era invisível e permanente. Ele nunca devolve a
 JWK pública: a lista existe para revogar, e <code>lastUsedAt: null</code> é o sinal da
@@ -749,18 +749,18 @@ no mesmo formato da revogação de PAT por autosserviço. O <code>PatAuthGuard</
 guarda confere que a chave não foi revogada, mas nunca uma
 expiração — a chave em si não expira, só o JWT de TTL curto (≤60s,
 <code>exp - iat</code>) que o runner assina com ela a cada vez. Desde a
-<a href="business-rules.html#rn-543">RN-543</a> o <code>GET</code> devolve DUAS espécies e DIZ
+<a href="business-rules/produto.html#rn-543">RN-543</a> o <code>GET</code> devolve DUAS espécies e DIZ
 qual é qual (<code>especie</code>): uma chave de MÁQUINA (<code>projectId: null</code>) serve todo
 projeto do seu dono, então aparece na listagem de todo projeto — sem isso
 ela seria invisível e permanente em toda tela, o mesmo defeito que a RN-519
 fechou, renascido na espécie nova. A rota que cria chaves de MÁQUINA é
 <code>POST /internal/machine-device-keys</code>, abaixo
-(<a href="business-rules.html#rn-552">RN-552</a>) — outra rota, outra credencial e outro
+(<a href="business-rules/api.html#rn-552">RN-552</a>) — outra rota, outra credencial e outro
 chamador. O MATERIAL da chave que ela registra é produzido na máquina:
 <code>brabo-runner device-key create</code>
-(<a href="business-rules.html#rn-551">RN-551</a>) gera o par Ed25519 localmente e
+(<a href="business-rules/runner.html#rn-551">RN-551</a>) gera o par Ed25519 localmente e
 imprime só a JWK pública, então a metade privada nunca viaja. Desde a
-<a href="business-rules.html#rn-547">RN-547</a> o <code>install.sh</code> <strong>encadeia as duas</strong> no
+<a href="business-rules/produto.html#rn-547">RN-547</a> o <code>install.sh</code> <strong>encadeia as duas</strong> no
 fim de uma instalação, e instala a unit de máquina com a chave resultante
 (<a href="adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a>) — que é o que
 torna real, e não hipotético, o custo declarado desta rota.
@@ -770,7 +770,7 @@ CADA projeto em modo runner que o dono alcança — uma chamada
 </li>
 <li>
 <p><strong>A chave de MÁQUINA também é alcançável por CONTA, sem projeto no
-caminho</strong> (<a href="business-rules.html#rn-611">RN-611</a>): <code>GET /users/me/machine-device-keys</code>
+caminho</strong> (<a href="business-rules/api.html#rn-611">RN-611</a>): <code>GET /users/me/machine-device-keys</code>
 e <code>DELETE /users/me/machine-device-keys/:deviceKeyId</code>, classificadas <code>jwt</code>
 porque o escopo é o próprio chamador, como o resto de <code>/users/me/*</code>.
 Elas existem porque a instalação de uma linha cria a conta e a chave de
@@ -783,7 +783,7 @@ parâmetro nomeia outro usuário, e a visão de <code>maintainer</code> fica de 
 a RN-519 decidiu).
 O <code>DELETE</code> é a mesma revogação da rota por projeto, delegada ao mesmo caso
 de uso: derruba as conexões vivas abertas COM aquela chave, em todo projeto
-(desde a <a href="business-rules.html#rn-685">RN-685</a> o alvo é a chave, não
+(desde a <a href="business-rules/api.html#rn-685">RN-685</a> o alvo é a chave, não
 <code>{project, user}</code>); sem projeto ainda, ela só registra a revogação, que é
 tudo o que há para parar — o agente de máquina que espera (RN-550) não tem
 conexão, e o próximo ticket dele é recusado.</p>
@@ -791,7 +791,7 @@ conexão, e o próximo ticket dele é recusado.</p>
 <li>
 <p><strong>Revogar uma chave de dispositivo agora alcança a conexão VIVA, e o alvo
 é <code>{project, user}</code> — nunca <code>{key}</code></strong>
-(<a href="business-rules.html#rn-520">RN-520</a>, <a href="adr/0147-agente-local-com-capacidades.html">ADR 0147</a>
+(<a href="business-rules/api.html#rn-520">RN-520</a>, <a href="adr/0147-agente-local-com-capacidades.html">ADR 0147</a>
 ponto 6). O <code>DELETE</code> só barrava o PRÓXIMO ticket: um <code>brabo-runner</code> já
 conectado mantinha vivo o canal <code>terminal:&lt;projectId&gt;</code>, rodando comandos
 aprovados com a chave revogada, até cair sozinho. A api agora pede ao
@@ -808,9 +808,9 @@ seguinte pede ticket novo e uma credencial que continua válida o obtém. Um
 runner de outro usuário no mesmo projeto fica de pé. Derrubar a conexão é
 EFEITO COLATERAL: engine fora do ar, nenhum runner conectado ou um timeout
 nunca podem fazer o <code>DELETE</code> (204, idempotente) falhar ou virar 5xx — a
-mesma régua de <code>rag_searches</code> (<a href="business-rules.html#rn-479">RN-479</a>) e
-<code>mirror_sync_result</code> (<a href="business-rules.html#rn-517">RN-517</a>).
-<strong>Revisado pela <a href="business-rules.html#rn-685">RN-685</a>
+mesma régua de <code>rag_searches</code> (<a href="business-rules/api.html#rn-479">RN-479</a>) e
+<code>mirror_sync_result</code> (<a href="business-rules/api.html#rn-517">RN-517</a>).
+<strong>Revisado pela <a href="business-rules/api.html#rn-685">RN-685</a>
 (<a href="adr/0201-revogacao-por-chave.html">ADR 0201</a>): o alvo agora é a CHAVE.</strong>
 O ticket registra qual credencial o pediu (o <code>kid</code>, ou o id do PAT), e a
 revogação pede ao engine
@@ -827,7 +827,7 @@ usuário) fica DE FORA para chaves de dispositivo — agora por decisão, não
 omissão: aquele par nasceu de resposta a incidente com um segredo
 COMPARTILHADO circulando, e a metade privada de uma chave de dispositivo
 nunca sai da máquina que a fez. Essa frase dizia &quot;o navegador que a fez&quot;, e
-a <a href="business-rules.html#rn-551">RN-551</a> alargou o fabricante sem enfraquecer a
+a <a href="business-rules/runner.html#rn-551">RN-551</a> alargou o fabricante sem enfraquecer a
 afirmação: o terminal é agora um segundo gerador, e a metade privada continua
 nunca viajando — o que sai é a JWK pública. O que MUDOU é onde ela repousa:
 uma chave feita no navegador pousa numa pasta de projeto que o usuário
@@ -842,11 +842,11 @@ O que as protege é o <code>EngineServiceGuard</code> comparando
 a NetworkPolicy. O prefixo <code>/internal</code> é sinalização para humanos. Elas
 ficam <strong>fora do JWT</strong> via <code>@ServiceRoute()</code>: o token de usuário não funciona
 aqui e o service token não funciona em nenhuma outra rota — os dois
-mecanismos nunca se sobrepõem (<a href="business-rules/autenticacao.html#rn-035">RN-035</a>).</p>
+mecanismos nunca se sobrepõem (<a href="business-rules/api.html#rn-035">RN-035</a>).</p>
 </li>
 <li>
 <p><strong><code>POST /internal/first-account</code> é um segundo caminho que cria USUÁRIO, e
-funciona em produção</strong> (<a href="business-rules.html#rn-546">RN-546</a>,
+funciona em produção</strong> (<a href="business-rules/produto.html#rn-546">RN-546</a>,
 <a href="adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a>). Declarado aqui
 em vez de deixado para ser descoberto. O registro normal é o primeiro
 caminho e não foi tocado; este existe porque uma instalação nova de uma
@@ -860,7 +860,7 @@ controle sobre a MÁQUINA, não sobre uma caixa de e-mail. <strong>Recusa com <c
 quando a instalação tem QUALQUER usuário</strong>, condição sobre a instalação e não
 sobre o e-mail pedido, então não pode ser chamado repetidamente com endereços
 diferentes, e fica calado para sempre assim que alguém existe (inclusive
-depois de uma restauração de migração, <a href="business-rules.html#rn-530">RN-530</a>).
+depois de uma restauração de migração, <a href="business-rules/infra.html#rn-530">RN-530</a>).
 <strong>E nenhuma rota pública nasceu</strong>: um &quot;criar o primeiro owner&quot; público é uma
 corrida entre quem instalou e quem varreu a porta, e <code>owner</code> do primeiro
 workspace não é papel que alguém recupere por HTTP.</p>
@@ -880,7 +880,7 @@ controla a instalação.</p>
 </li>
 <li>
 <p><strong><code>POST /internal/machine-device-keys</code> CUNHA UMA CREDENCIAL DURÁVEL DE
-USUÁRIO a partir de um segredo de máquina</strong> (<a href="business-rules.html#rn-552">RN-552</a>,
+USUÁRIO a partir de um segredo de máquina</strong> (<a href="business-rules/api.html#rn-552">RN-552</a>,
 <a href="adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a> ponto 4). Esta é
 a borda mais afiada que o service token tem, e é declarada aqui pelo mesmo
 motivo que a irmã acima: o próximo passo do instalador depois de criar a
@@ -912,7 +912,7 @@ regra de domínio que o registro do navegador usa, porque guardar uma metade
 privada é o pior desfecho que esta rota tem.</p>
 <p>O que a chave concede não é alargado: ela dá ao agente local exatamente os
 projetos que o dono já alcança como <code>developer</code>, resolvidos contra o projeto
-pedido (<a href="business-rules.html#rn-543">RN-543</a>). Duas lacunas são declaradas em
+pedido (<a href="business-rules/produto.html#rn-543">RN-543</a>). Duas lacunas são declaradas em
 vez de escondidas: não há <code>GET</code> nem <code>DELETE</code> aqui (listar publicaria o
 inventário de credenciais de uma pessoa a quem detém só o segredo da máquina;
 revogar já existe onde tem um dono humano), e numa instalação que ainda não
@@ -946,7 +946,7 @@ classificação não mudou</strong> — continua <code>role:developer</code>, en
 do teto segue <code>role:maintainer</code>. Até a FASE 18 a tabela <code>agent_areas</code> nunca
 era escrita e a rota respondia <code>[]</code> a todos, o que fazia a classificação
 parecer permissiva por acidente, não por decisão. Com a área nascendo junto
-com o projeto (<a href="business-rules/custo.html#rn-094">RN-094</a>), a divisão volta ao
+com o projeto (<a href="business-rules/api.html#rn-094">RN-094</a>), a divisão volta ao
 que a FASE 14d pretendia: <strong>ler</strong> o teto é trabalho de quem executa;
 <strong>mudá-lo</strong> é decidir quanto o produto gasta sem perguntar, e é por isso que
 exige o mesmo papel que ativa a execução.</p>
@@ -980,13 +980,13 @@ coisas fazem dessa aparente permissividade uma decisão e não um descuido:</p>
 é para ler, e escrever é efeito externo, que nasce <code>proposed_action</code> e
 pertence a uma fase posterior. Um <code>@Post</code> neste arquivo é mudança de fase,
 não de rota;</li>
-<li><strong>o caminho é contido num lugar SÓ</strong> (<a href="business-rules/custo.html#rn-095">RN-095</a>),
-pela mesma checagem central da <a href="business-rules/custo.html#rn-092">RN-092</a> —
+<li><strong>o caminho é contido num lugar SÓ</strong> (<a href="business-rules/api.html#rn-095">RN-095</a>),
+pela mesma checagem central da <a href="business-rules/api.html#rn-092">RN-092</a> —
 e a contenção importa aqui mais que o papel, porque nos providers remotos o
 caminho vira segmento de URL da API do provider e um <code>../</code> troca o
 <strong>endpoint</strong>, não o arquivo;</li>
 <li><strong>a credencial gasta é a do owner do workspace</strong>
-(<a href="business-rules/custo.html#rn-058">RN-058</a>/<a href="business-rules/custo.html#rn-082">RN-082</a>),
+(<a href="business-rules/api.html#rn-058">RN-058</a>/<a href="business-rules/api.html#rn-082">RN-082</a>),
 como na escrita. Ler custa o rate limit do provider, e é por isso que a
 busca tem orçamento: sem teto, um <code>viewer</code> poderia inflar a conta do owner
 à vontade.</li>
@@ -994,7 +994,7 @@ busca tem orçamento: sem teto, um <code>viewer</code> poderia inflar a conta do
 </li>
 <li>
 <p><strong>Três rotas de gasto/curadoria nasceram na AT-632
-(<a href="business-rules/custo.html#rn-952">RN-952</a>..<a href="business-rules/custo.html#rn-954">RN-954</a>,
+(<a href="business-rules/api.html#rn-952">RN-952</a>..<a href="business-rules/api.html#rn-954">RN-954</a>,
 <a href="adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233</a>).</strong>
 <code>GET /projects/:projectId/spend/team</code> (<code>role:viewer</code>) devolve o total do
 projeto e o custo por agente/área a QUALQUER membro, e nunca provider nem
@@ -1010,7 +1010,7 @@ outro workspace.</p>
 <p><strong><code>GET /workspaces/:workspaceId/spend-report</code> passou a devolver o recorte
 por provider, que é um recorte por CREDENCIAL</strong>
 (<a href="adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076</a>,
-<a href="business-rules/custo.html#rn-186">RN-186</a>/<a href="business-rules/custo.html#rn-187">RN-187</a>).
+<a href="business-rules/api.html#rn-186">RN-186</a>/<a href="business-rules/api.html#rn-187">RN-187</a>).
 Nenhuma rota nova e nenhuma mudança de papel — continua <code>role:owner</code>, como
 já era —, mas o que ela CONCEDE mudou, e é por isso que esta nota existe. O
 ADR <a href="adr/0063-duas-audiencias-para-o-mesmo-gasto.html">0063</a> tinha recusado
@@ -1040,7 +1040,7 @@ quando ele existir.</p>
 <p><strong><code>POST /projects/:projectId/members</code> é <code>role:maintainer</code> na tabela,
 e esse papel é NECESSÁRIO mas não SUFICIENTE</strong>
 (<a href="adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127</a>,
-<a href="business-rules.html#rn-472">RN-472</a>). É o espelho da nota do
+<a href="business-rules/api.html#rn-472">RN-472</a>). É o espelho da nota do
 <code>socket-ticket</code> acima: lá o papel da tabela é o piso e o
 corpo pode elevá-lo; aqui o papel da tabela é o portão inteiro que o
 <code>RolesGuard</code> aplica, e o caso de uso então recusa <strong>dois movimentos com
@@ -1054,7 +1054,7 @@ do <code>socket-ticket</code> dá — a decisão depende do CORPO da requisiçã
 vê —, então a regra é uma função pura em
 <code>domain/iam/tetos-de-rebaixamento.ts</code> aplicada por
 <code>AddProjectMemberUseCase</code>, na FORMA dos tetos absolutos de
-<code>domain/actions/decide.ts</code> (<a href="business-rules.html#rn-418">RN-418</a>): nenhuma
+<code>domain/actions/decide.ts</code> (<a href="business-rules/api.html#rn-418">RN-418</a>): nenhuma
 chave de configuração, nada que possa ligá-los. O <code>owner</code> protegido
 é <code>workspace_members.role</code>, nunca <code>workspaces.created_by</code>.
 O que os tetos NÃO cobrem está escrito no ADR e na RN.</p>
@@ -1063,11 +1063,11 @@ O que os tetos NÃO cobrem está escrito no ADR e na RN.</p>
 <p><strong><code>DELETE /projects/:projectId/members/:userId</code> também é <code>role:maintainer</code>
 e também não basta</strong> — a segunda porta do teto de auto-rebaixamento
 (<a href="adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156</a>,
-<a href="business-rules.html#rn-556">RN-556</a>). O ADR 0127 deixou esta rota sem teto por
+<a href="business-rules/api.html#rn-556">RN-556</a>). O ADR 0127 deixou esta rota sem teto por
 uma premissa que se mostrou falsa — <em>&quot;remoção é benigna&quot;</em>. Apagar a linha de
 <code>project_members</code> não apaga um papel: ele <strong>troca</strong> o
 efetivo, porque <code>forProject</code> é <code>projectRole ?? workspaceRole</code>
-(<a href="business-rules.html#rn-471">RN-471</a>). Um <code>maintainer</code> por linha de projeto que é
+(<a href="business-rules/web.html#rn-471">RN-471</a>). Um <code>maintainer</code> por linha de projeto que é
 <code>viewer</code> no workspace se rebaixava, de forma irreversível pela
 tela — repor a linha é <code>POST :projectId/members</code>, que exige o
 <code>maintainer</code> recém-abandonado; <strong>sem</strong> papel nenhum no workspace, a queda é
@@ -1088,7 +1088,7 @@ desfecho, ainda alcançável por outro <code>maintainer</code>.</p>
 <p><strong><code>POST /workspaces/:workspaceId/members</code> é <code>role:owner</code> na tabela, e
 isso também deixou de ser a resposta inteira</strong> — a terceira rota desta família
 (<a href="adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157</a>,
-<a href="business-rules.html#rn-557">RN-557</a>). O ADR 0127 nomeou esta rota como a mesma
+<a href="business-rules/produto.html#rn-557">RN-557</a>). O ADR 0127 nomeou esta rota como a mesma
 classe de defeito <em>um escopo acima</em>, e o ADR 0156 a deixou como decisão à parte;
 ela era um passa-adiante de doze linhas que <strong>nunca recebia o ator</strong>, então nenhum
 teto poderia ter sido aplicado. Aqui é pior que no projeto por dois motivos
@@ -1114,7 +1114,7 @@ ser revogada, e reversível pela mesma rota por qualquer owner que reste.</p>
 <p><strong><code>DELETE /workspaces/:workspaceId/members/:userId</code> é <code>role:owner</code>, e é
 a quinta porta da mesma família</strong>
 (<a href="adr/0173-remocao-de-membro-de-workspace.html">ADR 0173</a>,
-<a href="business-rules.html#rn-615">RN-615</a>). Ela não existia quando o ADR 0157 foi
+<a href="business-rules/api.html#rn-615">RN-615</a>). Ela não existia quando o ADR 0157 foi
 escrito — a frase acima sobre &quot;nenhum <code>@Delete</code> de membro&quot; descreve aquele
 momento. Ela carrega o mesmo teto sem regra nova: <code>remocaoEhAutoRebaixamento</code>
 com o papel de workspace como o efetivo de hoje e <em>nenhum</em> como o papel
@@ -1136,12 +1136,12 @@ sessão já conectados. O <strong>titular</strong> (<code>workspaces.created_by<
 credenciais de LLM e de git os agentes gastam, RN-058) não pode ser removido: 409
 <code>criador_do_workspace</code> até que <code>PUT /workspaces/:workspaceId/owner-of-record</code>
 (<code>role:owner</code>, o destino já tem de ser <code>owner</code>, senão 409
-<code>titular_precisa_ser_owner</code>) a transfira — <a href="business-rules.html#rn-616">RN-616</a>.
+<code>titular_precisa_ser_owner</code>) a transfira — <a href="business-rules/api.html#rn-616">RN-616</a>.
 Qualquer owner pode transferi-la, inclusive para outro owner que não pediu.</p>
 </li>
 <li>
 <p><strong><code>GET /workspaces/:workspaceId/members</code> é <code>role:viewer</code>, não o <code>owner</code>
-das três rotas de escrita ao lado</strong> (<a href="business-rules.html#rn-652">RN-652</a>,
+das três rotas de escrita ao lado</strong> (<a href="business-rules/web.html#rn-652">RN-652</a>,
 AT-335). O mínimo é o do endpoint (RN-102): ler a lista não é
 mantê-la. <code>viewer</code> é o que as leituras vizinhas usam
 (<code>GET /workspaces/:workspaceId</code>, <code>/projects</code>) e o que
@@ -1194,7 +1194,7 @@ todo cabeçalho que o web envia: <code>Content-Type</code>, <code>Authorization<
 <code>Access-Control-Allow-Origin</code> para as origens de <code>WEB_ORIGIN</code>;
 <strong><code>/internal/*</code> e <code>/metrics</code> não</strong>, e a exclusão é o
 ponto. As 13 rotas internas são servidor-a-servidor com um segredo
-compartilhado (<a href="business-rules/autenticacao.html#rn-035">RN-035</a>); CORS ali não
+compartilhado (<a href="business-rules/api.html#rn-035">RN-035</a>); CORS ali não
 habilitaria nada — o cliente HTTP da api ignora esses cabeçalhos —, mas
 <strong>anunciaria a um navegador que ele é cliente esperado daquele
 canal</strong>. Há um teste afirmando a ausência, e um afirmando que a
@@ -1226,14 +1226,14 @@ duas contenções que impedem usá-lo para fechar a sessão de
 outra pessoa: <code>findInProject(projectId, originSessionId)</code> recusa em silêncio
 um id que não pertence ao PRÓPRIO projeto do caminho, e o fechamento
 só acontece se <code>GetSessionPendingWorkUseCase</code> (a mesma guarda do
-heartbeat de inatividade, <a href="business-rules/custo.html#rn-073">RN-073</a>) confirmar
+heartbeat de inatividade, <a href="business-rules/engine.html#rn-073">RN-073</a>) confirmar
 que não há handoff, ação ou turno pendurado ali. Nunca fecha a
 sessão de execução que a própria chamada acabou de ativar.</p>
 </li>
 <li>
 <p><strong><code>GET /internal/sessions/:sessionId/pending-work</code> ganhou
 <code>aguardandoUsuarioDesde</code>, e nenhuma rota mudou de classificação</strong>
-(<a href="business-rules.html#rn-581">RN-581</a>). Continua <code>engine-service</code>: o campo
+(<a href="business-rules/api.html#rn-581">RN-581</a>). Continua <code>engine-service</code>: o campo
 é o instante em que o turno de um agente conversacional terminou, lido do mesmo
 event log que o engine já escreve, e só decide por quanto tempo o
 engine mantém uma sessão aberta. A mesma RN fez as rotas de sessão que
@@ -1247,7 +1247,7 @@ respostas de sessão ganhou um valor documentado, <code>conversation_idle_timeou
 <li>
 <p><strong><code>POST /projects/:projectId/execution/activate</code> recusa com <code>409</code> quando
 o projeto não tem repositório, e a classificação não mudou</strong>
-— continua <code>role:maintainer</code> (<a href="business-rules.html#rn-582">RN-582</a>,
+— continua <code>role:maintainer</code> (<a href="business-rules/api.html#rn-582">RN-582</a>,
 <a href="adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165</a>). A
 recusa vem antes de qualquer efeito. A mensagem é escolhida a partir dos
 handoffs do projeto, lidos em TODAS as sessões dele — por isso ela pode dizer &quot;aceite
@@ -1260,7 +1260,7 @@ usuário.</p>
 <p><strong>Oferecer handoff a um agente já ativo no projeto é <code>409</code>
 <code>agente_ja_ativo</code>, e a classificação não mudou</strong> — a rota humana
 <code>POST .../sessions/:sessionId/handoffs</code> continua <code>role:developer</code> e a
-interna continua <code>engine-service</code> (<a href="business-rules.html#rn-635">RN-635</a>,
+interna continua <code>engine-service</code> (<a href="business-rules/api.html#rn-635">RN-635</a>,
 <a href="adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182</a>). Ao contrário da recusa acima,
 esta NOMEIA uma sessão: a mensagem diz em que sessão do mesmo
 projeto o destino está ativo, porque é o texto que o agente lê como
@@ -1273,7 +1273,7 @@ aceita <code>seAusente</code> — uma chave que só pode fazer a chamada escreve
 <li>
 <p><strong>O <code>POST /internal/sessions/:sessionId/handoffs</code> interno agora pode ACEITAR
 a oferta Criativo→PO que ele cria, e a classificação não mudou</strong> —
-continua <code>engine-service</code> (<a href="business-rules.html#rn-658">RN-658</a>,
+continua <code>engine-service</code> (<a href="business-rules/api.html#rn-658">RN-658</a>,
 <a href="adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185</a>). O engine não ganha
 poder de ativar agente: quem decide é a api, a partir do <code>readiness.confirmed</code>
 que uma PESSOA gravou por <code>POST .../readiness</code> (<code>role:developer</code>, o mesmo
@@ -1281,12 +1281,12 @@ mínimo de aceitar pelo card), e ela grava essa pessoa como o ator. O
 engine não consegue forjar a marca — ele nunca escreve <code>readiness.confirmed</code> — e
 a oferta precisa carregar o <code>product_brief</code> nascido depois daquele clique, na mesma
 sessão. <code>POST .../agents/criativo/validate-necessity</code> mantém a rota e o
-papel, sem chamador no web (<a href="business-rules.html#rn-657">RN-657</a>).</p>
+papel, sem chamador no web (<a href="business-rules/api.html#rn-657">RN-657</a>).</p>
 </li>
 <li>
 <p><strong><code>GET /projects/:projectId/execution/session</code> é <code>role:viewer</code>, o
 mesmo papel de <code>GET /sessions/:sessionId</code></strong>
-(<a href="business-rules/autenticacao.html#rn-139">RN-139</a>). Devolve a sessão de execução
+(<a href="business-rules/api.html#rn-139">RN-139</a>). Devolve a sessão de execução
 CORRENTE do projeto — <code>active</code> com <code>execution.activated</code> gravado — ou
 <code>null</code>; nunca a sessão mais recente do projeto, que era o que a
 aba Executores lia e que trocava de sessão em silêncio no
@@ -1296,16 +1296,16 @@ instante em que outra sessão nascia depois dela.</p>
 <p><strong><code>GET /workspaces/:workspaceId/projects-summary</code> ganhou
 <code>roster.activatedAgents</code>, e a classificação não mudou</strong> — continua
 <code>role:viewer</code>. O campo é a lista de ids de agente com um <code>agent.activated</code>
-na sessão mais recente do projeto (<a href="business-rules.html#rn-630">RN-630</a>),
+na sessão mais recente do projeto (<a href="business-rules/api.html#rn-630">RN-630</a>),
 calculada na mesma varredura por sessão que já produz
-<code>executionActivated</code> e <code>gatesEverOpened</code> (<a href="business-rules.html#rn-568">RN-568</a>).
+<code>executionActivated</code> e <code>gatesEverOpened</code> (<a href="business-rules/web.html#rn-568">RN-568</a>).
 Não nomeia usuário, sessão nem credencial, e não acrescenta consulta.</p>
 </li>
 <li>
 <p><strong><code>POST .../llm-turn</code> e <code>POST .../llm-turn-stream</code> ganharam
 <code>modelName</code> no corpo da resposta/quadro final, e a classificação
 não mudou</strong> — continua <code>engine-service</code> como sempre
-(<a href="business-rules/autenticacao.html#rn-146">RN-146</a>). O nome do modelo já
+(<a href="business-rules/api.html#rn-146">RN-146</a>). O nome do modelo já
 era resolvido para chamar o provider; ele só passou a viajar de volta ao
 engine, que o inclui no payload de <code>agent.response</code>. Nenhum dado novo
 é lido, nenhuma credencial nova é exposta — é o mesmo nome que
@@ -1313,7 +1313,7 @@ já aparece em <code>token_usage</code>.</p>
 </li>
 <li>
 <p><strong><code>PUT /projects/:projectId/agent-autonomy</code> passou a aceitar
-<code>actionType: &quot;*&quot;</code> — o &quot;modo automático&quot; (<a href="business-rules/autenticacao.html#rn-153">RN-153</a>)
+<code>actionType: &quot;*&quot;</code> — o &quot;modo automático&quot; (<a href="business-rules/api.html#rn-153">RN-153</a>)
 — e a classificação não mudou:</strong> continua <code>role:maintainer</code>,
 o mesmo do <code>GET</code> ao lado. A diferença é o que o corpo agora
 AUTORIZA, não quem pode chamar: a curinga concede autonomia para QUALQUER
@@ -1325,7 +1325,7 @@ que continua recebendo só a <code>PermissionPolicy</code> já resolvida,
 exatamente como antes de a curinga existir. É por isso que os três
 tetos absolutos — merge em branch protegida, <code>instruction_patch</code>,
 <code>parallelize</code>/<code>raise_max_parallel</code> — continuam bloqueando mesmo com a
-curinga em <code>auto_approve</code> (<a href="business-rules/autenticacao.html#rn-154">RN-154</a>):
+curinga em <code>auto_approve</code> (<a href="business-rules/api.html#rn-154">RN-154</a>):
 eles reagem a <code>current.policy === 'auto_approve'</code>, nunca a de onde ela
 veio, e nenhuma exceção precisou entrar em <code>decide()</code> para isso continuar
 valendo. O <code>ApprovalCard.tsx</code> só oferece o botão que grava a
@@ -1336,7 +1336,7 @@ mas o que de fato garante o papel é este mesmo
 <li>
 <p><strong>O roteador de ferramentas Jev é uma chamada de SAÍDA nova levando contexto de agente</strong>
 (<a href="adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179</a>,
-<a href="business-rules.html#rn-625">RN-625</a>). Antes de uma chamada de chat a um modelo do
+<a href="business-rules/engine.html#rn-625">RN-625</a>). Antes de uma chamada de chat a um modelo do
 OpenRouter, a api faz POST em <code>https://openrouter.ai/api/alpha/decisions</code> (a
 Decisions API, alfa) com a chave do OpenRouter do owner do workspace — a MESMA
 chave que o chat já gasta, decifrada no mesmo caso de uso, nunca logada
@@ -1356,7 +1356,7 @@ a mesma política. Qualquer falha da chamada cai no catálogo inteiro.</p>
 <li>
 <p><strong><code>POST .../actions/:actionId/approve_always</code> ganhou <code>desfecho</code> e
 <code>padraoGravado</code> na resposta, e a classificação não mudou</strong> —
-continua <code>role:developer</code> (<a href="business-rules.html#rn-642">RN-642</a>). A aprovação
+continua <code>role:developer</code> (<a href="business-rules/api.html#rn-642">RN-642</a>). A aprovação
 e o padrão gravado agora dividem uma transação; clicar numa ação que
 já estava APROVADA responde <code>201</code> com <code>desfecho: &quot;ja_aprovada&quot;</code> em vez de
 <code>409</code>, e uma ação RECUSADA continua respondendo <code>409</code> (<code>acao_ja_recusada</code>) sem
@@ -1366,7 +1366,7 @@ um padrão que o teto proíbe.</p>
 </li>
 <li>
 <p><strong>Um erro de git ganhou resposta nomeada nova: <code>409 merge_conflict</code></strong> — nenhuma rota,
-papel ou guard mudou (<a href="business-rules.html#rn-704">RN-704</a>).
+papel ou guard mudou (<a href="business-rules/api.html#rn-704">RN-704</a>).
 <code>GitProviderErrorFilter</code> mapeia <code>GitMergeConflictError</code> (o merge do
 repositório local achou conflito) para <code>409</code> com os arquivos em conflito na
 mensagem; a ref de destino fica intacta e a pull request continua aberta.
@@ -1375,7 +1375,7 @@ essa mensagem, o mesmo caminho de <code>GitPullRequestAlreadyMergedError</code>.
 </li>
 <li>
 <p><strong><code>GET /projects/:projectId/actions</code> aceita <code>status=failed</code></strong> — mesma rota,
-mesmo papel <code>developer</code> (<a href="business-rules.html#rn-705">RN-705</a>). Até aqui só
+mesmo papel <code>developer</code> (<a href="business-rules/api.html#rn-705">RN-705</a>). Até aqui só
 <code>pending</code> era aceito; <code>failed</code> lista as ações do projeto cuja
 execução falhou, e EXIGE <code>actionType</code> (<code>400</code> sem ele), para que a
 leitura seja de um tipo e nunca o histórico inteiro. Devolve a mesma
@@ -1387,19 +1387,19 @@ no diff.</p>
 <li>
 <p><strong>Duas respostas ganharam campos na Rodada 135</strong> — nenhuma rota, papel ou
 guard mudou. <code>GET /workspaces/:workspaceId/models/catalog</code> (<code>role:maintainer</code>)
-devolve <code>sugestao</code> por modelo (<a href="business-rules/custo.html#rn-965">RN-965</a>): a
+devolve <code>sugestao</code> por modelo (<a href="business-rules/api.html#rn-965">RN-965</a>): a
 faixa de cobrança e o preço publicado pelo fabricante, com link e data da
 fonte — dado curado no repositório, não dado do usuário nem segredo, e nada
 é gravado pela leitura (quem aplica é o <code>owner</code>, pelas rotas de curadoria de
 sempre). <code>GET /projects/:projectId/sessions/:sessionId/token-usage</code>
 (<code>role:developer</code>) devolve <code>lastCall</code> por agente
-(<a href="business-rules/custo.html#rn-969">RN-969</a>): tokens de entrada, nome do modelo
+(<a href="business-rules/api.html#rn-969">RN-969</a>): tokens de entrada, nome do modelo
 e janela da última chamada, do mesmo escopo de sessão que a soma já expunha,
 sem provider nem credencial.</p>
 </li>
 <li>
 <p><strong>A resposta do catálogo de modelos ganhou <code>reasoningBudget</code></strong> — nenhuma rota,
-papel ou guard mudou (<a href="business-rules.html#rn-914">RN-914</a>, ADR 0223). O campo
+papel ou guard mudou (<a href="business-rules/api.html#rn-914">RN-914</a>, ADR 0223). O campo
 (inteiro ou <code>null</code>) sai no DTO de modelo das leituras do catálogo que já
 existiam, com os mesmos papéis. É curadoria do produto (o orçamento de
 raciocínio provado por smoke), não dado do usuário nem segredo; a escrita é só
@@ -2741,7 +2741,7 @@ por migration, sem rota nova.</p>
 </table></div>
 <nav class="site-pager"><a href="reference/brb.html">Registro BRB</a></nav>
 </article>
-<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/docs/security-surface.md">Editar esta página</a><span>Atualizado em 2026-11-04T14:34:32-03:00 · Daniel Souza</span></footer>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/apps/api/docs/security-surface.md">Editar esta página</a><span>Atualizado em 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
 </main>
 <aside class="site-toc"><h2>Nesta página</h2><ul><li class="n2"><a href="#classifications">Classificações</a></li><li class="n2"><a href="#the-fifteen-public-routes">As quinze rotas públicas</a></li><li class="n3"><a href="#infrastructure">Infraestrutura</a></li><li class="n3"><a href="#first-party-auth">Auth first-party</a></li><li class="n3"><a href="#social-login-adr-0084">Login social (ADR 0084)</a></li><li class="n2"><a href="#notes">Notas</a></li><li class="n2"><a href="#table">Tabela</a></li></ul></aside>
 </div>

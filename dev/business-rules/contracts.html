@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="pt-BR" data-locale="pt-BR" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regras de negócio — Contratos | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../assets/tema.js"></script>
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Menu">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Buscar" aria-label="Buscar" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Idioma"><option value="../business-rules/contracts.html" selected>pt-BR</option><option value="../en/business-rules/contracts.html">en</option><option value="../ru/business-rules/contracts.html">ru</option><option value="../zh-Hans/business-rules/contracts.html">zh-Hans</option></select>
+<select data-seletor aria-label="Ambiente"><option value="../../dev/business-rules/contracts.html" selected>dev</option><option value="../../prd/business-rules/contracts.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Alternar tema">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Comece aqui</h2><ul><li><a href="../index.html">Introdução</a></li><li><a href="../getting-started.html">Primeiros passos</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">Do zero a um entregável</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Arquitetura</h2><ul><li><a href="../architecture.html">Arquitetura</a></li><li><a href="../adr.html">Decisões (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Formato do contrato normalizado do GitProvider</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — Normalização de erros do GitProvider</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Política de retry para providers remotos</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Cadastro de credenciais de git do usuário</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Bootstrap de Gitflow idempotente e retomável</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Política de branches mecanizada</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Adoção de repositório existente, e o plano como portão</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — O engine trabalha em repositório remoto</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness de agentes: montagem determinística de contexto</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — O tipo da sessão é dado da criação, e a execução continua sendo evento</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Limites de transporte e janela efetiva de compactação coerentes</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — O Infra Lead conversa pelo composer, e antes o turno dele passa pelo `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — O idioma das respostas mora em três lugares — conta, sessão e projeto —, em lista aberta de BCP-47 e nunca no `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — O laço pergunta ao Jev qual ferramenta, e o modelo do usuário vê só o menu que sobra</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Reabrir sessão: as três decisões do dono, e `developer` reabre</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — A mensagem que chega com turno em curso entra numa fila persistida e é lida no fim do turno</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Agente Criativo conversacional no harness + fundação de handoffs</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Agente PO, backlog (epics/stories/tasks) e rastreabilidade</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Agente Arquiteto: ADRs via PR real, module_map e validação cruzada</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent e painel do time ao vivo (fechamento da Fase 4a)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Psicólogo real: ToolLoop, hipóteses com evidência e triagem de custo</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: perfil de proficiência, patches de instrução e loop fechado</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Fechamento da Fase 4b (sessão 1): evidência que chega, custo que aparece, análise que sobrevive ao kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Fechamento da Fase 4b (sessão 2): catálogo que funciona, dedup que distingue quem negou, e fila que sobrevive à rodada</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Hierarquia de agentes: áreas, leads e delegação</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Promoção de história com autoridade do usuário</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead como área, e paralelismo autorizado pelo usuário</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Diagrama C4 do Arquiteto</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Fusão condicional do aceite do handoff com a ativação de execução</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Fluxo de papéis como registro declarativo (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — O plano do Dev Lead suspende o turno para aprovação</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — O UX Designer entra como agente conversacional</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: código pronto, dormente para disparo automático</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` e `delivery-metricas` viram script de relatório</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` nasce como script de relatório sob demanda, não agente</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — O papel `dbre` vira dois scripts: linter de migration e relatório de backup</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — A delegação Dev Lead → dev vira dado, com `parecerArtifactId` redefinido</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Handoff manual a um agente à escolha reusa oferta+aceite, nunca um terceiro estado de handoff</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;Estou pronto — a necessidade está validada&quot;: um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — O handoff do PO ao Arquiteto é aceito sem clique quando o backlog está coberto e o repositório é local</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Aprovar o plano do Dev Lead ativa a execução, e a tarefa ganha o módulo que ele atribui</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — A história arquivada: uma coluna, não um estado da máquina</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — O entregável roda na máquina do usuário pelo compose da Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates de PR: QAAgent e SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Destravar os gates de QA e SecOps: gitleaks na árvore, pareceres validados e tool call em texto</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Fechamento da Fase 4a: gate de infra que valida, e painel que diz a verdade</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates como registro declarativo</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — O agente de gate espera a aprovação, como o dev espera</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — O gate sobrevive ao restart</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-estratégia e AppSec como segundo MOMENTO, não agente novo</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` como script de relatório sobre `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — O gate `necessidade-validada` se fecha com confirmação humana separada, não com o Criativo se autovalidando</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set de casos de regressão para o julgamento semântico do agente de QA Automação</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — O plano de teste nasce depois da entrega do dev, e o gate `implementavel` passa a se julgar sobre a história e o `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Pergunta em aberto vira pendência a resolver</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — A decisão do projeto chega ao dev e ao QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Infraestrutura dos dev agents: worktrees, executores git e trava de merge</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — DevAgent real: ToolLoop, orçamento por task e disciplina de bloqueio</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Lock de inicialização do workspace, Monitor de dev agents e herança de teto</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent como modo de execução permanente</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Destravar o DevAgent real: escrita, terminal, ADR por módulo e orçamento por projeto</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Reagendamento por evento do dev agent, e o circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — A decisão no event log, e a ordem do gate</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — O dev agent espera a aprovação no meio do laço</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Escopo de caminho na política de terminal</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Revisão do ADR 0065: a fronteira de efeito externo deixa de ser `deny` e vira teto absoluto</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — O modo automático libera o escopo de caminho, e só ele</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e &quot;Sempre permitir&quot; grava verbo + subcomando</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — O modo automático libera push e PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Nome de pasta legível do workspace</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — O projeto escolhe onde o código mora: pasta do usuário ou pasta gerenciada</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` em três valores, e o workspace nasce `unverified` quando o runner é quem verifica</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Navegação de pasta local via o Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — No modo `runner`, o projeto nasce ao clicar em &quot;Navegar pasta...&quot;, não só na confirmação</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Converter o `execution_mode` de um projeto existente: recusar com dev agent ativo, realocar o `permissions.json`, aposentar a linha do container</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — A base única dos projetos montados, montada por identidade</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — A validação do workspace montado é adiada até a materialização</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — A base consentida no bootstrap, e `mounted` como padrão local</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Container por projeto: a fronteira deixa de ser política</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Ciclo de vida do container: tabela de estado, sem orquestrador</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — A porta de Docker, e a prova de empacotamento que escolheu a implementação</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — O broker de container: quem fala com o Docker do servidor, e por que ele não aceita especificação</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — O Arquiteto roteia módulos para infra: ele CANDIDATA, a Infra ELEGE</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — A Infra elege entre as candidatas do roteamento, e a eleição vira nova versão de `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents executam DENTRO do container real do projeto, e o terminal ganha um piso de auto-aprovação lá dentro</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — O portão da imagem do Arquiteto (RN-105) passa a valer nos três modos de execução</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Página global de containers: teto por carga no broker, e `container_remove` no teto absoluto</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — O `brabo-runner` sobe o container do projeto na máquina do usuário</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Agentes de dev só depois do container</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — A segunda raiz do broker, e o localizador discriminado que a escolhe</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — O container do projeto roda com o dono da pasta, medido pela api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — A Infra sobe o container no aceite do handoff, por passo do servidor e com a autonomia semeada, e é ela quem entrega ao Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — O recurso mínimo do container é derivado do `module_map`: cada módulo declara o seu, e a Infra sobe com a soma</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — A Infra herda a rede que o Arquiteto declarou</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Runner local: execução na máquina do usuário por canal Phoenix com ticket de uso único</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) pro runner, escopado por construção a uma rota</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Distribuição do `@brabo/runner` via `tsup` e `npm publish`, versão injetada só em CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Binário standalone do `@brabo/runner` via `bun build --compile`, com o addon nativo `.node` embutido por extração real para um diretório temporário</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Configuração do runner pelo navegador: uma chave de dispositivo Ed25519 como segunda credencial do `runner-ticket`, um proxy do GitHub Releases para o binário e a File System Access API para uma pasta configurada com um clique</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker vira pré-requisito real do modo `runner`</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — Um agente local, capacidades declaradas na conexão</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — A base consentida no runner, e a criação de pasta pelo canal</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — A chave de dispositivo de máquina</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — O binário standalone do runner deixa de prometer o Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — O binário standalone do runner deixa de prometer o Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — O git credenciado roda no HOST do runner; o código roda no container</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — O fluxo do runner pelo navegador é aposentado, e o caminho é o instalador</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — O CORS que o engine não tinha, e a porta como parte do contrato</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Credencial sempre cifrada; verificação vira ação explícita</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — CSP fechado na api, e o escopo de projeto contido na raiz</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — A chave que assina o `state` do OAuth de git não tem default</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Login social (GitHub/GitLab), revisando o backlog dos ADRs 0031/0032</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — SMTP real no `MailSender`, atrás de um toggle explícito</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Dois tetos de rebaixamento em `project_members`, e a sobreposição fica</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — O teto de auto-movimento no upsert de workspace, e a auto-promoção que era brecha</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Seis providers de LLM sobre a base, e a Fase 9b finalmente fechada</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Curadoria de modelo por workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Facetas de capability provadas; &quot;para que serve&quot; é curadoria</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Duas audiências para o mesmo gasto: a fatura do owner e o consumo do membro</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Escopo de área na cascata de modelo, e o binding de agente global</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings no contrato de LLMProvider</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` volta a ser dimensão de gasto, e a contenção passa a ser do tipo</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Ranking de modelos por capacidade, sem nota inventada</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Orçamento por área é ADITIVO, ao lado de projeto/sessão — não uma cascata, e não uma tabela nova</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Detecção de Ollama nativo no bootstrap de dev: perguntar uma vez, persistir no `.env`, pôr os serviços do compose atrás de um profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull de modelo do Hugging Face: tabela própria, confirmação em dois passos e allowlist de publicadores oficiais — nunca `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — O custo real que o provider devolve vira o número do metering</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Tabela de chunks: vetor e `tsvector` na mesma linha</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Busca híbrida: pesos, limiar e o que é citação</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: aba própria de busca híbrida, sem renomear &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j como grafo de conhecimento e templates de prompt, driver na api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` para agentes e modelos Ollama garantidos no boot</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Memória relacional como projeção do event log; templates consumidos sem tocar GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Pasta local anexada vira `chunks.scope = 'local'`, lida pelo NAVEGADOR, nunca um caminho do host</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — A Anamnese religada: não roda sem sujeito, e a hipótese aceita vira fato do perfil</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — O contrato entre módulos vira artefato versionado do Arquiteto, e o dev agent o lê em vez do worktree alheio</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — O desvio do agente que a Anamnese observa vira sinal do produto, sem dado pessoal</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — A superfície de leitura de código, contida e com orçamento</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Tema alcançável, e o boot sob CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Moldura de tela, e o registro de abas diverge do handoff de propósito</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Leitura direta do schema do engine para o &quot;N agentes online&quot; do dashboard</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (e tipos futuros) gerados do contrato OpenAPI, não copiados à mão</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` dividido em cinco PRs mecânicos, declarados de antemão</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Agrupamento de estado do canal de turno extraído para `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` dividido em um arquivo por seção, atrás de um barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — A página do projeto navega por um trilho vertical, e a aba Código para de recolher a sidebar sozinha</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` abaixo de 1 000 linhas, em dez PRs mecânicos, e a trava só depois</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — O tema escuro vira preto neutro, e a dívida de contraste acaba</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Animação de texto com `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Uma navegação só: a sidebar absorve o trilho do projeto</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Fase 5 (sessão 1): imagens de produção, compose.prod, CI e teste de fumaça</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Fase 5 (sessão 2): deploy Kubernetes com Kustomize, métrica de fila e overlay local</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Fase 5 (sessão 3): graceful shutdown, OpenTelemetry, métricas, logs e dashboards</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, hardening da api, superfície exposta e release</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace sem coletor, e o caminho entre camadas no log</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Observabilidade no Compose local: métrica e log, sem trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — O instalador de uma linha, com fonte escolhida e marcador</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Backup e restore de volumes, contra compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — O compose do instalador viaja com ele, como asset assinado</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — A tela só oferece o modo que a instalação executa, e a instalação por Release não tem broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — O broker vira a quinta imagem publicada, e o instalador PERGUNTA se o liga</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — O destino S3 do overlay local deixa de ser o MinIO e passa a ser o SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — O compose de dev vira `brabo-dev`, e o dev recusa subir ao lado de uma instalação</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — O engine sobe para Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint e a validação do pipeline de CI gerado</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Imagens publicadas no GHCR a cada tag final, e o overlay de produção preso por digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — E2E de navegador contra o compose de produção, num pacote fora do workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — O schema dividido por agregado de domínio, atrás de um barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Assinatura dos artefatos publicados</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — A imagem dos workflows vem do compose, e o Dependabot de imagem é ligado</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Sincronização contínua da documentação</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — A referência de API sai do código, e o teste de tabela cobra os metadados</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Documentação publicada por degrau, em subdiretório do Pages</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Publicação simétrica por degrau, e uma raiz que escolhe</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — O caminho publicado nomeia o ambiente, não a branch</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` ganha lockfile próprio, fora do `pnpm audit` do produto</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — O índice de ADR por tema, com o tema fora do ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — A referência da API vira uma página Redoc</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Todo ADR se chama &quot;ADR NNNN — título&quot;</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — A referência entra na tradução</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — A página da API sai traduzida por catálogo</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 Regras</h2><ul><li><a href="../business-rules.html">Regras de negócio</a></li><li><a href="../business-rules/custo.html">Custo e metering</a></li><li><a href="../business-rules/autenticacao.html">Autenticação</a></li><li><a href="../business-rules/api.html">API</a></li><li><a href="../business-rules/broker.html">Broker</a></li><li><a href="../business-rules/ci.html">CI</a></li><li><a href="../business-rules/contracts.html" aria-current="page">Contratos</a></li><li><a href="../business-rules/engine.html">Engine</a></li><li><a href="../business-rules/infra.html">Infra</a></li><li><a href="../business-rules/produto.html">Produto</a></li><li><a href="../business-rules/runner.html">Runner</a></li><li><a href="../business-rules/web.html">Web</a></li></ul></section><section><h2>📖 Referência</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Superfície exposta da api</a></li><li><span>Referência da API</span></li></ul></section><section><h2>💡 Explicação</h2><ul><li><span>Processo e esteira</span><ul><li><a href="../explanation/documentation-workflow.html">Sincronia da doc</a></li><li><a href="../explanation/branching-policy.html">Política de branches</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">Cadeia de suprimentos do CI</a></li><li><a href="../explanation/gates.html">Os gates, e como eles são medidos</a></li><li><a href="../explanation/observability.html">Observabilidade</a></li><li><a href="../explanation/modelo-de-time.html">Modelo de time e fluxo de entregáveis</a></li></ul></li><li><span>Validações e medições</span><ul><li><a href="../explanation/primeiro-dogfooding.html">Primeiro dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Execução real (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Achados da execução real da esteira</a></li><li><a href="../explanation/validacao-fase-12.html">Validação da Fase 12</a></li><li><a href="../explanation/validacao-real.html">Validação real (13b)</a></li><li><a href="../explanation/aceite-providers.html">Aceite dos providers</a></li><li><a href="../explanation/medicao-do-idioma.html">Medição da heurística de idioma</a></li><li><a href="../explanation/medicao-do-jev.html">Medição do roteador de ferramentas Jev</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Auditoria: fluxo.yml × código (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Auditoria visual, antes e depois da Rodada 29</a></li></ul></li><li><span>História das fases</span><ul><li><a href="../explanation/historico-de-fases.html">Histórico de fases</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — pasta do usuário</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — instalação de uma linha</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — agente local da máquina</a></li><li><a href="../explanation/backlog.html">Backlog triado</a></li></ul></li><li><span>Localização</span><ul><li><a href="../explanation/localizacao.html">Localização</a></li><li><a href="../explanation/localizacao-en.html">Localização — inglês (en)</a></li><li><a href="../explanation/localizacao-ru.html">Localização — russo (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Localização — chinês simplificado (zh-Hans)</a></li></ul></li><li><span>Notas técnicas</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — não adotado</a></li></ul></li></ul></section><section><h2>🛠️ Operação</h2><ul><li><a href="../runbook.html">Manual de operação</a></li></ul></section><section><h2>📚 Vocabulário</h2><ul><li><a href="../glossary.html">Glossário</a></li></ul></section><section><h2>🤝 Contribuir</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Como contribuir</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Onde pedir ajuda</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Reportar vulnerabilidade</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="contratos">Contratos</h1>
+<h2 id="git">Git</h2>
+<h3 id="rn-028">RN-028 — Capability decide, não o nome do provider</h3>
+<p>Operação não suportada (proteção de branch no provider local) é declarada em
+<code>capabilities</code> e rejeitada com <code>GitNotSupportedError</code> — nunca falha silenciosa.</p>
+<p>São <strong>quatro</strong> capabilities: <code>protectBranch</code> e <code>pullRequests</code> desde a Fase 2, e
+<code>listTree</code> e <code>pullRequestDiff</code> desde a FASE 26 (aba Code, só leitura). A regra
+não mudou com elas — mudou o alcance. E o critério de declarar continua sendo
+prova: capability só é <code>true</code> quando a suite a exercita naquele provider; sem
+prova, declara-se <code>false</code> e degrada (mesmo critério dos ADRs 0041/0042).</p>
+<ul>
+<li><strong>Onde:</strong> <code>packages/shared/src/index.ts</code> (<code>GitProviderCapabilities</code>); os
+tetos das duas operações de leitura em
+<code>apps/api/src/domain/git/git-read-limits.ts</code>, fora do shared porque ele é
+100% tipo</li>
+<li><strong>Teste:</strong> suite de contrato única, <code>test/contract/git-provider.contract.ts</code>,
+rodada contra os três providers</li>
+<li><strong>Origem:</strong> <a href="../adr/0001-git-provider-contract-shape.html">ADR 0001</a></li>
+</ul>
+<h3 id="rn-087">RN-087 — O Dev Lead é o único endereço externo da execução</h3>
+<p>Existe um agente <code>dev-lead</code>, conversacional, que recebe o handoff do Arquiteto
+(desde a <a href="api.html#rn-672">RN-672</a>, da Infra, com o container do
+projeto <code>running</code>) e propõe o <strong>plano de execução</strong>: quantos agentes por módulo e por quê. Ele não
+escreve código — distribui trabalho e responde por ele.</p>
+<p><strong>Antes dele, a frase &quot;quem decide é o lead&quot; da <a href="api.html#rn-083">RN-083</a> não tinha
+dono.</strong> O Arquiteto terminava e a execução subia por um botão, sem ninguém no
+meio para avaliar quanto trabalho havia.</p>
+<p><strong>Os <code>dev-&lt;modulo&gt;</code> deixaram de ser endereçáveis por handoff.</strong> Isso não é
+exceção nova: é a regra do <a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038</a> —
+handoff externo endereça só lead de área ou agente sem área — passando a valer
+para o dev como já valia para QA e Infra. Enquanto não havia Dev Lead, eles
+eram agentes SEM área e por isso alvos válidos; virando membros, deixam de ser.</p>
+<p><strong>A área de <code>dev</code> é a primeira DINÂMICA</strong>, e é o que forçou o predicado: os
+membros são um por módulo do <code>module_map</code>, decididos pelo Arquiteto e
+diferentes em cada projeto, então não há lista a enumerar. <code>dev-lead</code> casa com
+o mesmo prefixo <code>dev-</code> dos membros, e quem o exclui é a regra genérica <strong>o lead
+nunca é membro da própria área</strong> — que vale para qualquer área e vive num lugar
+só. A primeira versão repetia essa exclusão em três pontos, e a verificação por
+mutação mostrou que nenhuma das cópias era alcançável por teste: cada uma
+sobrevivia à mutação da outra.</p>
+<p><strong>O plano é <code>proposed_action</code> (revisado pelo <a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086</a>, <a href="engine.html#rn-284">RN-284</a>).</strong>
+Até essa mudança o plano virava EVENTO simples, sem aprovação: o argumento era
+que propor não tem efeito externo — o gasto acontece quando os agentes sobem,
+e é lá que o teto cobra autorização; transformar a proposta em ação a decidir
+faria você decidir duas vezes a mesma coisa. Uma auditoria de
+<code>packages/contracts/fluxo.yml</code> × código encontrou que o fluxo já declarava esta saída como
+<code>via: proposed_action</code> desde o ADR 0085, e o código nunca foi ajustado para
+bater — o dono do produto decidiu que o código errava: o plano é a PRIMEIRA
+decisão real de quanto a sessão vai gastar com paralelismo, e o usuário passou
+a decidir ativar a execução tendo VISTO uma aprovação de verdade, não só lido
+uma linha no fio. A lição antiga não desapareceu — é o motivo pelo qual
+<code>propose_execution_plan</code> NÃO entrou no bloco de tetos absolutos de
+<code>decide.ts</code> (ver RN-284).</p>
+<p><strong>O plano BEM-SUCEDIDO encerra o turno — no caminho SEM suspensão.</strong> Na
+primeira execução real o Dev Lead registrou <strong>dois</strong> <code>execution.plan_proposed</code>
+na mesma sessão — textos diferentes, mesmo total —, porque o laço voltava ao
+modelo e ele propunha de novo. O event log é imutável: ficaram duas propostas
+e nada dizendo qual valia. A instrução &quot;use uma vez&quot; no spec da ferramenta é
+pedido, não garantia; quem garante é o laço parar. Desde o ADR 0086, quando a
+proposta fica <code>pending</code>, quem encerra o turno é a PARADA por suspensão
+(RN-284) — o sucesso imediato (<code>auto_approved</code>/<code>executed</code>/<code>approved</code>, ver
+RN-284) continua fechando o laço do mesmo jeito de sempre.</p>
+<p><strong>Bem-sucedido, e não &quot;chamou a ferramenta&quot;</strong>: um plano recusado (vazio, ou com
+zero agente num módulo) deixa o laço seguir, senão a recusa vira fim de turno e
+o modelo nunca chega a corrigir. A primeira versão desta guarda olhava só o
+nome da ferramenta e tinha esse defeito — encontrado pelo teste comportamental,
+não pela leitura.</p>
+<p>Um plano vazio, ou com zero agente num módulo, é recusado <strong>antes de propor
+qualquer coisa</strong> — a proposta, uma vez criada, é decisão real do usuário, e um
+plano meio proposto não teria como ser retratado.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/engine/lib/engine/agents/dev_lead_server.ex</code> e
+<code>dev_lead_tools.ex</code>; a regra de endereçamento em
+<code>apps/api/src/domain/agents/agent-areas.ts</code>; o handoff em
+<code>application/use-cases/agents/offer-infra-handoff.use-case.ts</code></li>
+<li><strong>Teste:</strong> <code>apps/engine/test/engine/agents/dev_lead_tools_test.exs</code>,
+<code>dev_lead_server_test.exs</code> (<code>o plano ENCERRA o turno</code>, <code>o plano recusado NÃO encerra o turno</code>),
+<code>apps/api/test/domain/agents/agent-areas.spec.ts</code> (<code>o dev de módulo DEIXOU de ser endereçável</code>, <code>`dev-lead` É endereçável, apesar do prefixo</code>) e
+<code>test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts</code></li>
+<li><strong>Origem:</strong> <a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053</a>, FASE 14d;
+o mecanismo de aprovação revisado pelo <a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086</a></li>
+</ul>
+<h3 id="rn-110">RN-110 — <code>blame</code> é a 13ª operação do <code>GitProviderContract</code>, com o mesmo vocabulário de ausência das outras leituras</h3>
+<p>Fundação da pendência de blame declarada na FASE 26 (nenhuma tela consome
+ainda — vem na onda seguinte). <code>blame(ref, path)</code> devolve <code>GitBlame | null</code>,
+<code>null</code> significando exatamente o que já significa em <code>getFileContent</code>/
+<code>listTree</code>: arquivo ausente naquela ref, ou ref inexistente. Dois vocabulários
+de &quot;não existe&quot; para a mesma aba fariam a tela tratar o mesmo caso de duas
+formas — a mesma razão que já valia para as duas operações anteriores.</p>
+<p>Cada provider computa por meios PRÓPRIOS, porque não há endpoint comum: o
+GitHub não tem blame na REST (só GraphQL — a única operação do provider que
+fala GraphQL), o GitLab tem <code>repository/files/:path/blame</code>, e o local sai de
+<code>git blame --porcelain</code>, o único dos três testado contra um repositório de
+verdade nesta sessão (os outros dois só contra os backends fake do teste de
+contrato — sem <code>GITHUB_TEST_TOKEN</code>/<code>GITLAB_TEST_TOKEN</code> no ambiente, quem prova
+contra a API real é o smoke manual). <code>GIT_BLAME_LINE_LIMIT</code> (2000) corta
+arquivo genuinamente enorme — já cortado por bytes na rota de conteúdo, mas
+<code>blame</code> lê o arquivo inteiro do provider antes de decidir.</p>
+<ul>
+<li><strong>Onde:</strong> <code>packages/shared/src/index.ts</code> (<code>BlameInput</code>, <code>GitBlame</code>,
+<code>GitBlameLine</code>, capability <code>blame</code>),
+<code>apps/api/src/infrastructure/git/{github,gitlab,local}-provider.ts</code>,
+<code>apps/api/src/domain/git/git-read-limits.ts</code> (<code>GIT_BLAME_LINE_LIMIT</code>),
+<code>apps/api/src/application/use-cases/git/read-project-code.use-case.ts</code>
+(método <code>blame</code>), <code>apps/api/src/interfaces/http/git/code.controller.ts</code>
+(<code>GET /projects/:id/code/blame</code>)</li>
+<li><strong>Teste:</strong> <code>apps/api/test/contract/git-provider.contract.ts</code> (bloco &quot;blame&quot;),
+exercitado pelos três specs de provider — o do <code>local</code> contra git de
+verdade — e <code>read-project-code.use-case.spec.ts</code> (bloco &quot;blame&quot;)</li>
+<li><strong>Origem:</strong> FASE 26b (fundação das pendências declaradas da FASE 26/
+<a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060</a>)</li>
+</ul>
+<h3 id="rn-111">RN-111 — <code>listPullRequests</code> é a 14ª operação do <code>GitProviderContract</code>; a lista navegável abre o mesmo diff por id</h3>
+<p><code>CodeDiffPanel.tsx</code> consome <code>listPullRequests(state?)</code> numa lista clicável
+(id/número/título/autor/estado/branches, com filtro por estado); clicar num
+item reusa o MESMO fluxo de diff por id que já existia — não há caminho novo
+de leitura, só como CHEGAR ao id sem precisar saber de cor. Quem já sabe o id
+(ex.: veio de Aprovações) continua podendo colar direto.</p>
+<p><code>listPullRequests(state?)</code> devolve um RESUMO por PR
+(<code>GitPullRequestSummary</code>: id, número, título, autor, estado, branches,
+<code>updatedAt</code>) — não <code>GitPullRequest</code>, que é o tipo de ESCREVER (abrir/mesclar) e
+nunca teve título nem autor porque nenhuma das duas operações precisava. Um
+tipo próprio evita que a escrita ganhe campos que só a leitura usa.</p>
+<p>O <code>local</code> TEM PR — o store sidecar da Fase 4a já é a fonte, e a suposição do
+enunciado (&quot;PR não existe no conceito de repositório local puro&quot;) não se
+sustentou: o self-contained dos dev agents criou PR local desde então. As três
+capabilities são <code>true</code>. <code>GIT_PR_LIST_LIMIT</code> (100) é uma página só, sem
+paginação de seguimento — navegação humana, não sincronização de histórico.</p>
+<ul>
+<li><strong>Onde:</strong> <code>packages/shared/src/index.ts</code> (<code>ListPullRequestsInput</code>,
+<code>GitPullRequestSummary</code>, <code>GitPullRequestList</code>, capability
+<code>pullRequestsList</code>), <code>apps/api/src/infrastructure/git/{github,gitlab, local}-provider.ts</code>, <code>apps/api/src/domain/git/git-read-limits.ts</code>
+(<code>GIT_PR_LIST_LIMIT</code>), <code>read-project-code.use-case.ts</code> (método
+<code>pullRequests</code>), <code>code.controller.ts</code> (<code>GET /projects/:id/code/pull-requests</code>),
+<code>apps/web/src/routes/code/CodeDiffPanel.tsx</code> (lista clicável, filtro por
+estado, reuso do fluxo de diff por id)</li>
+<li><strong>Teste:</strong> <code>git-provider.contract.ts</code> (bloco &quot;listPullRequests&quot;),
+<code>read-project-code.use-case.spec.ts</code> (bloco &quot;lista de PRs&quot;),
+<code>apps/web/src/routes/code/CodeDiffPanel.test.tsx</code></li>
+<li><strong>Origem:</strong> FASE 26b</li>
+</ul>
+<h3 id="rn-112">RN-112 — <code>listBranchesDetailed</code> é operação PRÓPRIA, separada de <code>listBranches</code></h3>
+<p>Fundação do dropdown rico, agora consumida por <code>CodeBranchPicker.tsx</code>
+(<code>ahead</code>/<code>behind</code>, badge de PR — a onda seguinte à FASE 26b fechou a
+pendência que <code>CodeShell.tsx</code> declarava). A decisão foi NÃO estender <code>listBranches</code> — a
+13ª operação original, que o bootstrap de Gitflow chama sem precisar de nada
+disso: enriquecer custa uma chamada extra ao provider POR BRANCH (duas no
+GitLab, que não tem endpoint que devolva os dois lados de uma comparação numa
+chamada só, ao contrário de <code>compareCommitsWithBasehead</code> do GitHub e de <code>git rev-list --left-right --count</code> no local). Encostar esse custo em toda
+adoção/criação de branch transformaria o bootstrap numa varredura cara. As
+duas operações convivem no contrato: <code>listBranches</code> pro bootstrap,
+<code>listBranchesDetailed</code> (a 15ª) pra aba Code — <code>GitBranchDetail</code> estende
+<code>GitBranch</code> só na FORMA, nunca no CONTRATO de quem chama.</p>
+<p><code>ahead</code>/<code>behind</code> são sempre relativos à branch DEFAULT do repositório
+(<code>ListBranchesDetailedInput.defaultBranch</code>, que o chamador já sabe — pedi-la
+de novo ao provider seria uma chamada a mais só pra redescobrir o que já
+tinha). <code>null</code> nos dois quando o provider não consegue computar (branch órfã,
+histórico não relacionado) é degradação honesta, nunca um número inventado.
+<code>GIT_BRANCH_DETAIL_LIMIT</code> (30) corta pelas mesmas razões de tráfego do item 34
+da FASE 26 — sem ele, um repositório com centenas de branches viraria centenas
+de chamadas por abertura do dropdown.</p>
+<ul>
+<li><strong>Onde:</strong> <code>packages/shared/src/index.ts</code> (<code>ListBranchesDetailedInput</code>,
+<code>GitBranchDetail</code>, <code>GitBranchDetailList</code>, <code>GitBranchPullRequestRef</code>,
+capability <code>branchesDetailed</code>), <code>apps/api/src/infrastructure/git/{github, gitlab,local}-provider.ts</code>, <code>git-read-limits.ts</code>
+(<code>GIT_BRANCH_DETAIL_LIMIT</code>), <code>read-project-code.use-case.ts</code> (método
+<code>branches</code>), <code>code.controller.ts</code> (<code>GET /projects/:id/code/branches</code>);
+no web, <code>apps/web/src/lib/api-client.ts</code> (<code>getCodeBranches</code>) e
+<code>apps/web/src/routes/code/CodeBranchPicker.tsx</code> — o dropdown em si, aberto
+a partir de <code>CodeShell.tsx</code></li>
+<li><strong>Teste:</strong> <code>git-provider.contract.ts</code> (bloco &quot;listBranchesDetailed&quot;),
+<code>read-project-code.use-case.spec.ts</code> (bloco &quot;branches detalhadas&quot;),
+<code>apps/web/src/routes/code/CodeBranchPicker.test.tsx</code></li>
+<li><strong>Borda:</strong> o método <code>branches()</code> mora no MESMO caso de uso das outras seis
+leituras (<code>ReadProjectCodeUseCase</code>), não perto do bootstrap — é uma LEITURA
+da aba Code, com a mesma resolução de credencial e o mesmo portão de
+container (RN-105) que as demais; tratá-la como operação de bootstrap
+duplicaria os dois. Uma ref fora da lista de branches (tag ou sha) segue
+alcançável — o rodapé do dropdown tem um campo manual, porque
+<code>listBranchesDetailed</code> não enumera essas duas coisas.</li>
+<li><strong>Origem:</strong> FASE 26b (fundação); onda seguinte fechou a UI</li>
+</ul>
+<h2 id="o-gate-implementavel-ativa--qa-estratégia-como-segundo-momento-do-qa-lead-rn-340341-adr-0090">O gate <code>implementavel</code> ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)</h2>
+<h3 id="rn-341">RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende</h3>
+<p><code>packages/contracts/fluxo.yml</code> declarava o papel <code>qa-estrategia</code> como <code>proposto</code>, com o
+critério de separação escrito no próprio registro: &quot;pode ser o próprio
+qa-lead em segundo MOMENTO, não necessariamente agente novo — a separação é
+de entregável&quot;. O <a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090</a>
+constrói exatamente isso: <code>Engine.Gates.QaEstrategiaAgent</code> é módulo SEM
+ESTADO (não é <code>GenServer</code>), acionado por <code>Engine.Gates.QaLeadServer.run_design/3</code>
+— um ponto de entrada NOVO e ADITIVO no MESMO processo <code>qa-lead</code>, sem tocar
+<code>run/2</code> (o caminho de sempre, revisão de PR, amarrado a
+<code>DevAgentState.find_by_task_id</code>).</p>
+<p><strong>O contexto é LEVE, e é aí que a separação de entregável aparece.</strong>
+<code>Engine.Gates.QaEstrategiaContext.fetch/3</code> busca SÓ story (de
+<code>EngineApiClient.list_backlog/1</code>, a árvore que o PO já lê — <a href="engine.html#rn-164">RN-164</a>)
+e <code>module_map</code> vigente (de <code>EngineApiClient.get_infra_context/2</code>, o MESMO
+<code>GetInfraContextUseCase</code> que o Infra Lead consome, aqui só pelo campo
+<code>moduleMap</code>) — SEM <code>dev_state</code>, SEM <code>worktree_path</code>: o gate <code>implementavel</code>
+roda PRE-DEV, antes de existir dev agent, worktree ou <code>task_id</code>. Nenhuma
+rota nova na api — as duas funções já existiam.</p>
+<p><strong>Nunca suspende.</strong> O registro de ferramentas (<code>ReadFile</code>, <code>SearchWorkspace</code>,
+<code>EmitPlanoDeTeste</code>) não inclui <code>terminal</code> nem <code>write_file</code> — as DUAS únicas
+tools que <code>Engine.Harness.Hooks.ActionPipeline</code> intercepta para criar
+<code>proposed_action</code>. Sem chamada nenhuma passando pelo pipeline de ações, o
+<code>ToolLoop</code> deste agente nunca produz <code>:pending</code>, e <code>run_design/3</code> roda
+SÍNCRONO dentro do próprio <code>handle_cast</code> — sem mecanismo de
+suspensão/retomada, ao contrário do resto da área de QA.</p>
+<p><strong>O teto de iterações fica em 8 (conversacional), não 60 (gate) — de
+propósito, não lacuna.</strong> Este agente roda SEM <code>token_budget_micros</code> — não há
+task nem budget de task ainda. O critério da <a href="engine.html#rn-085">RN-085</a> não é &quot;quem
+trabalha muito&quot;: é &quot;o que segura o gasto além do teto de iterações&quot;. Sem
+budget por baixo, subir o teto multiplicaria o pior caso sem nada para
+conter — a MESMA razão pela qual <code>infra-workflows</code> fica em 8 mesmo usando
+ferramenta. <code>&quot;qa-estrategia&quot;</code> NÃO ganhou cláusula própria em
+<code>Engine.Harness.Iteracoes.tipo/1</code>: cair no default é a decisão certa.</p>
+<p>O entregável — <code>emit_plano_de_teste</code> (síntese, critérios executáveis
+verificáveis, estratégia de automação GENÉRICA e sem framework — decisão de
+escopo desta frente, na <code>spec/0</code> que o modelo lê, não uma validação em
+código) — vira o artefato <code>artifact.plano_de_teste</code>
+(<code>ArtifactEmitter.emit/5</code>, schema validado, <code>criteriosExecutaveis</code> não pode
+ser vazio), no event log da MESMA sessão que chamou <code>run_design/3</code> — é lá
+que <code>assess_implementability</code> (<a href="api.html#rn-340">RN-340</a>) o lê depois. Falha
+(limite de iterações, orçamento, modelo que para sem emitir) NUNCA é
+silenciosa: <code>agent.error</code> durável com origem, mesma régua da
+<a href="engine.html#rn-059">RN-059</a>.</p>
+<p><strong>Desde a <a href="engine.html#rn-674">RN-674</a> (ADR 0192) o MOMENTO mudou.</strong> O segundo momento
+continua sendo do <code>qa-lead</code>, sem agente novo, e continua nunca suspendendo;
+mas roda DEPOIS da entrega, no começo do ciclo de <code>run/2</code>, com o worktree do
+dev e os arquivos do diff — <code>run_design/3</code> e <code>QaEstrategiaContext</code> saíram, e
+o artefato ganhou <code>taskId</code>. O teto continua 8, agora COM o orçamento da task
+por baixo.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/engine/lib/engine/gates/qa_estrategia_agent.ex</code>,
+<code>qa_lead_server.ex</code> (<code>run_area/3</code>, desde a <a href="engine.html#rn-674">RN-674</a>),
+<code>tools/emit_plano_de_teste.ex</code>, <code>hooks/termination_plano_de_teste.ex</code>;
+<code>apps/engine/lib/engine/harness/artifact_schemas.ex</code> (<code>plano_de_teste</code>);
+<code>apps/engine/lib/engine/harness/iteracoes.ex</code> (SEM cláusula nova, ver
+acima); <code>packages/contracts/fluxo.yml</code> (<code>qa-estrategia</code>, <code>status: active</code>)</li>
+<li><strong>Teste:</strong> <code>apps/engine/test/engine/gates/qa_estrategia_agent_test.exs</code>,
+<code>qa_lead_server_test.exs</code> (describe &quot;plano de teste da entrega (ADR 0192)&quot;), <code>apps/engine/test/engine/harness/artifact_schemas_test.exs</code>
+(describe &quot;plano_de_teste&quot;), <code>iteracoes_test.exs</code> (&quot;qa-estrategia é
+conversacional DE PROPÓSITO&quot;)</li>
+<li><strong>Origem:</strong> <a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090</a></li>
+</ul>
+<hr>
+<h2 id="secops-runtime--relatório-de-abuso-sobre-rate_limit_hits-rn-375377-adr-0091"><code>secops-runtime</code> — relatório de abuso sobre <code>rate_limit_hits</code> (RN-375..377, ADR 0091)</h2>
+<h3 id="rn-377">RN-377 — A seção &quot;não medido&quot; é permanente, e cita as três lacunas por nome</h3>
+<p><code>montarRelatorio</code> sempre inclui <code>naoMedido</code>: detecção automática de
+incidente, resposta a incidente e postmortem de segurança. As três dependem
+do mesmo gatilho que <code>packages/contracts/fluxo.yml</code> já declarava para <code>secops-runtime</code> —
+tráfego de produção real — e nenhuma delas é simulada com incidente de
+exemplo nem número inventado (mesmo princípio dos ADRs 0041/0042/0077: sem o
+dado real, a lacuna fica visível em vez de fingida). A seção só sai da lista
+quando o produto tiver tráfego real para medir contra ela — não é um TODO a
+apagar na próxima limpeza.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/scripts/relatorio-seguranca-runtime.ts</code>,
+<code>apps/api/package.json</code> (<code>relatorio:seguranca-runtime</code>)</li>
+<li><strong>Teste:</strong> <code>apps/api/test/scripts/relatorio-seguranca-runtime.spec.ts</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">0091</a></li>
+</ul>
+<hr>
+<h2 id="platform-ganha-uma-primeira-entrega-relatório-de-telemetria-sob-demanda-rn-385386-adr-0092"><code>platform</code> ganha uma primeira entrega: relatório de telemetria sob demanda (RN-385/386, ADR 0092)</h2>
+<h3 id="rn-385">RN-385 — O papel <code>platform</code> nasce como SCRIPT de leitura pontual, sobre as mesmas fontes do <code>DomainGaugesCollector</code></h3>
+<p><code>packages/contracts/fluxo.yml</code> descreve <code>platform</code> (<code>camada_plataforma</code>) como &quot;SRE / Platform
+— dono do loop de retorno&quot;, <code>status: planned</code>, com ativação sincronizada a
+<code>DEPLOY_ENABLED</code> — que não existe. O dono do produto decidiu antecipar a
+metade que já tem dado real por trás: <code>pnpm --filter api relatorio:telemetria [--projeto &lt;uuid&gt;] [--json]</code> lê, sob demanda, as MESMAS perguntas que o
+<code>DomainGaugesCollector</code> já responde a cada <code>METRICS_GAUGE_INTERVAL_MS</code> para o
+scrape do Prometheus — sessões ativas/closing por projeto, tasks bloqueadas
+por projeto, estado do último backup (idade, status, tamanho, sempre GLOBAL,
+nunca por projeto, porque o produto tem um backup só). Não é agente LLM nem
+<code>GenServer</code>: é leitura avulsa, sem estado, que termina depois de imprimir.</p>
+<p>As consultas SQL são REPLICADAS, não importadas do coletor — os métodos dele
+(<code>collectSessions</code>/<code>collectBlockedTasks</code>/<code>collectBackup</code>) são privados e
+terminam escrevendo num gauge Prometheus (<code>this.metrics.*.set(...)</code>); não há
+uma metade pura de &quot;só a query&quot; para reusar sem acoplar um script avulso ao
+ciclo de vida de um <code>@Injectable</code> do NestJS. O script também NÃO é um segundo
+coletor: não registra métrica nenhuma, não roda em <code>setInterval</code>.</p>
+<p>A saída sempre traz &quot;onde ver mais&quot; (os três dashboards versionados em
+<code>deploy/k8s/observability/dashboards/*.json</code>, os alertas em
+<code>deploy/k8s/observability/alerts/brabo-alerts.yaml</code>, <code>docs/runbook.md #observabilidade</code> e <code>pnpm dev:obs</code> para observabilidade local) — o script
+LINKA para o que já existe, nunca duplica.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/scripts/relatorio-telemetria.ts</code>; espelha
+<code>apps/api/src/infrastructure/observability/domain-gauges.collector.ts</code></li>
+<li><strong>Teste:</strong> <code>apps/api/test/scripts/relatorio-telemetria.spec.ts</code> (funções
+puras — <code>parseArgs</code>, <code>formatarIdade</code>, <code>formatarBytes</code> — mesmo recorte de
+<code>medir-execucao.spec.ts</code>: a parte que fala com o banco é exercitada rodando
+o script contra um banco real)</li>
+<li><strong>ADR:</strong> <a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">0092</a></li>
+</ul>
+<h3 id="rn-386">RN-386 — O relatório de telemetria declara, sem inventar, o que NÃO mede</h3>
+<p>O gatilho real do papel <code>platform</code> (<code>DEPLOY_ENABLED</code>) não existe: não há
+ambiente de produção com tráfego real, não há SLO numérico definido em lugar
+nenhum do produto, e não há postmortem possível sem incidente de verdade.
+<code>relatorio-telemetria.ts</code> diz isso na PRÓPRIA saída, numa seção &quot;não medido&quot;,
+em vez de fingir cobertura que não tem — a mesma disciplina do ADR 0042 para
+nota de modelo e do ADR 0077 para qualidade de código: sem o dado real, o
+produto DECLARA a lacuna, nunca inventa o número.</p>
+<p>Três lacunas, todas explícitas: <strong>SLO numérico formal</strong> (nenhum está
+definido); <strong>postmortem</strong> (depende de incidente real que não aconteceu); e
+<strong>telemetria de volta ao produto em loop fechado</strong> (o script é leitura
+pontual sob demanda — observar, decidir e agir sozinho é o que tornaria
+<code>platform</code> <code>active</code> em <code>packages/contracts/fluxo.yml</code>, e por isso o <code>gate_saida: { id: operavel, status: planned }</code> do papel permanece <code>planned</code>, intocado por esta
+mudança).</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/scripts/relatorio-telemetria.ts</code> (função <code>imprimir</code>,
+seção &quot;Não medido&quot;); <code>packages/contracts/fluxo.yml</code> (<code>camada_plataforma › platform › saidas_alvo</code>, artefato <code>telemetria-consolidada</code>, campo <code>nota</code>)</li>
+<li><strong>Teste:</strong> cobertura indireta — a seção é texto fixo verificado por leitura
+do arquivo; não há verdade condicional a testar aqui (nada a errar entre
+&quot;medido&quot; e &quot;não medido&quot; além do texto em si)</li>
+<li><strong>ADR:</strong> <a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">0092</a></li>
+</ul>
+<hr>
+<h2 id="auditoria-fluxoyml--código--onda-2-rn-160-no-backend-e-delegação-dev-lead--dev-rn-404405-adr-0094">Auditoria fluxo.yml × código — Onda 2: RN-160 no backend e delegação Dev Lead → dev (RN-404/405, ADR 0094)</h2>
+<h3 id="rn-405">RN-405 — A delegação Dev Lead → dev vira dado em <code>delegations</code>, com <code>parecerArtifactId</code> redefinido para &quot;o que justificou a decisão&quot;</h3>
+<p>O ADR 0053 (FASE 14d) já previa a delegação Dev Lead → <code>dev-&lt;modulo&gt;</code> como
+&quot;o mesmo caminho de QA e Infra&quot; (<code>delegations</code>, <code>area = 'dev'</code>), mas
+declarou isso fora de escopo. <code>dev_lead_server.ex</code> nunca gravava a tabela —
+só QA (<code>qa_lead_server.ex</code>) e Infra (<code>infra_lead_server.ex</code>) gravavam, e os
+dois do lado ENGINE, porque é lá que o subagente produz um PARECER (veredito
+de rodada única) que justifica <code>parecerArtifactId</code>.</p>
+<p>O Dev Lead não tem esse padrão: a ativação de um <code>dev-&lt;modulo&gt;</code> acontece do
+lado API, em <code>AcceptParallelizationUseCase.execute</code> — chamada tanto pelo
+caminho direto (<code>RequestParallelizationUseCase</code>, abaixo do teto de sessão da
+<a href="api.html#rn-083">RN-083</a>) quanto pelo aprovado (<code>ExecuteParallelizationUseCase</code>,
+depois que o usuário aprova a <code>proposed_action</code> tipo <code>parallelize</code>). A
+gravação entrou DENTRO desse método — cobre os dois caminhos de graça,
+porque os dois já convergem ali —, com <code>status: 'completed'</code> REDEFINIDO para
+esta área: significa &quot;a delegação foi EFETIVADA&quot; (o agente subiu), não &quot;o
+subagente terminou e emitiu parecer&quot; como em QA/Infra (decisão registrada no
+<a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094</a>).</p>
+<p><code>parecerArtifactId</code> aponta para o <code>id</code> do evento <code>artifact.module_map</code> mais
+recente e vigente do projeto — obtido de
+<code>SessionEventRepository.listByTypeForProject(projectId, 'artifact.module_map')</code>
+(método genérico já existente, usado por <code>computeCoverage</code> para
+<code>artifact.business_rule</code>; nenhuma consulta nova foi escrita, só uma chamada a
+mais dele — o último item da lista é o mais recente, porque a função ordena
+por <code>createdAt</code> ASC) — o artefato que justificou a decisão de delegar.
+<code>area: 'dev'</code>, <code>leadAgent: 'dev-lead'</code>, <code>subagent</code> é o id exato do agente
+ativado (<code>extraDevAgentId(module)</code>, a MESMA função que constrói o id em todo
+o resto do use case — nenhum formato novo). Sem <code>artifact.module_map</code> no
+projeto (não deveria acontecer — é entrada obrigatória do Dev Lead em
+<code>packages/contracts/fluxo.yml</code>), a delegação NÃO é gravada com um id inventado: só loga o
+estado inesperado, pela mesma lição da RN-059 (nunca falha silenciosa, mas
+também nunca finge uma justificativa que não existe). E falha de
+<code>RecordDelegationUseCase.execute</code> (ex.: banco fora do ar) é capturada e
+logada, nunca propagada — a ativação do dev agent já é sucesso quando a
+tentativa de gravar a delegação acontece, e não pode ser derrubada por uma
+gravação auxiliar.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts</code>
+(<code>recordDevDelegation</code>, chamado ao fim de <code>execute</code>)</li>
+<li><strong>Teste:</strong> <code>apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts</code>,
+describe &quot;delegação Dev Lead → dev (área dev, ADR 0094)&quot; — grava com
+<code>area: 'dev'</code> apontando pro module_map mais recente; sem module_map não
+grava (e não lança); <code>RecordDelegationUseCase</code> falhando não derruba a
+ativação</li>
+<li><strong>ADR:</strong> <a href="../adr/0094-delegacao-dev-lead-vira-dado.html">0094</a></li>
+</ul>
+<hr>
+<h2 id="auditoria-fluxoyml--código--onda-6-última-o-gate-necessidade-validada-rn-406-adr-0095">Auditoria fluxo.yml × código — Onda 6 (última): o gate <code>necessidade-validada</code> (RN-406, ADR 0095)</h2>
+<p>Fecha o último achado do plano da auditoria (seção D,
+<code>docs/explanation/auditoria-fluxo-vs-codigo.md</code>) — B2. As outras cinco
+ondas já tinham fechado (a 3, 4 e 5 antecipadas fora de ordem pelos ADRs
+0089/0090; a 1 e a 2 nos PRs anteriores). <code>packages/contracts/fluxo.yml</code> (papel
+<code>criativo</code>) declarava <code>gate_saida: { id: necessidade-validada, status: proposto }</code> desde o ADR 0085 sem mecanismo nenhum atrás — e
+<code>modelo-de-time.md</code> já registrava por que: o Criativo (o modelo) decidir
+sozinho que a necessidade que ele mesmo produziu está validada seria
+autovalidação, não gate de verdade.</p>
+<h3 id="rn-406">RN-406 — O gate <code>necessidade-validada</code> se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando</h3>
+<blockquote>
+<p><strong>Revista pelo <a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185</a>
+(<a href="api.html#rn-657">RN-657</a>), por decisão do dono em 30/09.</strong> O clique deixou de ser
+SEPARADO: &quot;Estou pronto — a necessidade está validada&quot; grava
+<code>readiness.confirmed</code> e <code>necessity.validated</code> no mesmo POST, com o
+<code>product_brief</code> produzido DEPOIS do clique (<code>productBriefId: null</code>). O botão
+&quot;Confirmar necessidade validada&quot; saiu da tela. O que desta regra continua
+valendo: quem valida é sempre uma PESSOA, nunca o Criativo; o gate segue
+<code>warn</code>. <code>POST .../agents/criativo/validate-necessity</code> continua na api, sem
+consumidor na tela — é o caminho de uma sessão cujo &quot;Estou pronto&quot; é
+anterior ao ADR 0185. O texto abaixo é o desenho do ADR 0095, mantido como
+histórico.</p>
+</blockquote>
+<p><code>SessionPage.tsx</code> ganha um terceiro botão de confirmação, no MESMO padrão
+interacional de &quot;Estou pronto para produzir&quot; (RN-142) e &quot;Confirmar
+arquitetura pronta&quot; (<a href="web.html#rn-160">RN-160</a>): &quot;Confirmar necessidade validada&quot;
+(<code>handleValidateNecessity</code>) chama <code>POST .../agents/criativo/validate-necessity</code>, que grava <code>necessity.validated</code>
+com <code>payload.productBriefId</code> apontando para o <code>artifact.product_brief</code>
+mais recente da sessão.</p>
+<p>O botão só habilita DEPOIS que <code>confirm_readiness</code> já consolidou o
+<code>product_brief</code> (<code>hasProductBrief</code>, <code>events.some(e =&gt; e.type === 'artifact.product_brief')</code>) — não faz sentido &quot;validar&quot; um resumo
+executivo que ainda não foi produzido, e é essa a leitura mais
+consistente com <code>packages/contracts/fluxo.yml</code>: <code>necessidade-validada</code> é gate de SAÍDA
+do Criativo, o momento em que o trabalho dele já entregou um artefato
+concreto. <code>ValidateNecessityUseCase</code> revalida a mesma pré-condição no
+BACKEND (<code>SessionEventRepository.listByTypeInSession(sessionId, 'artifact.product_brief')</code>, pega o último por <code>seq</code>) — a UI desabilitada
+sozinha não bastaria, mesma lição da <a href="api.html#rn-404">RN-404</a>.</p>
+<p>Diferente de <code>OfferInfraHandoffUseCase</code> (RN-160), esta confirmação NÃO
+sinaliza o engine: o handoff Criativo→PO já aconteceu dentro do próprio
+<code>confirm_readiness</code>
+(<code>CriativoServer.executar_confirm_readiness/1</code>), então não há agente
+nenhum esperando por este evento — ele é só o registro de que um humano
+validou o MÉRITO do que já foi entregue. <code>ValidateNecessityUseCase</code> não
+recebe <code>ApiToEngineClient</code> no construtor.</p>
+<p><code>apps/api/config/gates.yml</code> ganha o gate <code>necessidade-validada</code>: <code>status: active</code>,
+<code>aprovacao_humana: true</code> (é literalmente um clique humano),
+<code>verificacao: script</code>, mas <code>severidade: warn</code> — nada no produto hoje
+CONSULTA a passagem deste gate antes de deixar o PO seguir (diferente de
+<code>story-promovida</code>/<code>plano-de-adocao</code>, que são <code>block</code> porque uma trava
+real de código os impede de serem pulados). <code>packages/contracts/fluxo.yml</code> (papel
+<code>criativo</code>) passa <code>status: proposto</code> → <code>status: ativo</code>.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/src/application/use-cases/agents/validate-necessity.use-case.ts</code>;
+<code>apps/api/src/interfaces/http/agents/agents.controller.ts</code>
+(<code>validateNecessityHandoff</code>); <code>apps/web/src/routes/SessionPage.tsx</code>
+(<code>hasProductBrief</code>, <code>necessidadeJaValidada</code>, <code>handleValidateNecessity</code>)</li>
+<li><strong>Teste:</strong> <code>apps/api/test/application/use-cases/agents/validate-necessity.use-case.spec.ts</code>
+— sem <code>product_brief</code>, recusa ANTES de gravar qualquer evento; com um ou
+mais, grava referenciando o MAIS RECENTE;
+<code>apps/web/src/routes/SessionPage.validar-necessidade.test.tsx</code> — botão
+desabilitado sem <code>product_brief</code>, habilitado com ele, some depois de
+<code>necessity.validated</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0095-gate-necessidade-validada.html">0095</a></li>
+</ul>
+<hr>
+<h3 id="rn-407">RN-407 — O PO lê o funil de entrega e DORA parcial, terceira leitura escopada ao projeto</h3>
+<p>O PO ganhou uma TERCEIRA ferramenta de leitura — <code>listar_metricas_de_produto</code>
+(<code>:direct</code>, sem parâmetro nenhum) — servida por
+<code>GET /internal/projects/:projectId/product-metrics</code>, mesmo desenho das duas
+irmãs da <a href="engine.html#rn-164">RN-164</a>: escopo fechado no projeto, sem termo de busca,
+sem paginação.</p>
+<p><code>packages/contracts/fluxo.yml</code> (papel <code>po</code>, entrada <code>metricas-de-produto</code>) declarava
+<code>status: lacuna</code> desde o <a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089</a>,
+que já tinha entregue o DADO — o script <code>pnpm --filter api analise:funil</code>
+mede o funil real sessão → commit → PR → merge, o lead time real e a
+deployment frequency real a partir de <code>proposed_actions</code>. O que faltava era
+só o MECANISMO: o PO nunca tinha como reler esse relatório dentro do turno.
+Fecha o item B4 da auditoria <code>fluxo.yml</code> × código
+(<a href="../explanation/auditoria-fluxo-vs-codigo.html">docs/explanation/auditoria-fluxo-vs-codigo.md</a>) —
+a ÚLTIMA pendência da tabela &quot;Backlog do modelo de time&quot;
+(docs/explanation/backlog.md), que fica vazia depois desta.</p>
+<p>O CÁLCULO é o MESMO do script, nunca duplicado: as funções puras
+(<code>calcularFunil</code>/<code>calcularLeadTimes</code>/<code>leadTimeMedioMs</code>/
+<code>deploymentFrequencyPorDia</code>) e a query que monta <code>AcaoGit[]</code>
+(<code>buscarAcoesGitDoFunil</code>) foram extraídas de <code>apps/api/scripts/analise-funil.ts</code>
+para <code>apps/api/src/application/services/funil-metrics.ts</code> — um caso de uso em
+<code>src/</code> não pode importar de <code>scripts/</code>, e o script passou a REEXPORTAR dali
+em vez de definir localmente, sem mudar assinatura nem comportamento (o
+teste de regressão do script continua verde sem ser tocado).</p>
+<p>O corpo JSON que a rota devolve <strong>não tem campo nenhum</strong> para as três
+ausências permanentes que o script já declarava em texto (&quot;Não medido, de
+propósito&quot;: funil de produto completo ideação → commit, evidência de adoção
+por feature, MTTR/change failure rate) — o shape do relatório nunca reservou
+espaço para elas. A ferramenta do PO cita as três pelo NOME no TEXTO que
+devolve ao modelo, sempre, e não só quando o número dá zero: sem essa
+seção o PO leria só os números do funil e concluiria por omissão que não há
+lacuna nenhuma.</p>
+<ul>
+<li><strong>Onde:</strong> <code>apps/api/src/application/services/funil-metrics.ts</code>;
+<code>apps/api/scripts/analise-funil.ts</code> (reexporta);
+<code>apps/api/src/application/use-cases/backlog/list-product-metrics.use-case.ts</code>;
+<code>apps/api/src/interfaces/http/internal/internal-projects.controller.ts</code>;
+<code>apps/api/src/interfaces/http/internal/dto/product-metrics.response.dto.ts</code>;
+<code>apps/engine/lib/engine/harness/tools/listar_metricas_de_produto.ex</code>;
+<code>apps/engine/lib/engine/agents/po_server.ex</code>;
+<code>apps/engine/lib/engine/sessions/engine_api_client.ex</code></li>
+<li><strong>Teste:</strong> <code>apps/api/test/application/use-cases/backlog/list-product-metrics.use-case.spec.ts</code>;
+<code>apps/api/test/scripts/analise-funil.spec.ts</code> (regressão — continua
+importando de <code>scripts/analise-funil.ts</code>, sem alteração);
+<code>apps/engine/test/engine/harness/tools/listar_metricas_de_produto_test.exs</code>;
+<code>apps/engine/test/engine/agents/po_server_test.exs</code></li>
+<li><strong>Origem:</strong> mesmo padrão da <a href="engine.html#rn-164">RN-164</a> (leitura de agente escopada
+ao projeto, sem efeito externo, sem <code>proposed_action</code>); o dado é do
+<a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089</a> — esta RN só
+fecha o mecanismo de leitura que faltava.</li>
+</ul>
+<h2 id="o-repositório-nasce-no-aceite-do-handoff-ao-arquiteto-e-a-execução-não-começa-sem-ele-rn-582">O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)</h2>
+<h3 id="rn-605">RN-605 — O pull de imagem é um passo NOMEADO do <code>start</code>, sob o teto de controle, e o estouro diz que imagem grande não sobe</h3>
+<p>O <code>start</code> da porta de Docker não fazia pull: o <code>docker run</code> fazia, por dentro,
+sob o <code>TIMEOUT_DE_CONTROLE_MS</code> (30 s). Reproduzido na AT-234 com um duplo do
+daemon (imagem ausente, pull de 45 s, sem dormir e sem rede): o estouro saía
+como <code>ComandoDeDockerFalhouError</code> — &quot;<code>docker run …</code> terminou com código -1:
+(sem saída de erro)&quot; —, virava 502 com <code>origem: null</code> no broker e chegava à api
+sem nome. E matar o CLI CANCELA o pull (medido no Docker 29.8.0, containerd):
+a imagem continuou ausente nos 60 s seguintes, então a frase &quot;o pull pode
+seguir no daemon&quot; não valia.</p>
+<p>Das quatro saídas medidas (teto próprio de ~300 s, <code>start</code> assíncrono, pull
+antecipado na decisão de imagem, só dar nome), o mantenedor decidiu a <strong>D —
+só dar nome</strong> (2026-09-27). A regra:</p>
+<ol>
+<li><strong>O pull é explícito.</strong> Antes do <code>run</code>, <code>image inspect</code>; imagem presente
+não é baixada de novo (o mesmo <code>--pull missing</code> do <code>run</code>). Ausente, <code>docker pull</code> sob o MESMO teto de controle de 30 s — nenhum teto maior.</li>
+<li><strong>O estouro tem nome.</strong> <code>PullExcedeuTetoError</code>, origem <code>infra</code>, com a
+imagem, o teto e a consequência inteira: o pull foi cancelado, a imagem
+continua ausente, imagem grande não sobe por este caminho, e o conserto é
+baixá-la antes no host. Antes de afirmar isso, o adaptador confere o daemon
+(<code>docker version</code>): daemon fora continua sendo <code>DockerIndisponivelError</code>.
+Pull que falha por outro motivo segue o caminho de sempre
+(<code>ComandoDeDockerFalhouError</code>, sem origem, ADR 0128).</li>
+<li><strong>O nome atravessa.</strong> O broker responde 504 com <code>origem: 'infra'</code>, e a api
+o repassa em <code>BrokerRecusouError</code> — <code>origem</code> preenchida, nunca <code>null</code>. No
+modo <code>runner</code> o mesmo adaptador roda na máquina do usuário e a mensagem
+chega no <code>container_start_result</code>.</li>
+<li><strong>Os tetos de quem espera o <code>start</code> contam o pior caso inteiro</strong>: os dois
+<code>ps</code> de <code>resolver</code>, <code>image inspect</code>, <code>pull</code>, <code>run</code> e o <code>docker version</code> de
+diagnóstico — seis chamadas de controle (<code>CHAMADAS_DE_CONTROLE_NO_START</code>).
+A api espera 10 + 6 × 30 + 5 = <strong>195 s</strong> (<code>TETO_DE_MUTACAO_MS</code>); o engine,
+no <code>RunnerRouter</code>, 6 × 30 + 5 = <strong>185 s</strong> no <code>start</code> e 4 × 30 + 5 =
+<strong>125 s</strong> no <code>stop</code>/<code>remove</code> (eram 60 s, menos que o <code>resolver</code> mais a
+operação).</li>
+<li><strong>O <code>propose_action</code> do engine espera a execução que a api faz dentro
+dele.</strong> <code>container_start</code>, <code>container_start_via_runner</code> e <code>container_stop</code>
+auto-aprovados são EXECUTADOS na mesma requisição
+(<code>ProposeActionUseCase</code>), e a chamada caía no default de 15 s do Req — um
+<code>start</code> longo voltava como timeout de transporte mesmo sem pull. Agora ela
+leva <code>receive_timeout</code> de <strong>225 s</strong> (o teto da api + 30 s), espelhado na api
+como <code>TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS</code>; os testes dos dois
+lados conferem broker &lt; api &lt; engine e runner &lt; engine. <code>container_remove</code>
+fica fora: nunca nasce auto-aprovado.</li>
+</ol>
+<p>Nenhuma dependência nova (<a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128</a>), nenhum campo
+que o chamador escreva (<a href="../adr/0130-broker-de-container.html">ADR 0130</a>): a imagem
+continua vindo da decisão do Arquiteto, e <code>pull</code> não é operação nova do broker
+— é um passo do <code>start</code>.</p>
+<p><strong>Declarado, não fechado:</strong></p>
+<ul>
+<li>
+<p><strong>Imagem grande não sobe na primeira tentativa</strong>, pelo broker nem pelo
+runner — decisão D do mantenedor. O desfecho agora é nomeado; o conserto é
+baixar a imagem antes no host.</p>
+</li>
+<li>
+<p><strong>No pior caso de falha, a aprovação fica presa por até ~195 s</strong>:
+<code>ExecuteContainerStartUseCase</code> roda dentro do <code>POST</code> de aprovação, e nem a
+web nem o servidor HTTP têm teto próprio.</p>
+</li>
+<li>
+<p>Não foi medido se as camadas baixadas antes do cancelamento são
+reaproveitadas na tentativa seguinte.</p>
+</li>
+<li>
+<p><strong>Código:</strong>
+<code>packages/docker-port/src/docker-cli.ts:202</code> (<code>PullExcedeuTetoError</code>),
+<code>:586</code> (<code>garantirImagem</code>), <code>:125</code> (<code>CHAMADAS_DE_CONTROLE_NO_START</code>),
+<code>:116</code> (<code>TIMEOUT_DE_CONTROLE_MS</code>);
+<code>apps/broker/src/servidor.ts:231</code> (<code>PullExcedeuTetoError</code>);
+<code>apps/api/src/infrastructure/http-clients/container-broker.client.ts:241</code> (<code>TETO_DE_MUTACAO_MS</code>),
+<code>:205</code> (<code>CHAMADAS_DE_CONTROLE_NO_START</code>),
+<code>:264</code> (<code>TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS</code>);
+<code>apps/engine/lib/engine/sessions/engine_api_client.ex:1945</code> (<code>opcoes_do_propose_action</code>),</p>
+<p><code>apps/engine/lib/engine/sessions/engine_api_client.ex:1945</code> (<code>opcoes_do_propose_action</code>),
+<code>:1649</code> (<code>@teto_do_propose_action_de_container_ms</code>);
+<code>apps/engine/lib/engine/runners/runner_router.ex:52</code> (<code>@timeout_do_start_ms</code>)</p>
+</li>
+<li>
+<p><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts:425</code> (describe da
+reprodução, &quot;(AT-234)&quot;: o pull de 45 s termina NOMEADO, <code>:457</code>; daemon fora
+continua daemon fora, <code>:481</code>; o pull que cabe sobe, <code>:493</code>; imagem presente
+não é baixada, <code>:508</code>; as seis chamadas, <code>:520</code>);
+<code>apps/broker/src/servidor.spec.ts:317</code> (504 com origem <code>infra</code>);
+<code>apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:144</code>
+(chega com <code>origem</code>), <code>:362</code> e <code>:377</code> (a conta e a ordem);
+<code>apps/runner/src/index-handlers.spec.ts:420</code> (o nome no
+<code>container_start_result</code>);
+<code>apps/engine/test/engine/sessions/engine_api_client_propose_action_test.exs:67</code>
+(HTTP real: a api que demora 16 s é esperada), <code>:82</code> e <code>:95</code> (as ações e a
+ordem, lendo o espelho da api);
+<code>apps/engine/test/engine/runners/runner_router_test.exs:183</code></p>
+</li>
+<li>
+<p><strong>Origem:</strong> AT-234</p>
+</li>
+</ul>
+<h2 id="decidir-no-chat-onde-o-dono-está-rn-626">Decidir no chat, onde o dono está (RN-626)</h2>
+<h3 id="rn-627">RN-627 — O container do projeto roda com o dono da pasta, medido pela api</h3>
+<p>Sob <code>--cap-drop ALL</code> o root do container não tem <code>CAP_DAC_OVERRIDE</code> e não
+escreve na pasta do projeto, que é do uid do operador: <code>npm install</code> dava
+<code>EACCES</code> para todo dev agent (AT-247, <a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180</a>).</p>
+<ol>
+<li><strong>A api mede, o broker compõe.</strong> <code>container-spec</code> devolve <code>usuarioDaPasta</code>
+(<code>stat</code> da pasta dos modos <code>container</code>/<code>mounted</code>; <code>null</code> se a pasta não é
+alcançada, se o dono é root ou se o projeto é <code>runner</code>). O broker o copia
+para <code>spec.usuario</code> e o adaptador emite <code>--user uid:gid</code> e <code>--env HOME=/tmp</code>.</li>
+<li><strong>Nunca vem de quem pede.</strong> <code>start</code> não tem corpo e o corpo de <code>exec</code> ignora
+campo extra; <code>exec</code> herda o usuário do container.</li>
+<li><strong>O broker revalida.</strong> Inteiros em 1..2^31-1; <code>0</code> é recusado nomeando
+<code>usuario.uid</code>/<code>usuario.gid</code> (root é o ausente, &quot;como sempre&quot;).</li>
+<li><strong>Não afrouxa contenção</strong>: <code>--cap-drop ALL</code>, um bind, rede de dois valores
+e cinco operações continuam. Container já criado só muda ao ser recriado.</li>
+</ol>
+<ul>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:785</code> (<code>argsDeCriacao</code>),
+<code>packages/docker-port/src/spec-de-container.ts:136</code> (<code>usuarioValidado</code>),
+<code>apps/broker/src/operacoes.ts:427</code> (<code>especificacaoDoProjeto</code>),
+<code>apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:124</code>
+(<code>ObterSpecDeContainerUseCase</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (o <code>run</code> leva
+<code>--user</code> e continua sem campo livre), <code>packages/docker-port/src/spec-de-container.spec.ts</code>
+(<code>usuario</code>), <code>apps/broker/src/operacoes.spec.ts</code> (&quot;o usuário do container&quot;),
+<code>apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts</code></li>
+<li><strong>Origem:</strong> AT-247</li>
+</ul>
+<h2 id="a-anamnese-não-paga-duas-vezes-pela-mesma-janela-e-o-resgate-de-gate-não-reinicia-ciclo-que-espera-alguém-rn-722">A Anamnese não paga duas vezes pela mesma janela, e o resgate de gate não reinicia ciclo que espera alguém (RN-722)</h2>
+<h3 id="rn-738">RN-738 — Parar container de projeto é imediato, e a linha da <code>/containers</code> relê ao decidir</h3>
+<ul>
+<li><strong>Regra:</strong> todo container de projeto sobe com <code>--init</code> — CONSTANTE da
+composição do <code>docker run</code> em <code>DockerViaCli</code>, nunca campo da spec (a
+contenção é o tipo, ADR 0130); vale para o broker e para o runner, que usam
+a mesma porta. O comando de espera (<code>sleep infinity</code>) era PID 1 sem handler
+de SIGTERM, e o kernel não entrega sinal de ação padrão a PID 1: <code>docker stop</code> esperava os 10 s e matava (<code>Exited (137)</code>). Medido em container
+descartável: 10,25 s sem <code>--init</code>, 0,20 s com. Na página <code>/containers</code>,
+decidir a ação pendente (aprovar, negar, sempre permitir) invalida
+<code>['containers-overview']</code> e <code>['container-lifecycle', projectId]</code> no
+<code>finally</code> — também quando a chamada falha ou cai —, e devolve a promessa ao
+card. Nenhum poll novo (RN-579/632).</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:785</code> (<code>argsDeCriacao</code>),
+<code>apps/web/src/components/AcoesDoContainer.tsx:61</code> (<code>invalidateContainers</code>), <code>:172</code>
+(<code>aprovar</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (<code>run</code> leva
+<code>--init</code> antes do comando), <code>apps/broker/src/contencao-do-brabo.spec.ts</code>
+(os dois modos sobem com <code>--init</code>), <code>apps/web/src/routes/ContainersPage.test.tsx</code>
+(aprovar relê visão geral e ciclo de vida; aprovação recusada ainda relê)</li>
+<li><strong>Origem:</strong> AT-422 (instalação local, 03/10: três paradas <code>executed</code> com a
+linha em &quot;rodando&quot; e <code>Exited (137)</code>)</li>
+</ul>
+<h3 id="rn-807">RN-807 — O <code>exec</code> que estoura o teto volta como estouro, e o comando morre dentro do container</h3>
+<ul>
+<li><strong>Regra:</strong> o estouro do teto do <code>exec</code> da <code>DockerPort</code> é decidido pelo
+RELÓGIO (decorrido ≥ teto) além do <code>killed</code>, porque o cliente <code>docker exec</code>
+captura o SIGTERM do <code>timeout</code> do <code>execFile</code> e sai com código 0 — medido:
+<code>sleep 30; echo FIM</code> sob teto de 3s voltava <code>erro: null</code>, <code>stdout: &quot;&quot;</code>, e o
+adaptador devolvia <code>exitCode: 0</code>. Comando de agente que estourava os 120s
+voltava &quot;exit 0&quot;, e o QA aprovou suíte que trava. O estouro agora devolve
+<code>exitCode: -1</code>, <code>timedOut: true</code> e a marca de timeout. E matar o cliente não
+mata o comando: o <code>exec</code> embrulha o comando (que segue inteiro e não
+interpretado; o canal é <code>-e BRABO_EXEC_CMD</code>, <a href="#rn-947">RN-947</a>) num <code>sh</code> que grava o próprio PID — líder de grupo e de sessão,
+porque o runtime faz <code>setsid</code> em todo <code>docker exec</code> — em <code>/tmp</code> do container;
+no estouro o adaptador mata o GRUPO por esse PID (SIGKILL), numa chamada
+interna, sem operação nova na porta (ADR 0130). Medido e recusado: <code>timeout</code>
+do busybox dentro do <code>sh -c</code> — o vigia morre com o cliente e o <code>sleep</code>
+sobrevive. Se a morte falhar (<code>/tmp</code> sem escrita, por exemplo), a marca diz
+que o processo pode ter sobrevivido.</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:279</code> (<code>estourouOTeto</code>),
+<code>packages/docker-port/src/docker-cli.ts:506</code> (<code>matarExecEstourado</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (&quot;erro nulo depois do
+teto É estouro&quot;; &quot;no estouro mata o grupo do comando DENTRO do container&quot;;
+&quot;o comando que estoura volta timedOut e MORRE dentro do container&quot;, contra
+Docker real, pulado sem daemon)</li>
+<li><strong>Origem:</strong> AT-482</li>
+</ul>
+<h3 id="rn-820">RN-820 — O container de projeto volta sozinho quando o daemon reinicia</h3>
+<ul>
+<li><strong>Regra:</strong> o <code>docker run</code> composto pelo <code>DockerViaCli</code> leva
+<code>--restart unless-stopped</code> como CONSTANTE, ao lado do <code>--init</code> da
+<a href="#rn-738">RN-738</a> — a spec não ganha campo, e a contenção do ADR 0130 não
+muda. Um daemon reiniciado (atualização do sistema) religa o container de
+projeto; um <code>docker stop</code> explícito (o <code>container_stop</code> do ciclo de vida) NÃO
+é desfeito, porque <code>unless-stopped</code> não religa o que foi parado à mão — nunca
+<code>always</code>. Medido: container <code>unless-stopped</code> parado com <code>docker stop</code> segue
+<code>exited</code> com <code>RestartCount=0</code>.</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:785</code> (<code>argsDeCriacao</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (&quot;cria o container
+com rótulo gerenciado, UM bind e as capabilities derrubadas&quot;)</li>
+<li><strong>Origem:</strong> AT-494 (o daemon reiniciado deixou todo container de projeto
+<code>Exited (143)</code> com o registro <code>running</code>)</li>
+</ul>
+<h3 id="rn-928">RN-928 — O comando do app é argumento de um supervisor constante, e sem ele o container é o de sempre</h3>
+<ul>
+<li><strong>Regra:</strong> <code>EspecificacaoDeContainer.comandoDoApp</code> (opcional, até 300 caracteres, sem <code>\n</code>, <code>\r</code> nem NUL) troca o <code>sleep infinity</code> pelo supervisor CONSTANTE <code>SUPERVISOR_DO_APP</code>, que recebe o comando como <code>$1</code> (molde da <a href="#rn-807">RN-807</a>) e nunca o concatena: aspas, <code>;</code> e <code>$()</code> do comando não escapam. O app sobe em background (log em <code>/tmp/brabo-app.log</code>, código em <code>/tmp/brabo-app.exit</code>) e o PID 1 segue <code>sleep infinity</code>. Ausente ou <code>null</code>, o <code>docker run</code> é byte a byte o anterior. O broker lê o campo SÓ da <code>container-spec</code> da api. (<a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228</a>.)</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/spec-de-container.ts:351</code> (<code>comandoDoAppValidado</code>), <code>packages/docker-port/src/docker-cli.ts:380</code> (<code>SUPERVISOR_DO_APP</code>), <code>packages/docker-port/src/docker-cli.ts:785</code> (<code>argsDeCriacao</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts:657</code> (<code>NÃO-REGRESSÃO</code>), <code>packages/docker-port/src/docker-cli.spec.ts:676</code> (comando com <code>'</code>, <code>;</code> e <code>$()</code> fica como argumento)</li>
+<li><strong>Origem:</strong> AT-610 (EP-030).</li>
+</ul>
+<h3 id="rn-929">RN-929 — Porta publicada vai só ao loopback, e DNS e <code>extra_hosts</code> são IP literal e nome de lista fechada</h3>
+<ul>
+<li><strong>Regra:</strong> <code>portas</code> vira sempre <code>-p 127.0.0.1:H:C</code> (TCP; interface constante, sem opção), host de 1024 a 65535 fora de 3000, 4000, 5173, 5432, 7474, 7687, 8088, 8090 e 11434, no máximo 10 e sem duplicata. <code>dns</code> é IP literal v4/v6 (até 3). <code>hostsExtras</code> é <code>{ nome, ip }</code> (até 10) com nome em <code>[a-z0-9.-]</code> de até 253 caracteres, nunca <code>localhost</code>, <code>host.docker.internal</code> nem nome de serviço da instalação, e IPv4 literal. Os três são recusados com rede <code>none</code>. <code>inspect</code> devolve <code>portasPublicadas</code> lidas de <code>NetworkSettings.Ports</code>, separadas do declarado (<a href="web.html#rn-468">RN-468</a>). (<a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228</a>.)</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/spec-de-container.ts:384</code> (<code>portasValidadas</code>), <code>packages/docker-port/src/spec-de-container.ts:405</code> (<code>dnsValidado</code>), <code>packages/docker-port/src/spec-de-container.ts:415</code> (<code>hostsExtrasValidados</code>), <code>packages/docker-port/src/docker-cli.ts:358</code> (<code>portasPublicadasDe</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/spec-de-container.spec.ts:237</code> (recusas), <code>packages/docker-port/src/docker-cli.spec.ts:688</code> (<code>-p 127.0.0.1</code>, <code>--dns</code>, <code>--add-host</code>), <code>apps/broker/src/operacoes.spec.ts:289</code> (vem da api)</li>
+<li><strong>Origem:</strong> AT-608 (EP-030), fatia do contrato.</li>
+</ul>
+<h3 id="rn-930">RN-930 — A instância de QA é efêmera, só mexe no que tem <code>brabo.papel=qa</code> e sobe os serviços que a Infra declarou por digest</h3>
+<ul>
+<li><strong>Regra:</strong> a spec com <code>qa: { chave, servicos }</code> sobe <code>brabo-qa-&lt;workspace_dir_name&gt;-&lt;chave&gt;</code> sem <code>--restart</code>, com <code>brabo.papel=qa</code> e <code>brabo.qa.instancia</code>, sem app nem porta. <code>stop</code>, <code>remove</code>, <code>inspect</code> e <code>exec</code> com <code>alvo</code> de QA filtram <code>brabo.papel=qa</code>; homônimo sem o papel é &quot;não gerenciado&quot; e nada é removido. Cada serviço (até 6, imagem por digest <code>@sha256:</code> obrigatório, <code>env</code> de chaves <code>[A-Z_][A-Z0-9_]*</code>) sobe com <code>--network container:&lt;qa&gt;</code>, <code>--cap-drop ALL</code>, sem privilégio nem porta publicada, tetos constantes e <code>--tmpfs</code>; serviço compartilhado vive na rede privada <code>--internal</code> do projeto. O broker expõe <code>/containers/:projectId/qa/:chave/{start,remove,exec}</code> e lê os serviços da api, conferindo a chave. (<a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229</a>.)</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:572</code> (<code>iniciarQa</code>), <code>packages/docker-port/src/docker-cli.ts:880</code> (<code>argsDeServicoDeQa</code>), <code>packages/docker-port/src/spec-de-container.ts:439</code> (<code>instanciaDeQaValidada</code>), <code>apps/broker/src/operacoes.ts:212</code> (<code>startQa</code>), <code>apps/broker/src/servidor.ts:135</code> (<code>rotaDeContainer</code>)</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts:756</code> (remove só alcança o papel <code>qa</code>), <code>packages/docker-port/src/spec-de-container.spec.ts:256</code> (digest, chave, env), <code>apps/broker/src/operacoes.spec.ts:321</code> (lista da api e chave da rota), <code>apps/broker/src/servidor.spec.ts:405</code> (roteador fechado)</li>
+<li><strong>Origem:</strong> AT-612 (EP-030).</li>
+</ul>
+<h3 id="rn-941">RN-941 — O serviço de QA roda com usuário e comando declarados, nunca como root, e leva o nome da instância mais o do serviço</h3>
+<ul>
+<li><strong>Regra:</strong> revisa a RN-930 e a RN-935 depois da prova com Docker real de 29/10/2026 (AT-612), que achou três defeitos. (1) O serviço PRÓPRIO era criado com o nome da própria instância (<code>Conflict</code>): agora é <code>&lt;instância&gt;-&lt;serviço&gt;</code>, o que <code>removerServicosDeQa</code> e o rótulo <code>brabo.qa.dono</code> já esperavam. (2) Postgres sob <code>--cap-drop ALL</code> sai com <code>chown</code>/<code>chmod</code> negados: o serviço ganha <code>user</code> (<code>&quot;&lt;uid&gt;:&lt;gid&gt;&quot;</code>, inteiros diferentes de 0, sem zero à esquerda, nunca root) que vira <code>--user</code>, e os caminhos <code>tmpfs</code> montam com <code>uid=</code>, <code>gid=</code> e <code>mode=0700</code> do mesmo dono. (3) Imagens que não sobem sozinhas: o serviço ganha <code>command</code> (1 a 16 argumentos de até 200 caracteres, sem <code>\0</code>, <code>\n</code> ou <code>\r</code>), passado como argumentos DEPOIS da imagem, nunca por shell. <code>null</code> equivale a ausente. A contenção não muda (<code>--cap-drop ALL</code>, sem <code>--privileged</code>/<code>--cap-add</code>, sem porta publicada, tetos constantes). A régua mora nos três lugares (docker-port, api, engine) e nenhum deles aceita <code>0</code>.</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/spec-de-container.ts:453</code> (<code>usuarioDeServicoValidado</code>), <code>packages/docker-port/src/docker-cli.ts:880</code> (<code>argsDeServicoDeQa</code>), <code>apps/api/src/domain/infra/run-instructions.ts:160</code> (<code>recusaDoQa</code>), <code>apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:133</code> (<code>qa</code>).</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (nome, <code>--user</code>, dono do tmpfs, comando), <code>packages/docker-port/src/spec-de-container.spec.ts</code> (recusa de <code>0:0</code>, <code>70:0</code>, <code>70</code>, comando grande/com quebra), <code>apps/broker/src/operacoes.spec.ts</code>, <code>apps/api/test/domain/infra/run-qa.spec.ts</code>, <code>apps/engine/test/engine/infra/instrucoes_de_execucao_test.exs</code>; prova com Docker real: <code>postgres:17-alpine</code> com <code>70:70</code> aceita conexão em <code>localhost:5432</code> e <code>busybox httpd</code> responde em <code>localhost:9000</code> de dentro da instância.</li>
+<li><strong>Origem:</strong> AT-612 (EP-030), ADR 0229.</li>
+</ul>
+<h3 id="rn-947">RN-947 — O comando do agente no <code>exec</code> não aparece na linha de comando de nenhum processo do container</h3>
+<ul>
+<li><strong>Regra:</strong> o comando do <code>exec</code> da <code>DockerPort</code> viaja por <code>-e BRABO_EXEC_CMD=&lt;comando&gt;</code> e não mais no argv: o embrulho da <a href="#rn-807">RN-807</a> o lê, faz <code>unset</code> e <code>set --</code>, e o roda por <code>(eval &quot;$c&quot;)</code> em subshell (mesmo grupo, mesmo PID gravado, <code>exit</code> e <code>set -e</code> contidos, exit code preservado). O argv do container fica só <code>/bin/sh -c &lt;embrulho&gt; brabo-exec &lt;marcador&gt;</code>. Medido no uso real: os 36 comandos do QA de automação com <code>pkill -f</code> morriam com 143, porque o padrão casava o argv do próprio <code>sh</code>. Fora, declarado: o runner no host (<code>apps/runner/src/exec.ts</code>), que a <a href="runner.html#rn-507">RN-507</a> já condiciona a container <code>running</code>.</li>
+<li><strong>Onde:</strong> <code>packages/docker-port/src/docker-cli.ts:299</code> (<code>EMBRULHO_DO_EXEC</code>).</li>
+<li><strong>Teste:</strong> <code>packages/docker-port/src/docker-cli.spec.ts</code> (&quot;o comando que estoura volta timedOut e MORRE dentro do container&quot;, contra Docker real: auto-<code>pkill -f</code> sobrevive, <code>exit 3</code> volta 3, o comando não aparece no <code>ps</code>).</li>
+<li><strong>Origem:</strong> AT-622 (EP-030).</li>
+</ul>
+<nav class="site-pager"><a href="../business-rules/ci.html"></a><a href="../business-rules/engine.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/packages/docs/business-rules/contracts.md">Editar esta página</a><span>Atualizado em 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>Nesta página</h2><ul><li class="n2"><a href="#git">Git</a></li><li class="n3"><a href="#rn-028">RN-028 — Capability decide, não o nome do provider</a></li><li class="n3"><a href="#rn-087">RN-087 — O Dev Lead é o único endereço externo da execução</a></li><li class="n3"><a href="#rn-110">RN-110 — blame é a 13ª operação do GitProviderContract, com o mesmo vocabulário de ausência das outras leituras</a></li><li class="n3"><a href="#rn-111">RN-111 — listPullRequests é a 14ª operação do GitProviderContract; a lista navegável abre o mesmo diff por id</a></li><li class="n3"><a href="#rn-112">RN-112 — listBranchesDetailed é operação PRÓPRIA, separada de listBranches</a></li><li class="n2"><a href="#o-gate-implementavel-ativa--qa-estratégia-como-segundo-momento-do-qa-lead-rn-340341-adr-0090">O gate implementavel ativa — QA-estratégia como segundo momento do qa-lead (RN-340/341, ADR 0090)</a></li><li class="n3"><a href="#rn-341">RN-341 — A QA-estratégia é o segundo MOMENTO do qa-lead, e nunca suspende</a></li><li class="n2"><a href="#secops-runtime--relatório-de-abuso-sobre-rate_limit_hits-rn-375377-adr-0091">secops-runtime — relatório de abuso sobre rate_limit_hits (RN-375..377, ADR 0091)</a></li><li class="n3"><a href="#rn-377">RN-377 — A seção &quot;não medido&quot; é permanente, e cita as três lacunas por nome</a></li><li class="n2"><a href="#platform-ganha-uma-primeira-entrega-relatório-de-telemetria-sob-demanda-rn-385386-adr-0092">platform ganha uma primeira entrega: relatório de telemetria sob demanda (RN-385/386, ADR 0092)</a></li><li class="n3"><a href="#rn-385">RN-385 — O papel platform nasce como SCRIPT de leitura pontual, sobre as mesmas fontes do DomainGaugesCollector</a></li><li class="n3"><a href="#rn-386">RN-386 — O relatório de telemetria declara, sem inventar, o que NÃO mede</a></li><li class="n2"><a href="#auditoria-fluxoyml--código--onda-2-rn-160-no-backend-e-delegação-dev-lead--dev-rn-404405-adr-0094">Auditoria fluxo.yml × código — Onda 2: RN-160 no backend e delegação Dev Lead → dev (RN-404/405, ADR 0094)</a></li><li class="n3"><a href="#rn-405">RN-405 — A delegação Dev Lead → dev vira dado em delegations, com parecerArtifactId redefinido para &quot;o que justificou a decisão&quot;</a></li><li class="n2"><a href="#auditoria-fluxoyml--código--onda-6-última-o-gate-necessidade-validada-rn-406-adr-0095">Auditoria fluxo.yml × código — Onda 6 (última): o gate necessidade-validada (RN-406, ADR 0095)</a></li><li class="n3"><a href="#rn-406">RN-406 — O gate necessidade-validada se fecha com um clique SEPARADO do usuário, nunca com o Criativo se autovalidando</a></li><li class="n3"><a href="#rn-407">RN-407 — O PO lê o funil de entrega e DORA parcial, terceira leitura escopada ao projeto</a></li><li class="n2"><a href="#o-repositório-nasce-no-aceite-do-handoff-ao-arquiteto-e-a-execução-não-começa-sem-ele-rn-582">O repositório nasce no aceite do handoff ao Arquiteto, e a execução não começa sem ele (RN-582)</a></li><li class="n3"><a href="#rn-605">RN-605 — O pull de imagem é um passo NOMEADO do start, sob o teto de controle, e o estouro diz que imagem grande não sobe</a></li><li class="n2"><a href="#decidir-no-chat-onde-o-dono-está-rn-626">Decidir no chat, onde o dono está (RN-626)</a></li><li class="n3"><a href="#rn-627">RN-627 — O container do projeto roda com o dono da pasta, medido pela api</a></li><li class="n2"><a href="#a-anamnese-não-paga-duas-vezes-pela-mesma-janela-e-o-resgate-de-gate-não-reinicia-ciclo-que-espera-alguém-rn-722">A Anamnese não paga duas vezes pela mesma janela, e o resgate de gate não reinicia ciclo que espera alguém (RN-722)</a></li><li class="n3"><a href="#rn-738">RN-738 — Parar container de projeto é imediato, e a linha da /containers relê ao decidir</a></li><li class="n3"><a href="#rn-807">RN-807 — O exec que estoura o teto volta como estouro, e o comando morre dentro do container</a></li><li class="n3"><a href="#rn-820">RN-820 — O container de projeto volta sozinho quando o daemon reinicia</a></li><li class="n3"><a href="#rn-928">RN-928 — O comando do app é argumento de um supervisor constante, e sem ele o container é o de sempre</a></li><li class="n3"><a href="#rn-929">RN-929 — Porta publicada vai só ao loopback, e DNS e extra_hosts são IP literal e nome de lista fechada</a></li><li class="n3"><a href="#rn-930">RN-930 — A instância de QA é efêmera, só mexe no que tem brabo.papel=qa e sobe os serviços que a Infra declarou por digest</a></li><li class="n3"><a href="#rn-941">RN-941 — O serviço de QA roda com usuário e comando declarados, nunca como root, e leva o nome da instância mais o do serviço</a></li><li class="n3"><a href="#rn-947">RN-947 — O comando do agente no exec não aparece na linha de comando de nenhum processo do container</a></li></ul></aside>
+</div>
+<script src="../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-pt-BR.json" data-base="../"></script></body>
+</html>

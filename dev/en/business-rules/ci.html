@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en" data-locale="en" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regras de negócio — CI | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Menu">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Search" aria-label="Search" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Language"><option value="../../business-rules/ci.html">pt-BR</option><option value="../../en/business-rules/ci.html" selected>en</option><option value="../../ru/business-rules/ci.html">ru</option><option value="../../zh-Hans/business-rules/ci.html">zh-Hans</option></select>
+<select data-seletor aria-label="Environment"><option value="../../../dev/en/business-rules/ci.html" selected>dev</option><option value="../../../prd/en/business-rules/ci.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Toggle theme">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Start here</h2><ul><li><a href="../index.html">Introduction</a></li><li><a href="../getting-started.html">Getting Started</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">From zero to a deliverable</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Architecture</h2><ul><li><a href="../architecture.html">Architecture</a></li><li><a href="../adr.html">Decisions (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Shape of the normalized GitProvider contract</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — GitProvider error normalization</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Retry policy for remote providers</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Registration of the user's git credentials</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Idempotent and resumable Gitflow bootstrap</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Branch protection: divergence between providers and the approval matrix</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Mechanized branch policy</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Adoption of an existing repository, and the plan as a gate</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — The engine works on a remote repository</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — The pipeline merge alarm gains a recipient, and the rule covers `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — The repository is born at the acceptance of the handoff to the Arquiteto, and execution does not start without it</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Automatic `dev` → `qa` promotion while QA is in a test phase</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Agent harness: deterministic context assembly</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, tools, ContextManager (harness with LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — The session's type is data set at creation, and execution stays an event</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Consistent transport limits and effective compaction window</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — The click answers on ACCEPTING the command, and the turn continues through the channel</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — The Infra Lead converses through the composer, and first its turn goes through `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — The response language lives in three places — account, session and project —, as an open BCP-47 list and never in `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — The loop asks Jev which tool, and the user's model sees only the menu that remains</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — A closed session can be reopened: a dedicated exit from the terminal states, to `active`, with a new event</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Reopening a session: the owner's three decisions, and `developer` reopens</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — A message arriving during a turn enters a persisted queue and is read at the end of the turn</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Conversational Creative agent in the harness + handoff foundation</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — PO agent, backlog (epics/stories/tasks) and traceability</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Architect agent: ADRs via a real PR, module_map and cross-validation</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent and the live team panel (Phase 4a closure)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Real Psychologist: ToolLoop, evidence-backed hypotheses and cost triage</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnesis: proficiency profile, instruction patches and closed loop</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Closing Phase 4b (session 1): evidence that arrives, cost that shows up, analysis that survives a kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Closing Phase 4b (session 2): a catalog that works, a dedup that distinguishes who denied, and a queue that survives the run</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Agent hierarchy: areas, leads and delegation</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Story promotion with user authority</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead as an area, and parallelism authorized by the user</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Architect's C4 diagram</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Conditional merge of handoff acceptance with execution activation</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Role flow as a declarative registry (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — The Dev Lead's plan suspends the turn for approval</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — The UX Designer enters as a conversational agent</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: code ready, dormant for automatic trigger</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` and `delivery-metricas` become a report script</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` starts as an on-demand reporting script, not an agent</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — The `dbre` role becomes two scripts: migration linter and backup report</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — The Dev Lead → dev delegation becomes data, with `parecerArtifactId` redefined</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Manual handoff to an agent of choice reuses offer+accept, never a third handoff state</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — The handoff offer gains a lifecycle: one pending per destination, and `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — &quot;I'm ready — the need is validated&quot;: one click closes readiness, the `necessidade-validada` gate and the PO's acceptance</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — The PO's handoff to the Arquiteto is accepted without a click when the backlog is covered and the repository is local</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Approving the Dev Lead's plan activates execution, and the task gains the module it assigns</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — The archived story: a column, not a state of the machine</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — The deliverable runs on the user's machine through Infra's compose</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — PR gates: QAAgent and SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Unblocking the QA and SecOps gates: gitleaks on the tree, validated verdicts, and tool call in text</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Closing Phase 4a: an infra gate that actually validates, and a panel that tells the truth</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates as a declarative registry</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — The gate agent waits for approval, like the dev agent waits</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — The gate survives a restart</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-strategy and AppSec as a second MOMENT, not a new agent</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` as a report script over `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — The `necessidade-validada` gate closes with a separate human confirmation, not with the Creative self-validating</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set of regression cases for the QA Automation agent's semantic judgment</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — The QA golden-set now runs in CI, scheduled and weekly</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — The test plan is born after the dev's delivery, and the `implementavel` gate starts judging itself on the story and the `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — A gate cycle stalled for more than 2 h parks, and only a human gesture resumes it</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — An open question becomes a pending item to resolve</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — The project's decision reaches the dev and QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Dev agent infrastructure: worktrees, git executors and the merge lock</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — Real DevAgent: ToolLoop, per-task budget and blocking discipline</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Workspace initialization lock, dev agent Monitor and ceiling inheritance</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent as a permanent execution mode</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Unblocking the real DevAgent: writing, terminal, ADR by module, and per-project budget</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Event-based rescheduling of the dev agent, and the circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Post-dogfooding operability: closing Phase 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — The decision in the event log, and the gate's ordering</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — The dev agent waits for approval mid-loop</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Path scope in the terminal policy</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Revision of ADR 0065: the external-effect boundary stops being `deny` and becomes an absolute ceiling</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — Automatic mode releases the path scope, and only it</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — The autopilot: automatic mode approves everything except the ceilings, the scope compares against the real execution folder, and &quot;Always allow&quot; records verb + subcommand</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — Automatic mode releases push and PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Readable workspace folder name</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — The project chooses where the code lives: user folder or managed folder</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` in three values, and the workspace is born `unverified` when the runner is the one who verifies it</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Local folder navigation via the Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — In `runner` mode, the project is born when clicking &quot;Browse folder...&quot;, not only at confirmation</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Converting `execution_mode` on an existing project: refuse with an active dev agent, relocate `permissions.json`, retire the container row</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — The single base for mounted projects, mounted by identity</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — Validation of the mounted workspace is deferred until materialization</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — The base consented at bootstrap, and `mounted` as the local default</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Container per project: the boundary stops being policy</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Container lifecycle: state table, no orchestrator</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — The Terminal tab gets the real consumer of the lifecycle, not the terminal</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — The Docker port, and the packaging proof that chose the implementation</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — The container broker: who talks to the server's Docker, and why it does not accept a specification</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — The Arquiteto routes modules to infra: it NOMINATES, Infra ELECTS</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra elects among the routing's candidates, and the election becomes a new version of `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents execute INSIDE the project's real container, and the terminal gains an auto-approval floor in there</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — The Arquiteto's image gate (RN-105) now applies in all three execution modes</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Global containers page: a per-load ceiling on the broker, and `container_remove` under the absolute ceiling</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` brings up the project's container on the user's machine</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Dev agents only after the container</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — The broker's second root, and the discriminated locator that chooses it</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — The project container runs as the folder's owner, measured by the api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra brings up the container on handoff acceptance, as a server step and with seeded autonomy, and it is Infra that hands over to the Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — The container's minimum resource is derived from the `module_map`: each module declares its own, and Infra starts with the sum</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra inherits the network the Arquiteto declared</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Local runner: execution on the user's machine over a Phoenix channel with a single-use ticket</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) for the runner, scoped by construction to a single route</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Distribution of `@brabo/runner` via `tsup` and `npm publish`, version injected only in CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Standalone binary of `@brabo/runner` via `bun build --compile`, native `.node` addon embedded by real extraction to a temp directory</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Browser-driven runner setup: an Ed25519 device key as a second `runner-ticket` credential, a GitHub Releases proxy for the binary, and the File System Access API for a one-click configured folder</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker becomes a real prerequisite of the `runner` mode</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — One local agent, capabilities declared on connection</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — The base consented in the runner, and folder creation through the channel</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — The machine device key</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — The runner's standalone binary stops promising Intel Mac</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — The runner's standalone binary stops promising Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — Credentialed git runs on the runner's HOST; the code runs in the container</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — Revocation targets the KEY, not the `{project, user}` pair</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — The runner flow through the browser is retired, and the path is the installer</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — First-party auth: argon2id, EdDSA and refresh rotation</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — Cutting Keycloak: our own issuer, service token and cookie-based session</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — The CORS the engine didn't have, and the port as part of the contract</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Credential always encrypted; verification becomes an explicit action</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — Closed CSP on the api, and project scope contained at the root</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — The key that signs the git OAuth `state` has no default</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Social login (GitHub/GitLab), revising the ADR 0031/0032 backlog</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — Real SMTP in `MailSender`, behind an explicit toggle</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Two downgrade ceilings on `project_members`, and the override stays</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — The self-downgrade ceiling also on project member removal</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — The self-movement ceiling on the workspace upsert, and the self-promotion that was a loophole</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — The master key's id recorded in the envelope, as observability and never as authority</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — Workspace member removal is born, protected by the same clause</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Dashboard currency: USD for now, manual per-workspace exchange rate deferred</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — An OpenAI-compatible base, an LLM provider contract, and capabilities that refuse a binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Living catalog, model lifecycle and auditable price</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Six LLM providers on top of the base, and Phase 9b finally closed</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Model curation per workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Proven capability facets; &quot;what it's good for&quot; is curation</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Two audiences for the same spend: the owner's bill and the member's consumption</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Area scope in the model cascade, and the global agent binding</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings in the LLMProvider contract</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` becomes a spend dimension again, and containment moves to the type</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Model ranking by capability, with no invented score</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Budget per area is ADDITIVE, next to project/session — not a cascade, and not a new table</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Native Ollama detection in dev bootstrap: ask once, persist to `.env`, gate the compose services behind a profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Hugging Face model pull: a dedicated table, two-step confirmation, and an official-publisher allowlist — never `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — The routing preference lives in the model binding, travels with it, and freezes in metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — The real cost the provider returns becomes the metering number</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — Semantic duplicates of stories and rules are warned by embedding with a threshold, and the spending enters metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Chunks table: vector and `tsvector` on the same row</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Hybrid search: weights, threshold, and what counts as a citation</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: its own hybrid-search tab, without renaming &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j as knowledge graph and prompt templates, driver in the api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` for agents and Ollama models guaranteed at boot</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Relational memory as an event log projection; templates consumed without touching GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Locally attached folder becomes `chunks.scope = 'local'`, read by the BROWSER, never a host path</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — RAG search telemetry is a TABLE, with the weights frozen in the row</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — RAG accuracy golden-set, and the `rag-acertivo` gate</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — The RAG golden-set now runs in CI, scheduled — and remains `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — The agents' artifacts projected to files, in a `docs/` folder</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — The Anamnese turned back on: it does not run without a subject, and the accepted hypothesis becomes a profile fact</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — The contract between modules becomes a versioned Arquiteto artifact, and the dev agent reads it instead of someone else's worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — The agent deviation the Anamnese observes becomes a product signal, without personal data</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Auth screens faithful to the design, and the three fonts that weren't loading</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — The code-reading surface, contained and budgeted</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Reachable theme, and the boot under CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Screen frame, and the tab registry diverges from the handoff on purpose</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Direct read of the engine schema for the dashboard's &quot;N agents online&quot;</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (and future types) generated from the OpenAPI contract, not hand-copied</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx` split into five mechanical PRs, declared upfront</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Turn-channel state cluster extracted into `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` split into one file per section, behind a barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — The project page navigates by a vertical rail, and the Code tab stops auto-collapsing the sidebar</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` below 1,000 lines, in ten mechanical PRs, and the lock only afterwards</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — The dark theme becomes neutral black, and the contrast debt ends</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Text animation with `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — A single navigation: the sidebar absorbs the project rail</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Phase 5 (session 1): production images, compose.prod, CI, and smoke test</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Phase 5 (session 2): Kubernetes deploy with Kustomize, queue metric and local overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Phase 5 (session 3): graceful shutdown, OpenTelemetry, metrics, logs and dashboards</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, api hardening, exposed surface and release</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace without a collector, and the path between layers in the log</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Observability in the local Compose: metric and log, no trace</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — The one-line installer, with a chosen source and a marker</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Volume backup and restore, against compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: the trigger ten documents cite and none creates</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — The first account is born in the terminal, and the local agent comes up paired</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — The installer's compose travels with it, as a signed asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — The screen only offers the mode the installation executes, and the Release installation has no broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — The broker becomes the fifth published image, and the installer ASKS whether to turn it on</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — The local overlay's S3 destination stops being MinIO and becomes SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — The dev compose becomes `brabo-dev`, and dev refuses to come up next to an installation</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — The engine moves up to Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint and validation of the generated CI pipeline</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Images published to GHCR on every final tag, and the production overlay pinned by digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — Browser E2E against the production compose, in a package outside the workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — The schema split by domain aggregate, behind a barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — A repeated `pnpm audit` timeout is an accepted risk; a finding still fails</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Signature of published artifacts</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — A third-party image comes in by digest, and the lint fails whoever forgets</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — The release scans with Trivy what it publishes, by digest, before signing</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — The third-party image tag lives INSIDE the reference, before the digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — The workflows' image comes from the compose, and image Dependabot is turned on</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Continuous documentation synchronization</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — The API reference comes out of code, and the table test enforces the metadata</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Documentation published per stage, in a Pages subdirectory</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Symmetric publishing per stage, and a root that chooses</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — The published path names the environment, not the branch</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` gets its own lockfile, out of the product's `pnpm audit`</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — The ADR index by theme, with the theme outside the ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — The API reference becomes a Redoc page</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Four languages, with pt-BR as SOURCE and default: documentation and interface in Portuguese, English, Russian and Simplified Chinese</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Every ADR is titled &quot;ADR NNNN — title&quot;</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — The reference enters translation</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — The API page is translated by catalog</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 Rules</h2><ul><li><a href="../business-rules.html">Business rules</a></li><li><a href="../business-rules/custo.html">Custo e metering</a></li><li><a href="../business-rules/autenticacao.html">Authentication</a></li><li><a href="../business-rules/api.html">API</a></li><li><a href="../business-rules/broker.html">Broker</a></li><li><a href="../business-rules/ci.html" aria-current="page">CI</a></li><li><a href="../business-rules/contracts.html">Contratos</a></li><li><a href="../business-rules/engine.html">Engine</a></li><li><a href="../business-rules/infra.html">Infra</a></li><li><a href="../business-rules/produto.html">Produto</a></li><li><a href="../business-rules/runner.html">Runner</a></li><li><a href="../business-rules/web.html">Web</a></li></ul></section><section><h2>📖 Reference</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Api's Exposed Surface</a></li><li><span>API reference</span></li></ul></section><section><h2>💡 Explanation</h2><ul><li><span>Process and pipeline</span><ul><li><a href="../explanation/documentation-workflow.html">Docs sync</a></li><li><a href="../explanation/branching-policy.html">Branching policy</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">CI supply chain</a></li><li><a href="../explanation/gates.html">The gates, and how they're measured</a></li><li><a href="../explanation/observability.html">Observability</a></li><li><a href="../explanation/modelo-de-time.html">Team model and deliverable flow</a></li></ul></li><li><span>Validations and measurements</span><ul><li><a href="../explanation/primeiro-dogfooding.html">First dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Real execution (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Findings from the real execution of the pipeline</a></li><li><a href="../explanation/validacao-fase-12.html">Phase 12 validation</a></li><li><a href="../explanation/validacao-real.html">Real validation (13b)</a></li><li><a href="../explanation/aceite-providers.html">Provider acceptance</a></li><li><a href="../explanation/medicao-do-idioma.html">Measuring the language heuristic</a></li><li><a href="../explanation/medicao-do-jev.html">Measuring the Jev tool router</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Audit: fluxo.yml × code (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Visual audit, before and after Rodada 29</a></li></ul></li><li><span>Phase history</span><ul><li><a href="../explanation/historico-de-fases.html">Phase history</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">FASE 28 — user's folder</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — one-line installation</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — machine's local agent</a></li><li><a href="../explanation/backlog.html">Triaged backlog</a></li></ul></li><li><span>Localization</span><ul><li><a href="../explanation/localizacao.html">Localization</a></li><li><a href="../explanation/localizacao-en.html">Localization — English (en)</a></li><li><a href="../explanation/localizacao-ru.html">Localization — Russian (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Localization — Simplified Chinese (zh-Hans)</a></li></ul></li><li><span>Technical notes</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — not adopted</a></li></ul></li></ul></section><section><h2>🛠️ Operations</h2><ul><li><a href="../runbook.html">Runbook</a></li></ul></section><section><h2>📚 Vocabulary</h2><ul><li><a href="../glossary.html">Glossary</a></li></ul></section><section><h2>🤝 Contributing</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Contributing</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Getting help</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Report a vulnerability</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="ci">CI</h1>
+<h2 id="pr-gates">PR Gates</h2>
+<h3 id="rn-037">RN-037 — Infra becomes an area: Workflows generates CI per provider, Lead consolidates into a single PR</h3>
+<p>Second instance of the ADR 0038 model, after the QA area (RN-036) — with
+one structural difference: the Infra area's two delegations ALWAYS run
+(Dockerfiles/compose by the Lead itself — &quot;delegates to itself&quot;; CI
+pipeline by the Workflows subagent), never is one dispensed. <code>Workflows</code>
+decides the pipeline format from the context's <code>gitProvider</code>
+(<code>GetInfraContextUseCase</code>, read from <code>project_repositories.provider</code> —
+<strong>not</strong> from <code>GitProvider</code> <code>capabilities</code>, which are the SAME for GitHub
+and GitLab): <code>&quot;gitlab&quot;</code> generates <code>.gitlab-ci.yml</code>; any other value
+(<code>&quot;github&quot;</code>, <code>&quot;local&quot;</code>, or unknown) generates <code>.github/workflows/ci.yml</code>.
+Each file goes through <code>validate_infra_file</code> before finishing — hadolint
+for Dockerfile, <code>actionlint</code> for GitHub Actions workflow
+(<a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039</a>;
+<code>.gitlab-ci.yml</code> has no local validation, a documented gap, not a
+half-solution).</p>
+<p>Consolidation: the two delegates' files are merged by <code>path</code> (Workflows'
+wins on collision) into a SINGLE PR — the mechanism to propose the PR
+(<code>propose_infra_pr</code>) changes from &quot;the tool calls the api directly&quot; to
+&quot;the tool signals the Lead, which consolidates and calls once&quot; — the
+<code>open_infra_pr</code> the api receives is the SAME as always, byte for byte
+(<code>ExecuteInfraPrUseCase</code> untouched). Failure of any delegate (origin
+<code>infra</code>/<code>modelo</code>/<code>codigo</code>/<code>politica</code>) NEVER opens a partial PR — the same
+rule as RN-036, one level up again.</p>
+<p>Each delegate (even the Lead, on itself) is tracked as a <code>delegations</code>
+row — reused exactly as RN-036 left it, with ONE correction: the
+<code>task_id</code> column became NULLABLE (the Infra area delegates on the
+SESSION, with no backlog task behind an infra PR), and the route
+<code>POST /internal/sessions/:sessionId/delegations</code> stopped being nested
+under <code>/tasks/:taskId</code> — <code>taskId</code> now goes in the body, optional. Cycle K
+and budget have no dedicated column in the Infra area (the original
+InfraAgent never had per-task budget, and this work didn't introduce
+one).</p>
+<ul>
+<li><strong>Where:</strong> <code>apps/engine/lib/engine/infra/infra_lead.ex</code> (<code>consolidar/2</code>),
+<code>infra_lead_server.ex</code> (the wiring), <code>workflows_agent.ex</code>,
+<code>tools/validate_infra_file.ex</code> (dispatch by extension),
+<code>apps/api/src/application/use-cases/execution/get-infra-context.use-case.ts</code>
+(<code>gitProvider</code>), <code>record-delegation.use-case.ts</code> (<code>taskId</code> optional)</li>
+<li><strong>Test:</strong> <code>apps/engine/test/engine/infra/infra_lead_test.exs</code> (the merge
+and the block, pure), <code>infra_lead_server_test.exs</code> (the wiring: single
+PR with both file sets, two delegations, <code>gitProvider: &quot;gitlab&quot;</code> →
+<code>.gitlab-ci.yml</code>, Workflows failure → no PR), <code>workflows_agent_test.exs</code>
+— and the proof that the <code>ExecuteInfraPrUseCase</code>/<code>InfraGateRunner</code>
+contract didn't change: <code>execute-infra-pr.use-case.spec.ts</code> and
+<code>infra_gate_runner_test.exs</code> pass <strong>with no change at all</strong></li>
+<li><strong>Origin:</strong> <a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038</a>, <a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039</a></li>
+</ul>
+<p>On the <code>apps/web</code> side (Phase 8d): the team panel groups <code>infra</code>/
+<code>infra-workflows</code> the same way as QA (RN-036), and the feed narrates the
+area's delegations — the same <code>AREAS</code>/<code>areaFor</code> registry from
+<code>apps/web/src/lib/agents.ts</code>, with no Infra-specific code in the UI.</p>
+<hr>
+<h2 id="the-dbre-role-becomes-two-mechanical-scripts-rn-400403-adr-0093">The <code>dbre</code> role becomes two mechanical scripts (RN-400..403, ADR 0093)</h2>
+<h3 id="rn-401">RN-401 — The linter is not a CI gate: it scans the whole repository, not the PR's diff</h3>
+<p>Running <code>pnpm --filter api lint:migracao</code> against the repository's real
+migrations FINDS three occurrences in migrations already merged and accepted
+(<code>0006_whole_princess_powerful.sql:22</code> and <code>0034_quick_saracen.sql:33</code> —
+<code>DROP COLUMN</code>; <code>0007_groovy_bullseye.sql:2</code> — <code>ALTER COLUMN ... SET DATA TYPE</code>). That's not a defect to fix in passing (same CLAUDE.md
+rule that protects findings Z/AD/AE): they're already accepted migrations, and
+deleting them would erase the evidence of why the decision was made. It's also
+why the script exits <code>!= 0</code> but is <strong>not</strong> wired into
+<code>.github/workflows/ci.yml</code> — a gate that fails the whole repository
+would fail every PR forever, for a finding that isn't its own. Becoming a real
+blocking gate requires scoping to the DIFF against the PR's base (the same
+technique as <code>scripts/ci/pr-police.ts</code>), left for when <code>dbre</code> needs to
+BLOCK a merge — today it's a manual opinion, not an automatic verdict.</p>
+<ul>
+<li><strong>Where:</strong> <code>apps/api/scripts/lint-migracao.ts</code> (<code>principal</code>, exit code at the
+end of the file); decision documented in the file's header and in the ADR</li>
+<li><strong>Test:</strong> not applicable to CI (there's no step); the manual run against the
+real repository is recorded in ADR 0093, Consequences section</li>
+<li><strong>ADR:</strong> <a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">0093</a></li>
+</ul>
+<h2 id="n-agents-online-on-the-dashboard--live-status-never-historical-presence-rn-409-adr-0097">&quot;N agents online&quot; on the dashboard — LIVE status, never historical presence (RN-409, ADR 0097)</h2>
+<h3 id="rn-411">RN-411 — The fourth pending-work signal: dev agents speak <code>dev.*</code>, not <code>agent.status</code></h3>
+<p>Found by real USE, not by test: in an execution session, five dev
+agents came up, became <code>idle_tripped</code> (the circuit breaker of
+<a href="engine.html#rn-047">RN-047</a>, stuck waiting for the user to unblock a task
+manually), and the 30-second heartbeat
+(<code>Engine.Sessions.SessionServer.handle_info(:heartbeat_timeout, state)</code>)
+closed the session from underneath while the work — and the wait for a human
+decision — continued.</p>
+<p><code>GetSessionPendingWorkUseCase</code> already had a third signal
+(<a href="web.html#rn-064">RN-064</a>) for the same problem: an agent activated, with no later
+<code>idle</code>, holds the session. But that signal only reads <code>agent.status</code>, the
+vocabulary of CONVERSATIONAL agents (Criativo/PO/Arquiteto/Dev
+Lead/UX Designer/Staff/Infra). <code>Engine.Dev.DevAgentServer</code> (via
+<code>Engine.Dev.AgentIo</code>) never emits <code>agent.status</code> — it uses its OWN
+vocabulary in the session's event log: <code>dev.started</code>, <code>dev.working</code>,
+<code>dev.awaiting_gate</code>, <code>dev.awaiting_approval</code>, <code>dev.idle</code>,
+<code>dev.idle_tripped</code>, <code>dev.blocked</code>, <code>dev.blocked_by_container</code>,
+<code>dev.error</code>. An execution session
+with a dev agent working OR stuck always returned <code>pending: false</code>
+by the third signal, because no <code>agent.status</code> exists for it.</p>
+<p>The FOURTH signal fetches the LAST <code>dev.*</code> event of each <code>actor.id</code>
+(<code>dev-&lt;modulo&gt;</code>/<code>dev-&lt;modulo&gt;-2</code>, the same key as
+<a href="web.html#rn-195">RN-195</a>) that has already appeared in the session — like the third signal,
+but over multiple event types instead of just one, because the
+dev agent's state isn't ONE type with a variable <code>payload.status</code>, it's distinct event
+TYPES per transition. The ruler: <code>pending: true</code> when the
+last one is <code>dev.working</code>, <code>dev.blocked</code>, or <code>dev.idle_tripped</code> — all three
+mean &quot;there's work running or a human needs to act&quot;, and stuck
+waiting for unblocking IS pending work (it's literally what the
+user was doing when the session closed in the real execution). Only
+<code>dev.idle</code> (no task at all to pick up, truly drained) doesn't
+count.</p>
+<p><code>dev.awaiting_gate</code> and <code>dev.awaiting_approval</code>, as the last event, did NOT
+originally trigger this signal — they were left out of the ruler as
+decided at the time. <code>awaiting_gate</code> was a KNOWN residual gap;
+<a href="api.html#rn-412">RN-412</a> closed it, together with <code>awaiting_approval</code> (by a
+new argument, not the original — see RN-412).</p>
+<p><code>dev.blocked_by_container</code> came in LATER, by the same argument and through an
+equally real finding. The type was born with
+<a href="engine.html#rn-502">RN-502</a>/<a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143</a> — the dev
+agent doesn't claim a task before the project has a registered <code>running</code>
+container — and the use case's <code>DEV_EVENT_TYPES</code> list didn't keep up.
+Since it's the list the use case QUERIES, the event became invisible: the
+api didn't see it even to ignore it. In the real <code>exp004</code> execution (session
+<code>f782257e</code>) five dev agents emitted <code>dev.started</code> and
+<code>dev.blocked_by_container</code> at 22:41:38, the engine closed by
+<code>heartbeat_timeout</code> at 22:42:07 — exactly 30 seconds —, and events
+from that session kept arriving 13 and 32 minutes later. The last
+VISIBLE event per agent was <code>dev.started</code>, which is deliberately
+outside the ruler. The five were waiting for a HUMAN to bring up the container, which is the
+definition of pending work the other signals already use.</p>
+<p>The claim that the list was &quot;the complete vocabulary, confirmed by
+direct reading of the engine's code&quot; was true when it was written —
+and it's what silently aged. What keeps it true now is
+MECHANISM: <code>scripts/ci/vocabulario-de-eventos-dev.spec.ts</code> extracts the
+<code>dev.*</code> types from <code>apps/engine/lib/**/*.ex</code> and fails when they diverge
+from the use case's two lists, naming the missing type. It COMPARES
+instead of GENERATING (the <code>agent-areas.ts</code> precedent) because only half of the
+pair is derivable: <code>DEV_EVENT_TYPES</code> is mechanical, <code>DEV_PENDING_TYPES</code> is
+judgment — which states mean &quot;a human needs to act&quot;.</p>
+<p>The SAME drift had a third instance, in the WEB, and the mechanism
+now covers it. <code>DEV_STATUS_EVENTS</code>
+(<code>apps/web/src/lib/agent-status.ts</code>), which the team panel queries to
+tell each dev agent's state, also didn't know
+<code>dev.blocked_by_container</code> nor <code>dev.awaiting_approval</code> — and there the
+consequence wasn't invisibility, it was a LIE: both fell into the
+<code>switch</code>'s <code>default: return 'trabalhando'</code>, so in <code>exp004</code> the panel
+said that five dev agents stopped for HOURS, waiting for a human to
+bring up the container, were working. Both map to
+<code>aguardando</code>, the same state <code>dev.awaiting_gate</code> already used (the agent
+doesn't proceed until something OUTSIDE it happens), with no new state in
+<code>AgentStatus</code>; <code>dev.error</code>, which wasn't in any list and therefore
+made the panel go back to the previous <code>dev.working</code>, maps to <code>falhou</code>.
+The list stopped being a list: it became a <code>type -&gt; AgentStatus</code> MAP, which
+erases the <code>default</code> and makes it impossible to add a type without answering what
+it means. And the cross test gained the engine × web pair, with a
+requirement the api doesn't have — an explicit DECISION per type, mapped OR
+declared in <code>DEV_STATUS_EVENTS_FORA</code> (<code>type -&gt; reason</code>, empty today) —,
+because in the panel a <code>dev.*</code> type MAY legitimately not matter; what
+it can't do is be left out by forgetfulness.</p>
+<ul>
+<li><strong>Where:</strong> <code>apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts</code></li>
+<li><strong>Test:</strong> <code>apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts</code>
+(dev agent <code>dev.working</code>/<code>dev.blocked</code>/<code>dev.idle_tripped</code>/<code>dev.blocked_by_container</code>
+as the last event → <code>pending: true</code>, including the five agents of the
+<code>exp004</code> scenario and with <code>dev.blocked_by_container</code> beating an earlier
+<code>dev.idle</code>; <code>dev.idle</code> → <code>pending: false</code>; a session without a
+<code>dev.*</code> event keeps the previous behavior; only each agent's LAST event
+matters; <code>dev-&lt;modulo&gt;-2</code> also holds; isolation between
+sessions), <code>scripts/ci/vocabulario-de-eventos-dev.spec.ts</code> (the engine's
+<code>dev.*</code> vocabulary × the api's two lists AND × the panel's
+map, plus the three fabricated cases that prove the
+<code>DEV_STATUS_EVENTS_FORA</code> valve, which no real data exercises today), and
+<code>apps/web/src/lib/agent-status.test.ts</code> (<code>dev.blocked_by_container</code> and
+<code>dev.awaiting_approval</code> → <code>aguardando</code>, <code>dev.error</code> → <code>falhou</code>, never
+<code>trabalhando</code>; and the most recent event still prevailing)</li>
+<li><strong>Origin:</strong> found by real use — a real execution session with five dev
+agents in <code>idle_tripped</code> closed by the heartbeat while the user
+was still unblocking tasks manually; and, later, five dev agents
+in <code>blocked_by_container</code> in <code>exp004</code>, by the same mechanism</li>
+</ul>
+<hr>
+<h2 id="rag-search-leaves-a-trace-and-the-trace-freezes-the-weights-rn-479481">RAG search leaves a trace, and the trace freezes the weights (RN-479..481)</h2>
+<h3 id="rn-498">RN-498 — The RAG golden-set runs in real CI, SCHEDULED — and the gate stays <code>warn</code></h3>
+<p>RN-490 recorded the RAG golden-set (ADR 0132) being born as a manual <code>mix golden_set.rag</code>, &quot;never in CI&quot;, for the same reason as the QA golden-set
+(ADR 0123): without an API LLM secret or new infra, there was no way to
+run a real Ollama on a CI runner. This RN closes that half —
+only for RAG, never for QA — with a dedicated workflow
+(<code>.github/workflows/golden-set-rag.yml</code>, <code>schedule</code> + <code>workflow_dispatch</code>)
+that pulls <code>nomic-embed-text</code> into a real Ollama service (the same pinned version
+as the rest of the product, today <code>0.34.4</code>) and really runs <code>mix golden_set.rag</code>.</p>
+<p><strong>The difference that makes this tractable for RAG and not for QA:</strong> the
+RAG golden-set only calls the EMBEDDING model — CPU, deterministic,
+no sampling — never a CHAT model making a judgment, which is what the
+QA golden-set requires (expensive, it measures something non-deterministic by nature,
+as ADR 0123 itself records with real rounds varying from 1 to 5 hits
+out of 6). <code>ubuntu-latest</code>, with no GPU at all, suffices here — it wouldn't suffice for
+QA. The QA golden-set <strong>doesn't change at all</strong> with this RN: it remains entirely
+manual, a <code>TODO(humano)</code> in CLAUDE.md.</p>
+<p><strong><code>severidade: warn</code> (<code>docs/gates.yml</code>) STAYS <code>warn</code>, and the reason changed.</strong>
+It's no longer &quot;there's no CI with an LLM&quot; — it becomes cadence: the workflow is
+SCHEDULED (nightly + manual trigger), it never runs on <code>pull_request</code>. <code>block</code>
+would promise a merge lock that doesn't exist — the same reasoning that
+already held in Stage 2, now applied to the right reason. A regression in search
+accuracy becomes a trend signal visible within 24h (or immediately, via
+<code>workflow_dispatch</code>), never a gate that blocks a PR — a trade-off accepted
+explicitly by the product owner, given the cost of pulling the model and
+running 17 searches (a few minutes) in every window.</p>
+<p><strong>No secret needs to be generated in the workflow.</strong> <code>seed-golden-set-rag.ts</code>
+never defines <code>NODE_ENV</code>, and the four secrets the api would refuse with an
+example literal in production (RN-114) are only checked when
+<code>NODE_ENV === 'production'</code> — the script falls into the development branch and uses
+the dev literals without complaint, unlike <code>docker/smoke.sh</code>, which comes up
+with <code>NODE_ENV=production</code> on purpose and therefore generates its own with
+<code>openssl rand</code>.</p>
+<p><strong>The permanent exclusion of the <code>:golden_set_rag</code> tag in <code>test_helper.exs</code>
+(RN-490) doesn't change.</strong> It protects the regular <code>mix test</code> — including on the machine
+of any developer with Ollama up — never the new workflow, which
+invokes <code>mix golden_set.rag</code> explicitly, just as it was always
+necessary to run it manually.</p>
+<p><strong>Fixed after measuring: the workflow above never ran green once.</strong>
+Five consecutive scheduled runs (09/05 to 09/09/2026) failed, and there were
+<strong>three</strong> stacked defects, each hiding the next:</p>
+<ol>
+<li><strong><code>mix golden_set.rag</code> is an alias that calls <code>test</code>, and Mix refuses that
+outside the <code>:test</code> environment</strong> — <code>** (Mix) &quot;mix test&quot; is running in the &quot;dev&quot; environment</code> —, before running anything. <code>def cli</code> in
+<code>apps/engine/mix.exs</code> now declares <code>preferred_envs</code> for BOTH
+golden-set tasks: that's what makes the short command, the only one documented
+everywhere, work without an environment prefix. Requiring <code>MIX_ENV=test</code> from
+whoever calls would transfer the fix to all the prose that teaches the
+command — and to whoever forgot, again.</li>
+<li><strong>The job never brought up the api</strong>, and the test SKIPS when <code>API_URL</code> doesn't respond
+(an environment precondition declared in ADR 0132). With item 1 fixed, the
+job would be green without measuring anything. It now brings up the real api (build,
+<code>node dist/main.js</code>, waiting for <code>/health</code>) — satisfying the precondition, and
+never loosening the test, which would be changing the judgment to fit the CI.
+What does the work is still <code>seed-golden-set-rag.ts</code>, which brings up its
+own Nest context; the instance exists to answer <code>/health</code>.</li>
+<li><strong>The seed died with 409 at the image gate.</strong> It created the project as
+<code>runner</code> precisely to ESCAPE the gate (RN-105), relying on the exemption
+that RN-169/RN-421 gave to <code>mounted</code>/<code>runner</code> — an exemption <strong>revoked by
+RN-494</strong> (ADR 0135), with the script's comment still citing it.
+Now the seed CROSSES the gate through the real path: it decides the image via
+<code>DecidirImagemDoProjetoUseCase</code>, the same use case as the Arquiteto's
+<code>choose_project_image</code>, in a <code>consultiva</code> session it
+opens (the decision event requires <code>session_id</code>, which is <code>NOT NULL</code>) — never
+a hand-written artifact INSERT, which would make the golden-set measure against a
+state production doesn't know how to produce.</li>
+</ol>
+<p><strong>And the job now requires the golden-set to have MEASURED.</strong> The guard is the result
+line (<code>N/N casos acertaram</code>), which is only printed after the 17
+cases run; without it the step fails naming the reason. It's necessary
+because the <code>{:skip, motivo}</code> the test returns from the BODY <strong>is inert</strong> — there's
+no runtime skip in ExUnit, and what you see is <code>Result: 1 passed</code>. That was
+exactly what happened when measuring: with the seed dying with 409, the test
+passed. <code>excluded</code> does NOT work as a signal here, unlike what the sibling guard
+in <code>ci.yml</code> checks: the legitimate output carries over a thousand excluded, which
+are all the other engine tests, out by the tag.</p>
+<p>Measured after the three fixes, on this machine, through the path the job
+now follows: <strong>17/17 in the top-5</strong>, the same as the two manual rounds that
+recorded the floor.</p>
+<ul>
+<li><strong>Where:</strong> <code>.github/workflows/golden-set-rag.yml</code>, <code>docs/gates.yml</code>
+(<code>rag-acertivo</code>), <code>apps/engine/mix.exs</code>,
+<code>apps/api/scripts/seed-golden-set-rag.ts</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">0138</a></li>
+<li><strong>Origin:</strong> the product owner's plan, Part 2 / Stage 3</li>
+</ul>
+<h2 id="phase-29--the-one-line-installation-signing-what-is-published">PHASE 29 — the one-line installation: signing what is published</h2>
+<div class="tabela-rolavel"><table>
+<thead>
+<tr>
+<th>situation</th>
+<th>what the system does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Invalid state transition</td>
+<td>typed error (<code>InvalidSessionTransitionError</code> etc.), translated to 4xx — never writes inconsistent state</td>
+</tr>
+<tr>
+<td>Agent blows the iteration or token ceiling</td>
+<td>ends and records a blocking artifact with the failure's origin</td>
+</tr>
+<tr>
+<td>Task exhausts the K cycle</td>
+<td>blocked with a reason, does not spin forever (RN-015)</td>
+</tr>
+<tr>
+<td>LLM provider goes down midway</td>
+<td>recorded as an <strong>infra</strong> failure, never &quot;the model stopped&quot; (RN-023)</td>
+</tr>
+<tr>
+<td>Two concurrent decisions on the same hypothesis</td>
+<td>explicit conflict (RN-022)</td>
+</tr>
+<tr>
+<td>Engine replica goes down</td>
+<td>the session is adopted by another or ends as <code>closed_abnormally / node_shutdown</code> — never stays orphaned</td>
+</tr>
+<tr>
+<td><code>QaLeadServer</code>/<code>SecOpsAgentServer</code> goes down in the middle of a gate cycle</td>
+<td><code>Engine.Gates.GateRescuer</code> resumes on its own — restarts the area (no verdict recorded) or resends the lost call (verdict already recorded) — without manual intervention (RN-140)</td>
+</tr>
+<tr>
+<td>Rate limit unavailable</td>
+<td>the request <strong>passes</strong>: the guard protects against abuse, not against improper access</td>
+</tr>
+<tr>
+<td>Rate limit <strong>exceeded</strong> (429)</td>
+<td>the screen says what the api answered and the poll stops; the app never answers the limit with more traffic (RN-088)</td>
+</tr>
+<tr>
+<td>Wrong credential, nonexistent account or blocked account</td>
+<td><strong>the same</strong> 401 response, with the same argon2 cost (RN-032)</td>
+</tr>
+<tr>
+<td>An already used refresh presented again</td>
+<td>family revoked and a security event; the legitimate user is also logged out (RN-030)</td>
+</tr>
+<tr>
+<td>Internal traffic without the service secret</td>
+<td>403 in the api, 401 in the engine — never reaches the controller (RN-035)</td>
+</tr>
+<tr>
+<td>Provider refuses the key during catalog sync</td>
+<td>provider <strong>skipped</strong> with the failure's origin; no model is marked as gone (RN-041)</td>
+</tr>
+<tr>
+<td>The binding's model disappears from the provider</td>
+<td>the cascade falls to the level below and WARNS which scope it skipped — never swaps the model silently (RN-041)</td>
+</tr>
+<tr>
+<td>Model price changes</td>
+<td>it holds from now on; the recorded cost and the price that produced it stay untouched (RN-042)</td>
+</tr>
+<tr>
+<td>Creating the handoff fails (Criativo→PO, Arquiteto→Infra/Dev Lead)</td>
+<td>durable <code>agent.error</code>, the agent process STAYS alive; what was already recorded before (product_brief, rules) is not lost (RN-116)</td>
+</tr>
+<tr>
+<td><strong>Mounted folder</strong> project path outside <code>BRABO_PROJECTS_BASE</code></td>
+<td>creation is <strong>refused</strong> (400) naming the base and suggesting <code>&lt;base&gt;/&lt;nome&gt;</code> — the project is not born only to get stuck later (RN-170/RN-501)</td>
+</tr>
+<tr>
+<td><strong>Mounted folder</strong> project folder unreachable when the Infra starts the container</td>
+<td><code>container_start</code> ends <code>failed</code> NAMED (variable, path, folder owner, next step) and the lifecycle does <strong>not</strong> reach <code>provisioning</code> (RN-501)</td>
+</tr>
+<tr>
+<td><code>BRABO_PROJECTS_BASE</code> absent</td>
+<td>the api answers <code>projectsBase: null</code> and project creation <strong>does not offer</strong> the Mounted folder mode — never offer a mode the installation does not honor (RN-500)</td>
+</tr>
+<tr>
+<td>Folder browser receives a <code>path</code> outside the base (including the <code>&lt;base&gt;2</code> prefix trap)</td>
+<td><strong>400</strong> naming the base — malformed, and not 403: no role browses outside it (RN-504)</td>
+</tr>
+<tr>
+<td>Folder browser receives a <code>path</code> inside the base that the api cannot open</td>
+<td><strong>404</strong> saying WHICH of the two it is (does not exist / exists and cannot be read) — never a 500 with an <code>fs</code> message (RN-504)</td>
+</tr>
+<tr>
+<td>Browsed folder only has files, symlinks, or more than 500 subfolders</td>
+<td>the listing comes back with <code>arquivos</code>/<code>simbolicos</code>/<code>truncado</code> and the screen SAYS what was left out — a folder full of code never presents itself as empty (RN-504)</td>
+</tr>
+<tr>
+<td><code>BRABO_PROJECTS_BASE</code> overlapping the Brabo checkout (in both directions)</td>
+<td><code>pnpm dev</code> <strong>refuses to start</strong>, naming both paths. No api validation catches this: it compares against <code>process.cwd()</code>, which inside its container is <code>/workspace</code> (RN-500)</td>
+</tr>
+<tr>
+<td><code>BRABO_PROJECTS_HOST_BASE</code> absent in the broker and <code>container_start</code> of a <code>mounted</code> project</td>
+<td>refusal <strong>naming the variable</strong> (503, origin <code>infra</code>), without touching any container — never falls back to the other root, which would point to another project's folder (RN-503)</td>
+</tr>
+<tr>
+<td>LEGACY <code>mounted</code> project, with the folder outside the base</td>
+<td>the spec returns <code>localizacao.tipo: 'indisponivel'</code> with the reason naming the base and the path; the broker refuses with 409 and the fix is <strong>moving the folder</strong>, not changing mode (RN-503)</td>
+</tr>
+<tr>
+<td>Broker down (it starts under <code>profiles</code> and does NOT start by default) and <code>container_start</code> of a <code>mounted</code> project</td>
+<td>the action ends <code>failed</code> with the reason of <code>BrokerIndisponivelError</code>, never an exception — and nothing transitions in the lifecycle (RN-503)</td>
+</tr>
+<tr>
+<td>Incoherent project location in the database (mode/path pair written outside creation)</td>
+<td>execution activation refuses with <strong>400</strong> and the reason in pt-BR, never a 500 without a body (RN-478)</td>
+</tr>
+<tr>
+<td>Social login: provider email matches an existing account but is NOT verified</td>
+<td>refused with 403, no link recorded — an unverified email is not proof of identity (RN-274)</td>
+</tr>
+<tr>
+<td>Social login: invalid/expired <code>state</code>, or from another PURPOSE (git connection flow)</td>
+<td>refused, no call to the provider nor write to the database (RN-273)</td>
+</tr>
+<tr>
+<td>Validating the need without any <code>product_brief</code> in the session</td>
+<td>refused (400) BEFORE recording any event — there is nothing to validate yet (RN-406)</td>
+</tr>
+<tr>
+<td>Converting <code>execution_mode</code> with a dev agent working or stuck</td>
+<td>refused (409) BEFORE touching permissions.json or the container lifecycle — never migrates a live agent (RN-447)</td>
+</tr>
+<tr>
+<td>Attached local folder exceeds the file ceiling or the summed bytes</td>
+<td>refused (400), the whole batch — never truncates silently (RN-456)</td>
+</tr>
+<tr>
+<td>An individual file of the local folder is too big or of an unrecognized extension</td>
+<td>only SKIPPED (<code>filesSkipped</code>), never takes down the whole upload (RN-456)</td>
+</tr>
+<tr>
+<td>Confirming a model pull request that is no longer <code>pending_confirmation</code></td>
+<td>refused (409) — the confirmation is not re-executable (RN-462)</td>
+</tr>
+<tr>
+<td>Hugging Face model pull fails in Ollama</td>
+<td>request ends <code>failed</code> with the origin declared (infra/model), nothing is activated in the catalog (RN-462)</td>
+</tr>
+<tr>
+<td>Runner binary unavailable (release without an asset, GitHub down) during browser setup</td>
+<td>the chosen folder and the two configuration files STAY; the screen says the reason and swaps the instruction for the <code>npm install -g @brabo/runner</code> path (RN-473)</td>
+</tr>
+<tr>
+<td>Runner does not connect within the wait's ceiling</td>
+<td>the screen says it did not see it, declares that this is not proof of absence and points to the Code tab — never &quot;verifying&quot; forever (RN-474)</td>
+</tr>
+<tr>
+<td>Runner folder with a device key present and invalid (broken JSON, or without <code>kid</code>)</td>
+<td>the CLI refuses NAMING the file and the reason, and offers the two ways out — never the usage block, which is the answer for whoever configured nothing (RN-475)</td>
+</tr>
+<tr>
+<td>Creating the repository fails before a bootstrap row exists</td>
+<td>the status endpoint reports <code>provision_failed</code> with the reason read from the <code>proposed_action</code>, and <code>failedStep</code> stays NULL — no Gitflow step was attempted, and naming one would be inventing (RN-477)</td>
+</tr>
+<tr>
+<td>Bootstrap's <code>step.check</code> fails (expired token, 403, timeout)</td>
+<td>becomes <code>status: 'failed'</code> + <code>lastError</code> on the row and <code>bootstrap.step_failed</code> in the event log — before it went up without touching anything and the screen polled forever (RN-477)</td>
+</tr>
+<tr>
+<td>Provisioning does not converge within the screen's ceiling</td>
+<td>the wait STOPS at 3 minutes, declares that this does not prove failure and offers to look again — without firing a second POST (RN-477)</td>
+</tr>
+<tr>
+<td>Applying a model to all agents and the api refusing PART of them</td>
+<td>the rows that passed stay written and are re-read; the warning says how many out of how many and NAMES those that remained — never &quot;saved&quot; nor &quot;not saved&quot;, which would both be lies (RN-476)</td>
+</tr>
+<tr>
+<td>INSERT of the RAG search telemetry fails</td>
+<td>the search <strong>answers anyway</strong>, with <code>searchId: null</code>, and the failure becomes a log with origin <code>infra</code> — the measuring instrument does not take down what it measures, and it does not vanish silently either (RN-479)</td>
+</tr>
+<tr>
+<td>Vote on a <code>searchId</code>/<code>chunkId</code> that that search did not return</td>
+<td>a 400 that teaches, nothing recorded — a vote without rank does not distinguish &quot;poor index&quot; from &quot;wrong weights&quot;, and a meaningless number is worse than no number (RN-480)</td>
+</tr>
+<tr>
+<td><code>medir:rag</code> over a window in which <code>vector_available</code> was <code>false</code> the whole time</td>
+<td><strong>fails (exit 1)</strong>: what was measured is not the hybrid search, it is its lexical half, and calibrating the vector weight against that would be calibrating against another system (RN-479)</td>
+</tr>
+<tr>
+<td><code>route_modules_to_infra</code> called without a current <code>module_map</code>, with an empty list, a repeated module, a module outside the map, or an invalid image (<code>latest</code>/no tag/short <code>rationale</code>)</td>
+<td>400 naming what is missing or what is wrong — via the agent, an error tool-result the model fixes, never a crash (RN-487)</td>
+</tr>
+<tr>
+<td><code>container_start</code> elects an image outside the candidates of the Arquiteto's current routing</td>
+<td>the action becomes <code>failed</code> naming the refused image and listing the valid candidates — neither is the image decided nor is the broker called (RN-491)</td>
+</tr>
+<tr>
+<td>Broker refuses or is unavailable when starting the container (<code>BrokerRecusouError</code>/<code>BrokerIndisponivelError</code>)</td>
+<td>the action becomes <code>failed</code> with the broker's message — never propagates, never stays pending (RN-491)</td>
+</tr>
+<tr>
+<td><code>emit_artifact</code> with <code>type: decision_record</code> missing <code>context</code>/<code>options</code>/<code>choice</code>/<code>consequences</code></td>
+<td>error tool-result naming the missing key(s) — the model fixes it on the next turn of the loop, never a crash (RN-505)</td>
+</tr>
+<tr>
+<td>Terminal/worktree in a <code>runner</code> project verified and connected, but WITHOUT a <code>running</code> container</td>
+<td>NAMED refusal (<code>RunnerReadiness</code>), never falls back to the bare host — Docker is a real prerequisite, with no fallback (RN-507)</td>
+</tr>
+<tr>
+<td><code>RunnerGit</code> tries to materialize the worktree without the three preconditions of RN-507</td>
+<td>raises with a named message BEFORE any <code>exec</code> — never tries blindly and lets the channel timeout explain (RN-507)</td>
+</tr>
+<tr>
+<td>Periodic worktree cleanup job finds a <code>runner</code> project without a connected runner or without a <code>running</code> container</td>
+<td>SKIPS the project this round, silently — never an error, never stops pruning the other projects (RN-507)</td>
+</tr>
+<tr>
+<td><code>container_start_via_runner</code> proposed for a <code>container</code>/<code>mounted</code> project, or <code>runner</code> without a connected runner</td>
+<td>the Infra Lead REFUSES locally, naming the reason, without calling <code>propose_action</code> even once (RN-508)</td>
+</tr>
+<tr>
+<td><code>container_start_via_runner</code> approved without a decided image (RN-105)</td>
+<td>the action becomes <code>failed</code> naming the absence of a decision — never calls the engine (RN-508)</td>
+</tr>
+<tr>
+<td>Runner connected to a project whose <code>execution_mode</code> requires a capability it did not declare at <code>join</code></td>
+<td>join <strong>refused</strong> naming the capability and telling to update the binary — a fatal refusal, no retry, never silent degradation (RN-514)</td>
+</tr>
+<tr>
+<td>Runner that declares a capability THIS server does not know</td>
+<td>the name is <strong>ignored</strong> and the join passes — a runner newer than the engine connects (RN-514)</td>
+</tr>
+<tr>
+<td><code>exec</code> dispatched to a runner that did not declare the <code>exec</code> capability</td>
+<td>answers the caller in the same <code>exec_result</code> format, with <code>exitCode</code> 126 and the cause in <code>output</code> — never lets the <code>RunnerRouter</code> wait until the timeout (RN-514)</td>
+</tr>
+<tr>
+<td><code>pty_*</code> relayed to a runner that did not declare the <code>pty</code> capability</td>
+<td>the message is NOT delivered and the <code>:web</code> receives a named <code>pty_error</code> — never &quot;loading&quot; forever (RN-514)</td>
+</tr>
+<tr>
+<td>Mirror destination inside the project's <code>workspacePath</code>, or containing it</td>
+<td><strong>400</strong> naming the direction of the loop — both are the same refusal, and the comparison is by SEGMENT, so <code>/base-outra</code> does NOT count as inside <code>/base</code> (RN-515)</td>
+</tr>
+<tr>
+<td>Mirror destination declared in an <code>execution_mode: container</code> project</td>
+<td><strong>400</strong> NAMING the reason (the source is a server volume, the local agent does not see it) — never accept and never copy (RN-515)</td>
+</tr>
+<tr>
+<td><code>PUT .../mirror-path</code> without the <code>mirrorPath</code> key in the body</td>
+<td><strong>400</strong> — omitting would be indistinguishable from asking to CLEAR, and clearing silently is the defect; clearing is an explicit <code>null</code> (RN-515)</td>
+</tr>
+<tr>
+<td><code>brabo-runner service install</code> run as root</td>
+<td><strong>named refusal</strong>, without writing a file or running a command — the service is a user one by design, and a root one would break the premise of the product's three boundaries (RN-518)</td>
+</tr>
+<tr>
+<td><code>brabo-runner service &lt;qualquer&gt;</code> on Windows (or on any platform other than Linux/macOS)</td>
+<td><strong>refusal naming the platform</strong>, saying the decision is declared and pointing to the foreground — never a mute failure, never an &quot;installed&quot; that did not install (RN-518)</td>
+</tr>
+<tr>
+<td><code>service install</code> in a folder without a valid device key</td>
+<td><strong>refusal naming the file</strong> — a service authenticates by key, never by token, which would stay on disk inside the unit (RN-518)</td>
+</tr>
+<tr>
+<td><code>systemctl</code>/<code>launchctl</code> unavailable during <code>service install</code></td>
+<td>the unit file <strong>STAYS</strong>, and the answer says it did not activate, naming the pending command — deleting it would become &quot;nothing happened&quot;, which is false (RN-518)</td>
+</tr>
+<tr>
+<td><code>service uninstall</code> without an installed unit and without <code>--dir</code></td>
+<td>answers NOT INSTALLED and <strong>touches no file at all</strong>: without the unit's record, guessing by the <code>cwd</code> would delete another project's key (RN-518)</td>
+</tr>
+<tr>
+<td><code>service status</code> on a machine without the service manager in the PATH</td>
+<td>answers &quot;installed, and I could NOT ask&quot; with its own code — &quot;I don't know&quot; never becomes &quot;stopped&quot; (RN-518)</td>
+</tr>
+<tr>
+<td>Workspace project that NEVER provisioned a container, on the <code>/containers</code> page</td>
+<td>appears in the list with <code>registrado: null</code> and the text <strong>&quot;never provisioned&quot;</strong> — never <code>stopped</code>, never &quot;not observed&quot;, and never spends one of the broker's 20 checks (RN-521)</td>
+</tr>
+<tr>
+<td>&quot;Start&quot; clicked on a project without a decided <code>artifact.project_image</code></td>
+<td>the button does not even become active: the screen SAYS the image remains to be decided, in text, instead of proposing an action already known to end in failure (RN-521/RN-105)</td>
+</tr>
+<tr>
+<td>&quot;Start&quot; on a <code>runner</code> project whose <code>workspaceVerifiedAt</code> is null</td>
+<td>inert button with its OWN reason (&quot;no local agent ever confirmed the folder&quot;) — never collapsed with &quot;no image decided&quot; (RN-521)</td>
+</tr>
+<tr>
+<td>&quot;Start&quot; on a <code>runner</code> project with a confirmed folder but the runner possibly off</td>
+<td>the screen OFFERS and writes the caveat: folder confirmation is not agent presence (RN-468), and the action fails when approved if it is not up (RN-521)</td>
+</tr>
+<tr>
+<td>Role below <code>maintainer</code> on the <code>/containers</code> page</td>
+<td>inert controls with the reason said ONCE in text; state, image and resources stay VISIBLE (RN-521/RN-102, ADR 0064)</td>
+</tr>
+<tr>
+<td><code>brabo-runner --base &lt;caminho&gt;</code> with a relative path, with <code>..</code>, equal to <code>/</code>, pointing to a file, or (on Linux) outside <code>$HOME</code></td>
+<td><strong>refusal naming the reason</strong> and exits with code 2 — an explicit request typed just now that cannot be honored, the same disposition as a refused <code>--dir</code> (RN-529)</td>
+</tr>
+<tr>
+<td><code>--base</code> INSIDE this project's folder, or equal to it</td>
+<td>refusal <code>base-dentro-da-raiz</code>: every new project would be born inside this one. The OPPOSITE direction (the project folder inside the base) is the normal arrangement and passes (RN-529)</td>
+</tr>
+<tr>
+<td><code>$XDG_CONFIG_HOME/brabo/runner.json</code> corrupted, or with a base the guard refuses</td>
+<td>the refusal is STATED on <code>stderr</code>, names what is lost, and the runner <strong>continues without a base</strong> — taking down an agent serving a project because of a configuration it does not use yet would be disproportionate (RN-529)</td>
+</tr>
+<tr>
+<td>Base file that exists and does not declare <code>base</code></td>
+<td>it is <strong>absence</strong>, not refusal: configuration without a consented base, not broken configuration — the runner runs as always (RN-529)</td>
+</tr>
+<tr>
+<td>Project whose folder (<code>--dir</code>) is OUTSIDE the configured base</td>
+<td>stays <strong>valid</strong>, without a warning: the base is a creation rule, and the lexicon of <code>--dir</code> is forever — the same prohibition written in <code>project-workspaces-root.ts</code> (RN-529/RN-501)</td>
+</tr>
+<tr>
+<td>ABSOLUTE project segment, with <code>..</code>, pointing to the base itself, or escaping it by symlink</td>
+<td>named refusal with its own reason, in the double pass (lexical and by <code>realpath</code>) — never accepted and reinterpreted, because what crosses the network is the SEGMENT (RN-529, ADR 0130)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="when-things-go-wrong">When things go wrong</h2>
+<p><a href="../explanation/fase-28-pasta-do-usuario.html">PHASE 28</a> refused in writing the
+one-line installer while the artifacts were not signed (BRB-005), and
+that is why <a href="../explanation/fase-29-instalacao-de-uma-linha.html">PHASE 29</a>
+signs <strong>before</strong> installing. Session 2, <a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149</a>.</p>
+<h3 id="rn-524">RN-524 — A published artifact is signed by workflow identity, verified in the same run, and the verification refuses instead of warning</h3>
+<p>Every final tag signs what it publishes, and <strong>verifies what it signed before
+publishing the Release</strong>:</p>
+<ul>
+<li>the <strong>five images</strong> are signed <strong>by DIGEST</strong> (they were four when this
+rule was written; the fifth, the broker, came in with
+<a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162</a>), read from
+<code>.release/images.json</code> — never by tag. A tag is a moving pointer: signing
+<code>:5.0.0</code> would attest what that tag pointed to at the instant of signing, and not
+what it points to when someone downloads. The digest is what the manifest already records
+and what the production overlay already applies (ADR 0119);</li>
+<li>the runner <strong>binaries</strong> (five targets when this rule was born, <strong>four</strong>
+since <a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174</a>, which removed
+<code>darwin-x64</code>) are covered by <strong>ONE</strong> signed <code>checksums.txt</code>, and not by
+one signature per binary — whoever verifies three and forgets the fourth has
+no way of knowing they forgot;</li>
+<li>the signature is <strong>keyless</strong> (GitHub Actions OIDC): the identity that signs is
+the workflow itself, and there is no private key in custody. An own key pair
+would mean one more CI secret, and this repository has already seen a PAT
+expire silently and fail two runs of <code>tag-release</code>
+(<a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139</a>);</li>
+<li><strong>a verification failure is a named refusal, never a warning.</strong> A warning one accepts
+by clicking is a verification that does not exist.</li>
+</ul>
+<p>The manifest <strong>declares what it covers</strong>. The matrix is <code>fail-fast: false</code> on purpose,
+so a target that did not build does not prevent the other four from having a manifest —
+but the job names in the log the targets that were left out, because a <code>checksums.txt</code>
+that lists four and keeps silent about the fifth is worse than none: whoever verifies the
+four concludes they verified the release. This half was <strong>written intention and
+a mechanism that did not fulfill it</strong>: with <code>needs: build</code>, a target that does not build did not
+prevent, it DELAYED by a day — see <a href="#rn-565">RN-565</a>, which makes it true and
+measures the number.</p>
+<p><strong>Where:</strong> <code>.github/workflows/release.yml</code> (steps &quot;Instalar o cosign&quot; and &quot;Assinar
+as imagens publicadas&quot;, with <code>id-token: write</code> in the <code>permissions</code> block);
+<code>.github/workflows/build-runner-binaries.yml</code> (job <code>checksums</code>, <strong>without</strong> <code>needs:</code>
+since <a href="#rn-565">RN-565</a> — the wait is for the assets, with a ceiling).</p>
+<p><strong>Test:</strong> <code>scripts/ci/actions-pinadas.spec.ts</code> covers the SHA pin of
+<code>sigstore/cosign-installer</code> (with the version comment alongside, which is what
+tells a human and Dependabot which version that hash is). The signature itself
+is only proven on a real tag — declared, like the rest of the release pipeline.</p>
+<p><strong>Origin:</strong> PHASE 29, session 2. Closes <strong>BRB-005</strong> for images and binaries. Does NOT
+cover the operating-system <em>code-signing</em> of the binaries (macOS notarization,
+Windows Authenticode), which requires a paid identity and stays in the backlog.</p>
+<h2 id="installsh-closes-the-installation-rn-547-phase-30"><code>install.sh</code> closes the installation (RN-547, PHASE 30)</h2>
+<h3 id="rn-549">RN-549 — The E2E on a clean machine proves the WHOLE installation: the five links, the agent up and waiting, and the first project picked up without anyone going back to the terminal</h3>
+<p>Session 8 of <a href="../explanation/fase-30-runner-por-maquina.html">PHASE 30</a>, the last — and the
+only one that could answer the question the whole phase pursues: <em>on a clean
+machine, does <code>install.sh</code> end with the local agent up and paired, and does the person create
+the first project in Runner mode without going back to the terminal?</em> Until now the answer was
+a written intention: <a href="produto.html#rn-547">RN-547</a> chained the five commands and declared,
+in writing, that in its tests <code>brabo-runner</code> is a shell stand-in and the api is a
+<code>node:http</code> — <em>&quot;what is proven is the CHAINING, never the integration&quot;</em>.</p>
+<p><strong>The harness was not born here: it was EXTENDED.</strong> <code>.github/workflows/install-e2e.yml</code>
+has existed since PHASE 29 (<a href="produto.html#rn-534">RN-534</a>) and already runs the published installer on an
+ephemeral Actions runner — which is literally a clean machine, without Brabo, without
+<code>.env</code>, without a marker. What it proved stopped at <code>.env</code>: plan, state, the three
+promises to never delete, the path without a TTY, and the startup with a simulated TTY. A
+second workflow would duplicate the expensive side (waiting for the Release, downloading, verifying the
+signature) to measure the cheap side.</p>
+<p><strong>It does NOT run on <code>pull_request</code>, and the consequence is declared instead of
+hidden.</strong> The installer verifies its own origin against a Release's <strong>signed</strong>
+<code>checksums.txt</code> (<a href="produto.html#rn-526">RN-526</a>), which only exists after a final
+tag; the only way to make it run on a PR would be giving it a door to SKIP
+verification — the door <a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150</a>
+refuses, and which once opened would hold for anyone, not only for CI. Hence: <strong>the
+PR that wrote this E2E did not execute it</strong>, and its checks passed without exercising
+a single line of what it added. It is the same decision as the RAG golden-set
+(<a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138</a>), for the same reason.</p>
+<p><strong>Hence the half that RUNS on PRs, and it is the reason it exists.</strong> A workflow that only runs
+on tags is a workflow whose error shows up on the tag, when the release is already going out and
+nobody looks at the PR that broke it anymore. <code>scripts/dev/install-e2e.spec.ts</code> measures the
+two known ways for this E2E to rot silently: someone <strong>loosening</strong> the gate
+(putting <code>pull_request</code> in the trigger, or passing a skip-verification flag), and someone
+<strong>rewriting a sentence</strong> of <code>install.sh</code> — with which every <code>grep</code> of the workflow comes
+to match nothing, and the assertions do not fail, they VANISH. The prompts canary is
+derived, not memorized: the TTY answers go via file, <strong>in order</strong>, and a
+new <code>read -r</code> in the installer misaligns all the following ones — the base would become the
+password —, so the test counts the prompts and says to look at the answers file.</p>
+<p><strong>What the E2E came to prove, and each assertion has an owner.</strong> The five links of
+<a href="produto.html#rn-547">RN-547</a>, one by one, against a REAL api and binary — the account
+(<a href="produto.html#rn-546">RN-546</a>), the pair generated on the machine and the stamped <code>kid</code>
+(<a href="runner.html#rn-551">RN-551</a>), the registration of the public key (<a href="api.html#rn-552">RN-552</a>) and the
+per-machine unit (<a href="runner.html#rn-545">RN-545</a>). Plus the invariant of <a href="web.html#rn-475">RN-475</a> measured on the
+DISK and not in the output (the file the runner reads has <code>kid</code>, has <code>d</code>, and the
+<code>.parcial</code> vanished when <code>finish</code> closed), the password absent from <code>.env</code>, from the
+marker and from the log, and the <code>ownerEmail</code> present in the marker.</p>
+<p><strong>The NEGATIVE proof is the one worth the most, and it is the absence of the pending block.</strong>
+<a href="produto.html#rn-547">RN-547</a> says to report each link that fails in a named final block — and
+exit <strong>0</strong> all the same. An E2E that looked at the exit code would go green with
+four of the five links broken. <em>&quot;No pending items&quot;</em> is the only way to assert
+that the five closed, including the ones the workflow does not know how to name.</p>
+<p><strong>The signal that the agent is UP waiting is the LINE, never the manager's state — and that
+choice is this E2E's central decision.</strong>
+<code>perguntarEstado</code> maps <code>activating</code> to <code>rodando</code> (<a href="web.html#rn-088">RN-088</a>, with
+reason: &quot;coming up&quot; is not &quot;stopped&quot;), so both <code>systemctl is-active</code> and
+<code>brabo-runner service status --machine</code> answer <em>up</em> for a process that will
+die two seconds later. It is exactly the race a fixed <code>sleep</code> hides, and
+measuring the wrong artifact here — a binary on disk, a written unit — is the
+easiest way for an E2E to go green without proving anything. The chosen signal is the line the
+process writes when ENTERING the wait (<a href="runner.html#rn-550">RN-550</a>): it only exists after
+the agent has read the machine key from disk, gotten a ticket, talked to the real api
+and received an EMPTY list — it proves pairing and waiting at once. And it is not
+state sampling: it is a fact already written to the journal, which does not undo itself. That is why
+waiting for it with a ceiling is not a race — either it shows up, or the ceiling blows and the
+step fails showing the whole journal. <code>service status --machine</code> comes in
+<strong>after</strong> it, as confirmation that the exit code answers what the
+operator will see, never in its place.</p>
+<p><strong>The phase's outcome is measured through the API, and not the BROWSER.</strong> The subject of the
+assertion is the AGENT, not the page: what it observes is <code>GET /runner/projects</code>
+(<a href="produto.html#rn-543">RN-543</a>), an api fact. A browser would create the project through the SAME
+route with one more layer that fails for reasons unrelated to the promise — and would not
+make the assertion stronger, because it remains the line in the agent's
+journal. The browser layer exists (<code>e2e/</code>,
+<a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120</a>), answers
+another question (three origins, <code>httpOnly</code> cookie, CSRF), has its own lockfile and
+assumes the production compose up: dragging it here would make the installer's E2E
+depend on a second harness installed on a machine that should be clean.
+Proving the wizard is the web suite's job, and it is already covered there. What the step
+measures is the whole chain: the account born in the terminal <strong>gets through the login</strong> without
+any verification link, the personal workspace of <a href="api.html#rn-410">RN-410</a> exists, the
+project is born <code>runner</code>, and the agent picks it up on its own within the
+15s/30s/60s cadence of <a href="runner.html#rn-550">RN-550</a>.</p>
+<p><strong>Idempotency is measured by the half the E2E reaches without reinstalling.</strong> The api
+really answers <code>409</code> to a second <code>first-account</code> — with a GENERATED password, never
+a constant, because <code>exigirSenhaValida</code> runs BEFORE the conflict and a weak password
+would give <code>400</code>, measuring the wrong thing. What the installer DOES with that <code>409</code>
+(go silent, and not become a pending item) is HTTP code classification, covered in
+<code>install-fechamento.spec.ts</code> against a test server: repeating it here would require
+a whole second installation, which goes through the MIGRATION path
+(<a href="infra.html#rn-530">RN-530</a>) — proven backup, delete, recreate — and is its own delivery.</p>
+<p><strong>The only divergence between this runner and a clean machine belongs to the ENVIRONMENT, and it is
+named.</strong> On a real machine whoever installs has a login session and
+<code>systemd --user</code> is already up; the Actions job runs non-interactively, without a session, and
+without it <code>systemctl --user</code> has no bus to talk to — the <code>service install --machine</code> would become a pending item for a reason that is not the product's, and the E2E
+would &quot;prove&quot; a lab failure. <code>loginctl enable-linger</code> brings the
+user manager up; it is not an installer flag, it skips no verification and does not
+change what the unit does.</p>
+<p><strong>Two defects showed up while writing this, and both were invisible because the
+workflow never ran.</strong> The first was in the harness itself: the answers
+file started with <code>nao-migrar</code>, which on a clean machine falls into the
+MARKER question — it does not match <code>s|S|sim|SIM</code>, the script said <em>&quot;Nada foi gravado&quot;</em> and exited
+0, and the marker assertion right below would have failed. The migration question
+is under <code>if [ -n &quot;$marcador&quot; ] || [ -n &quot;$sinais&quot; ]</code>, and on a clean machine both
+are empty: it does not happen. Fixed to the SEVEN real answers.</p>
+<p><strong>The second is a FINDING and was not fixed here, on purpose.</strong> The published
+<code>install.sh</code> <strong>cannot bring anything up on its own on a clean machine</strong>: it brings up the stack
+with <code>docker compose -f docker/docker-compose.install.yml</code>, a path RELATIVE to the
+directory it runs from — and that file <strong>is not a Release asset, does not enter the
+signed <code>checksums.txt</code> (<a href="#rn-524">RN-524</a>), and the script does not download it
+anywhere</strong> (its only downloads are <code>cosign</code>, the manifest, its own hash and the
+runner binary). The compose also bind-mounts <code>./postgres/init.sql</code>, so there are
+THREE files and not one. Whoever follows the runbook's <code>sh -c &quot;$(curl … install.sh)&quot;</code>
+dies in <em>&quot;no such file or directory&quot;</em> <strong>after</strong> having already verified the signature,
+chosen the base and written the <code>.env</code>. Fixing it means deciding whether the compose becomes a
+signed asset or whether the installer starts cloning — its own delivery, not something to do
+in passing inside the E2E that discovered the hole. The workflow brings the three by hand, from the
+tag, in a step that SAYS it is a finding; the PR test demands both halves (the step
+exists, and the installer keeps using the compose without downloading it), and the day the
+installer fetches them on its own the test fails — and the right thing then is to delete the step,
+not relax the test.</p>
+<p><strong>What did NOT come in:</strong> any door to skip origin verification; <code>apps/</code>
+untouched (the finding became a report, not a passing fix); no second
+installer E2E workflow; and no loosened gate — in particular, the E2E
+stays out of <code>pull_request</code>.</p>
+<ul>
+<li><strong>Code:</strong> <code>.github/workflows/install-e2e.yml:16</code> (the trigger that stays without
+<code>pull_request</code>), <code>:111</code> (the finding's step — the three files the installer
+does not download), <code>:172</code> (the systemd user session, the declared divergence),
+<code>:204</code> (the full installation with the SEVEN answers), <code>:241</code>–<code>:245</code> (the five
+links of RN-547, one per line), <code>:253</code> (the negative proof — no pending items),
+<code>:267</code>–<code>:274</code> (the <code>kid</code>, the <code>d</code> and the <code>.parcial</code>, measured on DISK and not in the
+output), <code>:278</code> (the password that did not leak), <code>:307</code> (the
+agent up, by the journal line and not by the manager), <code>:354</code> (the first
+project via the api, and the agent picking it up), <code>:415</code> (the <code>409</code> of the second account)</li>
+<li><strong>Test:</strong> <code>scripts/dev/install-e2e.spec.ts</code> — the half that runs on PRs: the
+trigger read from the DOCUMENT (not from the text, which would match the comment that
+explains why <code>pull_request</code> is not there), the absence of a skip-verification flag
+in both files, the sentence contract between workflow and
+<code>install.sh</code> (the five links plus the usual four), the two lines of
+<code>apps/runner</code> the assertions depend on, the interactive prompts canary, the
+ORDER between the journal line and <code>service status --machine</code>, and the two halves
+of the compose finding. Verified by mutation: rewriting an installer
+sentence and putting <code>pull_request</code> in the trigger fail</li>
+<li><strong>Gap DECLARED:</strong> this E2E <strong>does not run on the PR that wrote it</strong>, and none of its
+checks proves a line of what was added — the first real execution is
+the next final tag. Also left out, and not by forgetfulness: the second
+run of the installer through the MIGRATION path (<a href="infra.html#rn-530">RN-530</a>) — backup,
+restore proof, delete and recreate —, macOS (the full step is Linux:
+<code>launchd</code>, and the Docker the hosted runner does not have), and the browser</li>
+<li><strong>ADR:</strong> <a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">0155</a></li>
+<li><strong>Origin:</strong> PHASE 30, session 8 —
+<a href="../explanation/fase-30-runner-por-maquina.html">the phase's scope</a></li>
+</ul>
+<h2 id="the-device-key-gets-a-screen-and-the-screen-states-the-reach-of-revoking-rn-561">The device key gets a screen, and the screen states the reach of revoking (RN-561)</h2>
+<h3 id="rn-565">RN-565 — The signed manifest goes out with what the Release HAS, and does not wait for the platform that never builds</h3>
+<p>The signed <code>checksums.txt</code> (<a href="#rn-524">RN-524</a>) is the precondition of two other
+rules: without it, <code>GET /runner-releases/binary</code> refuses with
+<code>release_sem_manifesto</code> (<a href="produto.html#rn-525">RN-525</a>) and <code>install.sh</code> refuses itself
+(<a href="produto.html#rn-526">RN-526</a>) — <strong>on all platforms, including those that attached a
+binary properly</strong>. A manifest that is late is not a late manifest: for
+whoever installs in that interval, it is an absent manifest.</p>
+<p><strong>The measurement, against the three tags that exist.</strong> In <code>v4.0.0</code>, <code>v4.0.1</code> and
+<code>v5.0.0</code>, the <code>darwin-x64</code> target (<code>macos-13</code>) spent <strong>24h00m01s</strong> in the queue and was
+cancelled by the Actions ceiling — the SAME number in all three, which says it
+never gets scheduled. The other four jobs end in at most
+<strong>4m18s</strong> (<code>linux-x64</code> in <code>v4.0.1</code>, 17:38:28Z → 17:42:44Z). The <code>checksums</code> job
+had <code>needs: build</code>: the <code>always()</code> guaranteed that it RAN (a cancelled dependency
+is covered), never WHEN.</p>
+<p><strong>The rule:</strong> the manifest job <strong>does not depend on the matrix</strong>. It waits for the Release's
+<strong>ASSETS</strong>, not the <strong>JOBS</strong> — with a ceiling —, and publishes whatever exists,
+naming in the log what it does not cover. The absence of a target is a foreseen outcome
+(<code>::notice::</code>), never an error; the absence of the <strong>Release</strong> remains a named
+error, because this workflow only ATTACHES and never creates; and <strong>no</strong>
+attached binary remains an error, because an empty <code>checksums.txt</code> would assert that the
+release has no binaries when what happened was the whole matrix failing.</p>
+<p><strong>The binaries ceiling is 1200s, and the number is not arbitrary:</strong> it is the
+<code>timeout-minutes: 20</code> of the <code>build</code> job itself — the most a target <strong>with a
+runner</strong> can take after starting. What it deliberately does not cover is
+<strong>queue</strong> time, and not covering queue time is the whole point. The loop exits
+early when all targets arrive, which is the happy path.</p>
+<p><strong>Nothing the job DOES changes.</strong> It still builds the manifest from the
+assets (and not from <code>dist-bin/</code>, empty there), signing with keyless <code>cosign</code> and
+verifying before attaching — <a href="#rn-524">RN-524</a> intact, one manifest and not
+five signatures. And a target that attaches AFTER the ceiling is not orphaned: the
+<code>--clobber</code> already existed for that, and redoing the manifest is a
+<code>workflow_dispatch</code> with the same tag.</p>
+<p><strong>What this rule does NOT do:</strong> <code>darwin-x64</code> still does not build. Changing the
+label, removing the platform or paying for a runner is the owner's decision, and the manifest cannot
+depend on it — it is precisely because it depended on it that it did not come out.</p>
+<blockquote>
+<p>Measured later, in AT-065 (2026-09-13, by a rehearsal <code>workflow_dispatch</code>):
+<code>macos-13</code> is a label without a runner (image retired by GitHub in Dec/2025;
+30min in the queue, cancelled, run <code>34769280227</code>). <code>macos-15-intel</code> schedules in
+3–22s and builds, but fails at <code>--self-test-pty</code> because, under Bun, the
+<code>onData</code> of <code>node-pty</code> does not deliver the child's output (oven-sh/bun#25822,
+open); the same proof passes under Node on the same runner (run <code>34770476634</code>).
+The pending decision stopped being about the runner and became waiting for Bun or
+removing the platform. The rule above does not change because of that.</p>
+</blockquote>
+<blockquote>
+<p><strong>Decided on 2026-09-27 (<a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174</a>, AT-065):
+the platform left.</strong> The matrix went to FOUR targets, and <code>ALVOS_ESPERADOS</code>
+followed — it is against it that the absence is declared, and leaving <code>darwin-x64</code>
+there would make every manifest announce, forever, a gap that is a decision. The
+Mac Intel stays with <code>npm install -g @brabo/runner</code> (under Node, where the same
+proof passes): <code>install.sh</code> says so without trying to download, the
+<code>GET /runner-releases/binary</code> proxy refuses <code>darwin-x64</code> with its own 400 pointing to
+npm, and the browser panel does not even ask for the download. This RN's rule does not
+change: it keeps holding for any target left without a runner, and
+<code>scripts/ci/alvos-do-runner.spec.ts</code> fails when the matrix, the api's list,
+the installer's <code>case</code> and the browser's diverge.</p>
+</blockquote>
+<ul>
+<li><strong>Code:</strong> <code>.github/workflows/build-runner-binaries.yml:283</code> (the job, now
+without <code>needs:</code>), <code>:318</code> (<code>timeout-minutes: 40</code>, which fits both waits),
+<code>:335</code> (<code>ALVOS_ESPERADOS</code> at the JOB level, so both steps read the same list),
+<code>:397</code> (the step that waits), <code>:401</code>/<code>:402</code> (the two ceilings), <code>:410</code> (the absent
+Release, which is an error), <code>:433</code> (the binaries ceiling, which is a <code>notice</code>), <code>:499</code> (the
+manifest naming what it does not cover)</li>
+<li><strong>Test:</strong> <code>scripts/ci/checksums-nao-espera-a-matriz.spec.ts</code> — that the job has
+no <code>needs:</code>, that both ceilings exist, that the binaries ceiling is derived
+from the <code>build</code>'s <code>timeout-minutes</code> (and not copied), that it fits in the
+job's own <code>timeout-minutes</code>, that the absence of a target is <code>notice</code> and the absence
+of the Release is <code>error</code>, that <code>ALVOS_ESPERADOS</code> matches the matrix, and the four
+guarantees of ADR 0149 this change does not touch (one signature, verifying
+before attaching, <code>id-token: write</code>, the <code>install.sh</code> in the manifest). It is STATIC,
+and the limit is declared at the top of the file: the job is only proven on a final tag,
+and it has never run on any</li>
+<li><strong>Gap DECLARED:</strong> the matrix has THREE targets since
+<a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187</a> (<code>win32-x64</code> left by the
+same mold as ADR 0174, and <code>ALVOS_ESPERADOS</code> followed) and the Release
+keeps receiving <strong>two</strong> — <code>darwin-arm64</code> is proven in rehearsal
+(<a href="runner.html#rn-688">RN-688</a>) and only needs a final tag to exercise it. The manifest will be born covering two and will
+<strong>say</strong> so, which is the difference between partial and silent. And, with the matrix
+failing entirely, the job spends both waits before refusing</li>
+<li><strong>ADR:</strong> <a href="../adr/0149-assinatura-dos-artefatos-publicados.html">0149</a></li>
+<li><strong>Origin:</strong> AT-051 (EP-009/HS-035)</li>
+</ul>
+<nav class="site-pager"><a href="../business-rules/broker.html"></a><a href="../business-rules/contracts.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/scripts/ci/docs/business-rules/ci.md">Edit this page</a><span>Updated 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>On this page</h2><ul><li class="n2"><a href="#pr-gates">PR Gates</a></li><li class="n3"><a href="#rn-037">RN-037 — Infra becomes an area: Workflows generates CI per provider, Lead consolidates into a single PR</a></li><li class="n2"><a href="#the-dbre-role-becomes-two-mechanical-scripts-rn-400403-adr-0093">The dbre role becomes two mechanical scripts (RN-400..403, ADR 0093)</a></li><li class="n3"><a href="#rn-401">RN-401 — The linter is not a CI gate: it scans the whole repository, not the PR's diff</a></li><li class="n2"><a href="#n-agents-online-on-the-dashboard--live-status-never-historical-presence-rn-409-adr-0097">&quot;N agents online&quot; on the dashboard — LIVE status, never historical presence (RN-409, ADR 0097)</a></li><li class="n3"><a href="#rn-411">RN-411 — The fourth pending-work signal: dev agents speak dev.*, not agent.status</a></li><li class="n2"><a href="#rag-search-leaves-a-trace-and-the-trace-freezes-the-weights-rn-479481">RAG search leaves a trace, and the trace freezes the weights (RN-479..481)</a></li><li class="n3"><a href="#rn-498">RN-498 — The RAG golden-set runs in real CI, SCHEDULED — and the gate stays warn</a></li><li class="n2"><a href="#phase-29--the-one-line-installation-signing-what-is-published">PHASE 29 — the one-line installation: signing what is published</a></li><li class="n2"><a href="#when-things-go-wrong">When things go wrong</a></li><li class="n3"><a href="#rn-524">RN-524 — A published artifact is signed by workflow identity, verified in the same run, and the verification refuses instead of warning</a></li><li class="n2"><a href="#installsh-closes-the-installation-rn-547-phase-30">install.sh closes the installation (RN-547, PHASE 30)</a></li><li class="n3"><a href="#rn-549">RN-549 — The E2E on a clean machine proves the WHOLE installation: the five links, the agent up and waiting, and the first project picked up without anyone going back to the terminal</a></li><li class="n2"><a href="#the-device-key-gets-a-screen-and-the-screen-states-the-reach-of-revoking-rn-561">The device key gets a screen, and the screen states the reach of revoking (RN-561)</a></li><li class="n3"><a href="#rn-565">RN-565 — The signed manifest goes out with what the Release HAS, and does not wait for the platform that never builds</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-en.json" data-base="../"></script></body>
+</html>

@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="ru" data-locale="ru" data-degrau="dev" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regras de negócio — Runner | Brabo</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="../../assets/tema.js"></script>
+<link rel="stylesheet" href="../../assets/tokens.css">
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body>
+<header class="site-nav">
+<button type="button" data-menu-alternar aria-label="Меню">&#9776;</button>
+<a class="marca" href="../index.html">Brabo</a>
+<input type="search" data-busca placeholder="Поиск" aria-label="Поиск" autocomplete="off">
+<ul data-busca-lista hidden></ul>
+<select data-seletor aria-label="Язык"><option value="../../business-rules/runner.html">pt-BR</option><option value="../../en/business-rules/runner.html">en</option><option value="../../ru/business-rules/runner.html" selected>ru</option><option value="../../zh-Hans/business-rules/runner.html">zh-Hans</option></select>
+<select data-seletor aria-label="Среда"><option value="../../../dev/ru/business-rules/runner.html" selected>dev</option><option value="../../../prd/ru/business-rules/runner.html">prd</option></select>
+<button type="button" data-tema-alternar aria-label="Сменить тему">&#9680;</button>
+</header>
+<div class="site-corpo">
+<nav class="site-side" aria-label="docs"><section><h2>🚀 Начните здесь</h2><ul><li><a href="../index.html">Введение</a></li><li><a href="../getting-started.html">Первые шаги</a></li><li><a href="../tutorials/from-zero-to-deliverable.html">С нуля до готового результата</a></li><li><a href="../tutorials/interface-antes-e-depois-shadcn.html">Interface antes e depois do shadcn (31/10/2026)</a></li></ul></section><section><h2>🏗️ Архитектура</h2><ul><li><a href="../architecture.html">Архитектура</a></li><li><a href="../adr.html">Решения (ADR)</a><ul><li><span>Git, repositório e política de branches</span><ul><li><a href="../adr/0001-git-provider-contract-shape.html">ADR 0001 — Формат нормализованного контракта GitProvider</a></li><li><a href="../adr/0002-git-error-normalization.html">ADR 0002 — Нормализация ошибок GitProvider</a></li><li><a href="../adr/0003-git-provider-retry-policy.html">ADR 0003 — Политика повторов для удалённых providers</a></li><li><a href="../adr/0004-git-credential-registration.html">ADR 0004 — Регистрация git-учётных данных пользователя</a></li><li><a href="../adr/0005-repo-bootstrap-idempotent-steps.html">ADR 0005 — Идемпотентный и возобновляемый bootstrap Gitflow</a></li><li><a href="../adr/0028-protecao-de-branch-divergencia-entre-providers.html">ADR 0028 — Защита веток: расхождение между providers и матрица одобрения</a></li><li><a href="../adr/0030-politica-de-branches-mecanizada.html">ADR 0030 — Механизированная политика веток</a></li><li><a href="../adr/0044-adocao-de-repositorio-existente.html">ADR 0044 — Усыновление существующего репозитория и план как шлюз</a></li><li><a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056 — Engine работает в удалённом репозитории</a></li><li><a href="../adr/0139-o-alarme-de-esteira-ganha-destinatario.html">ADR 0139 — Сигнал тревоги о merge конвейера получает адресата и правило для `dev`</a></li><li><a href="../adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.html">ADR 0165 — Репозиторий рождается при принятии handoff Arquiteto, и исполнение без него не начинается</a></li><li><a href="../adr/0217-promocao-automatica-para-qa-em-fase-de-teste.html">ADR 0217 — Автоматическое продвижение `dev` → `qa`, пока QA находится в тестовой фазе</a></li><li><a href="../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.html">ADR 0235 — A `qa` é aposentada por hora e a esteira do repositório fica `dev → main`</a></li><li><a href="../adr/0236-o-dependabot-dispensa-revisao-na-dev.html">ADR 0236 — O Dependabot dispensa revisão na `dev` e fica mergeável com os outros checks verdes</a></li></ul></li><li><span>Harness de agente, turnos e sessões</span><ul><li><a href="../adr/0006-prompt-assembler-context-harness.html">ADR 0006 — Harness агентов: детерминированная сборка контекста</a></li><li><a href="../adr/0007-toolloop-tools-context-manager.html">ADR 0007 — ToolLoop, инструменты, ContextManager (harness с LLM)</a></li><li><a href="../adr/0061-tipo-da-sessao-na-criacao.html">ADR 0061 — Тип сессии — это данные создания, а выполнение остаётся событием</a></li><li><a href="../adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.html">ADR 0098 — Согласованные пределы транспорта и эффективное окно сжатия</a></li><li><a href="../adr/0163-o-clique-responde-ao-aceitar.html">ADR 0163 — Клик отвечает при ПРИНЯТИИ команды, а ход продолжается через канал</a></li><li><a href="../adr/0175-infra-lead-conversa-pelo-composer.html">ADR 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`</a></li><li><a href="../adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.html">ADR 0177 — Язык ответов живёт в трёх местах — учётная запись, сессия и проект, — в открытом списке BCP-47 и никогда в `users.locale`</a></li><li><a href="../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.html">ADR 0179 — Цикл спрашивает Jev, какой инструмент, а модель пользователя видит только оставшееся меню</a></li><li><a href="../adr/0183-reabrir-sessao-encerrada.html">ADR 0183 — Закрытую сессию можно открыть снова: собственный выход из терминальных состояний, в `active`, с новым событием</a></li><li><a href="../adr/0184-reabrir-sessao-decisoes-do-dono.html">ADR 0184 — Повторное открытие сессии: три решения владельца, и `developer` открывает снова</a></li><li><a href="../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.html">ADR 0191 — Сообщение, пришедшее во время идущего хода, попадает в сохраняемую очередь и читается в конце хода</a></li><li><a href="../adr/0226-diario-vivo-e-retomada-dos-agentes.html">ADR 0226 — Diário vivo e retomada dos agentes: o turno interrompido volta uma vez, do plano</a></li><li><a href="../adr/0246-anexos-do-chat-bytes-no-postgres-referencia-no-evento.html">ADR 0246 — Anexos do chat: bytes no Postgres, referência no evento, visão por capability</a></li><li><a href="../adr/0247-uma-mensagem-varios-destinatarios.html">ADR 0247 — Uma mensagem, vários destinatários</a></li><li><a href="../adr/0249-o-raciocinio-do-agente-e-gravado-e-mostrado-so-a-developer.html">ADR 0249 — O raciocínio do agente é gravado e mostrado só a developer ou mais</a></li></ul></li><li><span>O time de agentes — papéis, áreas e handoffs</span><ul><li><a href="../adr/0008-agente-criativo-conversacional-handoffs.html">ADR 0008 — Разговорный агент Criativo в harness + фундамент handoffs</a></li><li><a href="../adr/0009-agente-po-backlog-rastreabilidade.html">ADR 0009 — Агент PO, backlog (epics/stories/tasks) и прослеживаемость</a></li><li><a href="../adr/0010-agente-arquiteto-adr-pr-module-map.html">ADR 0010 — Агент Arquiteto: ADR через настоящую PR, module_map и перекрёстная валидация</a></li><li><a href="../adr/0014-infra-agent-painel-phoenix.html">ADR 0014 — InfraAgent и живая панель команды (закрытие Фазы 4a)</a></li><li><a href="../adr/0015-psicologo-real-toolloop-hipoteses-evidencia.html">ADR 0015 — Настоящий Psicólogo: ToolLoop, гипотезы с доказательствами и сортировка по стоимости</a></li><li><a href="../adr/0016-anamnese-proficiencia-patches-instrucao.html">ADR 0016 — Anamnese: профиль владения навыками, патчи инструкций и замкнутый цикл</a></li><li><a href="../adr/0022-fechamento-4b-psicologo.html">ADR 0022 — Закрытие Фазы 4b (сессия 1): доказательство, которое доходит, стоимость, которая видна, анализ, который переживает kill</a></li><li><a href="../adr/0023-fechamento-4b-anamnese.html">ADR 0023 — Закрытие Фазы 4b (сессия 2): работающий каталог, дедупликация, различающая, кто отказал, и очередь, переживающая раунд</a></li><li><a href="../adr/0038-hierarquia-de-agentes.html">ADR 0038 — Иерархия агентов: области, leads и делегирование</a></li><li><a href="../adr/0046-promocao-de-story-com-autoridade-do-usuario.html">ADR 0046 — Продвижение истории с полномочиями пользователя</a></li><li><a href="../adr/0053-dev-lead-e-paralelismo-autorizado.html">ADR 0053 — Dev Lead как область и параллелизм, разрешённый пользователем</a></li><li><a href="../adr/0068-diagrama-c4-do-arquiteto.html">ADR 0068 — Диаграмма C4 Arquiteto</a></li><li><a href="../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.html">ADR 0069 — Условное слияние принятия handoff с включением выполнения</a></li><li><a href="../adr/0085-fluxo-como-registro-declarativo.html">ADR 0085 — Поток ролей как декларативный реестр (fluxo.yml)</a></li><li><a href="../adr/0086-dev-lead-plano-suspende-para-aprovacao.html">ADR 0086 — План Dev Lead приостанавливает ход до одобрения</a></li><li><a href="../adr/0087-ux-designer-agente.html">ADR 0087 — UX Designer входит как разговорный агент</a></li><li><a href="../adr/0088-staff-agente-dormente-para-disparo-automatico.html">ADR 0088 — Staff: код готов, спящий для автоматического запуска</a></li><li><a href="../adr/0089-analytics-e-delivery-metricas-como-relatorio.html">ADR 0089 — `analytics` и `delivery-metricas` становятся скриптом отчёта</a></li><li><a href="../adr/0092-platform-relatorio-de-telemetria-sob-demanda.html">ADR 0092 — `platform` рождается как скрипт отчёта по требованию, а не агент</a></li><li><a href="../adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.html">ADR 0093 — Роль `dbre` становится двумя скриптами: линтер миграций и отчёт о резервном копировании</a></li><li><a href="../adr/0094-delegacao-dev-lead-vira-dado.html">ADR 0094 — Делегирование Dev Lead → dev становится данными, с переопределённым `parecerArtifactId`</a></li><li><a href="../adr/0109-handoff-manual-a-agente-a-escolha.html">ADR 0109 — Ручной handoff агенту по выбору переиспользует предложение+принятие, а не третье состояние handoff</a></li><li><a href="../adr/0182-ciclo-de-vida-do-handoff.html">ADR 0182 — Предложение handoff получает жизненный цикл: одно ожидающее на получателя и `superseded`</a></li><li><a href="../adr/0185-estou-pronto-fecha-os-dois-gates.html">ADR 0185 — «Estou pronto — a necessidade está validada»: один клик закрывает готовность, gate `necessidade-validada` и принятие PO</a></li><li><a href="../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.html">ADR 0186 — Handoff от PO к Arquiteto принимается без клика, когда backlog покрыт и репозиторий локальный</a></li><li><a href="../adr/0194-aprovar-o-plano-ativa-a-execucao.html">ADR 0194 — Одобрение плана Dev Lead активирует выполнение, а задача получает модуль, который он назначает</a></li><li><a href="../adr/0212-historia-arquivada.html">ADR 0212 — Архивированная история: колонка, а не состояние машины</a></li><li><a href="../adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.html">ADR 0213 — Результат работает на машине пользователя через compose от Infra</a></li></ul></li><li><span>Gates, QA e revisão de segurança</span><ul><li><a href="../adr/0013-gates-qa-secops-pr.html">ADR 0013 — Gates PR: QAAgent и SecOpsAgent</a></li><li><a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020 — Разблокировать gates QA и SecOps: gitleaks по рабочему дереву, валидируемые заключения и tool call в тексте</a></li><li><a href="../adr/0021-fechamento-4a-infra-e-painel.html">ADR 0021 — Закрытие Фазы 4a: gate infra, который проверяет, и панель, которая говорит правду</a></li><li><a href="../adr/0054-gates-como-registro-declarativo.html">ADR 0054 — Gates как декларативный реестр</a></li><li><a href="../adr/0057-o-gate-espera-a-aprovacao.html">ADR 0057 — Агент gate ждёт одобрения, как ждёт dev</a></li><li><a href="../adr/0067-o-gate-sobrevive-ao-restart.html">ADR 0067 — Gate переживает перезапуск</a></li><li><a href="../adr/0090-qa-estrategia-e-appsec-segundo-momento.html">ADR 0090 — QA-стратегия и AppSec как второй МОМЕНТ, а не новый агент</a></li><li><a href="../adr/0091-secops-runtime-relatorio-de-abuso.html">ADR 0091 — `secops-runtime` как скрипт отчёта по `rate_limit_hits`</a></li><li><a href="../adr/0095-gate-necessidade-validada.html">ADR 0095 — Gate `necessidade-validada` закрывается отдельным подтверждением человека, а не самопроверкой Criativo</a></li><li><a href="../adr/0123-golden-set-regressao-qa-automacao.html">ADR 0123 — Golden-set регрессионных случаев для семантического суждения агента QA Automação</a></li><li><a href="../adr/0168-golden-set-do-qa-em-ci-semanal.html">ADR 0168 — Golden-set QA начинает работать в CI, по расписанию и еженедельно</a></li><li><a href="../adr/0192-plano-de-teste-depois-da-entrega.html">ADR 0192 — План тестирования рождается после сдачи dev, а gate `implementavel` начинает судить по истории и `module_map`</a></li><li><a href="../adr/0207-ciclo-de-gate-velho-estaciona.html">ADR 0207 — Цикл gate, простаивающий более 2 ч, паркуется, и возобновить его может лишь жест человека</a></li><li><a href="../adr/0214-pergunta-em-aberto-vira-pendencia.html">ADR 0214 — Открытый вопрос становится ожидающим решения пунктом</a></li><li><a href="../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.html">ADR 0215 — Решение проекта доходит до dev и QA</a></li></ul></li><li><span>Execução, política de terminal e aprovações</span><ul><li><a href="../adr/0011-infra-dev-agents-worktrees-merge-lock.html">ADR 0011 — Инфраструктура dev agents: worktrees, git-исполнители и замок merge</a></li><li><a href="../adr/0012-dev-agent-real-toolloop-orcamento-bloqueio.html">ADR 0012 — Настоящий DevAgent: ToolLoop, бюджет на task и дисциплина блокировки</a></li><li><a href="../adr/0017-lock-de-workspace-e-monitor-de-dev-agents.html">ADR 0017 — Блокировка инициализации workspace, Monitor dev agents и наследование пределов</a></li><li><a href="../adr/0018-noop-dev-agent-modo-de-execucao.html">ADR 0018 — NoopDevAgent как постоянный режим выполнения</a></li><li><a href="../adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.html">ADR 0019 — Разблокировать реальный DevAgent: запись, терминал, ADR по модулю и бюджет по проекту</a></li><li><a href="../adr/0045-reagendamento-por-evento-do-dev-agent.html">ADR 0045 — Перепланирование dev agent по событию и circuit breaker</a></li><li><a href="../adr/0047-operabilidade-pos-dogfooding.html">ADR 0047 — Эксплуатируемость после dogfooding: закрытие Фазы 12</a></li><li><a href="../adr/0048-decisao-no-log-e-a-ordem-do-gate.html">ADR 0048 — Решение в event log и порядок gate</a></li><li><a href="../adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.html">ADR 0052 — Dev agent ждёт одобрения посреди цикла</a></li><li><a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055 — Область пути в политике терминала</a></li><li><a href="../adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.html">ADR 0102 — Пересмотр ADR 0065: граница внешнего эффекта перестаёт быть `deny` и становится абсолютным пределом</a></li><li><a href="../adr/0167-modo-automatico-libera-o-escopo-de-caminho.html">ADR 0167 — Автоматический режим снимает область путей, и только он</a></li><li><a href="../adr/0189-o-piloto-automatico.html">ADR 0189 — Автопилот: автоматический режим одобряет всё, кроме потолков, область сравнивается с реальной папкой исполнения, а «Всегда разрешать» записывает глагол + подкоманду</a></li><li><a href="../adr/0204-modo-automatico-libera-push-e-pr.html">ADR 0204 — Автоматический режим разрешает push и PR</a></li></ul></li><li><span>Onde o código mora — modos de execução</span><ul><li><a href="../adr/0066-nome-de-pasta-legivel-do-workspace.html">ADR 0066 — Читаемое имя папки workspace</a></li><li><a href="../adr/0072-projeto-local-ou-container.html">ADR 0072 — Проект выбирает, где живёт код: папка пользователя или управляемая папка</a></li><li><a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104 — `execution_mode` с тремя значениями, и workspace рождается `unverified`, когда проверяет его runner</a></li><li><a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">ADR 0107 — Навигация по локальной папке через Runner</a></li><li><a href="../adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.html">ADR 0108 — В режиме `runner` проект рождается при клике на &quot;Navegar pasta...&quot;, а не только при подтверждении</a></li><li><a href="../adr/0111-conversao-de-execution-mode-de-projeto-existente.html">ADR 0111 — Конвертация `execution_mode` существующего проекта: отказ при активном dev agent, перемещение `permissions.json`, вывод из эксплуатации строки контейнера</a></li><li><a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141 — Единая база монтируемых проектов, смонтированная по тождеству</a></li><li><a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142 — Проверка смонтированного workspace откладывается до материализации</a></li><li><a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146 — База, согласованная в bootstrap, и `mounted` как локальный режим по умолчанию</a></li></ul></li><li><span>Container do projeto e broker</span><ul><li><a href="../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.html">ADR 0065 — Контейнер на проект: граница перестаёт быть политикой</a></li><li><a href="../adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.html">ADR 0081 — Жизненный цикл контейнера: таблица состояния, без оркестратора</a></li><li><a href="../adr/0083-terminal-mostra-estado-real-do-container.html">ADR 0083 — Вкладка Terminal получает реального потребителя жизненного цикла, а не терминал</a></li><li><a href="../adr/0128-porta-de-docker-e-a-prova-de-empacotamento.html">ADR 0128 — Порт Docker и доказательство упаковки, которое выбрало реализацию</a></li><li><a href="../adr/0130-broker-de-container.html">ADR 0130 — Broker контейнеров: кто говорит с Docker сервера и почему он не принимает спецификацию</a></li><li><a href="../adr/0131-roteamento-de-modulos-para-infra.html">ADR 0131 — Arquiteto направляет модули в инфраструктуру: он ВЫДВИГАЕТ кандидатов, Infra ВЫБИРАЕТ</a></li><li><a href="../adr/0133-infra-elege-imagem-do-roteamento.html">ADR 0133 — Infra выбирает среди кандидатов маршрутизации, и выбор становится новой версией `artifact.project_image`</a></li><li><a href="../adr/0134-dev-agents-executam-dentro-do-container.html">ADR 0134 — Dev agents выполняются ВНУТРИ реального контейнера проекта, а terminal получает там нижнюю границу автоодобрения</a></li><li><a href="../adr/0135-portao-de-imagem-nos-tres-modos.html">ADR 0135 — Шлюз образа от Arquiteto (RN-105) начинает действовать во всех трёх режимах выполнения</a></li><li><a href="../adr/0136-pagina-global-de-containers.html">ADR 0136 — Глобальная страница контейнеров: потолок на загрузку в broker и `container_remove` в абсолютном потолке</a></li><li><a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137 — `brabo-runner` поднимает контейнер проекта на машине пользователя</a></li><li><a href="../adr/0143-agentes-de-dev-so-depois-do-container.html">ADR 0143 — Агенты dev только после контейнера</a></li><li><a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144 — Второй корень broker и дискриминированный локатор, который его выбирает</a></li><li><a href="../adr/0180-container-com-o-dono-da-pasta.html">ADR 0180 — Контейнер проекта работает от владельца папки, измеренного api</a></li><li><a href="../adr/0190-a-infra-sobe-o-container-no-aceite.html">ADR 0190 — Infra поднимает контейнер при принятии handoff, шагом сервера и с засеянной автономией, и именно она передаёт работу Dev Lead</a></li><li><a href="../adr/0199-recurso-minimo-derivado-do-module-map.html">ADR 0199 — Минимальный ресурс контейнера выводится из `module_map`: каждый модуль объявляет свой, а Infra поднимает с суммой</a></li><li><a href="../adr/0208-a-infra-herda-a-rede-do-arquiteto.html">ADR 0208 — Infra наследует сеть, объявленную Arquiteto</a></li><li><a href="../adr/0228-comando-do-app-e-rede-do-container.html">ADR 0228 — O container do projeto sobe o app pelo comando declarado e publica porta só no loopback</a></li><li><a href="../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.html">ADR 0229 — O QA testa numa instância efêmera, com os serviços que a Infra declarou</a></li></ul></li><li><span>O runner local</span><ul><li><a href="../adr/0103-runner-local-execucao-na-maquina-do-usuario.html">ADR 0103 — Локальный runner: выполнение на машине пользователя через канал Phoenix с одноразовым тикетом</a></li><li><a href="../adr/0105-personal-access-token-do-runner-escopado-por-construcao.html">ADR 0105 — Personal Access Token (`brb_…`) для runner, ограниченный по построению одним маршрутом</a></li><li><a href="../adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.html">ADR 0106 — Распространение `@brabo/runner` через `tsup` и `npm publish`, версия внедряется только в CI</a></li><li><a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112 — Автономный бинарник `@brabo/runner` через `bun build --compile`, со встроенным нативным аддоном `.node` через реальное извлечение во временный каталог</a></li><li><a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118 — Настройка runner через браузер: ключ устройства Ed25519 как вторая учётная запись `runner-ticket`, прокси GitHub Releases для бинарника и File System Access API для папки, настраиваемой одним кликом</a></li><li><a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145 — Docker становится реальным предусловием режима `runner`</a></li><li><a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147 — Один локальный агент, возможности, объявляемые при подключении</a></li><li><a href="../adr/0151-base-consentida-no-runner.html">ADR 0151 — Согласованная база в runner и создание папки через канал</a></li><li><a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154 — Ключ устройства машины</a></li><li><a href="../adr/0174-runner-sem-binario-darwin-x64.html">ADR 0174 — Автономный бинарник runner перестаёт обещать Mac Intel</a></li><li><a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187 — Автономный бинарник runner перестаёт обещать Windows</a></li><li><a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193 — Git с учётными данными выполняется на ХОСТЕ runner; код выполняется в контейнере</a></li><li><a href="../adr/0201-revogacao-por-chave.html">ADR 0201 — Отзыв нацелен на КЛЮЧ, а не на пару `{проект, пользователь}`</a></li><li><a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203 — Поток runner через браузер выводится из употребления, путь — установщик</a></li><li><a href="../adr/0230-importar-chave-de-llm-pelo-runner.html">ADR 0230 — O runner importa a chave de API de LLM que o usuário já tem na máquina</a></li></ul></li><li><span>Autenticação, acesso e segredos</span><ul><li><a href="../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.html">ADR 0031 — Собственная аутентификация: argon2id, EdDSA и ротация refresh</a></li><li><a href="../adr/0032-corte-do-keycloak-e-sessao-em-cookie.html">ADR 0032 — Отказ от Keycloak: собственный эмитент, service token и сессия в cookie</a></li><li><a href="../adr/0037-cors-do-engine-e-a-porta-como-contrato.html">ADR 0037 — CORS, которого не было у engine, и порт как часть контракта</a></li><li><a href="../adr/0050-credencial-sempre-cifrada-verificacao-explicita.html">ADR 0050 — Учётные данные всегда зашифрованы; проверка становится явным действием</a></li><li><a href="../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.html">ADR 0058 — Закрытый CSP в api и область проекта, удержанная в корне</a></li><li><a href="../adr/0059-segredo-do-state-de-oauth-sem-default.html">ADR 0059 — У ключа, подписывающего `state` git OAuth, нет значения по умолчанию</a></li><li><a href="../adr/0084-login-social-github-e-gitlab.html">ADR 0084 — Социальный вход (GitHub/GitLab), пересматривающий backlog ADR 0031/0032</a></li><li><a href="../adr/0096-smtp-real-no-mailsender.html">ADR 0096 — Настоящий SMTP в `MailSender`, за явным переключателем</a></li><li><a href="../adr/0127-tetos-de-rebaixamento-em-project-members.html">ADR 0127 — Два потолка понижения в `project_members`, а перекрытие остаётся</a></li><li><a href="../adr/0156-teto-de-auto-rebaixamento-na-remocao.html">ADR 0156 — Потолок самопонижения также при удалении участника проекта</a></li><li><a href="../adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.html">ADR 0157 — Потолок самоперемещения в upsert workspace и самоповышение, которое было брешью</a></li><li><a href="../adr/0158-o-id-da-chave-mestra-gravado-no-envelope.html">ADR 0158 — Id мастер-ключа, записанный в конверте, как наблюдаемость и никогда как полномочие</a></li><li><a href="../adr/0173-remocao-de-membro-de-workspace.html">ADR 0173 — Удаление участника workspace рождается, защищённое тем же условием</a></li><li><a href="../adr/0245-acesso-rapido-por-papel-so-no-ambiente-local.html">ADR 0245 — Acesso rápido por papel só no ambiente local</a></li></ul></li><li><span>Providers de LLM, modelos e gasto</span><ul><li><a href="../adr/0040-moeda-do-dashboard.html">ADR 0040 — Валюта дашборда: пока USD, ручной курс по workspace отложен</a></li><li><a href="../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.html">ADR 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding</a></li><li><a href="../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.html">ADR 0042 — Живой каталог, жизненный цикл модели и проверяемая цена</a></li><li><a href="../adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.html">ADR 0043 — Шесть providers LLM поверх базы, и Фаза 9b наконец закрыта</a></li><li><a href="../adr/0049-curadoria-de-modelo-por-workspace.html">ADR 0049 — Курирование моделей по workspace</a></li><li><a href="../adr/0051-facetas-de-capability-e-curadoria-por-uso.html">ADR 0051 — Доказанные грани capability; &quot;для чего годится&quot; — это курирование</a></li><li><a href="../adr/0063-duas-audiencias-para-o-mesmo-gasto.html">ADR 0063 — Две аудитории для одного и того же расхода: счёт owner и потребление участника</a></li><li><a href="../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.html">ADR 0064 — Область как уровень каскада модели и глобальный binding агента</a></li><li><a href="../adr/0075-embeddings-no-contrato-de-llm-provider.html">ADR 0075 — Embeddings в контракте LLMProvider</a></li><li><a href="../adr/0076-provider-volta-a-ser-dimensao-de-gasto.html">ADR 0076 — `provider` снова становится измерением расходов, а сдерживание переходит к типу</a></li><li><a href="../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.html">ADR 0077 — Рейтинг моделей по возможностям, без выдуманной оценки</a></li><li><a href="../adr/0110-budget-por-area-aditivo-nao-cascata.html">ADR 0110 — Бюджет по области АДДИТИВЕН, рядом с проектом/сессией — не каскад и не новая таблица</a></li><li><a href="../adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.html">ADR 0114 — Обнаружение нативного Ollama в dev bootstrap: спросить один раз, сохранить в `.env`, поставить сервисы compose за profile</a></li><li><a href="../adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.html">ADR 0115 — Pull модели из Hugging Face: собственная таблица, подтверждение в два шага и allowlist официальных издателей — никогда `proposed_actions`</a></li><li><a href="../adr/0166-preferencia-de-roteamento-no-binding-de-modelo.html">ADR 0166 — Предпочтение маршрутизации живёт в binding модели, путешествует вместе с ним и замораживается в metering</a></li><li><a href="../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.html">ADR 0188 — Реальная стоимость, которую возвращает provider, становится числом metering</a></li><li><a href="../adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.html">ADR 0198 — О семантическом дубликате истории и правила предупреждает embedding с порогом, а расход попадает в metering</a></li><li><a href="../adr/0221-upstream-preso-por-sessao.html">ADR 0221 — O hub prende a conversa de cada agente ao upstream que a atendeu, por `session_id`</a></li><li><a href="../adr/0222-provider-9router-de-llm.html">ADR 0222 — O 9Router entra como o 10º provider de LLM, com URL por instalação</a></li><li><a href="../adr/0223-orcamento-de-raciocinio-por-modelo.html">ADR 0223 — O orçamento de raciocínio é capability POR MODELO, curada à mão</a></li><li><a href="../adr/0224-raciocinio-abortado-no-stream.html">ADR 0224 — O raciocínio é contado no stream e abortado no limite, e o custo é estimado e reconciliado</a></li><li><a href="../adr/0225-teto-de-preco-do-upstream-no-openrouter.html">ADR 0225 — O OpenRouter recebe um teto de preço por chamada (`provider.max_price` = catálogo × 1,5)</a></li><li><a href="../adr/0227-provider-opencode-zen-de-llm.html">ADR 0227 — O OpenCode Zen entra como o 11º provider de LLM, só no dialeto OpenAI</a></li><li><a href="../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.html">ADR 0233 — O membro vê o gasto do projeto por agente e por área, nunca por provider</a></li><li><a href="../adr/0251-preco-de-lista-datado-para-provider-sem-preco.html">ADR 0251 — Preço de lista datado no código para provider que não informa preço</a></li></ul></li><li><span>RAG, grafo de conhecimento e artefatos</span><ul><li><a href="../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.html">ADR 0079 — Таблица chunks: вектор и `tsvector` в одной строке</a></li><li><a href="../adr/0080-busca-hibrida-pesos-limiar-e-citacao.html">ADR 0080 — Гибридный поиск: веса, порог и что такое цитата</a></li><li><a href="../adr/0082-chat-rag-aba-de-busca-hibrida.html">ADR 0082 — Chat RAG: собственная вкладка гибридного поиска, без переименования &quot;Chat&quot;</a></li><li><a href="../adr/0099-neo4j-grafo-de-conhecimento-e-templates.html">ADR 0099 — Neo4j как граф знаний и шаблоны prompt, драйвер в api</a></li><li><a href="../adr/0100-rag-search-e-modelos-garantidos-no-boot.html">ADR 0100 — `rag_search` для агентов и модели Ollama, гарантированные при загрузке</a></li><li><a href="../adr/0101-memoria-relacional-como-projecao-do-event-log.html">ADR 0101 — Реляционная память как проекция event log; шаблоны потребляются без трогания GenServers</a></li><li><a href="../adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.html">ADR 0113 — Локальная папка, приложенная через браузер, становится `chunks.scope = 'local'`, читаемым БРАУЗЕРОМ, никогда путём хоста</a></li><li><a href="../adr/0129-telemetria-de-busca-do-rag-como-tabela.html">ADR 0129 — Телеметрия поиска RAG — это ТАБЛИЦА, с весами, замороженными в строке</a></li><li><a href="../adr/0132-golden-set-de-acerto-do-rag.html">ADR 0132 — Golden-set попаданий RAG и gate `rag-acertivo`</a></li><li><a href="../adr/0138-golden-set-do-rag-em-ci-agendado.html">ADR 0138 — Golden-set RAG начинает работать в CI, по расписанию — и остаётся `warn`</a></li><li><a href="../adr/0148-artefatos-projetados-em-arquivo.html">ADR 0148 — Артефакты агентов, спроецированные в файлы, в папку `docs/`</a></li><li><a href="../adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.html">ADR 0196 — Anamnese снова включена: не работает без субъекта, а принятая гипотеза становится фактом профиля</a></li><li><a href="../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.html">ADR 0200 — Контракт между модулями становится версионируемым артефактом Arquiteto, и dev agent читает его вместо чужого worktree</a></li><li><a href="../adr/0205-desvio-do-agente-como-sinal-do-produto.html">ADR 0205 — Отклонение агента, которое наблюдает Anamnese, становится сигналом продукта, без персональных данных</a></li></ul></li><li><span>Interface web e design system</span><ul><li><a href="../adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.html">ADR 0036 — Экраны аутентификации, верные дизайну, и три шрифта, которые не загружались</a></li><li><a href="../adr/0060-superficie-de-leitura-de-codigo.html">ADR 0060 — Поверхность чтения кода, ограниченная и с бюджетом</a></li><li><a href="../adr/0074-tema-alcancavel-e-o-boot-sob-csp.html">ADR 0074 — Достижимая тема и загрузка под CSP</a></li><li><a href="../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.html">ADR 0078 — Рамка экрана, и реестр вкладок намеренно расходится с handoff</a></li><li><a href="../adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.html">ADR 0097 — Прямое чтение схемы engine для &quot;N агентов онлайн&quot; на дашборде</a></li><li><a href="../adr/0116-tipos-do-web-gerados-do-openapi.html">ADR 0116 — `ActionType` (и будущие типы) генерируются из контракта OpenAPI, а не копируются вручную</a></li><li><a href="../adr/0122-sessionpage-dividido-em-cinco-prs.html">ADR 0122 — `SessionPage.tsx`, разделённый на пять механических PR, объявленных заранее</a></li><li><a href="../adr/0124-hook-do-canal-de-turno-do-sessionpage.html">ADR 0124 — Группировка состояния канала хода, извлечённая в `useTurnoDoAgente`</a></li><li><a href="../adr/0125-projectsettingstab-dividido-por-secao.html">ADR 0125 — `ProjectSettingsTab.tsx` разделён на файл на раздел, за barrel</a></li><li><a href="../adr/0126-trilho-vertical-de-navegacao-do-projeto.html">ADR 0126 — Страница проекта навигируется вертикальной рейкой, а вкладка Código перестаёт сама сворачивать sidebar</a></li><li><a href="../adr/0176-sessionpage-abaixo-de-mil-linhas.html">ADR 0176 — `SessionPage.tsx` меньше 1 000 строк, за десять механических PR, а замок — только после</a></li><li><a href="../adr/0181-tema-preto-neutro.html">ADR 0181 — Тёмная тема становится нейтрально-чёрной, и долг контраста заканчивается</a></li><li><a href="../adr/0210-animacao-de-texto-com-motion.html">ADR 0210 — Анимация текста с `motion`</a></li><li><a href="../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.html">ADR 0211 — Одна навигация: боковая панель поглощает рельс проекта</a></li><li><a href="../adr/0232-shadcn-com-base-ui-no-apps-web.html">ADR 0232 — shadcn/ui com Base UI e Tailwind 4 no `apps/web`</a></li><li><a href="../adr/0234-shiki-e-recharts-por-carga-dinamica.html">ADR 0234 — `shiki` no Code Block e `recharts` no Chart, sempre por carga dinâmica</a></li><li><a href="../adr/0237-o-visual-v3-liga-o-preflight-e-sobe-os-raios.html">ADR 0237 — O visual v3 liga o preflight e sobe os raios</a></li><li><a href="../adr/0238-o-grafo-de-modulos-vira-canvas-xyflow.html">ADR 0238 — O grafo de módulos da Arquitetura vira Canvas (`@xyflow/react`)</a></li><li><a href="../adr/0239-csp-frame-src-local-para-o-web-preview.html">ADR 0239 — CSP `frame-src` local para o Web preview do entregável</a></li><li><a href="../adr/0240-o-motivo-de-controle-inerte-mora-num-ponto-de-interrogacao-nos-containers.html">ADR 0240 — O motivo de controle inerte pode morar num &quot;?&quot; ativo na página de Containers</a></li><li><a href="../adr/0241-a-sidebar-adota-o-block-sidebar-07-do-shadcn.html">ADR 0241 — A sidebar adota o block `sidebar-07` do shadcn</a></li><li><a href="../adr/0242-containers-em-tabela-linear-com-tanstack-react-table.html">ADR 0242 — Containers em tabela linear com `@tanstack/react-table`</a></li><li><a href="../adr/0243-consequencia-irreversivel-pode-morar-num-botao-de-perigo.html">ADR 0243 — Consequência irreversível pode morar num botão de perigo</a></li><li><a href="../adr/0244-coluna-das-abas-do-projeto-alinhada-a-esquerda.html">ADR 0244 — Coluna das abas do projeto alinhada à esquerda</a></li><li><a href="../adr/0248-conteudo-das-paginas-ocupa-a-largura-inteira.html">ADR 0248 — O conteúdo das páginas ocupa a largura inteira</a></li><li><a href="../adr/0250-chat-da-sessao-ocupa-a-largura-inteira.html">ADR 0250 — O chat da Sessão ocupa a largura inteira</a></li></ul></li><li><span>Operação, deploy e instalação</span><ul><li><a href="../adr/0024-fase5-imagens-producao-ci.html">ADR 0024 — Фаза 5 (сессия 1): production-образы, compose.prod, CI и smoke-тест</a></li><li><a href="../adr/0025-fase5-deploy-kubernetes-kustomize.html">ADR 0025 — Фаза 5 (сессия 2): деплой в Kubernetes с Kustomize, метрика очереди и локальный overlay</a></li><li><a href="../adr/0026-fase5-observabilidade-e-graceful-shutdown.html">ADR 0026 — Фаза 5 (сессия 3): graceful shutdown, OpenTelemetry, метрики, логи и дашборды</a></li><li><a href="../adr/0027-fase5-backup-hardening-release.html">ADR 0027 — Backup/restore, усиление api, открытая поверхность и релиз</a></li><li><a href="../adr/0035-observabilidade-legivel-e-trace-sem-coletor.html">ADR 0035 — Trace без коллектора и путь между слоями в логе</a></li><li><a href="../adr/0070-observabilidade-no-compose-local.html">ADR 0070 — Наблюдаемость в локальном Compose: метрики и журналы, без трассировки</a></li><li><a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150 — Установщик одной строкой, с выбранным источником и маркером</a></li><li><a href="../adr/0152-backup-de-volumes-contra-compose.html">ADR 0152 — Резервное копирование и восстановление томов для compose</a></li><li><a href="../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.html">ADR 0153 — `DEPLOY_ENABLED`: триггер, который упоминают десять документов и не создаёт ни один</a></li><li><a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155 — Первая учётная запись рождается в терминале, а локальный агент поднимается сопряжённым</a></li><li><a href="../adr/0160-o-compose-do-instalador-viaja-assinado.html">ADR 0160 — Compose установщика едет вместе с ним, как подписанный asset</a></li><li><a href="../adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.html">ADR 0161 — Экран предлагает только тот режим, который выполняет установка, а у установки через Release нет broker</a></li><li><a href="../adr/0162-broker-publicado-e-oferecido-pelo-instalador.html">ADR 0162 — Broker становится пятым опубликованным образом, а установщик СПРАШИВАЕТ, включать ли его</a></li><li><a href="../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.html">ADR 0169 — Назначением S3 локального overlay перестаёт быть MinIO и становится SeaweedFS</a></li><li><a href="../adr/0170-compose-de-dev-brabo-dev.html">ADR 0170 — Dev-compose становится `brabo-dev`, и dev отказывается подниматься рядом с установкой</a></li><li><a href="../adr/0209-engine-em-otp-29.html">ADR 0209 — Engine переходит на Elixir 1.20.4 / OTP 29.1.1</a></li></ul></li><li><span>CI, release e cadeia de suprimentos</span><ul><li><a href="../adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.html">ADR 0039 — actionlint и валидация генерируемого конвейера CI</a></li><li><a href="../adr/0119-imagens-publicadas-no-ghcr-por-digest.html">ADR 0119 — Образы, публикуемые в GHCR с каждым финальным тегом, и production overlay, закреплённый по digest</a></li><li><a href="../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.html">ADR 0120 — Браузерный E2E против продакшен-compose, в пакете вне workspace</a></li><li><a href="../adr/0121-schema-dividido-por-agregado-de-dominio.html">ADR 0121 — Схема, разделённая по доменным агрегатам, за barrel</a></li><li><a href="../adr/0140-timeout-do-audit-como-risco-assumido.html">ADR 0140 — Повторяющийся timeout `pnpm audit` — принятый риск; находка по-прежнему отклоняет</a></li><li><a href="../adr/0149-assinatura-dos-artefatos-publicados.html">ADR 0149 — Подпись опубликованных артефактов</a></li><li><a href="../adr/0159-imagem-de-terceiro-por-digest.html">ADR 0159 — Сторонний образ входит по digest, и lint проваливает того, кто забудет</a></li><li><a href="../adr/0172-trivy-no-release-antes-de-assinar.html">ADR 0172 — Релиз сканирует Trivy то, что публикует, по digest, до подписи</a></li><li><a href="../adr/0178-tag-inline-na-imagem-de-terceiro.html">ADR 0178 — Тег стороннего образа живёт ВНУТРИ ссылки, перед digest</a></li><li><a href="../adr/0197-a-imagem-dos-workflows-vem-do-compose.html">ADR 0197 — Образ workflows берётся из compose, и Dependabot для образов включается</a></li><li><a href="../adr/0252-o-brabo-vira-um-conjunto-de-repositorios.html">ADR 0252 — O Brabo vira um conjunto de repositórios em `viralabs-dev`</a></li></ul></li><li><span>Documentação</span><ul><li><a href="../adr/0029-sincronizacao-continua-da-documentacao.html">ADR 0029 — Непрерывная синхронизация документации</a></li><li><a href="../adr/0033-referencia-de-api-gerada-do-openapi.html">ADR 0033 — Справочник API выводится из кода, а табличный тест требует метаданных</a></li><li><a href="../adr/0034-documentacao-publicada-por-degrau.html">ADR 0034 — Документация, публикуемая по ступеням, в подкаталоге Pages</a></li><li><a href="../adr/0071-publicacao-simetrica-por-degrau.html">ADR 0071 — Симметричная публикация по ступеням и корень, который предлагает выбор</a></li><li><a href="../adr/0073-o-caminho-publicado-nomeia-o-ambiente.html">ADR 0073 — Публикуемый путь называет окружение, а не ветку</a></li><li><a href="../adr/0117-lockfile-proprio-para-o-website.html">ADR 0117 — `website/` получает собственный lockfile, вне `pnpm audit` продукта</a></li><li><a href="../adr/0202-o-indice-de-adr-por-tema.html">ADR 0202 — Индекс ADR по темам, с темой вне ADR</a></li><li><a href="../adr/0206-referencia-da-api-numa-pagina-redoc.html">ADR 0206 — Справочник API становится страницей Redoc</a></li><li><a href="../adr/0216-quatro-idiomas-com-pt-br-como-fonte.html">ADR 0216 — Четыре языка, с pt-BR как ИСТОЧНИКОМ и языком по умолчанию: документация и интерфейс на португальском, английском, русском и упрощённом китайском</a></li><li><a href="../adr/0218-titulo-de-adr-com-prefixo.html">ADR 0218 — Каждый ADR называется «ADR NNNN — заголовок»</a></li><li><a href="../adr/0219-referencia-entra-na-traducao.html">ADR 0219 — Справочник входит в перевод</a></li><li><a href="../adr/0220-api-traduzida-por-catalogo.html">ADR 0220 — Страница API переводится по каталогу</a></li><li><a href="../adr/0253-o-site-de-docs-deixa-o-docusaurus.html">ADR 0253 — O site de docs deixa o Docusaurus</a></li><li><a href="../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.html">ADR 0254 — A doc de cada área mora na raiz dela</a></li></ul></li></ul></li></ul></section><section><h2>📐 Правила</h2><ul><li><a href="../business-rules.html">Бизнес-правила</a></li><li><a href="../business-rules/custo.html">Стоимость и metering</a></li><li><a href="../business-rules/autenticacao.html">Аутентификация</a></li><li><a href="../business-rules/api.html">API</a></li><li><a href="../business-rules/broker.html">Broker</a></li><li><a href="../business-rules/ci.html">CI</a></li><li><a href="../business-rules/contracts.html">Contratos</a></li><li><a href="../business-rules/engine.html">Engine</a></li><li><a href="../business-rules/infra.html">Infra</a></li><li><a href="../business-rules/produto.html">Produto</a></li><li><a href="../business-rules/runner.html" aria-current="page">Runner</a></li><li><a href="../business-rules/web.html">Web</a></li></ul></section><section><h2>📖 Справочник</h2><ul><li><a href="../reference/configuration.html">Configuração</a></li><li><a href="../reference/events.html">Eventos</a></li><li><a href="../reference/permissions.html">Permissões</a></li><li><a href="../reference/artifacts.html">Artefatos</a></li><li><a href="../reference/git-providers.html">Provedores de git</a></li><li><a href="../reference/internal-api.html">API interna</a></li><li><a href="../reference/scripts.html">Scripts e comandos</a></li><li><a href="../reference/rulesets.html">Rulesets do repositório</a></li><li><a href="../reference/paridade-de-traducao.html">Paridade de tradução</a></li><li><a href="../reference/brb.html">Registro BRB</a></li><li><a href="../security-surface.html">Открытая поверхность api</a></li><li><span>Справочник API</span></li></ul></section><section><h2>💡 Пояснения</h2><ul><li><span>Процесс и конвейер</span><ul><li><a href="../explanation/documentation-workflow.html">Синхронизация документации</a></li><li><a href="../explanation/branching-policy.html">Политика веток</a></li><li><a href="../explanation/cadeia-de-suprimentos-do-ci.html">Цепочка поставок CI</a></li><li><a href="../explanation/gates.html">Gates и то, как они измеряются</a></li><li><a href="../explanation/observability.html">Наблюдаемость</a></li><li><a href="../explanation/modelo-de-time.html">Модель команды и поток результатов</a></li></ul></li><li><span>Проверки и измерения</span><ul><li><a href="../explanation/primeiro-dogfooding.html">Первый dogfooding</a></li><li><a href="../explanation/execucao-real-hello-world.html">Реальное выполнение (hello world)</a></li><li><a href="../explanation/achados-execucao-real.html">Находки реального прогона конвейера</a></li><li><a href="../explanation/validacao-fase-12.html">Проверка Фазы 12</a></li><li><a href="../explanation/validacao-real.html">Реальная валидация (13b)</a></li><li><a href="../explanation/aceite-providers.html">Приёмка providers</a></li><li><a href="../explanation/medicao-do-idioma.html">Измерение эвристики языка</a></li><li><a href="../explanation/medicao-do-jev.html">Измерение маршрутизатора инструментов Jev</a></li><li><a href="../explanation/auditoria-fluxo-vs-codigo.html">Аудит: fluxo.yml × код (v3, ADR 0085)</a></li><li><a href="../explanation/auditoria-visual-rodada-29.html">Визуальный аудит до и после Rodada 29</a></li></ul></li><li><span>История фаз</span><ul><li><a href="../explanation/historico-de-fases.html">История фаз</a></li><li><a href="../explanation/fase-28-pasta-do-usuario.html">ФАЗА 28 — папка пользователя</a></li><li><a href="../explanation/fase-29-instalacao-de-uma-linha.html">FASE 29 — установка одной строкой</a></li><li><a href="../explanation/fase-30-runner-por-maquina.html">FASE 30 — локальный агент машины</a></li><li><a href="../explanation/backlog.html">Backlog после триажа</a></li></ul></li><li><span>Локализация</span><ul><li><a href="../explanation/localizacao.html">Локализация</a></li><li><a href="../explanation/localizacao-en.html">Локализация — английский (en)</a></li><li><a href="../explanation/localizacao-ru.html">Локализация — русский (ru)</a></li><li><a href="../explanation/localizacao-zh-hans.html">Локализация — упрощённый китайский (zh-Hans)</a></li></ul></li><li><span>Технические заметки</span><ul><li><a href="../explanation/tanstack-ai.html">TanStack AI — не принят</a></li></ul></li></ul></section><section><h2>🛠️ Эксплуатация</h2><ul><li><a href="../runbook.html">Руководство по эксплуатации</a></li></ul></section><section><h2>📚 Словарь</h2><ul><li><a href="../glossary.html">Глоссарий</a></li></ul></section><section><h2>🤝 Участие</h2><ul><li><a href="https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md">Как внести вклад</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SUPPORT.md">Где попросить помощи</a></li><li><a href="https://github.com/daneiel/brabo/blob/dev/SECURITY.md">Сообщить об уязвимости</a></li></ul></section></nav>
+<main>
+
+<article class="doc">
+<h1 id="runner">Runner</h1>
+<h2 id="волна-1-adr-0104--execution_mode-с-тремя-значениями-workspace-подтверждаемый-runner">Волна 1 ADR 0104 — <code>execution_mode</code> с тремя значениями, workspace, подтверждаемый runner</h2>
+<h3 id="rn-423">RN-423 — Runner ПОДТВЕРЖДАЕТ путь; без подтверждения команда отклоняется — никогда не падает в контейнер</h3>
+<p>Runner — <strong>источник истины</strong> о пути проекта <code>runner</code>, а не то, что было
+введено в мастере. Сразу после подключения канала Phoenix
+(<code>terminal:&lt;projectId&gt;</code>, роль <code>:runner</code>) <code>apps/runner/src/index.ts</code>
+отправляет <code>workspace_confirm</code> с <code>--dir</code>, полученным в командной строке.
+Engine передаёт его (<code>Engine.Sessions.EngineApiClient.confirm_workspace/4</code>)
+в <code>POST /internal/projects/:projectId/workspace-verification</code>
+(<code>ConfirmProjectWorkspaceUseCase</code>), который:</p>
+<ol>
+<li>Отказывает с <code>400</code>, если проект не в режиме <code>runner</code>;</li>
+<li>Повторно проверяет путь ТЕМ ЖЕ лексическим предикатом, что при создании
+(<a href="api.html#rn-422">RN-422</a>), — даже пришедший от runner, системный корень и
+пересечение с Brabo по-прежнему запрещены;</li>
+<li><strong>ПЕРЕЗАПИСЫВАЕТ</strong> <code>workspacePath</code> нормализованным путём и записывает
+<code>workspaceVerifiedAt = now()</code> — не требуя совпадения с тем, что было
+введено при создании: решает runner;</li>
+<li>ИДЕМПОТЕНТЕН — переподключение с тем же путём ничего не перезаписывает
+(<code>changed: false</code>); ДРУГОЙ путь перезаписывается, потому что runner
+остаётся источником истины при каждом переподключении;</li>
+<li>Без сессии в проекте (<code>ProjectSession.latest_id/1</code> возвращает <code>nil</code>):
+<code>UPDATE</code> происходит так же, отсутствует лишь событие
+<code>project.workspace_verified</code> (и доказательство gate
+<code>workspace-verificado</code>) — ТА ЖЕ деградация, которую уже принимают
+<code>pty_open</code>/<code>pty_close</code> (RN-108/RN-420). Принятый и объявленный пробел, не
+молчаливый.</li>
+</ol>
+<p><code>Engine.Actions.TerminalExecutor.decisao_de_execucao/1</code> получил ЧЕТЫРЕ
+исхода, а не два: <code>runner</code> с <code>workspace_verified_at: nil</code> отказывает
+(<code>:recusar_nao_verificado</code>); подтверждённый <code>runner</code> без подключённого runner
+отказывает (<code>:recusar_runner_desconectado</code>); подтверждённый и подключённый
+<code>runner</code> маршрутизирует (<code>:rotear_runner</code>); любой другой режим идёт обычным
+путём (<code>:caminho_de_sempre</code>). Оба отказа НИКОГДА не падают в <code>System.cmd</code> — у
+проекта <code>runner</code> нет bind-mount, а &quot;откатиться к обычному пути&quot; значило бы
+выполнять вслепую в папке, которую процесс engine не видит. Тот же отказ
+действует при гонке (<code>Registry</code> говорил &quot;подключён&quot; в начале <code>run/3</code>, но
+runner упал до ответа на dispatch).</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts</code>,
+<code>apps/api/src/interfaces/http/internal/internal-projects.controller.ts</code>
+(<code>POST :projectId/workspace-verification</code>),
+<code>apps/engine/lib/engine/actions/terminal_executor.ex</code>
+(<code>decisao_de_execucao/1</code>), <code>apps/engine/lib/engine_web/channels/terminal_channel.ex</code>
+(<code>handle_in(&quot;workspace_confirm&quot;, ...)</code>), <code>apps/engine/lib/engine/sessions/engine_api_client.ex</code>
+(<code>confirm_workspace/4</code>), <code>apps/runner/src/channel.ts</code>
+(<code>enviarWorkspaceConfirm</code>), <code>apps/runner/src/index.ts</code></li>
+<li><strong>Тест:</strong> <code>apps/api/test/application/use-cases/iam/confirm-project-workspace.use-case.spec.ts</code>,
+<code>apps/engine/test/engine/actions/terminal_executor_test.exs</code>
+(describe &quot;roteamento pro runner local&quot;),
+<code>apps/engine/test/engine_web/channels/terminal_channel_test.exs</code>
+(describe &quot;workspace_confirm&quot;), <code>apps/runner/src/channel.spec.ts</code>
+(<code>enviarWorkspaceConfirm</code> после join)</li>
+<li><strong>Граничный случай:</strong> <code>docs/gates.yml</code> записывает <code>workspace-verificado</code>
+как <code>severidade: warn</code> — по-настоящему блокирует явный отказ engine, gate —
+лишь запись/доказательство.</li>
+<li><strong>Архитектурное решение:</strong>
+<a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104</a></li>
+<li><strong>Источник:</strong> примирение ADR 0104, решение подтверждено владельцем
+продукта (runner — источник истины; без сессии UPDATE всё равно
+происходит; команда явно отклоняется без подтверждения/подключения)</li>
+</ul>
+<hr>
+<h3 id="rn-429">RN-429 — Навигация по локальной папке — чистая ретрансляция через Runner, никогда не перечисление контейнера силами api</h3>
+<p>Канал <code>terminal:&lt;projectId&gt;</code> получает два события, в ТОМ ЖЕ дизайне
+ретрансляции, что и PTY: <code>fs_list_dir</code>/<code>fs_home_dir</code> (<code>:web</code> запрашивает,
+engine ретранслирует НАПРЯМУЮ в pid зарегистрированного runner, немедленная
+ошибка, когда runner не подключён, — никогда не ждёт ответа, который не
+придёт) и <code>fs_list_dir_reply</code>/<code>fs_home_dir_reply</code> (<code>:runner</code> отвечает,
+broadcast, отфильтрованный только для <code>:web</code>, коррелируемый по <code>ref</code>,
+сгенерированному клиентом). api НЕ получает никакого нового маршрута — она
+по-прежнему не перечисляет файловую систему, аргумент, который ADR 0072 уже
+зафиксировал против выбора папки, остаётся в силе.
+<code>apps/runner/src/guard.ts</code> (который ограничивает <code>cwd</code> уже одобренной команды
+корнем проекта) намеренно НЕ применяется к навигации — перечисление каталога
+— свободное чтение на машине пользователя с привилегиями, которые у него уже
+есть, а запись без разрешения пропускается, а не прерывает весь список.</p>
+<p>Объявленный пробел: ticket канала выдаётся ПО уже существующему ПРОЕКТУ — на
+экране создания проекта (<code>NewProjectWizard.tsx</code>) проект рождается только при
+подтверждении, поэтому <code>FolderBrowserModal</code> получает там <code>projectId: null</code> и
+показывает объявленное состояние вместо попытки невозможного подключения;
+свободное текстовое поле остаётся ручным путём, как и раньше.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/engine/lib/engine_web/channels/terminal_channel.ex</code>;
+<code>apps/runner/src/fs-browser.ts</code>, <code>apps/runner/src/channel.ts</code>,
+<code>apps/runner/src/index.ts</code>; <code>apps/web/src/lib/fs-browser-channel.ts</code>,
+<code>apps/web/src/components/FolderBrowserModal.tsx</code>,
+<code>apps/web/src/components/RunnerOnboardingPanel.tsx</code>,
+<code>apps/web/src/routes/NewProjectWizard.tsx</code>,
+<code>apps/web/src/routes/code/TerminalPanel.tsx</code></li>
+<li><strong>Тест:</strong> <code>terminal_channel_test.exs</code> (чистая ретрансляция web↔runner,
+немедленная ошибка без runner, неверная роль игнорируется);
+<code>fs-browser.spec.ts</code> (упорядочение, пустая/несуществующая папка/файл,
+разрешение по записи); <code>FolderBrowserModal.test.tsx</code> (нулевой projectId,
+навигация, выбор, без runner); <code>NewProjectWizard.test.tsx</code> (кнопка
+&quot;Procurar pasta...&quot;)</li>
+<li><strong>ADR:</strong> <a href="../adr/0107-navegacao-de-pasta-local-via-o-runner.html">0107</a>,
+пересматривает <a href="../adr/0072-projeto-local-ou-container.html">0072</a>, не
+редактируя его</li>
+<li><strong>Источник:</strong> просьба владельца продукта — &quot;não consegui linkar com uma
+pasta do usuário&quot;</li>
+</ul>
+<hr>
+<h2 id="терминал-локального-runner-навсегда-застрявший-в-открытие-терминала-rn-433">Терминал локального runner, навсегда застрявший в &quot;Открытие терминала...&quot; (RN-433)</h2>
+<h3 id="rn-434">RN-434 — В Linux <code>--dir</code> локального runner принимается только внутри <code>$HOME</code> пользователя</h3>
+<p>CLI <code>brabo-runner</code> (режим <code>runner</code>, ADR 0103/0104) проверял только, что
+<code>--dir</code> существует и является папкой, — без каких-либо ограничений на то, ГДЕ
+в файловой системе эта папка может находиться. <code>lerArgumentos()</code>
+(<code>apps/runner/src/index.ts</code>) стал вызывать
+<code>validarDirDentroDoHomeNoLinux(dir, process.platform, homedir())</code>
+(<code>apps/runner/src/guard.ts</code>) сразу после проверки существования: в Linux
+(<code>process.platform === 'linux'</code>) <code>--dir</code> принимается только внутри
+<code>os.homedir()</code> — сам <code>$HOME</code> или любая его подпапка; путь вне этого дерева
+(<code>/etc</code>, <code>/root</code>, <code>/</code> или даже другая учётная запись в <code>/home</code>) отклоняется с
+<code>process.exit(2)</code> и сообщением, объясняющим причину и показывающим ожидаемый
+домашний каталог. Вне Linux (macOS, Windows) поведение не меняется —
+ограничение только для Linux.</p>
+<p>Проверка переиспользует <code>dentroDoEscopo</code>/<code>semBarraFinal</code> — те же примитивы
+сравнения путей, что уже использует <code>validarCwdDentroDaRaiz</code> в том же
+модуле, — но намеренно проще неё: без <code>realpath</code> и без защиты от
+TOCTOU/symlink, потому что она не защищает от злонамеренного СЕРВЕРА (это
+роль <code>validarCwdDentroDaRaiz</code>, выполняемая при каждом <code>exec</code>), — это проверка
+ЗАПУСКА самого локального CLI, направляющая пользователя, который ввёл
+неверный путь при запуске runner.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/guard.ts</code>
+(<code>DirForaDoHomeError</code>/<code>validarDirDentroDoHomeNoLinux</code>),
+<code>apps/runner/src/index.ts</code> (<code>lerArgumentos</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/guard.spec.ts</code>
+(<code>describe('validarDirDentroDoHomeNoLinux', …)</code> — принимает сам домашний
+каталог и его подпапку в Linux, отклоняет путь вне домашнего каталога и
+другую учётную запись внутри <code>/home</code> в Linux и подтверждает, что
+ограничение НЕ применяется вне Linux)</li>
+<li><strong>ADR:</strong> <a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">0104</a>
+(добавочное расширение — runner уже был объявлен &quot;источником истины о
+пути&quot;; это правило лишь сужает то, что он принимает как <code>--dir</code> в Linux)</li>
+<li><strong>Источник:</strong> явная просьба владельца продукта во время реального теста
+создания проекта (попытка направить <code>--dir</code> на путь вне домашнего
+каталога, <code>/home/dev/exp001</code>, которого на машине не было, — привела к
+решению запретить пути вне <code>$HOME</code> в Linux)</li>
+</ul>
+<hr>
+<h3 id="rn-435">RN-435 — Несуществующий <code>--dir</code> локального runner создаётся, а не отклоняется</h3>
+<p>CLI <code>brabo-runner</code> (режим <code>runner</code>, ADR 0103/0104) отклонял с
+<code>process.exit(2)</code> любой <code>--dir</code>, которого ещё не было на диске, — папку
+проекта приходилось создавать вручную до запуска CLI. <code>garantirDiretorio()</code>
+(<code>apps/runner/src/guard.ts</code>) стал автоматически создавать папку
+(<code>mkdirSync(dir, { recursive: true })</code>), когда её нет, а <code>lerArgumentos()</code>
+(<code>apps/runner/src/index.ts</code>) вызывает эту функцию СРАЗУ ПОСЛЕ
+<code>validarDirDentroDoHomeNoLinux</code> (RN-434) — ПОРЯДОК и есть правило: проверка
+<code>$HOME</code> работает на ещё не существующем пути (только <code>resolve()</code>, без
+обращения к диску), поэтому она выполняется первой и продолжает отклонять
+<code>--dir</code> вне домашнего каталога в Linux, даже когда его ещё нет, ДО любой
+попытки создания, — создание первым заново открыло бы брешь, которую RN-434
+только что закрыла. <code>--dir</code>, указывающий на уже существующий ФАЙЛ, остаётся
+реальной ошибкой (<code>DirNaoEUmaPastaError</code>, <code>process.exit(2)</code>, без попытки
+что-либо создать) — этот CLI никогда молча не перезаписывает файл. Сбой самого
+создания (отказ в доступе, диск заполнен и т. д.) тоже отклоняет
+(<code>NaoConsegiuCriarDiretorioError</code>), со встроенным сообщением исходной ошибки.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/guard.ts</code>
+(<code>garantirDiretorio</code>/<code>DirNaoEUmaPastaError</code>/<code>NaoConsegiuCriarDiretorioError</code>),
+<code>apps/runner/src/index.ts</code> (<code>lerArgumentos</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/guard.spec.ts</code>
+(<code>describe('garantirDiretorio', …)</code> — ничего не делает, когда папка уже
+существует, рекурсивно создаёт, когда её нет, отклоняет без создания, когда
+путь уже существует и является файлом, и оборачивает сбой <code>mkdir</code> в
+<code>NaoConsegiuCriarDiretorioError</code>; и ещё один случай в
+<code>describe('validarDirDentroDoHomeNoLinux', …)</code>, доказывающий, что <code>--dir</code>
+вне домашнего каталога и ЕЩЁ НЕ СУЩЕСТВУЮЩИЙ по-прежнему отклоняется,
+подтверждая, что порядок двух проверок не открывает бреши)</li>
+<li><strong>ADR:</strong> <a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">0104</a>
+(добавочное расширение — не меняет дизайн runner как источника истины о
+пути, лишь снижает трение при запуске нового проекта)</li>
+<li><strong>Источник:</strong> просьба владельца продукта, заметившего, что папки нового
+проекта в режиме <code>runner</code> на машине не было и её нужно было создавать
+вручную перед запуском CLI, — тот же сценарий, что мотивировал RN-434
+(несуществующий <code>/home/dev/exp001</code>), теперь решённый созданием папки, а не
+простым отказом</li>
+</ul>
+<hr>
+<h2 id="обозреватель-папок-runner-становится-трёхколоночным-а-создание-проекта-runner-перестаёт-ждать-последнего-шага-rn-436436">Обозреватель папок Runner становится трёхколоночным, а создание проекта <code>runner</code> перестаёт ждать последнего шага (RN-436/436)</h2>
+<h3 id="rn-452">RN-452 — <code>node-pty</code> разрешается внедрением, а не статическим импортом — и пробел, который это открыло в smoke npm, закрыт в том же коммите</h3>
+<p><code>pty.ts</code> перестал делать статический <code>import * as nodePty from 'node-pty'</code> в
+начале модуля — теперь он получает уже разрешённый модуль внедрением в
+конструктор <code>GerenciadorDePty</code>, разрешаемый один раз в <code>main()</code>
+(<code>src/index.ts</code>) через <code>native-pty-loader.ts#carregarNodePty()</code>. Изменение
+существует ради автономного бинарника (ADR 0112): скомпилированному пути
+нужно извлечь встроенные файлы в реальный каталог ДО разрешения <code>node-pty</code>,
+что требует асинхронного вызова — несовместимого с поднимаемым статическим
+<code>import</code>. Вне скомпилированного бинарника поведение идентично прежнему
+(<code>await import('node-pty')</code>, разрешаемый из <code>node_modules</code> того, кто
+установил пакет).</p>
+<p><strong>Пробел, который открыло изменение, закрыт в ТОМ ЖЕ коммите</strong>: ADR 0106 уже
+записывал, что статический <code>import</code> <code>node-pty</code>, будучи поднятым до любого
+разбора аргументов, заставлял <code>smoke-dist.mjs</code> доказывать, что нативная
+привязка загружается, просто ИМПОРТИРУЯ <code>dist/index.cjs</code> — даже на пути
+<code>uso()</code> (ноль аргументов), который никогда не доходит до <code>main()</code>. Перенос
+разрешения внутрь <code>main()</code> молча сломал эту гарантию, потому что
+<code>smoke-dist.mjs</code> задействовал только путь <code>uso()</code>. <code>smoke-dist.mjs</code> получил
+третью проверку — запускает CLI с валидными аргументами (но без реальных
+api/engine на другой стороне) и ожидает строку <code>node-pty carregado com sucesso</code> в stdout перед завершением процесса, — закрывая пробел, который
+открыло само изменение, вместо того чтобы оставить его молчаливой потерей
+покрытия.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/pty.ts</code> (<code>GerenciadorDePty</code>, внедрение
+<code>NodePtyModule</code>); <code>apps/runner/src/native-pty-loader.ts</code>
+(<code>carregarNodePty</code>); <code>apps/runner/src/index.ts</code> (<code>main</code>, разрешает один
+раз); <code>apps/runner/scripts/smoke-dist.mjs</code> (третья проверка,
+<code>verificarNodePtyCarrega</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/scripts/smoke-dist.mjs</code> (путь npm/tsup) и
+<code>apps/runner/scripts/smoke-bin.mjs</code> (путь бинарника, RN-451) — два
+единственных места, которые реально задействуют упакованный артефакт, ни
+один модульный тест их не заменяет</li>
+<li><strong>ADR:</strong> <a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">0112</a></li>
+<li><strong>Источник:</strong> техническая необходимость автономного бинарника; пробел в
+smoke npm найден собственным аудитом изменения, а не реальным выполнением,
+сообщившим о сбое</li>
+</ul>
+<h2 id="настройка-runner-через-браузер-rn-464466-adr-0118">Настройка runner через браузер (RN-464..466, ADR 0118)</h2>
+<h3 id="rn-466">RN-466 — <code>brabo-runner</code> работает без <code>--project</code>/<code>--dir</code>/<code>--token</code>, когда в папке есть локальная конфигурация, записанная браузером</h3>
+<blockquote>
+<p><strong>Пересмотрено <a href="web.html#rn-687">RN-687</a> (<a href="../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.html">ADR 0203</a>, 01.10):</strong>
+браузер больше не записывает эти файлы — поток выведен из эксплуатации.
+ЧТЕНИЕ сохраняется полностью: папка, настроенная до ADR 0203, продолжает
+работать, и именно через <code>--dir</code>, указывающий на <code>$XDG_CONFIG_HOME/brabo/</code>,
+unit машины находит ключ, созданный в терминале (RN-551).</p>
+</blockquote>
+<p><code>apps/runner/src/device-key.ts</code> (НОВЫЙ модуль, намеренно отделённый от
+<code>auth.ts</code>) читает — никогда не пишет — <code>brabo-runner.config.json</code>
+(<code>{projectId, apiUrl}</code>) и <code>brabo-runner-device-key.jwk.json</code> из текущего
+<code>cwd()</code>; отсутствие любого из двух возвращает <code>null</code>, никогда не выбрасывая,
+потому что такое отсутствие — НОРМАЛЬНЫЙ случай для того, кто всё ещё
+использует явные флаги. В <code>lerArgumentos</code> (<code>apps/runner/src/index.ts</code>)
+правило ОДНО И ТО ЖЕ трижды — явный флаг всегда побеждает локальный файл:
+<code>--project</code> побеждает <code>configLocal.projectId</code>; отсутствующий <code>--dir</code> падает в
+<code>.</code> (саму папку, где выполняется команда), когда была локальная
+конфигурация, вместо прежней ошибки использования;
+<code>--token</code>/<code>BRABO_ACCOUNT_TOKEN</code> побеждает локальный ключ устройства, когда
+есть оба. БЕЗ КАКИХ-ЛИБО учётных данных (ни токена, ни локального ключа) CLI
+по-прежнему отказывает с сообщением об использовании — ничто здесь не делает
+аутентификацию необязательной, лишь определяет, какая из двух форм
+используется.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/device-key.ts</code> (<code>lerConfigLocal</code>,
+<code>lerChaveDeDispositivo</code>), <code>apps/runner/src/index.ts:95-206</code>
+(<code>lerArgumentos</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/device-key.spec.ts</code> (счастливый путь каждого
+чтения; <code>null</code> без выброса для отсутствующего файла/невалидного JSON/
+отсутствующего поля; соблюдает полученный <code>cwd</code>; модуль не импортирует
+<code>writeFileSync</code>/<code>mkdirSync</code>)</li>
+<li><strong>ADR:</strong> <a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">0118</a></li>
+<li><strong>Источник:</strong> просьба владельца продукта</li>
+</ul>
+<h2 id="артефакт-решения-разговорных-агентов-rn-505">Артефакт решения разговорных агентов (RN-505)</h2>
+<h3 id="rn-507">RN-507 — Docker становится реальным предусловием режима <code>runner</code>: все ТРИ режима выполнения требуют ОДНОГО И ТОГО ЖЕ предиката</h3>
+<p>До сих пор <code>Engine.Actions.TerminalExecutor.decisao_de_execucao/1</code> проверял
+лишь ДВА предусловия для маршрутизации терминала к проекту <code>execution_mode: runner</code> — ПОДТВЕРЖДЁННЫЙ workspace и ПОДКЛЮЧЁННЫЙ сейчас runner — и
+маршрутизировал безусловно, как только оба совпадали, не проверяя, есть ли
+ЗАРЕГИСТРИРОВАННЫЙ <code>running</code>-контейнер
+(<code>Engine.Containers.ProjectContainerLifecycle.running?/1</code>), — тот же предикат,
+который <code>container</code>/<code>mounted</code> уже требовали начиная с RN-502 (ADR 0143).
+Runner на той стороне сам решал, выполнять ли команду внутри поднятого им
+контейнера (ADR 0137) или падать в чистый ХОСТ, — а без работающего Docker на
+машине пользователя всегда падал на хост, молча: изоляция, которую ADR 0134
+стремился создать для <code>container</code>, никогда не действовала для <code>runner</code>.</p>
+<p><strong>Исправление объединяет три режима под ОДНИМ И ТЕМ ЖЕ вопросом.</strong> <code>runner</code>
+получает ТРЕТЬЕ предусловие, в том же порядке, что и два других:
+подтверждён → подключён → <code>running</code>-контейнер. Три именованных отказа
+(workspace не подтверждён, runner отключён, нет контейнера) живут сегодня в
+<code>Engine.Runners.RunnerReadiness</code> — выделенном, потому что в том же PR родился
+ВТОРОЙ потребитель (<code>Engine.Actions.Workspace.RunnerGit</code>, ниже): &quot;это не два
+выведения, это одна функция с двумя потребителями&quot;, то же рассуждение, что в
+moduledoc <code>ProjectContainerLifecycle</code>.</p>
+<p><strong>Материализация worktree dev agent меняет механизм, а не результат.</strong>
+<code>Engine.Actions.Workspace.ensure!/4</code> пытался делать ЛОКАЛЬНЫЕ <code>File.mkdir_p!</code>/
+<code>System.cmd(&quot;git&quot;, ...)</code> против пути ХОСТА даже в режиме <code>runner</code> — пробел,
+который RN-478 записала и намеренно оставила ОТКРЫТЫМ (&quot;рабочему дереву dev
+agent негде родиться&quot;, раз у процесса engine нет никакого bind-mount для
+папки, живущей на машине пользователя). Исправление — не &quot;снова улучшить
+сообщение об ошибке&quot;: <code>ensure!/4</code> начинает ветвиться по <code>execution_mode</code> —
+ЛОКАЛЬНО для <code>container</code>/<code>mounted</code> (без изменений: <code>mounted</code> уже видит свою
+папку через <code>BRABO_PROJECTS_BASE</code>, bind-mount по идентичности в engine начиная
+с ADR 0141), через <code>Engine.Actions.Workspace.RunnerGit</code> для <code>runner</code>.
+<code>RunnerGit</code> делает <code>git init</code>/<code>remote add</code>/<code>fetch</code>/<code>checkout</code> (и эквиваленты
+<code>File.dir?</code>/<code>ls</code>/<code>rm_rf</code>, нужные <code>Engine.Dev.WorktreeManager</code>) как ОБЫЧНЫЕ
+команды оболочки, доставляемые ТЕМ ЖЕ каналом Phoenix, который уже выполняет
+одобренный терминал (<code>Engine.Runners.RunnerRouter.exec/5</code>), — никогда не новый
+механизм и всегда после того, как <code>RunnerReadiness.verificar/1</code> подтвердит три
+предусловия (выбрасывает с именованным сообщением до любой попытки I/O,
+никогда <code>exec</code> вслепую). <code>Engine.Dev.WorktreeManager</code> (<code>create/3</code>, <code>remove/2</code>,
+<code>list/1</code>, <code>cleanup_orphans/2</code>) ветвится по тому же критерию.</p>
+<p><strong>Периодическое задание очистки МОЛЧА ПРОПУСКАЕТ, никогда не сбоит.</strong>
+<code>Engine.Dev.WorktreeCleanup.run/0</code> проверял <code>File.dir?(work_dir)</code>, чтобы
+решить, очищать ли, — всегда <code>false</code> для <code>runner</code> (путь принадлежит ХОСТУ,
+engine его не видит), поэтому <code>runner</code> никогда реально не очищался и не
+тестировался этим путём. Gate становится по РЕЖИМУ: <code>File.dir?</code> остаётся для
+<code>container</code>/<code>mounted</code>; для <code>runner</code> решает <code>RunnerReadiness.pronto?/1</code> — без
+подключённого runner или без <code>running</code>-контейнера СЕЙЧАС проект пропускается
+В ЭТОМ раунде (&quot;сейчас знать невозможно&quot;, никогда ошибка, никогда worktree,
+по ошибке принятый за сироту), а <code>Enum.each/2</code> продолжает со следующими
+проектами без пролёта какого-либо исключения.</p>
+<p><strong>Протокол <code>exec</code>/<code>exec_result</code> получает НОВОЕ поле: <code>env</code> (ADR 0056).</strong>
+Аутентифицированному <code>git fetch</code> в <code>RunnerGit</code> нужны учётные данные
+провайдера — которые могут путешествовать только в ОКРУЖЕНИИ дочернего
+процесса (никогда argv, никогда <code>.git/config</code>, та же дисциплина, что у
+локального <code>Engine.Actions.GitAuth</code>). Поскольку дочерний процесс теперь
+рождается на машине пользователя, поле <code>env</code> (необязательное,
+<code>Record&lt;string,string&gt;</code>) входит в полезную нагрузку, которую отправляет
+<code>RunnerRouter.exec/5</code>, — присутствует только когда есть реальные учётные
+данные (провайдер <code>local</code> его никогда не несёт). На стороне runner:
+<code>apps/runner/src/exec.ts</code> СЛИВАЕТ (никогда не заменяет) <code>opts.env</code> поверх
+<code>process.env</code> перед <code>spawn</code> — <code>env</code>, заданный без слияния, отбросил бы PATH и
+сломал бы разрешение самого бинарника <code>git</code>/<code>sh</code>. <code>apps/runner/src/index.ts</code>
+передаёт <code>msg.env</code> только на путь ХОСТА (<code>executarComando</code>) — контейнер
+(<code>docker exec</code>, через <code>packages/docker-port</code>) не получил поддержки <code>env</code> (вне
+рамок этой поставки: операция <code>exec</code> порта по-прежнему без этого поля,
+намеренно, ADR 0130). Ни один журнал runner нигде не печатает <code>env</code> —
+проверено grep, <code>console.log</code>/<code>console.warn</code>/<code>console.error</code> по-прежнему
+упоминают только <code>ref</code>/<code>command</code>/<code>cwd</code>/<code>exitCode</code>.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/engine/lib/engine/actions/terminal_executor.ex</code>
+(<code>decisao_de_execucao/1</code>); <code>apps/engine/lib/engine/runners/ runner_readiness.ex</code> (новый); <code>apps/engine/lib/engine/actions/workspace.ex</code>
+(<code>ensure!/4</code>); <code>apps/engine/lib/engine/actions/workspace/runner_git.ex</code>
+(новый); <code>apps/engine/lib/engine/dev/worktree_manager.ex</code>;
+<code>apps/engine/lib/engine/dev/worktree_cleanup.ex</code>;
+<code>apps/engine/lib/engine/projects/project.ex</code> (<code>all_workspace_dirs/0</code>
+получает <code>execution_mode</code>); <code>apps/engine/lib/engine/runners/runner_router.ex</code>
+(<code>exec/5</code>); <code>apps/engine/lib/engine_web/channels/terminal_channel.ex</code>;
+<code>apps/runner/src/channel.ts</code> (<code>ExecMessage.env</code>); <code>apps/runner/src/exec.ts</code>;
+<code>apps/runner/src/index.ts</code></li>
+<li><strong>Тест:</strong> <code>apps/engine/test/engine/actions/terminal_executor_test.exs</code>,
+<code>apps/engine/test/engine/actions/workspace_runner_test.exs</code>,
+<code>apps/engine/test/engine/dev/worktree_manager_test.exs</code>,
+<code>apps/engine/test/engine/dev/worktree_cleanup_test.exs</code>,
+<code>apps/runner/src/channel.spec.ts</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0145-docker-pre-requisito-do-runner.html">0145</a></li>
+<li><strong>Источник:</strong> решение владельца продукта — Docker становится реальным
+предусловием режима <code>runner</code>, без отката на хост</li>
+</ul>
+<h2 id="o-espelho-copia-o-trabalho-para-a-pasta-do-usuário-rn-516">Зеркало копирует работу в папку пользователя (RN-516)</h2>
+<h3 id="rn-516">RN-516 — Назначение зеркала передаётся в ПРЕДОСТАВЛЕНИИ join, зеркало копирует список git в одну сторону и никогда не удаляет, а триггер — именованный момент, никогда watcher</h3>
+<p>Половина B сессии 6 ФАЗЫ 28: возможность <code>espelho</code>
+(<a href="engine.html#rn-514">RN-514</a>, <a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147</a>)
+начинает СУЩЕСТВОВАТЬ. <a href="api.html#rn-515">RN-515</a> решила, <strong>где живёт назначение</strong>, и
+не скопировала ни одного файла; это правило решает, <strong>как оно доходит до
+локального агента, что копируется и когда</strong>.</p>
+<p><strong>Назначение передаётся в предоставлении <code>join</code>, никогда в настройке runner.</strong>
+Ответ на <code>join</code> канала <code>terminal:&lt;projectId&gt;</code> перестал быть пустым для роли
+<code>:runner</code>: когда у проекта есть объявленное назначение
+(<code>projects.mirror_path</code>) <strong>и</strong> возможность <code>espelho</code> предоставлена, он несёт
+<code>%{espelho: %{destino: &quot;&lt;caminho&gt;&quot;}}</code>. Runner хранит это в
+<code>estado.destinoDoEspelho</code>, которое умирает вместе с соединением, и <strong>отклоняет
+<code>mirror_sync</code> для назначения, не предоставленного ему в этом соединении</strong> (ADR
+0147, пункт 4). Никогда переменная окружения, никогда локальный файл:
+глобальное назначение привело бы к тому, что артефакт проекта B приземлится в
+папке проекта A, и пользователь узнал бы об этом <strong>по содержимому, а не по
+ошибке</strong>.</p>
+<p>Заявленное следствие, и это цена: <strong>смена назначения при подключённом runner
+требует переподключить его.</strong> Предоставление принадлежит join, а новое
+назначение, пришедшее через другую дверь, было бы ровно той глобальной
+настройкой, которую правило отвергает.</p>
+<p><strong>Ненулевой <code>mirror_path</code> начинает ТРЕБОВАТЬ возможность.</strong> Она не входит в
+карту по <code>execution_mode</code> — требует её ДАННОЕ проекта, а не режим (и
+<code>mounted</code>, и <code>runner</code> могут иметь назначение, а <code>container</code> — нет). Это
+<strong>первый РЕАЛЬНЫЙ случай</strong> механизма отказа, который RN-514 оставила
+реализованным и ни разу не срабатывавшим: <code>brabo-runner</code> версии до этой,
+подключённый к проекту с назначением, <strong>перестаёт подключаться</strong> с именованным
+отказом (<code>JoinRecusadoError</code>, фатальный и без повторов). Это <strong>opt-in</strong> —
+происходит только там, где кто-то настроил назначение, — и цена заявлена в
+самом ADR 0147.</p>
+<p><strong>ТРИ отказа защиты, и проход <code>realpath</code> не избыточен.</strong>
+<code>apps/runner/src/espelho-guard.ts</code> — <strong>брат <code>guard.ts</code>, а не его
+расширение</strong>: переиспользует <code>semBarraFinal</code>/<code>dentroDoEscopo</code>/<code>realpathMaisProximo</code>
+и двойной проход лексика-затем-<code>realpath</code> из <code>validarCwdDentroDaRaiz</code> и
+письменно наследует ту же оговорку о <strong>TOCTOU</strong> — это best-effort, а не
+граница безопасности. Он отклоняет (1) symlink, уходящий из назначения,
+(2) назначение, <strong>содержащее</strong> workspace, и (3) назначение <strong>внутри</strong>
+workspace; (2) и (3) — одна петля в противоположных направлениях, и при
+bind по идентичности из
+<a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141</a> запись зеркала внутрь
+источника заставляет зеркало копировать само себя. Api уже отклонила
+<strong>лексическую</strong> половину (<a href="api.html#rn-515">RN-515</a>) и говорит в самом коде, что
+только лексику — у неё нет диска, где разрешить symlink компьютера
+пользователя. <code>destino/atalho -&gt; /caminho/do/projeto</code> проходит там
+незамеченным, и именно здесь он разрешается.</p>
+<p>Одно отличие механизма, найденное при реализации: <code>realpathMaisProximo</code>
+откатывается к первому существующему предку, а назначение зеркала почти
+никогда не существует (его создаёт <code>mkdir -p</code> этого прогона). Свести обе
+стороны к предку значило бы превратить и <code>/base-outra</code>, и <code>/base</code> в <code>/</code>, и
+защита отклоняла бы каждую соседнюю папку. Поэтому второй проход разрешает
+предка и <strong>возвращает суффикс</strong> — symlink может жить только в существующем
+сегменте, так что остаток никогда не прячет ссылку. У отказа (1) есть и вторая
+половина, <strong>пофайловая</strong> (<code>caminhoNoDestino</code>): <code>destino/sub</code>, являющийся
+ссылкой на <code>/etc</code>, заставил бы копию <code>sub/passwd</code> писать наружу, при том что
+само назначение совершенно корректно.</p>
+<p><strong>Одно направление, и НИКОГДА не удаляет.</strong> Workspace → назначение. Никогда
+<code>--delete</code>, никогда <code>unlink</code>, никогда <code>rm</code>. <strong>Файл, удалённый в workspace,
+остаётся в назначении</strong>, и это решение, а не небрежность: папка пользователя
+не реплика, а накопление — агент, удаляющий файл в чьей-то личной папке из-за
+<code>git clean</code> на другой стороне, — это сюрприз, которого продукт существует,
+чтобы не производить. Перезапись изменившегося файла ожидаема; удаление —
+никогда. Цена, заявленная в ADR: назначение только растёт, и никакой
+автоматический механизм его не чистит.</p>
+<p><strong>Копируется СПИСОК GIT, и ничего больше.</strong> <strong>Отслеживаемые</strong> файлы
+(<code>git ls-files</code>) плюс <strong>неотслеживаемые, не игнорируемые</strong>
+(<code>git ls-files --others --exclude-standard</code>), с <code>-z</code> (без него git берёт в
+кавычки и экранирует путь с пробелом или диакритикой). Это ровно «работа»:
+пропускает <code>node_modules</code>, <code>dist</code>, вывод сборки и сам <code>.git</code> <strong>без всякого
+списка исключений</strong>, который устаревал бы с каждым новым стеком, — <code>.gitignore</code>
+проекта уже и есть список, поддерживаемый тем, кто поддерживает проект.
+Workspace является git-репозиторием <strong>по построению</strong> (продукт разворачивает в
+нём Gitflow и материализует его через <code>git init</code>/<code>fetch</code>/<code>checkout</code>), так что
+предусловие принадлежит ПРОДУКТУ, а не является предположением о машине.
+Сбойный git или папка, не являющаяся репозиторием, <strong>падают с именованной
+причиной</strong> — никогда <code>cp -r</code> всего как план Б, которым весь <code>node_modules</code>
+оказался бы в чьей-то личной папке.</p>
+<p>Два проверенных и заявленных, а не скрытых свойства: <strong>вложенный</strong>
+git-репозиторий возвращается ОДНОЙ записью каталога и не обходится — worktree
+каждого dev agent (<code>&lt;workspace&gt;/.worktrees/&lt;agent_id&gt;</code>) именно такой, поэтому
+зеркало показывает <strong>основной checkout</strong>, никогда работу, ещё изолированную в
+worktree; и <strong>symlink в источнике пропускается</strong>, потому что следование ссылке
+принесло бы содержимое извне проекта в личную папку. Оставленное за бортом
+ПОДСЧИТЫВАЕТСЯ (<code>pulados</code>/<code>recusados</code>), никогда не проглатывается. И
+эвристики «изменилось?» нет: копировать всегда стоит байтов, уже равных, тогда
+как пропуск по размеру+mtime заставил бы зеркало молча не скопировать
+изменившийся файл.</p>
+<p><strong>СОБСТВЕННЫЙ предикат, и зеркало не требует Docker.</strong>
+<code>Engine.Runners.RunnerReadiness</code> остаётся <strong>байт в байт как есть</strong> (ADR 0147,
+пункт 3) — <code>Engine.Runners.Espelho</code> его не вызывает, не расширяет и ничего от
+него не получает. У зеркала ДВА предусловия, подтверждённый workspace и
+подключённый runner, и нет третьего, добавленного <a href="#rn-507">RN-507</a>
+(ЗАРЕГИСТРИРОВАННЫЙ контейнер <code>running</code>). <code>RunnerReadiness</code> с флагом
+«пропустить контейнер» — именно тот механизм, через который это третье
+случайно отвалится для <code>exec</code> при будущем рефакторинге, а
+<a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145</a> существует, чтобы оно
+не отвалилось. И зеркалу оно законно не нужно: третье существует потому, что
+было два возможных выполнения и неправильное было невидимо; у копирования
+файла на машине пользователя нет контейнера, из которого выпасть. Оно также не
+спрашивает <code>execution_mode</code> — это уже решила api при записи назначения
+(<a href="api.html#rn-515">RN-515</a> отклоняет <code>container</code>), и повторить решение значило бы
+завести второй источник того же правила.</p>
+<p><strong>Триггер — ИМЕНОВАННЫЙ МОМЕНТ, никогда watcher.</strong> Engine отправляет
+<code>mirror_sync</code> из места в коде, у которого есть имя, — сегодня это <strong>успешный
+коммит</strong> (<code>EngineWeb.ActionCommandController</code>, <code>git_commit</code>). Никогда
+<code>fs.watch</code>: watcher — это неограниченная работа, запускаемая чем угодно —
+установкой зависимостей, сборкой и, хуже того, записями самого зеркала, что
+есть петля, — и он работал бы непрерывно на машине пользователя без чьей-либо
+просьбы, что противоположно тому, что должен означать «локальный агент».
+Отправка — <strong>fire-and-forget</strong>: без <code>from</code>, без <code>pending_execs</code> и без
+<code>mirror_sync_result</code>, потому что инициатор занят другим, а телеметрия
+синхронизации — пункт 7 ADR, из другой сессии. Сбой зеркала становится
+локальным логом, никогда исключением, роняющим runner, и никогда молчанием.</p>
+<p><strong>Это НЕ <code>proposed_action</code>, и не должно им стать.</strong> Запись зеркала —
+настройка, объявленная пользователем, а не агент, просящий действовать, — ADR
+0147 говорит об этом явно, а синхронизация через команду терминала попала бы
+под область <a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055</a>
+и превратилась бы в очередь рутинных одобрений, подтачивая потолок, придающий
+смысл клику.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/espelho-guard.ts</code> (три отказа, двойной проход с
+сохранённым суффиксом, унаследованная оговорка о TOCTOU);
+<code>apps/runner/src/espelho.ts</code> (список git, копирование в одну сторону,
+<code>mkdir -p</code> только ПОСЛЕ защиты); <code>apps/runner/src/guard.ts</code> (три
+хелпера становятся экспортируемыми — один источник сравнения путей);
+<code>apps/runner/src/channel.ts</code> (<code>CAPACIDADES_DO_RUNNER</code> получает <code>espelho</code>,
+<code>MirrorSyncMessage</code>, <code>EspelhoConcedido</code>, <code>espelhoConcedidoDaResposta</code>);
+<code>apps/runner/src/index.ts</code> (<code>EstadoDoRunner.destinoDoEspelho</code>,
+<code>tratarMirrorSync</code> — отказ для непредоставленного назначения);
+<code>apps/engine/lib/engine/runners/capacidades.ex</code> (<code>exigidas/2</code>/<code>conceder/3</code>
+и <code>destino?/1</code> — требует назначение, а не режим);
+<code>apps/engine/lib/engine/runners/espelho.ex</code> (собственный предикат,
+<code>destino/1</code> для join и fire-and-forget <code>sincronizar/2</code>);
+<code>apps/engine/lib/engine/projects/project.ex</code> (<code>mirror_path</code> в схеме
+чтения); <code>apps/engine/lib/engine_web/channels/terminal_channel.ex</code>
+(предоставление в ответе join и <code>dispatch_mirror_sync</code>);
+<code>apps/engine/lib/engine_web/controllers/action_command_controller.ex</code>
+(триггер коммита)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/espelho-guard.spec.ts</code> (назначение внутри,
+назначение, содержащее, настоящий symlink в <code>tmp</code>, уходящий через само
+назначение и через средний сегмент, <code>/base-outra</code> против <code>/base</code>, пофайловая
+цель, <code>lstat</code> против <code>stat</code>); <code>apps/runner/src/espelho.spec.ts</code> (настоящий
+git-репозиторий: отслеживаемый + неотслеживаемый-неигнорируемый,
+игнорируемый снаружи, <strong>файл, удалённый в источнике, остаётся в
+назначении</strong>, вложенный репозиторий пропущен, symlink источника пропущен,
+symlink назначения отклонён, защита до <code>mkdir</code>, папка без git падает с
+именем); <code>apps/runner/src/channel.spec.ts</code> (назначение, пришедшее в ответе
+join, три объявленные возможности, <code>mirror_sync</code>, доходящий до обработчика);
+<code>apps/runner/src/index-handlers.spec.ts</code> (<code>describe &quot;tratarMirrorSync&quot;</code> —
+отклонённое непредоставленное назначение, соединение без предоставления,
+сбой, который не бросает исключение, и канал без какого-либо обратного push);
+<code>apps/engine/test/engine/runners/capacidades_test.exs</code> (назначение,
+требующее возможность, отклонённый унаследованный бинарник, <code>destino?/1</code>);
+<code>apps/engine/test/engine/runners/espelho_test.exs</code> (ДВА предусловия и
+ОТСУТСТВИЕ третьего — <code>:pronto</code> без единого зарегистрированного контейнера);
+<code>apps/engine/test/engine_web/channels/terminal_channel_test.exs</code>
+(<code>describe &quot;o destino do espelho na concessão do join&quot;</code> — предоставление,
+два отказа и push <code>mirror_sync</code>);
+<code>apps/engine/test/engine_web/controllers/action_command_controller_test.exs</code>
+(триггер: успешный коммит запускает, неудачный — нет)</li>
+<li><strong>ADR:</strong> <a href="../adr/0147-agente-local-com-capacidades.html">0147</a>, пункты 2, 3, 4 и 8</li>
+<li><strong>Источник:</strong> ФАЗА 28, сессия 6 (половина B). Заявленным и <strong>не</strong>
+подключённым остался второй именованный момент пункта 8, «конец хода
+агента»: в engine есть две непересекающиеся вещи с этим именем, и ни одна не
+является однозначной точкой зацепления —
+<code>Engine.Agents.TurnoAssincrono.finalizar/1</code> закрывает ход шести
+conversacionais, у которых нет инструмента записи в workspace, и срабатывает
+также при падении и отмене; <code>Engine.Dev.AgentIo.finish_task/3</code> не является
+границей простоя (забирает следующую task в том же вызове), а то, что пишет
+dev agent, живёт в worktree, в который зеркало намеренно не спускается.
+Выбрать одно значило бы выдумать продукт там, где ADR назвал момент, не
+назвав функцию</li>
+</ul>
+<hr>
+<h2 id="o-agente-local-vira-serviço-de-usuário-e-status-não-colapsa-estado-rn-518">Локальный агент становится сервисом ПОЛЬЗОВАТЕЛЯ, а <code>status</code> не сливает состояния (RN-518)</h2>
+<h3 id="rn-518">RN-518 — <code>brabo-runner service install|uninstall|status</code> устанавливает на уровне ПОЛЬЗОВАТЕЛЯ и никогда root; <code>uninstall</code> чистит папку, которую регистрирует UNIT; <code>status</code> отвечает четырьмя состояниями, не сливая ни одного; Windows — именованный отказ</h3>
+<p>Сессия 7 ФАЗЫ 28 и <strong>пункт 5</strong>
+<a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147</a>. До сих пор локальный
+агент был <strong>только передним планом</strong>: процесс, завершаемый SIGINT/SIGTERM,
+который умирает вместе с терминалом и не возвращается с сессией пользователя.
+Никакого прецедента не было — ни одного упоминания <code>systemd</code>, <code>launchd</code> или
+<code>LaunchAgent</code> в <code>apps/runner/</code>.</p>
+<p><strong>Уровень пользователя, ВСЕГДА — и root это ОТКАЗ, а не предупреждение.</strong>
+<code>systemd --user</code> в Linux, <code>LaunchAgent</code> в macOS. Это не предпочтение упаковки:
+docblock в <code>apps/runner/src/guard.ts:9-31</code> объявляет <em>«runner работает НА машине
+пользователя, с ЕГО привилегиями»</em> предпосылкой, на которую опираются три
+реальные границы продукта (аутентификация, конвейер одобрения, согласие), — а
+защита <code>cwd</code> — best-effort <strong>письменно</strong>, именно потому, что ничего не держит
+она. Системный сервис, работающий от root, сломал бы инвариант и оставил бы
+best-effort защиту единственным, что стоит между одобренной командой и диском
+машины. Поэтому <code>install</code> с <code>uid</code> 0 <strong>отказывает, называя причину</strong>, не
+записывая ни одного файла и не запуская ни одной команды: установить-и-
+предупредить оставило бы неправильную установку на ногах, а предупреждение
+прочитали бы лишь однажды.</p>
+<p><strong>Windows ВНЕ ОБЛАСТИ, и отказ именован.</strong> Матрица сборки уже выпускает
+бинарник для Windows (<a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112</a>),
+но сервис пользователя там — <strong>третий механизм</strong> (Службы ОС с учётной записью
+пользователя или Планировщик заданий при входе), а не вариация двух. Три
+подкоманды отвечают, называя платформу, говоря, что решение заявлено, и
+указывая путь, который продолжает работать (запуск на переднем плане). Никогда
+немой сбой, никогда «установлено», которое ничего не установило. Любая другая
+платформа попадает в тот же отказ.</p>
+<p><strong>Одна unit НА ПРОЕКТ, названная по <code>projectId</code></strong> — <code>brabo-runner-&lt;id&gt;.service</code>
+/ <code>dev.brabo.runner.&lt;id&gt;</code> — потому что сервер <strong>уже навязывает один runner на
+проект</strong>: второй <code>join</code> в тот же <code>terminal:&lt;projectId&gt;</code> отклоняется
+<code>Engine.Runners.Registry</code>. Именование по ПАПКЕ позволило бы установить две
+unit, которые никогда не могут работать одновременно, и вторая проявилась бы
+как сбой подключения, а не как ошибка установки. Повторная установка из другой
+папки <strong>перезаписывает</strong>. <code>uninstall</code> и <code>status</code> достают ровно ту же unit,
+потому что выводят имя из ТОГО ЖЕ <code>projectId</code>, разрешённого ТЕМИ ЖЕ двумя
+источниками в том же порядке, что и обычный CLI (<code>--project</code>, иначе
+<code>brabo-runner.config.json</code>), а папка берётся из <code>resolverDir</code> в <code>guard.ts</code> —
+никогда второе правило. В Linux файл кладётся туда, где systemd <strong>ищет</strong>, с его
+приоритетом: <code>$XDG_CONFIG_HOME/systemd/user</code>, когда переменная задана,
+<code>~/.config/systemd/user</code>, когда нет, — выбор только второго заставил бы unit
+родиться там, куда менеджер никогда не смотрит, и сбой проявился бы как
+<em>&quot;unit file does not exist&quot;</em> в <code>enable</code>, видимый, но по неверной причине.</p>
+<p><strong><code>projectId</code> становится ИМЕНЕМ ФАЙЛА, поэтому проверяется здесь.</strong> Он приходит
+из двух источников, не являющихся сервером (набранный флаг и файл папки), и
+<code>--project ../../etc/systemd</code> записал бы за пределы каталога unit. Только
+буквы, цифры, <code>.</code>, <code>-</code> и <code>_</code>, до 64 символов — UUID, реальный формат каждого
+проекта продукта, проходит целиком. Путь runner и папка с двойной кавычкой или
+переводом строки — тоже именованный отказ: перевод строки в файле unit —
+инъекция директивы, а не граничный случай.</p>
+<p><strong>Сервис аутентифицируется КЛЮЧОМ УСТРОЙСТВА, никогда токеном.</strong> <code>install</code>
+требует корректный <code>brabo-runner-device-key.jwk.json</code> в папке и отказывает без
+него, намеренно игнорируя <code>--token</code>/<code>BRABO_ACCOUNT_TOKEN</code>: запись токена
+учётной записи в файл unit оставила бы его на диске, читаемым любым процессом
+пользователя и переживающим shell, который его экспортировал, — а этот CLI
+<strong>никогда не записывал учётные данные на диск</strong> (в docblock <code>auth.ts</code> есть
+тестовый замок ровно против этого). <a href="#rn-434">RN-434</a> работает так же, через ТУ
+ЖЕ функцию: сервис, указывающий за пределы <code>$HOME</code> в Linux, отклоняется, потому
+что делать через unit то, что CLI отказывается делать через флаг, значило бы
+обойти правило через чёрный ход.</p>
+<p><strong><code>Restart=on-abnormal</code>, и никогда <code>on-failure</code></strong> (в plist — <code>KeepAlive</code> с
+<code>Crashed</code>, и никогда <code>SuccessfulExit</code>). Runner выходит с 1, когда join
+<strong>ОТКЛОНЁН</strong> — невалидный тикет, другой runner в проекте, недостающая
+возможность (<a href="engine.html#rn-514">RN-514</a>) — или когда исчерпал собственный потолок
+попыток, и обе вещи означают «остановись и позови человека». <code>on-failure</code>
+перезапускал бы фатальный отказ в цикле, а именно это CLI отказывается делать
+сам. Сигнал, OOM и watchdog — то, что покрывает <code>on-abnormal</code>, — единственный
+сбой, который перезапуск исправляет. <code>PATH</code> записывается <strong>замороженным</strong> в
+unit, с ценой, заявленной в самом файле: оба менеджера дают сервису
+минимальный PATH, а runner вызывает <code>git</code> (зеркало, <a href="#rn-516">RN-516</a>) и
+<code>docker</code> (<a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137</a>);
+без этого сервис отлично поднялся бы, а обе функции падали бы с «не найдено».
+Это снимок, и меняется он только переустановкой.</p>
+<p><strong>ДВЕ половины файла unit НЕ имеют одинакового синтаксиса, и
+<code>WorkingDirectory=</code> пишется БЕЗ кавычек.</strong> <code>ExecStart=</code> разбирается с
+<em>unquoting</em> и разделением на слова — поэтому каждый аргумент в кавычках, — а
+<code>WorkingDirectory=</code> <strong>нет</strong>: systemd берёт остаток строки целиком как путь.
+Обращение с ними как с одинаковыми стоило целого релиза: с кавычками значение
+перестаёт начинаться с <code>/</code>, unit отклоняется при загрузке
+(<code>Loaded: bad-setting</code>, <code>WorkingDirectory= path is not absolute</code>) и <strong>никогда
+не стартует</strong> — в обоих видах, ни в одной установке. Набор тестов всё время был
+зелёным, потому что каждая проверка требовала обратно ровно неправильную
+форму: поэтому теперь доказательство делается против
+<code>systemd-analyze --user verify</code>, настоящего валидатора, а не против текста.
+Экранировать ОСТАЁТСЯ <strong>один</strong> символ, и это не пробел (строка идёт целиком,
+так что <code>/home/eu/pasta com espaço</code> работает буквально): это <code>%</code>, потому что
+эта директива проходит <strong>раскрытие спецификаторов</strong> — <code>/home/dan/50%off</code>
+превращается в <code>/home/dan/50&lt;id-do-os-release&gt;ff</code> без всякой ошибки, и сервис
+стартует не в той папке. <code>%%</code> — способ сказать буквальный <code>%</code>. Обратное чтение
+принимает <strong>обе</strong> формы, и это намеренный долг перед теми, у кого на диске уже
+есть сломанная unit: <code>status</code> и <code>uninstall</code> должны продолжать доставать её
+папку. Кто в таком состоянии, чинит <strong>переустановкой</strong> — <code>install</code>
+перезаписывает весь файл.</p>
+<p><strong>И в том же файле есть ТРЕТИЙ синтаксис: <code>Environment=</code> (AT-095).</strong> Это СПИСОК
+присваиваний через пробел, с <em>unquoting</em> и экранированием в стиле C, и он тоже
+раскрывает спецификаторы. Записанный сырым — как выходили <code>XDG_CONFIG_HOME</code>
+unit МАШИНЫ и <code>PATH</code> обоих видов, —
+<code>Environment=XDG_CONFIG_HOME=/home/dan/50%off com espaco</code> доходил до сервиса
+как <code>/home/dan/50popff</code>: <code>%o</code> раскрыт, а <code>com</code>/<code>espaco</code> отброшены разделением
+на слова. Unit загружается, <code>verify</code> одобряет, сервис стартует — и агент молча
+ищет базу и ключ в несуществующей папке. Поэтому присваивание ЦЕЛИКОМ берётся
+в кавычки (<code>Environment=&quot;VAR=valor&quot;</code>), с <code>\</code> и <code>&quot;</code>, экранированными обратной
+косой, и <code>%</code> как <code>%%</code>; <code>$</code> там не экранируется (<code>Environment=</code> не раскрывает
+переменные). <code>--dir</code> в <code>ExecStart=</code> относился к тому же классу и был исправлен
+вместе: каждый аргумент по-прежнему в кавычках, а теперь <code>\</code> становится <code>\\</code>,
+<code>%</code> — <code>%%</code>, а <code>$</code> — <code>$$</code> (подстановка переменных <code>ExecStart=</code>). Перевод строки
+в <code>PATH</code>/<code>XDG_CONFIG_HOME</code> ОТКЛОНЯЕТСЯ до записи — в файле unit это новая
+директива, а не значение. Ничто из этого не меняет обратное ЧТЕНИЕ: оно читает
+только <code>WorkingDirectory=</code>, и ни одно из двух значений окружения с диска не
+читается. Доказательство — ФАКТИЧЕСКОЕ ЗНАЧЕНИЕ, а не <code>verify</code> (который
+одобряет сломанную форму): сам <code>systemd --test --user --unit=&lt;u&gt;</code> над временной
+папкой unit выводит разрешённую конфигурацию, и тест сравнивает то, что systemd
+ПОНЯЛ, с тем, что было записано.</p>
+<p><strong>Неудачная активация НЕ удаляет файл и не говорит «установлено».</strong> Запись
+unit и её активация — два шага, и менеджера может не быть (<code>systemctl</code> вне
+PATH, <code>launchd</code> отказывает). Файл <strong>остаётся</strong> — это то, что нужно человеку,
+чтобы закончить вручную, — а ответ — третий итог, называющий ожидающую команду
+и причину. Удаление файла превратило бы «не удалось активировать» в «ничего не
+произошло», что ложно.</p>
+<p><strong><code>uninstall</code> удаляет ВСЕ ТРИ, а папка берётся из UNIT — никогда из <code>cwd</code>.</strong>
+ADR явно говорит: файл unit, <code>brabo-runner.config.json</code> и
+<code>brabo-runner-device-key.jwk.json</code>. Последние два живут в папке runner, и
+важна папка, которая была <strong>УСТАНОВЛЕНА</strong>, а не та, откуда человек случайно
+набрал команду, — поэтому <code>WorkingDirectory</code> читается обратно из самого файла
+unit, являющегося записью об установленном. <strong>Нет unit — нет записи</strong>: два
+файла удаляются только с явным <code>--dir</code>, и сообщение говорит почему. Угадывание
+по <code>cwd</code> удалило бы ключ проекта, который никто не просил удалять. Неудачная
+деактивация становится <strong>предупреждением</strong>, и файл всё равно удаляется — unit,
+которую менеджер больше не узнаёт, не повод оставлять файл.</p>
+<p><strong>И <code>uninstall</code> ГОВОРИТ, чего он не сделал: ключ ушёл с диска, но не с
+сервера.</strong> Соответствующий публичный остаётся в <code>runner_device_keys</code>, а его
+отзыв — другое дело (<code>DELETE /projects/:projectId/runner-device-keys/:deviceKeyId</code>,
+<a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147</a> пункт 6). «Удалено»,
+оставляющее человека в уверенности, что он отозвал, было бы хуже, чем ничего
+не удалять. Лог LaunchAgent тоже <strong>не</strong> удаляется: это запись пользователя о
+случившемся, и удалять его никто не просил.</p>
+<p><strong><code>status</code> отвечает ЧЕТЫРЬМЯ состояниями, и они не сливаются</strong>
+(<a href="web.html#rn-088">RN-088</a>): <em>не установлено</em>, <em>установлено и работает</em>, <em>установлено и
+остановлено</em> и <em>установлено, но спросить не удалось</em>. Первый ответ берётся с
+<strong>ДИСКА</strong> — есть ли файл unit? — и поэтому остаётся верным на машине, где
+менеджера нет; только потом спрашивают менеджер. Неудачный <code>spawn</code> (бинарника
+нет в PATH) <strong>никогда</strong> не становится «менеджер сказал нет»: это разные ответы,
+разделённые у источника, и слово, которое этот CLI не умеет интерпретировать,
+тоже попадает в «спросить не удалось», а не превращается в «остановлено»
+наугад. У каждого состояния <strong>своя фраза</strong> и <strong>свой код выхода</strong> (0 / 3 / 4 / 5,
+без 1 и 2, потому что в этом CLI они уже означают общий сбой и ошибку
+использования): единый <code>exit(1)</code> для трёх «не работает» слил бы кодом ровно
+то, что разделяет фраза.</p>
+<p><strong>Ничто здесь не <code>proposed_action</code>.</strong> Это пользователь, запускающий команду на
+своей машине над своим сервисом, — а не агент, просящий действовать. <code>service</code>
+диспетчеризуется <strong>до</strong> <code>lerArgumentos</code>, потому что ни одна из трёх подкоманд
+ни к чему не подключается, а самое важное (<code>status</code>) должно работать в папке
+со сломанной конфигурацией — именно тогда кто-то и спрашивает.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/servico.ts</code> (новый — словарь, две платформы как
+ответы на ТЕ ЖЕ пять вопросов, отказы, четыре состояния и
+<code>CODIGO_POR_ESTADO</code>); <code>apps/runner/src/servico-sistema.ts</code> (новый — реальный
+адаптер диска и <code>systemctl</code>/<code>launchctl</code>, отделённый, чтобы гарантия
+«<code>servico.ts</code> не трогает <code>node:fs</code>/<code>node:child_process</code>» оставалась
+проверяемой); <code>apps/runner/src/index.ts</code> (<code>comandoDoRunnerParaServico</code>,
+<code>rodarSubcomandoDeServico</code>, диспетчеризация <code>service</code> в <code>main()</code> до
+<code>lerArgumentos</code> и новая строка в <code>uso()</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/servico.spec.ts</code> (новый — счастливый путь на обеих
+платформах с реальным содержимым unit/plist; root отклонён без какой-либо
+записи; Windows назван; без ключа устройства; <code>projectId</code>, который стал бы
+путём; отсутствующий <code>systemctl</code>, оставляющий файл и говорящий, что не
+активировал; переданная RN-434; <code>uninstall</code>, читающий папку из unit, а не из
+<code>cwd</code>, без unit и без <code>--dir</code> не трогающий ни одного файла, и неудачный
+<code>disable</code>, становящийся предупреждением; ЧЕТЫРЕ состояния <code>status</code> плюс
+неизвестное слово и три итога <code>launchctl</code>; и четыре различных кода выхода);
+<code>apps/runner/src/index.spec.ts</code>
+(<code>describe &quot;brabo-runner service é despachado antes de exigir credencial&quot;</code> —
+НАСТОЯЩИЙ процесс в папке без каких-либо учётных данных: <code>status</code> отвечает 4
+вместо блока использования, а неизвестная подкоманда попадает в использование
+<code>service</code>);
+<code>apps/runner/src/servico-systemd.spec.ts</code> (СГЕНЕРИРОВАННАЯ unit, проверенная
+настоящим <code>systemd-analyze --user verify</code>, в обоих видах, с папкой с пробелом
+и папкой с <code>%</code> — плюс СТАРАЯ форма в кавычках, ОТКЛОНЯЕМАЯ тем же
+валидатором; без systemd на машине файл ПРОПУСКАЕТСЯ с названной причиной,
+никогда не проходит молча и не падает из-за окружения) — и, начиная с AT-095,
+<code>describe &quot;o valor EFETIVO de Environment= é o valor gravado&quot;</code> и <code>describe &quot;o --dir do ExecStart= e o WorkingDirectory= também chegam intactos&quot;</code>, которые спрашивают у вывода <code>systemd --test --user</code>
+РАЗРЕШЁННОЕ значение <code>XDG_CONFIG_HOME</code>, <code>PATH</code>, <code>WorkingDirectory</code> и <code>--dir</code>
+с <code>%</code>, пробелом, кавычками, обратной косой и <code>$</code> и фиксируют старую форму
+<code>Environment=</code> как доставляющую ДРУГОЕ значение; <code>servico.spec.ts</code> получил
+два отказа по переводу строки и unit проекта без <code>XDG_CONFIG_HOME</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0147-agente-local-com-capacidades.html">0147</a>, пункт 5</li>
+<li><strong>Источник:</strong> ФАЗА 28, сессия 7. Заявлено и НЕ сделано: <strong>BRB-031</strong> (ручной
+<code>chmod +x</code> потока <a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118</a>)
+здесь <strong>не</strong> умирает — тот, кто запускает <code>brabo-runner service install</code>, уже
+должен был сделать бинарник исполняемым, чтобы дойти до команды, а ADR 0147
+привязывает этот побочный эффект к тому, что установка идёт из
+версионированного bootstrap
+<a href="../adr/0146-base-consentida-no-bootstrap.html">ADR 0146</a>, которого эта поставка не
+касается. Также вне: любые подкоманды <code>start</code>/<code>stop</code>/<code>restart</code> (жизненным
+циклом управляет менеджер сервисов ОС, и его дублирование в CLI создало бы
+второй источник истины о состоянии) и Windows, см. выше</li>
+</ul>
+<hr>
+<h2 id="a-flag-que-liga-um-agente-tem-de-chegar-ao-processo-rn-540">Флаг, включающий агента, должен ДОХОДИТЬ до процесса (RN-540)</h2>
+<h3 id="rn-529">RN-529 — <code>brabo-runner</code> рождается с локальной БАЗОЙ, каждый проект — её подпапка, и база НИКОГДА не делает <code>--dir</code> недействительным</h3>
+<p>У локального агента не было понятия базы. Единственным корнем был <code>--dir</code>,
+разрешаемый <code>resolverDir</code> относительно <code>INIT_CWD ?? process.cwd()</code>; без флага
+корнем был сам <code>cwd</code>. <code>estado.dir</code> — <strong>один</strong> путь, в единственном числе, —
+путь проекта этого соединения, — и не было ни константы, ни переменной, ни
+поля, говорящих, где живут проекты на этой машине. Слово «база» встречалось
+только в комментариях.</p>
+<p><strong>База ЛОКАЛЬНА и никогда не приходит по сети.</strong> Это дизайн брокера
+(<a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144</a>), применённый к локальному
+агенту: корень у того, кто выполняет, а по сети идёт <strong>относительный
+сегмент</strong>. Поля базы, приходящего с сервера, не существует, и
+<code>resolverPastaDoProjetoNaBase</code> отклоняет АБСОЛЮТНЫЙ сегмент по лексике —
+никогда не «принимает и переинтерпретирует».</p>
+<p><strong>Два источника, и флаг побеждает.</strong> <code>--base &lt;caminho&gt;</code> в командной строке и
+<code>$XDG_CONFIG_HOME/brabo/runner.json</code> (иначе <code>~/.config/brabo/runner.json</code>),
+куда её записывает установщик (<a href="../adr/0150-instalador-de-uma-linha.html">ADR 0150</a>).
+Файл — ПОЛЬЗОВАТЕЛЬСКИЙ, а не проектный, намеренно: база <strong>одна</strong> на N
+проектов, а её хранение в <code>brabo-runner.config.json</code> — который проектный,
+живёт ВНУТРИ папки проекта и пишется БРАУЗЕРОМ, — дало бы N копий одного
+значения с N шансами разойтись. Переменная окружения была отвергнута по двум
+причинам: <code>BRABO_PROJECTS_BASE</code> уже существует и является базой проектов
+<code>mounted</code> на стороне СЕРВЕРА (<a href="api.html#rn-500">RN-500</a>) — коллизия пространства имён,
+которую <a href="../adr/0141-base-unica-dos-projetos-montados.html">ADR 0141</a> письменно
+отверг; а под <code>systemd --user</code>/LaunchAgent (<a href="#rn-518">RN-518</a>) окружение — это
+окружение unit, а не shell того, кто устанавливал. Одного флага тоже не
+хватило бы: база попала бы в <code>ExecStart</code> каждой unit, и её смена потребовала
+бы переписать все.</p>
+<p><strong><code>--dir</code> по-прежнему означает ровно то, что всегда, и база НЕ входит в его
+проверку.</strong> Это перенесённый запрет api: <code>project-workspaces-root.ts</code>
+письменно запрещает правилу базы спускаться в <code>caminhoDeWorkspaceLocalValido</code>,
+потому что этот предикат выполняется при каждом ЧТЕНИИ, и унаследованный
+проект вне базы взорвался бы при чтении — <em>«база — правило СОЗДАНИЯ и
+КОНВЕРТАЦИИ; лексика — навсегда»</em> (<a href="api.html#rn-501">RN-501</a>). С этой стороны так же:
+<code>--dir</code> по-прежнему проверяется <code>validarDirDentroDoHomeNoLinux</code> +
+<code>garantirDiretorio</code> (<a href="#rn-434">RN-434</a>/<a href="#rn-435">RN-435</a>), и нахождение ВНЕ
+базы не делает его недействительным. Без этого база была бы <code>breaking/</code> без
+выигрыша, против унаследованного бинарника <a href="engine.html#rn-514">RN-514</a>. База решает
+<strong>только</strong>, где рождается НОВАЯ папка проекта.</p>
+<p><strong>Защита переиспользует правило; четвёртая копия не рождается.</strong>
+<code>base-guard.ts</code> — ТРЕТИЙ брат <code>guard.ts</code>, рядом с <code>espelho-guard.ts</code>:
+импортирует <code>semBarraFinal</code>, <code>dentroDoEscopo</code> и <code>realpathMaisProximo</code> — три
+хелпера, переставшие быть приватными именно для этого (<a href="#rn-516">RN-516</a>), —
+повторяет <strong>двойной проход</strong> лексика-затем-<code>realpath</code> из
+<code>validarCwdDentroDaRaiz</code> и переиспользует <code>validarDirDentroDoHomeNoLinux</code>
+ЦЕЛИКОМ, чтобы требовать базу внутри <code>$HOME</code> в Linux (база внутри <code>$HOME</code>
+подразумевает каждую подпапку внутри него, так что обе проверки продолжают
+соглашаться). Из отказа по петле в <code>espelho-guard.ts</code> переиспользуется то, что
+является правилом, — <code>dentroDoEscopo</code>, сравнение по СЕГМЕНТУ и никогда сырым
+<code>startsWith</code>, чтобы <code>/base-outra</code> не считалась внутри <code>/base</code>, — и <strong>не</strong>
+функция <code>recusarLaco</code>, которая бросает <code>DestinoDeEspelhoInvalidoError</code> и
+сообщила бы о некорректной базе как о проблеме зеркала. Тот же урок, что в
+<a href="api.html#rn-515">RN-515</a>: переиспользуется правило, а не сообщение.</p>
+<p><strong>Петля здесь АСИММЕТРИЧНА, и в этом находка.</strong> В зеркале оба направления —
+дефект. Здесь папка проекта ВНУТРИ базы — НОРМАЛЬНОЕ устройство: это буквально
+то, что означает «каждый проект — её подпапка». Петлёй является обратное
+направление: база внутри корня этого проекта (или равная ему) заставила бы
+каждый новый проект рождаться внутри этого, и git и зеркало этого начали бы
+обходить другие. Отклоняется только это.</p>
+<p><strong>Отказ по-разному обрабатывается в зависимости от ИСТОЧНИКА, и ни один не
+молчалив.</strong> Отсутствие базы — НОРМАЛЬНОЕ состояние (<code>null</code>, наследие
+нетронуто). База из ФЛАГА, не проходящая защиту, выходит с кодом 2 — это явная
+просьба, набранная сейчас и невыполнимая, та же обработка, что у отклонённого
+<code>--dir</code>. База из ФАЙЛА, не проходящая защиту, сообщается в <code>stderr</code>, называет
+теряемое («некуда будет создать папку нового проекта»), и runner <strong>продолжает
+без базы</strong>: ронять локального агента, обслуживающего проект, из-за настройки,
+которую он ещё даже не использует, было бы несоразмерно. Существующий файл, не
+объявляющий <code>base</code>, — отсутствие, а не отказ: это конфигурация БЕЗ
+согласованной базы, а не сломанная конфигурация. А строка запуска называет
+базу в ОБОИХ состояниях, потому что умолчание о «никакой» оставило бы
+кого-то искать, почему папка не появилась.</p>
+<p><strong>Это BEST-EFFORT, и оговорка о TOCTOU письменно унаследована</strong> от <code>guard.ts</code>
+и <code>espelho-guard.ts</code>: symlink, созданный ПОСЛЕ проверки и ДО <code>mkdir</code>, не
+покрыт, как и ссылка, чья цель ещё не существует. Границей безопасности
+остаются аутентификация + конвейер одобрения + согласие того, кто запустил CLI.</p>
+<p>Ничто здесь не СОЗДАЁТ папку: проверка базы не требует её существования
+(создаёт её установщик, и это то же рассуждение, что в
+<a href="../adr/0142-validacao-de-workspace-montado-adiada.html">ADR 0142</a> — проверять диск
+там, где познаваема лишь лексика, помешало бы согласовать базу до её
+появления). Единственный дисковый вопрос — тот, что никогда не двусмыслен:
+путь, который УЖЕ существует и не является папкой, никогда ею не станет.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/base.ts:69</code> (<code>caminhoDoArquivoDeBase</code>, приоритет
+XDG из <code>servico.ts</code>), <code>:106</code> (<code>lerBaseConsentida</code>, четыре итога) и <code>:181</code>
+(<code>resolverBaseConsentida</code>, порядок источников и происхождение отказа);
+<code>apps/runner/src/base-guard.ts:128</code> (<code>validarBaseDeProjetos</code>), <code>:209</code>
+(<code>recusarLacoComARaiz</code>, асимметричная петля) и <code>:296</code>
+(<code>resolverPastaDoProjetoNaBase</code>, подпапка и двойной проход);
+<code>apps/runner/src/index.ts:321</code> (разрешение в <code>lerArgumentos</code>, ПОСЛЕ
+<code>garantirDiretorio</code> и не трогая проверку <code>--dir</code>) и <code>:452</code>
+(<code>EstadoDoRunner.base</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/base-guard.spec.ts</code> (счастливый путь с базой, которая
+ещё не существует; соседняя папка с общим префиксом, которую НЕ путают; <code>..</code>,
+<code>/</code>, файл, <code>$HOME</code> в Linux; петля в обоих направлениях, включая построенную
+НАСТОЯЩИМ symlink; абсолютный сегмент, сегмент с <code>..</code>, указывающий на саму
+базу и уходящий через ссылку посередине);
+<code>apps/runner/src/base.spec.ts</code> (приоритет XDG, четыре итога чтения, флаг,
+побеждающий файл, и отказ, несущий ПРОИСХОЖДЕНИЕ)</li>
+<li><strong>ADR:</strong> <a href="../adr/0151-base-consentida-no-runner.html">0151</a> пункты 1 и 2</li>
+<li><strong>Источник:</strong> ФАЗА 29. Пара <code>workspace_create</code>/<code>workspace_create_result</code> и
+возможность <code>workspace</code> (пункты 3–6 ADR), объявленные здесь несделанными,
+ЗАКРЫТЫ в <a href="#rn-532">RN-532</a> — у базы появился потребитель. По-прежнему
+заявлено и НЕ сделано: <code>install.sh</code>, который и будет записывать файл</li>
+</ul>
+<hr>
+<h2 id="a-base-do-agente-local-ganha-um-consumidor-a-pasta-do-projeto-nasce-pelo-canal-rn-532">База локального агента получает потребителя: папка проекта рождается через канал (RN-532)</h2>
+<h3 id="rn-532">RN-532 — <code>workspace_create</code> создаёт папку под ЛОКАЛЬНОЙ базой, а ЗАПИСЫВАЕТ по-прежнему уже существовавший <code>workspace_confirm</code></h3>
+<p><a href="#rn-529">RN-529</a> дала <code>brabo-runner</code> БАЗУ, проверила её и письменно
+объявила, что <strong>её ничто не потребляет</strong>. Вот потребитель: пара
+<code>workspace_create</code>/<code>workspace_create_result</code>, возможность <code>workspace</code> и
+собственный предикат в engine.</p>
+<p><strong>Пара — это ЗАПРОС С ОТВЕТОМ, и смоделировать её на <code>workspace_confirm</code> было
+нельзя.</strong> Тот ОДНОНАПРАВЛЕН: <code>handle_in(&quot;workspace_confirm&quot;, …)</code> отвечает
+<code>{:noreply, socket}</code> и ничего не отправляет обратно. Тому, кто просит создать
+папку, нужно знать, появилась ли она и с каким путём, — поэтому образец —
+<code>exec</code>/<code>exec_result</code> (<code>despachar_pedido</code> + <code>pending_execs</code> +
+<code>responder_pedido_pendente/3</code>), тот же, что у трёх пар контейнера. Уточнение,
+потому что имя ходило по рукам: <strong><code>workspace.verified</code> в этом репозитории не
+существует</strong> — существует событие <code>project.workspace_verified</code> и колонка
+<code>workspace_verified_at</code>.</p>
+<p><strong>По сети идёт только СЕГМЕНТ.</strong> База локальна и никогда не приходит с сервера
+(RN-529); engine отправляет <code>projectId</code> и ОТНОСИТЕЛЬНЫЙ сегмент, а соединяет их
+<code>resolverPastaDoProjetoNaBase</code> — на стороне runner, у которого корень. Это
+инвариант <a href="../adr/0130-broker-de-container.html">ADR 0130</a>/
+<a href="../adr/0144-a-segunda-raiz-do-broker.html">ADR 0144</a>, применённый к локальному
+агенту: корень у того, кто выполняет. АБСОЛЮТНЫЙ сегмент отклоняется по
+ЛЕКСИКЕ, никогда не принимается и не переинтерпретируется.</p>
+<p><strong>Подтверждение ПЕРЕИСПОЛЬЗУЕТ <code>workspace_confirm</code>, и это экономит целый
+фронт работ.</strong> Создав папку, runner отправляет <code>workspace_confirm</code>,
+существующий с <a href="#rn-423">RN-423</a>, — и записывает именно он, по уже
+построенному пути: канал → engine → внутренний HTTP →
+<code>ConfirmProjectWorkspaceUseCase</code>, который перепроверяет лексику, идемпотентен и
+ставит метку <code>workspace_verified_at</code>. <strong>Ни одного нового маршрута записи не
+рождается</strong>, engine по-прежнему не пишет в таблицу, а путь, ставящий метку,
+по-прежнему один. ПОРЯДОК — механизм, а не эстетика: оба push приходят в ОДИН
+процесс канала по порядку, а обработчик <code>workspace_confirm</code> синхронный —
+отправка его ДО результата и гарантирует, что метка уже есть, когда
+запрашивающий выходит из <code>receive</code>.</p>
+<p><strong>Возможность <code>workspace</code> входит в словарь в той же сессии, что и код</strong>, с
+обеих сторон (<a href="../adr/0151-base-consentida-no-runner.html">ADR 0151</a> пункт 4).
+<a href="engine.html#rn-514">RN-514</a> сделала противоположную ставку с <code>espelho</code> — имя на сервере
+без кода на другой стороне — и она окупилась лишь потому, что кто-то её
+потребовал; повторить значило бы повторить тихий дефект, который переговоры
+существуют, чтобы предотвращать.</p>
+<p><strong>Это единственная из четырёх, чьё объявление зависит от СОСТОЯНИЯ данного
+запуска, а не от версии бинарника.</strong> Runner объявляет её, только когда есть
+согласованная база (<code>capacidadesDoRunner</code>), и именно по этой строке — и ни по
+какой другой — сервер ЗНАЕТ, что база есть: engine не читает диск пользователя
+и не имеет таблицы баз. Никто не ТРЕБУЕТ её в join, и это решение: требование
+в <code>runner</code> заставило бы каждый бинарник без базы перестать подключаться, что
+есть <code>breaking/</code> и MAJOR, ради функции, которую этот проект, может быть,
+никогда не использует. Она opt-in с другого конца — у кого есть база,
+объявляет, и только объявивший получает сообщение.</p>
+<p><strong>СОБСТВЕННЫЙ предикат, и <code>RunnerReadiness</code> остаётся байт в байт.</strong>
+У <code>Engine.Runners.PastaDoProjeto</code> ДВА предусловия — подключённый runner,
+согласованная база, — и ADR буквально перенимает отказ, который уже записал
+<code>Engine.Runners.Espelho</code>: общая функция с флагом «пропустить контейнер» — ровно
+тот путь, по которому третье предусловие СЛУЧАЙНО отваливается для <code>exec</code> при
+будущем рефакторинге (<a href="#rn-507">RN-507</a>/<a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145</a>
+существуют, чтобы оно не отвалилось). А здесь третье было бы хуже, чем
+ненужным: оно <strong>циклично</strong> — проект <code>runner</code> получает ЗАРЕГИСТРИРОВАННЫЙ
+контейнер <code>running</code> только после того, как его поднимет сам runner, а
+контейнер поднимается над папкой, которую это сообщение существует, чтобы
+создать.</p>
+<p>Он также НЕ спрашивает <code>workspace_verified_at</code> (в отличие от зеркала: здесь
+это РЕЗУЛЬТАТ, и требование его сделало бы сообщение недостижимым ровно в том
+случае, для которого оно создано) и <code>execution_mode</code> (второй источник того же
+правила — согласованная база есть у локального агента, а локальный агент
+существует только там, где существует).</p>
+<p><strong>Где отвечается каждое предусловие и почему не оба в одном месте.</strong>
+«Runner подключён» — от <code>Registry</code>, и модуль отвечает на него сам.
+«Согласованная база» — свойство этого СОЕДИНЕНИЯ: она живёт в <code>socket.assigns</code>
+и <strong>никогда в таблице</strong> (правило
+<a href="../adr/0147-agente-local-com-capacidades.html">ADR 0147</a>), поэтому отвечает
+диспетчеризация — канал отказывает ДО push и возвращает <code>motivo: &quot;sem-base&quot;</code>
+по ТОМУ ЖЕ <code>ref</code> в формате, которого модуль уже ждёт, ровно как <code>dispatch_exec</code>
+делает с 126. Никогда timeout, в виде которого проявился бы тихий дефект. Обе
+причины, оба сообщения и порядок их применения живут в модуле и больше нигде.</p>
+<p><strong>ИМЕНОВАННАЯ ошибка и пять причин, которые не сливаются.</strong> <code>sem-base</code>,
+<code>segmento</code>, <code>nao-e-pasta</code>, <code>mkdir</code> и <code>git</code> передаются как <code>motivo</code> рядом с
+текстом <code>erro</code> — раздельно намеренно: текст для чтения человеком, причина —
+чтобы другая сторона РЕШИЛА, а их слияние заставило бы engine сопоставлять
+подстроки на pt-BR. Собственным атомом в engine становится только <code>sem-base</code>
+(<code>:sem_base</code>), потому что только у него своё исправление; остальные четыре —
+<code>:recusado</code> с сообщением runner. Неудачный <code>init</code>/клон — именованная ошибка и
+<strong>никогда план Б</strong>: папка без <code>.git</code> сломала бы worktree dev agent, зеркало и
+собственное версионирование пользователя в месте, далёком от причины.</p>
+<p><strong>Идемпотентно, и три итога не сливаются.</strong> <code>mkdir -p</code> уже идемпотентен;
+решение потребовалось для репозитория — папка, которая УЖЕ является
+репозиторием, возвращается как УСПЕХ с режимом <code>ja-era-repositorio</code>, никогда
+<code>init</code> поверх (который солгал бы о случившемся) и не клон (который упал бы на
+непустой папке и превратил бы «уже было готово» в ошибку). Это то же
+поведение, что у <code>ConfirmProjectWorkspaceUseCase</code>, и по той же причине:
+сообщение может прийти дважды.</p>
+<p><strong><code>estado.dir</code> НЕ меняется.</strong> Созданная папка — папка проекта с точки зрения
+СЕРВЕРА, и записывает её там <code>workspace_confirm</code>. Корень, которым <code>guard.ts</code>
+сдерживает одобренную команду, остаётся корнем этого запуска: смена его во
+время работы сдвинула бы границу сдерживания из-за сетевого сообщения, а этот
+CLI так никогда не делает.</p>
+<p><strong>Это НЕ <code>proposed_action</code>, и ни один потолок не получает исключения.</strong>
+Создание папки проекта, о которой пользователь только что попросил, —
+СОГЛАСОВАННАЯ настройка, а не агент, просящий действовать, — та же линия, что
+уже провело зеркало (<a href="#rn-516">RN-516</a>). Делать это командой терминала значило
+бы попасть под область
+<a href="../adr/0055-escopo-de-caminho-na-politica-de-terminal.html">ADR 0055</a> и превратиться
+в очередь рутинных одобрений, подтачивая потолок, придающий смысл клику.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/pasta-do-projeto.ts:132</code> (<code>criarPastaDoProjeto</code> —
+порядок защита→диск→версионирование и пять причин);
+<code>apps/runner/src/channel.ts:173</code> (<code>WorkspaceCreateMessage</code>), <code>:194</code>
+(<code>WorkspaceCreateResultMessage</code>), <code>:476</code> (<code>CAPACIDADE_DE_WORKSPACE</code> и
+<code>capacidadesDoRunner</code>); <code>apps/runner/src/index.ts:1027</code>
+(<code>tratarWorkspaceCreate</code> — порядок <code>workspace_confirm</code> до результата);
+<code>apps/engine/lib/engine/runners/pasta_do_projeto.ex:107</code> (<code>verificar/1</code>) и
+<code>:134</code> (<code>criar/3</code>); <code>apps/engine/lib/engine/runners/runner_router.ex:181</code>
+(<code>create_workspace/3</code>); <code>apps/engine/lib/engine/runners/capacidades.ex:95</code>
+(<code>workspace</code> в словаре и вне наследия);
+<code>apps/engine/lib/engine_web/channels/terminal_channel.ex:666</code>
+(<code>handle_info({:dispatch_workspace_create, …})</code>, именованный отказ) и <code>:380</code>
+(<code>handle_in(&quot;workspace_create_result&quot;, …)</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/pasta-do-projeto.spec.ts</code> (счастливый путь с
+<code>init</code> и с клоном; идемпотентность, доказанная НАСТОЯЩИМ бинарником
+версионирования; пять причин с разными текстами и папка, которая НЕ рождается
+вне базы); <code>apps/runner/src/index-handlers.spec.ts</code> (ПОРЯДОК
+<code>workspace_confirm</code> → <code>workspace_create_result</code>; без базы — ни одного confirm;
+упавшее соединение ничего не отправляет); <code>apps/runner/src/channel.spec.ts</code>
+(<code>workspace</code> объявляется только с базой; payload без <code>segmento</code>/<code>projectId</code>
+отбрасывается; некорректный <code>env</code> становится <code>undefined</code>);
+<code>apps/engine/test/engine/runners/pasta_do_projeto_test.exs</code> (два
+предусловия БЕЗ базы данных — утверждение — чистый <code>ExUnit.Case</code>, — точный
+payload, четыре причины и успех без пути, который не становится успехом);
+<code>apps/engine/test/engine/runners/runner_router_test.exs</code> (roundtrip и
+timeout); <code>apps/engine/test/engine/runners/capacidades_test.exs</code>
+(<code>workspace</code> объявляема, никогда в наследии, никогда не требуется);
+<code>apps/engine/test/engine_web/channels/terminal_channel_test.exs</code>
+(именованный отказ по тому же <code>ref</code> и ничего не отправлено runner)</li>
+<li><strong>ADR:</strong> <a href="../adr/0151-base-consentida-no-runner.html">0151</a> пункты 3–6</li>
+<li><strong>Источник:</strong> ФАЗА 29, сессия 8. Заявлено и НЕ сделано: кто ВЫЗЫВАЕТ
+<code>PastaDoProjeto.criar/3</code> — путь web→api→engine принадлежит сессии 9, — и
+<code>install.sh</code>, записывающий файл базы, который относится к другому фронту</li>
+</ul>
+<hr>
+<h2 id="o-agente-local-abre-n-conexões-uma-por-projeto-rn-544-fase-30">Локальный агент открывает N соединений, по одному на проект (RN-544, ФАЗА 30)</h2>
+<h3 id="rn-544">RN-544 — Локальный агент открывает N соединений, по одному на проект, обнаруженный маршрутом, — а потолок попыток и отказ join перестают принадлежать ПРОЦЕССУ</h3>
+<p><a href="produto.html#rn-543">RN-543</a> открыла <code>GET runner/projects</code> и осталась без вызывающего.
+<code>brabo-runner</code> по-прежнему требовал <code>--project</code>: в <code>index.ts</code> было
+<code>if (!projectId) uso()</code>, и выполнения без проекта не существовало. Эта RN — её
+потребитель, и это половина
+<a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154</a>, доказывающая его
+находку: <em>«один процесс, открывающий N соединений — по одному на обслуживаемый
+проект, — удовлетворяет пунктам 1, 2 и 3 байт в байт»</em>. <strong>В engine ничего не
+меняется</strong>: топик <code>terminal:&lt;projectId&gt;</code>, socket id и тикет описывают
+СОЕДИНЕНИЕ, а N соединений остаются N соединениями. Отказ второму runner в том
+же проекте остаётся нетронутым, и это реальная гарантия, а не случайность.</p>
+<p><strong>Два режима, и старый остаётся байт в байт.</strong> <code>--project</code>/<code>--dir</code> с учётными
+данными проекта — включая поток браузера
+(<a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118</a>,
+<a href="api.html#rn-464">RN-464</a>) — обычный путь: ОДНО соединение, и его итог по-прежнему
+итог процесса. Новый режим требует ОБОИХ, и по разным причинам: учётных данных
+МАШИНЫ, потому что именно их принимает маршрут; и <strong>согласованной базы</strong>
+(<a href="#rn-529">RN-529</a>), потому что без неё не из чего выводить папку каждого
+проекта, а выдумать её значило бы записать на диск пользователя путь, на
+который он не соглашался. Без базы запуск без <code>--project</code> по-прежнему
+попадает в <code>uso()</code>, говоря, чего из двух не хватило.</p>
+<p><strong>Runner не знает, какого вида его собственный ключ, и это решение.</strong> На диске
+ключ машины и ключ проекта — ОДИН и тот же файл: приватный JWK с <code>kid</code>
+(<a href="web.html#rn-475">RN-475</a>). Знает СЕРВЕР, находящий публичный по этому <code>kid</code>. Поэтому
+CLI спрашивает, а именованный 403 из <code>PatAuthGuard</code> становится
+<code>CredencialNaoEDeMaquinaError</code> со словами api и исправлением (<code>--project</code>) —
+никогда общее «сбой подключения». Локальная догадка была бы вторым источником
+истины о том же, и локальный был бы неверным. JWT этого вызова идёт <strong>без</strong>
+claim <code>projectId</code>, потому что guard сравнивает
+<code>payload.projectId !== request.params.projectId</code>, а на маршруте без проекта оба
+должны быть <code>undefined</code>.</p>
+<p><strong>N соединений требуют N состояний.</strong> Четыре поля <code>EstadoDoRunner</code> — ПО
+ПРОЕКТУ: <code>dir</code>, <code>canalAtual</code>, <code>containerAtivo</code>, <code>destinoDoEspelho</code>, — плюс
+<code>gerenciadorPty</code>, рождающийся из <code>dir</code>. Общее состояние заставило бы
+<code>docker exec</code> одного проекта выполняться в контейнере ДРУГОГО, а PTY одного
+открываться в папке другого. <code>docker</code> и <code>base</code> принадлежат МАШИНЕ и входят как
+ОДНО и то же значение во все, никогда как копии, способные разойтись. Тип не
+изменился, и обработчики (<code>tratarExec</code>, <code>tratarMirrorSync</code>,
+<code>tratarWorkspaceCreate</code>…) не изменились ни на строку: зеркало
+(<a href="#rn-516">RN-516</a>) и <code>workspace_create</code> (<a href="#rn-532">RN-532</a>) уже были по
+проекту и уже передавались в предоставлении <code>join</code> этого соединения, что
+ровно и делает их корректными при N.</p>
+<p><strong>Потолок и отказ становятся свойством ПРОЕКТА.</strong> Они были свойством процесса:
+отказ join давал <code>process.exit(1)</code>, и исчерпанный <code>TETO_DE_TENTATIVAS_SEGUIDAS</code>
+тоже. При N соединениях убить всё из-за одного значило бы уронить агента всех
+работающих проектов. Поэтому у каждого проекта свой цикл и свой счётчик; проект,
+получивший отказ или исчерпавший попытки, <strong>завершается сам, ИМЕНОВАННО</strong>, а
+остальные продолжают — и только когда НЕ остаётся ни одного, процесс выходит с
+1, с итоговой сводкой по каждому. Каждый лог цикла предваряется именем проекта:
+при N переплетённых циклах «сбой подключения» без владельца — форма, которую
+принимает молчание, когда чего-то N. В режиме <code>projeto</code> старое поведение
+остаётся идентичным, и по той же логике наоборот: при ОДНОМ соединении
+обслуживать больше нечего.</p>
+<p><strong>Список запрашивается ОДИН раз, при старте.</strong> Периодический перезапрос был
+рассмотрен и отвергнут: он стоит регулярного вызова ради редкого события, а
+настоящая цена не трафик — это то, что список, вернувшийся МЕНЬШИМ,
+двусмыслен (проект удалён, режим сконвертирован, роль отозвана или
+кратковременный 500, маскирующийся под все три), а обрывать ЖИВОЕ соединение
+из-за этой двусмысленности значило бы променять верное состояние на догадку.
+Процесс <strong>ГОВОРИТ</strong> об этом при подъёме, а жест, чтобы подхватить новый
+проект, — переподключить агента, одной командой, с пользовательским сервисом
+<a href="#rn-518">RN-518</a>.</p>
+<p><strong>ПУСТОЙ список — НОРМАЛЬНОЕ состояние, и выход 0.</strong> Это состояние каждой
+только что установленной машины: установщик поднимает агента до появления
+какого-либо проекта (<a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a>).
+Это не ошибка, значит, и не код ошибки — а <code>Restart=on-abnormal</code>
+(<a href="#rn-518">RN-518</a>) его не поднимает, что правильно: поднимать нечего. Стоять
+на ногах с нулём соединений означало бы «активный» сервис, ничего не делающий,
+и <code>status</code> unit начал бы лгать.</p>
+<p><strong>Папка каждого проекта — <code>&lt;base&gt;/&lt;workspaceDirName&gt;</code>, через уже существующие
+защиты.</strong> <code>resolverPastaDoProjetoNaBase</code> (ТА ЖЕ, что использует
+<code>workspace_create</code>, и по той же причине: имя пришло по сети), плюс
+<code>validarDirDentroDoHomeNoLinux</code> (<a href="#rn-434">RN-434</a>) и <code>garantirDiretorio</code>
+(<a href="#rn-435">RN-435</a>) — четвёртая копия правила не рождается. Создание папки —
+это RN-435, применённая к ВЫВЕДЕННОМУ пути вместо набранного; чего здесь НЕ
+происходит — это <code>git init</code>/клон, который по-прежнему за <code>workspace_create</code>
+(<a href="#rn-532">RN-532</a>). Проект, чья папка отклонена, выходит из плана с именем и
+не роняет остальные. <code>OpcoesDaBase.raizDoProjeto</code> принимает <code>null</code> в режиме
+машины: без <code>--project</code> нет <code>--dir</code>, отказ по петле остаётся <strong>без субъекта</strong>
+(каждый корень выведен из базы, так что «база внутри корня проекта» построить
+невозможно), а передача туда самой базы была бы хуже —
+<code>dentroDoEscopo(base, base)</code> истинно, и каждая база была бы отклонена.</p>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/index.ts</code> (ворота в <code>lerArgumentos</code>,
+<code>lerArgumentosDeMaquina</code>, <code>manterConexaoDoProjeto</code>, <code>criarEstado</code>,
+<code>rodarComoAgenteDeMaquina</code>); <code>apps/runner/src/projetos.ts</code>
+(<code>listarProjetosDoRunner</code>, <code>planejarConexoes</code>,
+<code>CredencialNaoEDeMaquinaError</code>); <code>apps/runner/src/auth.ts</code>
+(<code>assinarDescobertaComChaveDeDispositivo</code> — JWT без claim <code>projectId</code>);
+<code>apps/runner/src/base-guard.ts</code> (пустой <code>OpcoesDaBase.raizDoProjeto</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/projetos.spec.ts</code> — счастливый путь маршрута и
+плана, 403, становящийся СОБСТВЕННОЙ ошибкой, ответ вне контракта и
+сегмент, уходящий из базы, отклоняемый БЕЗ падения соседа (в том числе через
+symlink, во втором проходе); <code>apps/runner/src/index.spec.ts</code> — ВОРОТА в
+настоящем процессе (без базы <code>uso()</code> с причиной; с базой отказ переходит к
+учётным данным); <code>apps/runner/src/base-guard.spec.ts</code> — пустой
+<code>raizDoProjeto</code> не ослабляет ни одного другого отказа</li>
+<li><strong>ЗАЯВЛЕННЫЙ пробел, ЗАКРЫТЫЙ позже <a href="api.html#rn-552">RN-552</a>:</strong> когда эта RN
+закрылась, никто не СОЗДАВАЛ ключ машины (это был <code>install.sh</code>, ADR 0155
+пункт 4), так что новый режим можно было проверить только с ключом,
+зарегистрированным вручную, — половина, которую уже объявляла RN-543. <code>apiUrl</code>
+в режиме машины берётся из <code>--api-url</code>/<code>BRABO_API_URL</code>/значения по
+умолчанию, а <strong>не</strong> из <code>brabo-runner.config.json</code>, который по ПРОЕКТУ:
+установке на другом порту или хосте нужен флаг в <code>ExecStart</code>, а пишет его
+unit для машины — это сессия 4 этой фазы. И unit по-прежнему ПО ПРОЕКТУ —
+этот PR меняет ПРОЦЕСС, а не сервис</li>
+<li><strong>ADR:</strong> <a href="../adr/0154-chave-de-dispositivo-de-maquina.html">0154</a></li>
+<li><strong>Источник:</strong> ФАЗА 30, сессия 3 —
+<a href="../explanation/fase-30-runner-por-maquina.html">срез фазы</a></li>
+</ul>
+<h2 id="a-unit-de-máquina-convivendo-com-as-por-projeto-rn-545">Unit МАШИНЫ, сосуществующая с unit по проектам (RN-545)</h2>
+<h3 id="rn-545">RN-545 — <code>service install --machine</code> устанавливает ОДНУ unit для машины, и два вида не перекрываются</h3>
+<p><a href="#rn-544">RN-544</a> заставила агента машины существовать как ПРОЦЕСС — N
+соединений, по одному на проект, обнаруженный маршрутом, — и письменно
+объявила, чего не хватало: <em>«unit по-прежнему ПО ПРОЕКТУ; этот PR меняет
+ПРОЦЕСС, а не сервис»</em>. Эта RN — другая половина, и это пятая и последняя из
+пяти связностей, которые измерил
+<a href="../adr/0154-chave-de-dispositivo-de-maquina.html">ADR 0154</a>
+(<code>apps/runner/src/servico.ts:264,391</code>). Остальные четыре уже закрыты или
+объявлены неприкосновенными: пункты 1, 2 и 3 описывают СОЕДИНЕНИЕ, и N
+соединений удовлетворяют их байт в байт, а пункт 4 закрылся в <a href="produto.html#rn-543">RN-543</a>.</p>
+<p><strong>Имя unit машины не может совпасть ни с каким <code>projectId</code>, и не совпадает по
+построению.</strong> <code>brabo-runner.service</code> / <code>dev.brabo.runner</code>, без суффикса, против
+<code>brabo-runner-&lt;projectId&gt;.service</code> / <code>dev.brabo.runner.&lt;projectId&gt;</code>.
+<code>PROJECT_ID_VALIDO</code> требует <strong>хотя бы один символ</strong>, так что в имени проекта
+всегда есть <code>-</code> (или разделяющая <code>.</code> в launchd) там, где имя машины
+заканчивается, — две строки никогда не совпадают. Это закреплено тестом, а не
+чтением regex.</p>
+<p><strong>Слой платформы теперь ключуется по ВИДУ, а не по <code>projectId</code>.</strong> Шесть из
+восьми членов <code>PlataformaDeServico</code> получали <code>projectId: string</code>; теперь они
+получают <code>AlvoDaUnidade</code>, размеченный тип
+(<code>{especie:'projeto', projectId}</code> | <code>{especie:'maquina'}</code>), — и никогда
+<code>projectId: string | null</code>, потому что с null каждый член сам решал бы, что с
+ним делать, а компилятор ни от одного бы не потребовал. <code>PlanoDeInstalacao</code>
+становится объединением по той же причине: три поля плана проекта теряют смысл
+на машине, где нет проекта, нет <code>--dir</code> (каждый корень берётся из базы), а api
+не может прийти из файла, который по проекту. <code>caminhoDaUnidade</code> СПУСТИЛСЯ из
+члена в функцию, потому что обе платформы отвечали одно и то же — папка плюс
+имя, — а поддержка двух идентичных реализаций была шансом, что они разойдутся,
+когда придёт второй вид.</p>
+<p><strong>Дискриминатор — флаг <code>--machine</code>, и НИКОГДА отсутствие <code>--project</code>.</strong> ADR 0154
+пункт 5 написал <em>«<code>service install</code> без <code>--project</code> устанавливает unit
+машины»</em>, и это было измерено в этой сессии и <strong>не</strong> могло быть реализовано
+буквально: у <code>resolverProjeto</code> ДВА источника, и обычный сегодняшний путь —
+запуск <code>install</code> без флагов изнутри папки, которую настроил браузер, — отвечает
+<code>brabo-runner.config.json</code>. Трактовать «без <code>--project</code>» как «машина» молча
+сконвертировало бы установку тех, кто уже пользуется продуктом, — ровно то, что
+пункт 5 того же ADR обещает не делать. Поэтому новый вид — <strong>явный opt-in</strong>,
+оба источника проекта остаются байт в байт, а <code>--machine</code> вместе с <code>--project</code>
+— именованный отказ вместо выдуманного приоритета.</p>
+<p><strong><code>install --machine</code> отказывает больше, чем половина проекта, и два
+собственных отказа измерены.</strong> Первый: в папке не может быть
+<code>brabo-runner.config.json</code>. <code>lerArgumentos</code> разрешает <code>projectId</code> по этому
+файлу, когда <code>--project</code> отсутствует, а режим машины — это именно «без
+<code>projectId</code>», — unit машины, в чьём <code>WorkingDirectory</code> есть этот файл, подняла
+бы процесс в режиме ПРОЕКТА, молча, обслуживая ОДИН проект и называясь агентом
+машины. Второй: без <strong>согласованной базы</strong> (<a href="#rn-529">RN-529</a>) агент машины
+выходит в <code>uso()</code> при первой загрузке (<a href="#rn-544">RN-544</a>), а запись сервиса,
+который никогда не поднимется, — это «неправильная установка на ногах», которую
+этот модуль отвергает повсюду, — база входит ВНЕДРЁННОЙ
+(<code>DependenciasDeInstalacao.resolverBase</code>), как четыре другие зависимости, чтобы
+<code>servico.ts</code> по-прежнему не читал диск или окружение сам.</p>
+<p><strong>Unit замораживает <code>XDG_CONFIG_HOME</code> и никогда ЗНАЧЕНИЕ базы.</strong> Это то же
+решение, что для <code>PATH</code> в <a href="#rn-518">RN-518</a>, с бо́льшим следствием: именно эта
+переменная решает, ГДЕ живёт файл базы (<code>base.ts</code>), а <code>systemd --user</code> не
+передаёт окружение shell установившего — без неё пользователь с переменной,
+направленной за пределы <code>~/.config</code>, получил бы сервис, читающий не ту базу или
+никакую. Значение базы остаётся за бортом намеренно: её смена — по-прежнему
+правка файла и перезапуск, никогда переустановка, что уже защищал docblock
+<code>base.ts</code>, отвергая «только флаг <code>--base</code>».</p>
+<p><strong><code>apiUrl</code> unit машины читает <code>BRABO_API_URL</code>, а unit проекта — нет.</strong>
+Приоритет плана ПРОЕКТА остаётся байт в байт (<code>--api-url</code> › конфиг этой
+папки › значение по умолчанию), потому что там отвечает файл. В плане машины
+этот файл проектный и не годится, так что без переменной единственной
+альтернативой <code>--api-url</code> было бы значение по умолчанию <code>localhost</code> — установка
+из shell с заданным <code>BRABO_API_URL</code> молча сгенерировала бы unit, указывающую не
+туда. Она входит в <code>ContextoDoServico</code> (<code>apiUrlDoAmbiente</code>), никогда не
+читается прямо из <code>process.env</code>.</p>
+<p><strong><code>install</code> ОТКАЗЫВАЕТ, когда уже установлен другой вид, и ничего не
+удаляется.</strong> Агент машины обслуживает КАЖДЫЙ проект владельца ключа в режиме
+<code>runner</code>; добавление к нему unit по проекту (или наоборот) ставит два процесса,
+спорящих за один <code>terminal:&lt;projectId&gt;</code>, и сервер отказывает одному из них —
+вероятно, только что установленному, а это худший порядок обнаружения
+проблемы. Это отказ по ТОМУ ЖЕ критерию, что отказ root, уже живущий в этом
+файле: <em>«установить и предупредить оставило бы неправильную установку на ногах,
+а сообщение прочитали бы лишь однажды»</em>. Существующая unit остаётся нетронутой,
+сообщение называет <code>uninstall</code> каждой, и <strong><code>--force</code> нет</strong> — флаг, снимающий
+защиту с молчаливым симптомом, возвращает молчаливый симптом. Это НЕ
+противоречит пункту 5 ADR: он гарантирует, что уже установленная unit по
+проекту продолжает работать, и она продолжает, байт в байт; отклоняется
+создание перекрытия СЕЙЧАС.
+<strong><code>status</code> отвечает о запрошенном виде, и четыре состояния не становятся
+восемью.</strong> Код выхода по-прежнему принадлежит ЗАПРОШЕННОЙ unit
+(<a href="web.html#rn-088">RN-088</a>) — суммирование двух стёрло бы, какая из них просит
+внимания, так же как суммирование пяти очередей решений стёрло бы, какая
+очередь какая. Сосуществование показывается ТЕКСТОМ, и это ответ <strong>ДИСКА</strong>:
+unit другого вида перечисляются по имени, без запроса состояния каждой у
+менеджера, и вывод ГОВОРИТ, что не спрашивал. Это выполненный пункт 5 ADR 0154 —
+<em>«оставить шесть процессов молча спорить за три проекта»</em> — дефект, ради
+предотвращения которого существует этот блок. Без <code>--machine</code> и без
+разрешимого проекта главная — unit <strong>машины</strong> (единственная, чьё имя не
+требует аргумента), а вывод называет <code>--project</code> для тех, кому нужна другая;
+до этой RN тот же ввод отвечал «нужно знать, КАКОЙ проект», а это вопрос, а не
+ответ, для того, у кого ровно та установка, которую создаёт установщик.</p>
+<p><strong><code>uninstall</code> НЕ наследует это значение по умолчанию, и асимметрия
+намеренна.</strong> Прочитать не тот вид стоит неверной строки; удалить не тот вид
+стоит сервиса и ключа устройства. Без <code>--machine</code> и без разрешимого проекта он
+ОТКАЗЫВАЕТ, перечисляя существующее на диске с точной командой для каждого, — и
+никогда не удаляет оба, что было бы удалением большего, чем просили.</p>
+<p><strong><code>Restart=on-abnormal</code> остаётся байт в байт в обоих видах.</strong> Exit 1 — фатальный
+отказ join или исчерпанный потолок попыток, и перезапуск был бы циклом, который
+CLI отказывается делать сам (<a href="engine.html#rn-514">RN-514</a>). Более того: RN-544 сделала так,
+чтобы <strong>пустой список выходил с 0</strong> именно для того, чтобы <code>on-abnormal</code> не
+поднимал сервис в новой установке, где обслуживать нечего, — замена на
+<code>on-failure</code> отменила бы оба решения разом.</p>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/servico.ts</code> (<code>AlvoDaUnidade</code>, <code>ALVO_DE_MAQUINA</code>,
+<code>alvoDeProjeto</code>, <code>resolverEspecie</code>, <code>PlanoDeInstalacao</code> как объединение,
+<code>caminhoDaUnidade</code>/<code>projetosInstalados</code>/<code>maquinaInstalada</code>,
+<code>prepararPlanoDeProjeto</code>/<code>prepararPlanoDeMaquina</code>, <code>recusaDeSobreposicao</code>,
+<code>linhasDoQueExiste</code>/<code>linhasDeCoexistencia</code>,
+<code>ContextoDoServico.apiUrlDoAmbiente</code>,
+<code>DependenciasDeInstalacao.resolverBase</code>, <code>SistemaDeServico.listarPasta</code>);
+<code>apps/runner/src/servico-sistema.ts</code> (<code>listarPasta</code> поверх <code>readdirSync</code>);
+<code>apps/runner/src/index.ts</code> (адаптер <code>resolverBase</code> поверх
+<code>resolverBaseConsentida</code>, <code>apiUrlDoAmbiente</code>, текст использования)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/servico.spec.ts</code> — <code>service install --machine</code>
+(unit без <code>--project</code>/<code>--dir</code>, отсутствие коллизии имён, заморозка
+<code>XDG_CONFIG_HOME</code> без значения базы, Label и лог launchd, <code>BRABO_API_URL</code>) и
+пять собственных отказов (конфиг проекта в папке, нет базы, невалидная база,
+нет ключа, <code>--machine</code> с <code>--project</code>); и два вида, не перекрывающиеся (отказ
+в ОБОИХ направлениях без удаления чего-либо, <code>status</code> каждой стороны,
+говорящий о другой, не суммируя код и не спрашивая менеджер, <code>status</code> без
+аргумента, падающий на машину, <code>uninstall --machine</code>, оставляющий unit
+проекта нетронутой, и <code>uninstall</code> без вида, отказывающий и перечисляющий обе)</li>
+<li><strong>ЗАЯВЛЕННЫЙ пробел:</strong> <code>install --machine</code> <strong>не знает</strong>, действительно ли
+ключ этой папки — ключ машины: на диске оба вида — один и тот же файл, JWK с
+<code>kid</code> (<a href="web.html#rn-475">RN-475</a>), а знает СЕРВЕР (<a href="#rn-544">RN-544</a>). Папка с ключом
+ПРОЕКТА устанавливает unit без ошибки, а отказ появляется лишь при первой
+загрузке, как <code>CredencialNaoEDeMaquinaError</code>. Проверка в <code>install</code>
+потребовала бы сетевого вызова в подкоманде, которая сегодня не делает ни
+одного, а выдумывание локальной догадки дало бы второй источник истины,
+который отвергла RN-544. И на момент этой RN никто не СОЗДАВАЛ ключ машины:
+регистрирует <code>install.sh</code>
+(<a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a> пункт 4) в сессии
+6 — эта сессия поставляет подкоманду, которую он будет вызывать, а маршрут,
+который он вызывает, пришёл в <a href="api.html#rn-552">RN-552</a></li>
+<li><strong>ADR:</strong> <a href="../adr/0154-chave-de-dispositivo-de-maquina.html">0154</a></li>
+<li><strong>Источник:</strong> ФАЗА 30, сессия 4 —</li>
+</ul>
+<hr>
+<h2 id="o-agente-de-máquina-espera-o-primeiro-projeto-e-a-chave-nasce-no-terminal-rn-550551-fase-30">Агент машины ждёт первого проекта, а ключ рождается в терминале (RN-550/551, ФАЗА 30)</h2>
+<h3 id="rn-550">RN-550 — При НУЛЕ соединений локальный агент НЕ выходит: он ждёт и перезапрашивает список; при живом соединении запрос по-прежнему только при старте</h3>
+<p>Сессия 8 <a href="../explanation/fase-30-runner-por-maquina.html">ФАЗЫ 30</a>.
+<a href="#rn-544">RN-544</a> сделала пустой список НОРМАЛЬНЫМ состоянием, а выход
+процесса — <strong>0</strong>, говоря <em>«создайте проект в режиме Runner и поднимите агента
+снова — список запрашивается только при старте»</em>. Это письменно противоречило
+<a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a> пункт 5 — <em>«он
+<strong>ждёт</strong>… когда человек создаст первый проект в web, агент уже там»</em> — и ломало
+ровно тот случай, которого добивается фаза: новую установку, то есть установку
+с НУЛЁМ проектов. Установщик поднимал агента, агент обнаруживал, что ничего
+нет, и уходил, а человек, создавший первый проект через несколько минут,
+вернулся бы в терминал, так и не будучи об этом предупреждён.</p>
+<p><strong>Правило АСИММЕТРИЧНО, и асимметрия — это замысел:</strong></p>
+<pre class="codigo"><code>conexões &gt; 0  →  список запрашивается ТОЛЬКО при старте   (RN-544 остаётся байт в байт)
+conexões = 0  →  перезапрос с объявленной периодичностью
+</code></pre>
+<p><strong>И оно НЕ отменяет решение RN-544.</strong> Аргумент той сессии продолжает
+действовать целиком: список, вернувшийся <strong>МЕНЬШИМ</strong>, двусмыслен — проект
+удалён, режим сконвертирован, роль отозвана или кратковременный 500,
+маскирующийся под все три, — и обрыв <strong>ЖИВОГО</strong> соединения из-за этой
+двусмысленности променял бы верное состояние на догадку. При <strong>нуле</strong>
+соединений обрывать нечего и никакой двусмысленности нет: любой появившийся
+проект — чистый выигрыш, и никакое решение о пропавшем не принимается.
+Перезапрос <strong>ОСТАНАВЛИВАЕТСЯ</strong> в момент, когда приходит первый непустой список,
+и дальше поведение байт в байт сегодняшнее — модуль ожидания больше не
+вызывается, пока жив процесс.</p>
+<p><strong>Аргумент <code>exit 0</code> пал, потому что пала его предпосылка.</strong> RN-544 написала, что
+<em>«стоять на ногах с нулём соединений означало бы „активный“ сервис, ничего не
+делающий, и <code>status</code> unit начал бы лгать»</em>, — и это зависело от того, что
+процесс ничего не делает. Именно эту предпосылку убирает эта RN: он
+перезапрашивает с объявленной периодичностью и ГОВОРИТ, что делает это.
+<code>active (running)</code> становится правдой, а лгал выход с 0, оставлявший новую
+установку без агента как раз в ту минуту, когда человек собирался создать
+первый проект.</p>
+<p><strong>Периодичность растёт ступенями и СТАБИЛИЗИРУЕТСЯ: 15 с, 30 с, 60 с, и
+последнее повторяется вечно.</strong> Две короткие ступени существуют потому, что
+обслуживаемый случай — кто-то создаёт первый проект СЕЙЧАС; потолок в минуты
+заставил бы агента появиться после того, как человек перестал смотреть. Плато
+в 60 с — цена в установившемся режиме: ОДИН запрос в минуту от одной
+установки к маршруту, возвращающему список самого владельца учётных данных.
+Рост сверх этого сэкономил бы трафик, за который никто не платит, и ухудшил бы
+единственное, что даёт ожидание.</p>
+<p><strong>Потолок есть, и он на СБОИ, никогда на ожидание.</strong> У ожидания нет предела —
+ожидание — нормальное состояние новой установки и может длиться днями.
+Потолок — на <strong>ПОДРЯД</strong> идущие сбои запроса: десять, и тогда процесс выходит с
+1, НАЗЫВАЯ число, как цикл подключения уже делает с
+<code>TETO_DE_TENTATIVAS_SEGUIDAS</code> и по той же причине (не долбить api вечно, когда
+проблема не кратковременна). ОТВЕТИВШИЙ запрос обнуляет счётчик — включая
+ответ ПУСТЫМ, что есть успех, потому что пустой список — правильный ответ.
+Константа ОТДЕЛЬНАЯ намеренно, с тем же значением: одна считает сбои
+ПОДКЛЮЧЕНИЯ, другая — сбои ПЕРЕЧИСЛЕНИЯ, и их связывание заставило бы изменение
+периодичности подключения без чьей-либо просьбы менять время, которое новая
+установка ждёт перед тем, как сдаться. <code>CredencialNaoEDeMaquinaError</code> (403 по
+виду ключа, <a href="#rn-544">RN-544</a>) в потолок <strong>не</strong> входит: она фатальна сразу,
+потому что ключ проекта не становится ключом машины от ещё одной минуты
+ожидания.</p>
+<p><strong>Стоять на ногах молча было бы хуже, чем выйти.</strong> «Ждёт» и «завис» —
+одинаковая картинка для читающего <code>journalctl</code>, поэтому процесс говорит
+периодичность при входе в ожидание, говорит, когда появляется первый проект, и
+бьёт ПУЛЬС каждые 30 запросов (полчаса на плато), сообщая, <strong>сколько</strong> запросов
+уже было. Не каждый запрос становится строкой, тоже намеренно: лог раз в
+минуту, вечно, — это шум, хоронящий важные строки.</p>
+<p><strong><code>Restart=on-abnormal</code> остаётся байт в байт в ОБОИХ видах unit
+(<a href="#rn-545">RN-545</a>), и в них ничего не меняется.</strong> Измерено: <code>on-abnormal</code>
+поднимает по СИГНАЛУ, watchdog или timeout — никогда по коду выхода, ни 0, ни</p>
+<ol>
+<li>Выход с 0 никогда не был тем, что мешало сервису подняться; мешало то, что
+<code>on-abnormal</code> не смотрит ни на какой код. Реальный эффект изменения
+противоположен опасаемому: unit МАШИНЫ, которая и выполняет этот режим, теперь
+действительно остаётся <code>active (running)</code> вместо того, чтобы заканчиваться
+<code>inactive (dead)</code> через секунды после подъёма, — а
+<code>service status --machine</code> начинает отвечать <code>rodando</code> (0) там, где раньше
+отвечал <code>parado</code> (3) в новой установке. Unit по ПРОЕКТУ не затронута ни в
+одной строке: она выполняет режим <code>projeto</code>, который сюда никогда не доходит.</li>
+</ol>
+<p><strong>Одно исключение, заявленное: НЕпустой список, все проекты которого
+отклонены, по-прежнему выходит с 1.</strong> Это тоже ноль соединений, и всё же он не
+ждёт — потому что там каждый отказ называет конкретный локальный дефект
+(сегмент, уходящий из базы, папка, являющаяся файлом) с собственным
+исправлением, а перезапрос повторял бы те же отказы бесконечно, хороня в логе
+строку, говорящую, что чинить. Ожидание — для <em>«проекта ещё нет»</em>, никогда для
+<em>«он есть, а я не могу его обслужить»</em>.</p>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/espera-de-projetos.ts:127</code>
+(<code>esperarPrimeiroProjeto</code>), <code>:60</code> (<code>CADENCIA_DA_ESPERA_MS</code>), <code>:75</code>
+(<code>TETO_DE_FALHAS_DE_CONSULTA</code>), <code>:88</code> (<code>CONSULTAS_POR_BATIMENTO</code>);
+<code>apps/runner/src/index.ts:1465</code> (ожидание внутри
+<code>rodarComoAgenteDeMaquina</code> и исключение для отклонённых сразу ниже)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/espera-de-projetos.spec.ts</code> — счастливый путь
+(ждёт, перезапрашивает, возвращает первый непустой список и там
+ОСТАНАВЛИВАЕТСЯ), стабилизирующаяся периодичность, пульс каждые N запросов,
+потолок подряд идущих сбоев с числом в сообщении, ответ посередине,
+ОБНУЛЯЮЩИЙ счётчик, 403 по виду, поднимающийся нетронутым, и SIGTERM,
+возвращающий <code>parado</code>; <code>apps/runner/src/index.spec.ts</code> — СТЫК в НАСТОЯЩЕМ
+процессе против фиктивной api, возвращающей <code>[]</code>: процесс ГОВОРИТ, что
+остаётся на ногах, и <strong>не завершается</strong>, что и было дефектом</li>
+<li><strong>ADR:</strong> <a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">0155</a> пункт 5</li>
+<li><strong>Источник:</strong> ФАЗА 30, сессия 8 —
+<a href="../explanation/fase-30-runner-por-maquina.html">срез фазы</a></li>
+</ul>
+<h3 id="rn-551">RN-551 — <code>brabo-runner device-key create</code>/<code>finish</code>: пара Ed25519 рождается НА МАШИНЕ, приватный ключ никогда не передаётся, а файл, который читает runner, никогда не существует без <code>kid</code></h3>
+<p>Сессия 8 <a href="../explanation/fase-30-runner-por-maquina.html">ФАЗЫ 30</a>, другая половина.
+До сих пор пару ключей устройства генерировал <strong>только браузер</strong>
+(<code>apps/web/src/lib/runner-bootstrap.ts</code>,
+<a href="../adr/0118-configuracao-automatica-do-runner-pelo-navegador.html">ADR 0118</a>,
+<a href="api.html#rn-464">RN-464</a>); CLI умел лишь <strong>читать</strong> то, что кто-то положил в папку
+(<code>device-key.ts</code>). <a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a>
+пункт 4 просит другую сторону: <em>«пара генерируется <strong>на машине</strong>; приватный
+ключ никогда не передаётся… сохраняет верной фразу, которой RN-519 отвергает
+представление <code>maintainer</code>: „приватный ключ устройства никогда не покидает
+браузер“ — становится „никогда не покидает машину“»</em>. Без этого
+<a href="produto.html#rn-543">RN-543</a>, <a href="#rn-544">RN-544</a> и <a href="#rn-545">RN-545</a> все оставались с одним
+и тем же заявленным пробелом: <strong>никто не создаёт ключ машины</strong>.</p>
+<p><strong>Это ДВА шага, и причина — <code>kid</code>.</strong> <code>kid</code>, записанный внутри приватного JWK, И
+ЕСТЬ id записи на сервере (<a href="web.html#rn-475">RN-475</a>) — вся цепочка лишь ПЕРЕДАЁТ его
+(runner читает <code>jwk.kid</code>, JWT несёт его в заголовке, <code>PatAuthGuard</code> находит по
+нему публичный), и никто не выводит его из чего-то другого. Он существует
+только <strong>после</strong> регистрации публичного, а приватный, записанный до этого,
+рождается бесполезным — буквально дефект, на поиск которого RN-475 потратила
+целую охоту. Браузер решает это, держа пару в ПАМЯТИ между регистрацией и
+записью; CLI решает <strong>ЧАСТИЧНЫМ</strong> файлом:</p>
+<pre class="codigo"><code class="language-sh">PUB=$(brabo-runner device-key create)          # генерирует здесь, печатает ПУБЛИЧНЫЙ
+ID=$(… registra PUB na api …  | jq -r .id)     # регистрирует установщик
+brabo-runner device-key finish --id &quot;$ID&quot;      # ставит kid и записывает
+</code></pre>
+<p><strong>Ни в какой момент не существует <code>brabo-runner-device-key.jwk.json</code> без
+<code>kid</code>.</strong> <code>create</code> пишет в <code>…jwk.json.parcial</code>, имя, которое
+<code>lerChaveDeDispositivo</code> не ищет; <code>finish</code> ставит метку и пишет настоящее имя.
+Файл, который ЧИТАЕТ runner, либо полон, либо не существует, а прерывание между
+двумя шагами оставляет <code>.parcial</code>, который runner ИГНОРИРУЕТ, а следующий
+<code>create</code> НАЗЫВАЕТ, — говоря, что запись той попытки могла остаться ОСИРОТЕВШЕЙ,
+что инертно и видно в списке <a href="api.html#rn-519">RN-519</a>.</p>
+<p><strong>CLI НЕ говорит с api, и причина — СЕКРЕТ, а не техника.</strong> Ключ машины
+регистрирует установщик, аутентифицированный <code>BRABO_SERVICE_TOKEN</code>, который он
+только что сгенерировал
+(<a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">ADR 0155</a> пункт 1). Заставить
+<code>brabo-runner</code> вызывать маршрут потребовало бы дать ему этот токен — секрет
+УСТАНОВКИ, открывающий внутренние маршруты, переданный процессу, который сегодня
+видит только учётные данные устройства и стоит на ногах вечно на машине
+пользователя. Разрез противоположный: <strong>каждая сторона хранит ровно один
+секрет, и ни одна не видит чужого</strong>. Через границу между ними идут ПУБЛИЧНЫЙ
+JWK и id — ничего, что требует защиты.</p>
+<p><strong>Назначение по умолчанию — папка конфигурации машины, и приоритет
+ПЕРЕИСПОЛЬЗУЕТСЯ.</strong> <code>$XDG_CONFIG_HOME/brabo/</code> (иначе <code>~/.config/brabo/</code>), рядом
+с <code>runner.json</code> из <a href="#rn-529">RN-529</a> и по той же причине — это конфигурация
+МАШИНЫ, и у ключа машины нет папки проекта, где жить.
+<code>pastaDeConfiguracaoDoBrabo</code> была ИЗВЛЕЧЕНА из <code>caminhoDoArquivoDeBase</code>, когда
+получила второго потребителя, а не скопирована. Это <strong>не</strong> открывает снова
+дверь, которую закрыла Волна 2
+<a href="../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.html">ADR 0104</a>
+(учётные данные по глобальному и НЕЯВНОМУ пути): <code>device-key.ts</code> по-прежнему
+читает только из <code>cwd</code>, который передаст вызывающий, а на эту папку указывает
+<code>--dir</code> unit машины (<a href="#rn-545">RN-545</a>), явно, записанный в сервисе. <code>--dir</code>
+существует и годится и для папки проекта — на диске оба вида — один и тот же
+файл, а разницу знает СЕРВЕР (<a href="#rn-544">RN-544</a>): эта команда не утверждает
+никакого вида.</p>
+<p><strong>Приватный ключ записывается с режимом 600, явно, и никогда не оставляется
+<code>umask</code>.</strong> Папка рождается 700, когда её создаёт ЭТА команда; уже существовавшая
+папка принадлежит пользователю (может быть, ту настроил браузер) и не
+ужесточается заново. <code>--dir</code> проходит через ТУ ЖЕ
+<code>validarDirDentroDoHomeNoLinux</code> из <a href="#rn-434">RN-434</a>, переиспользованную
+целиком: записывается секрет пользователя, а папка вне его <code>$HOME</code> — не то
+место, где будет искать его <code>systemd --user</code>.</p>
+<p><strong>stdout несёт ОДНО значение в одной строке, а всё остальное — stderr.</strong> Это
+контракт, от которого зависит <code>install.sh</code> (<code>PUB=$(…)</code>): смешение заставило бы
+скрипт фильтровать вывод для человека, а именно так контракт ломается без
+чьего-либо ведома. В <code>create</code> stdout — публичный JWK; в <code>finish</code> — ПУТЬ к
+файлу, значение, которое нужно следующему шагу (<code>service install --machine --dir &lt;pasta&gt;</code>).</p>
+<p><strong>Перезапись полного ключа ОТКЛОНЯЕТСЯ, и <code>--force</code> нет.</strong> Смена ключа уже
+сопряжённой машины сменила бы идентичность агента, который может работать
+СЕЙЧАС, молча: публичный остался бы зарегистрированным, а процесс начал бы
+подписывать ключом, которого никто не знает. Отказ называет жест (отозвать,
+удалить, создать заново), а флаг, снимающий защиту с молчаливым симптомом,
+вернул бы молчаливый симптом.</p>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/criar-chave-de-dispositivo.ts:202</code>
+(<code>criarChaveDeDispositivo</code>), <code>:275</code> (<code>finalizarChaveDeDispositivo</code>), <code>:82</code>
+(<code>SUFIXO_PARCIAL</code>), <code>:177</code> (<code>resolverDestino</code>); <code>apps/runner/src/base.ts:85</code>
+(<code>pastaDeConfiguracaoDoBrabo</code>, извлечённая);
+<code>apps/runner/src/index.ts:1280</code> (диспетчеризация до <code>lerArgumentos</code> и
+разделение stdout/stderr)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/criar-chave-de-dispositivo.spec.ts</code> — счастливый
+путь от начала до конца (публичный в stdout, частичный в 600, <code>finish</code>,
+ставящий метку, и итоговый ключ, читаемый <code>lerChaveDeDispositivo</code> и
+ПОДПИСЫВАЮЩИЙ настоящий JWT тикета), <code>--dir</code> и отказы: <code>finish</code> без <code>create</code>,
+без <code>--id</code>, с <code>--id</code>, вставленным из всего JSON, полный ключ уже на месте (в
+обеих командах), частичный, не являющийся JWK, неизвестная подкоманда и
+предупреждение о сироте; <code>apps/runner/src/index.spec.ts</code> — СТЫК в настоящем
+процессе: <code>device-key create</code> выполняется в папке БЕЗ каких-либо учётных
+данных, и stdout содержит только публичный JWK</li>
+<li><strong>ЗАЯВЛЕННЫЙ пробел, ЗАКРЫТЫЙ в обеих половинах:</strong> того, кто РЕГИСТРИРУЕТ
+публичный, не существовало в этом репозитории, когда эта RN закрылась, —
+маршрут пришёл в <a href="api.html#rn-552">RN-552</a>, а <code>install.sh</code>, связывающий две команды,
+— в <a href="produto.html#rn-547">RN-547</a>. Контракт, который предполагает эта команда, — тот, что
+уже есть у маршрута ключа ПРОЕКТА (<code>{ name, publicKeyJwk }</code>, где
+<code>publicKeyJwk</code> — JSON публичного JWK Ed25519 — <code>kty</code> &quot;OKP&quot;, <code>crv</code> &quot;Ed25519&quot;,
+<code>x</code> — и ответ с <code>id</code>), и именно это производит stdout <code>create</code>: одну строку
+в этом формате. Команда также <strong>не</strong> выбирает <code>name</code> устройства, намеренно —
+это поле записи, и называет тот, кто регистрирует</li>
+<li><strong>ADR:</strong> <a href="../adr/0155-a-primeira-conta-nasce-no-terminal.html">0155</a> пункт 4</li>
+<li><strong>Источник:</strong> ФАЗА 30, сессия 8 —
+<a href="../explanation/fase-30-runner-por-maquina.html">срез фазы</a></li>
+</ul>
+<hr>
+<h2 id="a-credencial-que-não-atravessa-o-container-do-agente-local-rn-558">Учётные данные, которые не пересекают контейнер локального агента (RN-558)</h2>
+<h3 id="rn-558">RN-558 — Учётные данные в <code>exec</code> при активном контейнере ОТКЛОНЯЮТСЯ runner с именованным итогом и источником <code>politica</code></h3>
+<p>Пробел, письменно объявленный при закрытии <a href="#rn-507">RN-507</a>/<a href="api.html#rn-508">RN-508</a>
+(<a href="../adr/0145-docker-pre-requisito-do-runner.html">ADR 0145</a>) и заново измеренный
+здесь, звено за звеном, до написания хоть одной строки.</p>
+<p><strong>Цепочка, измеренная.</strong> <code>Engine.Runners.RunnerReadiness.verificar/1</code>
+(<code>runner_readiness.ex:52</code>) требует ЗАРЕГИСТРИРОВАННЫЙ контейнер <code>running</code> до
+ЛЮБОЙ операции <code>Engine.Actions.Workspace.RunnerGit</code> — включая начальный
+аутентифицированный <code>git fetch</code>, исходящий из <code>fetch!/3</code>
+(<code>runner_git.ex:226</code>, через <code>exec/4</code> в <code>:288</code>). ЕДИНСТВЕННЫЙ способ появления
+этой регистрации в проекте <code>runner</code> — тот же runner поднял собственный
+контейнер (<a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">ADR 0137</a>), и
+именно этот успех помечает в нём <code>estado.containerAtivo</code>
+(<code>apps/runner/src/index.ts:822</code>, в <code>tratarContainerStart</code>). С установленным
+<code>containerAtivo</code> <code>tratarExec</code> направляет команду внутрь контейнера
+(<code>index.ts:728</code>–<code>730</code> и новый отказ в <code>:693</code>), а операция <code>exec</code> в
+<code>packages/docker-port</code> <strong>не имеет поля <code>env</code></strong> — намеренно
+(<a href="../adr/0130-broker-de-container.html">ADR 0130</a>: никакого свободного <code>-e</code>). Поле
+<code>env</code>, которое RN-507 добавила к паре <code>exec</code>/<code>exec_result</code>
+(<code>RunnerRouter.exec/5</code>, <code>runner_router.ex:50</code>; <code>ExecMessage.env</code>,
+<code>apps/runner/src/channel.ts:62</code>), применяется только на пути ХОСТА, где
+<code>apps/runner/src/exec.ts:94</code> СЛИВАЕТ его поверх <code>process.env</code>.</p>
+<p>Результат: в момент, когда RN-507 позволяет аутентифицированному <code>fetch</code>
+выполниться, контейнер почти всегда уже работает в ТОМ ЖЕ runner — и именно там
+учётные данные (<a href="../adr/0056-o-engine-trabalha-em-repositorio-remoto.html">ADR 0056</a>,
+<code>GitAuth.env_de_auth/1</code>) отбрасывались <strong>молча, без ошибки</strong>. <code>git</code> выполнялся с
+эфемерным помощником, установленным через <code>-c</code>, и двумя ПУСТЫМИ переменными и
+выходил с ошибкой аутентификации — неотличимой от невалидного токена, неверных
+прав или упавшей сети. Человек гнался не за тем, а продукт ничего не говорил.</p>
+<p><strong>Исправление — ИМЕНОВАННЫЙ итог, а не доставка учётных данных.</strong> <code>docker exec</code> по-прежнему без поля <code>env</code> — трогать это значит менять порт сдерживания,
+и это решение ADR, а не срез (см. объявленный пробел ниже). Меняется то, что
+пара (присутствующий <code>env</code>, активный контейнер) перестаёт выполняться и
+начинает <strong>отклоняться</strong> с меткой, сообщением и источником.</p>
+<p><strong>Отказывает RUNNER, и только он может.</strong> Это единственный процесс, знающий обе
+половины одновременно: что команда несёт учётные данные и что она идёт внутрь
+контейнера. Engine не знает второй, и это было ИЗМЕРЕНО:
+<code>estado.containerAtivo</code> рождается <code>null</code> при каждом запуске runner
+(<code>index.ts:1449</code>) и устанавливается только <code>tratarContainerStart</code>, так что
+ЗАРЕГИСТРИРОВАННЫЙ в базе контейнер <code>running</code> <strong>не означает</strong> активного
+контейнера в этом процессе — перезапущенный runner с работающим контейнером
+направляет на ХОСТ, и там учётные данные доходят нормально. Подъём проверки в
+<code>RunnerReadiness</code> или в <code>RunnerGit</code> отклонял бы работающий путь. А
+<code>RunnerReadiness</code> остаётся БАЙТ В БАЙТ как есть: он не получает ни флага, ни
+четвёртого предусловия — это то же правило, которое <a href="#rn-516">RN-516</a> уже
+сформулировала о недопустимости вешать на него флаг «пропустить контейнер».</p>
+<p><strong>МЕТКА — константа ПРОТОКОЛА, а не деталь сообщения.</strong>
+<code>MARCA_DE_CREDENCIAL_NAO_ENTREGUE</code> (<code>index.ts</code>) и <code>@marca</code>
+(<code>credencial_de_git.ex</code>) несут ОДИН И ТОТ ЖЕ токен, и именно по нему — а не по
+фразе — engine узнаёт отказ после того, как тот прошёл через <code>rescue</code> и стал
+свободной строкой. Изменение только одной стороны ничего не ломает при
+компиляции: отказ по-прежнему происходит, и лишь КЛАССИФИКАЦИЯ снова
+ошибается, — ровно форма дефекта, который закрывает эта RN. Ни один из двух
+наборов тестов не достаёт другой язык (ExUnit не читает TypeScript, vitest
+runner не читает Elixir), поэтому защита живёт в <code>scripts/ci/</code>, рядом с другими
+тестами, читающими весь репозиторий как текст.</p>
+<p><strong>Источник — <code>politica</code>, и выбор указывает на ДЕЙСТВИЕ.</strong> Четыре источника
+<a href="../adr/0020-destravar-gates-qa-secops.html">ADR 0020</a> не распределяют вину, а
+говорят, что делать. Это не оговорка, которую никто не написал (<code>codigo</code>), и не
+упавшая сеть (<code>infra</code>): это сдерживание ADR 0130, работающее как задумано,
+против случая, которого оно не предусмотрело. Читающий <code>politica</code> знает, что
+искать баг не нужно, — есть ожидающее продуктовое решение.
+<code>Engine.Runners.CredencialDeGit.desfecho/1</code> добавляет ОДИН случай и не
+переклассифицирует ни одного другого: любой другой сбой worktree сохраняет байт
+в байт <code>{&quot;falha ao preparar o worktree&quot;, &quot;codigo&quot;}</code> в ОБОИХ dev agents
+(настоящем и Noop, который существует, чтобы проверять ЭТОТ путь, а не его
+копию).</p>
+<p><strong>Отказ по СДЕРЖИВАНИЮ побеждает, и порядок — решение.</strong> Он идёт ПОСЛЕ
+<code>validarCwdDentroDaRaiz</code> (<code>guard.ts</code>): команда, направленная за пределы корня,
+должна услышать <strong>это</strong>, потому что там отклоняется граница сдерживания, а
+здесь не хватает возможности. Слияние двух сделало бы команду вне области
+похожей на проблему учётных данных — тот же дефект диагноза, с другим знаком.</p>
+<p><strong><code>env</code> никогда не появляется в отказе — только КОЛИЧЕСТВО.</strong> Инвариант RN-507 —
+<code>msg.env</code> не идёт ни в какой лог, а этот выход идёт в event log продукта: отказ
+говорит «2 variável(is) de ambiente», никогда имя или значение.
+Число уже говорит то, что там нужно знать.</p>
+<p><strong>Что НЕ затронуто, подтверждено чтением:</strong> репозиторий <code>local</code> (провайдер без
+токена) — <code>GitAuth.env_de_auth/1</code> возвращает <code>[]</code>, <code>fetch!/3</code> превращает это в
+<code>nil</code>, поле даже не входит в payload, и отказ не срабатывает; режимы
+<code>container</code> и <code>mounted</code> — никогда не проходят через <code>RunnerGit</code>
+(<code>Workspace.ensure!/4</code> ветвится по <code>execution_mode</code>, и туда идёт только
+<code>runner</code>), а их контейнер поднимается брокером, по другую сторону сети; и
+обычная команда терминала, никогда не нёсшая <code>env</code>. <code>workspace_create</code> тоже
+несёт <code>env</code> и тоже не затронут: он выполняется на ХОСТЕ
+(<code>criarPastaDoProjeto</code>), а не в контейнере.</p>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/index.ts</code> (<code>MARCA_DE_CREDENCIAL_NAO_ENTREGUE</code> и
+отказ в <code>tratarExec</code> после проверки <code>cwd</code>), <code>apps/runner/src/channel.ts</code>
+(docblock <code>ExecMessage.env</code>, обещавший «выполняется только без учётных
+данных»), <code>apps/engine/lib/engine/runners/credencial_de_git.ex</code> (новый —
+метка, <code>recusada?/1</code>, <code>mensagem/2</code> и <code>desfecho/1</code>),
+<code>apps/engine/lib/engine/actions/workspace/runner_git.ex</code> (новая ветка в
+<code>fetch!/3</code> перед общей и moduledoc),
+<code>apps/engine/lib/engine/dev/dev_agent_server.ex</code> и
+<code>apps/engine/lib/engine/dev/noop_dev_agent_server.ex</code> (итог
+<code>{:error, reason}</code> при создании worktree)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/index-handlers.spec.ts</code>, блок <em>&quot;a credencial não
+atravessa o docker exec (RN-558)&quot;</em> — счастливый путь (без контейнера <code>env</code>
+доходит до хоста, и ничего не отклоняется), случай сбоя (с контейнером —
+именованный отказ, и <code>docker.exec</code> НЕ вызывается), отрицательное
+доказательство того, что имя и значение переменных не утекают в вывод,
+пустой <code>env</code>, не становящийся отказом, и отказ сдерживания <code>guard.ts</code>,
+побеждающий этот, когда <code>cwd</code> вне корня;
+<code>apps/engine/test/engine/actions/workspace_runner_test.exs</code> (два теста
+<code>RN-558</code>: отказ, становящийся именованным сообщением с источником <code>politica</code>,
+и РЕАЛЬНЫЙ сбой fetch, сохраняющий прежнее сообщение с источником <code>codigo</code> —
+отрицательная пара, доказывающая, что новая ветка не захватила старую);
+<code>apps/engine/test/engine_web/channels/credencial_no_runner_test.exs</code> (AT-111,
+ВСЯ цепочка через настоящий <code>TerminalChannel</code>: <code>env</code> доходит до канала только
+в <code>fetch</code>, ответ runner — фикстура
+<code>apps/runner/fixtures/exec-result-recusa-de-credencial.json</code>, которую spec
+runner сравнивает байт в байт с реальным выводом <code>tratarExec</code>, <code>RunnerGit</code>
+возвращает именованное сообщение, а <code>DevAgentServer</code> записывает <code>dev.blocked</code>
+с источником <code>politica</code>; плюс ветка без активного контейнера, где <code>fetch</code>
+отвечает 0, и реальный сбой, остающийся <code>codigo</code>. НЕ доказывает мост между
+языками выполнением: ни один процесс <code>node</code> не поднимается в ExUnit, а пару,
+которая его замыкает, составляет общая фикстура. Проверено мутацией: срез
+<code>env</code> в канале, в <code>RunnerGit</code>, распознавание отказа, <code>desfecho/1</code> или его
+использование в dev agent проваливают тест; отключение отказа в <code>tratarExec</code>
+проваливает spec runner);
+<code>scripts/ci/marca-de-credencial-do-runner.spec.ts</code> (идентичная метка с обеих
+сторон). Проверено мутацией: нейтрализация ветки <code>fetch!/3</code> проваливает тест
+engine со старым сообщением на виду</li>
+<li><strong>ЗАЯВЛЕННЫЙ пробел, представляющий собой ПОЛОВИНУ, которая остаётся
+открытой, — ЗАКРЫТ <a href="#rn-676">RN-676</a>
+(<a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193</a>, решение владельца
+от 01.10):</strong> fetch с учётными данными идёт ПОМЕЧЕННЫМ engine и выполняется на
+ХОСТЕ runner даже при активном контейнере; этот отказ сузился до <code>env</code> БЕЗ
+метки (на практике — runner до ADR 0193). Текст ниже — тот, что был, когда
+она закрыла половину молчания: учётные данные по-прежнему <strong>не пересекают</strong>
+<code>docker exec</code>. АУТЕНТИФИЦИРОВАННЫЙ clone/fetch удалённого репозитория в режиме
+<code>runner</code> по-прежнему невозможен при работающем контейнере — изменилось то,
+что теперь он падает, ГОВОРЯ об этом, а не выглядит как ошибка токена.
+Закрытие требует решить, КАК операция с учётными данными говорит с <code>docker exec</code> без поля <code>env</code>, и все известные варианты трогают порт сдерживания
+ADR 0130 (дать операции <code>env</code>; смонтированный и удаляемый файл учётных
+данных; выполнять <code>fetch</code> на хосте даже при активном контейнере, что сломало
+бы инвариант, что работа идёт внутри контейнера). Это ADR, никогда не
+исправление мимоходом. СМЕЖНОСТЬ, которую эта поставка тоже объявила, — отказ
+происходил ПОСЛЕ того, как <code>init_from_bare!/5</code> уже сделал <code>git init</code>, а
+<code>git_dir?/2</code> в <code>ensure!/5</code> помечал workspace готовым на следующей попытке,
+найдя <code>.git</code>, так что вторая попытка падала дальше, на <code>worktree add</code>, а не
+повторяла отказ, — <strong>ЗАКРЫТА в AT-112</strong>: неудачная инициализация (любой шаг,
+не только <code>fetch</code> с учётными данными) ОТМЕНЯЕТ <code>.git</code>, который сама создала
+(<code>inicializar_ou_desfazer!</code> в <code>Engine.Actions.Workspace</code> и в <code>RunnerGit</code>), и
+повторно бросает исходное исключение, так что следующая попытка повторяет ТУ
+ЖЕ причину. Отмена выполняется только в ветке, где <code>.git</code> НЕ было, — ветка
+«workspace до метки» (у которого есть <code>.git</code> и который не
+переинициализируется) остаётся нетронутой, так что чужая работа не
+стирается. На стороне <code>runner</code> <code>rm -rf</code> — best-effort (runner мог упасть,
+одна из причин сбоя). Рассмотренные и отвергнутые сигналы: маркер «в
+процессе» (второй файл для поддержки и сирота, если процесс умрёт между двумя
+шагами) и проверка ожидаемой ref (пустой репозиторий без <code>origin/&lt;branch&gt;</code> —
+ЗАКОННОЕ состояние и выглядел бы сбоем)</li>
+<li><strong>ADR:</strong> нового нет — поставка не сдвигает никакой границы. Она ПОТРЕБЛЯЕТ
+<a href="../adr/0130-broker-de-container.html">0130</a> (порт без <code>env</code>),
+<a href="../adr/0137-o-runner-sobe-o-container-do-projeto.html">0137</a> (контейнер на
+машине пользователя), <a href="../adr/0145-docker-pre-requisito-do-runner.html">0145</a>
+(предусловие и поле <code>env</code>) и <a href="../adr/0020-destravar-gates-qa-secops.html">0020</a>
+(четыре источника)</li>
+<li><strong>Источник:</strong> <code>AT-053</code> — пробел, который ADR 0145 оставил письменно
+объявленным</li>
+</ul>
+<hr>
+<h2 id="o-git-credenciado-roda-no-host-do-runner-rn-676">Git с учётными данными выполняется на хосте runner (RN-676)</h2>
+<h3 id="rn-676">RN-676 — При активном контейнере <code>git fetch</code> с учётными данными из <code>RunnerGit</code> выполняется на ХОСТЕ runner, помеченный engine; код остаётся в контейнере</h3>
+<p>Решение владельца (01.10), зафиксированное в
+<a href="../adr/0193-git-credenciado-no-host-do-runner.html">ADR 0193</a>: git-операция С
+УЧЁТНЫМИ ДАННЫМИ выполняется на ХОСТЕ runner, а код выполняется в контейнере.
+Закрывает половину, которую <a href="#rn-558">RN-558</a> оставила открытой, —
+аутентифицированный fetch в режиме <code>runner</code> при поднятом контейнере, что
+является обычным путём, всегда заканчивался именованным отказом.</p>
+<ol>
+<li><strong>Помечает engine, и только в одной точке.</strong> <code>RunnerGit.fetch!/3</code>
+отправляет fetch с учётными данными через
+<code>RunnerRouter.exec_git_credenciado/5</code>, который ставит
+<code>gitCredenciado: true</code> в payload <code>exec</code> и требует непустой <code>env</code> через
+guard. Команда терминала dev agent проходит через <code>RunnerRouter.exec/4</code> и
+никогда не несёт метку. Без учётных данных (provider <code>local</code>) fetch идёт без
+метки.</li>
+<li><strong>runner выполняет на хосте только при СОВОКУПНОСТИ</strong>: метка — литерал
+<code>true</code> <strong>и</strong> непустой <code>env</code>. Тогда команда идёт в <code>executarComando</code> (<code>env</code>,
+слитый поверх <code>process.env</code>), даже при активном контейнере. Папка та же:
+<code>estado.dir</code> — это bind-mount <code>/work</code>.</li>
+<li><strong><code>env</code> без метки хоста не получает.</strong> При активном контейнере эта пара
+по-прежнему ОТКЛОНЯЕТСЯ с меткой RN-558 и источником <code>politica</code>. Сегодня ни
+один вызывающий engine её не производит; на практике она приходит от
+<code>brabo-runner</code> до ADR 0193, который не читает метку, — и сообщение engine
+говорит обновить его. Метка без <code>env</code> тоже ничего не меняет: команда идёт в
+контейнер.</li>
+<li><strong>Никакая изоляция не меняется</strong>: <code>DockerPort.exec</code> по-прежнему без <code>env</code>
+(ADR 0130), а <code>RunnerReadiness</code> (RN-507) остаётся байт в байт — метка
+решает, ГДЕ выполняет runner, никогда ЛИ engine диспетчеризует.</li>
+<li><strong>Лог никогда не несёт ни имени, ни значения переменной <code>env</code></strong>: отказ даёт
+количество, а лог пути хоста добавляет только <code>[git credenciado, no host]</code>.</li>
+</ol>
+<ul>
+<li><strong>Код:</strong> <code>apps/runner/src/index.ts:694</code> (<code>gitCredenciadoNoHost</code>), <code>:659</code>
+(<code>tratarExec</code>); <code>apps/runner/src/channel.ts:71</code> (<code>gitCredenciado</code>), <code>:627</code>
+(<code>gitCredenciado</code>); <code>apps/engine/lib/engine/runners/runner_router.ex:93</code>
+(<code>exec_git_credenciado</code>), <code>:98</code> (<code>despachar_exec</code>);
+<code>apps/engine/lib/engine/actions/workspace/runner_git.ex:338</code> (<code>exec</code>), <code>:426</code>
+(<code>despachar</code>); <code>apps/engine/lib/engine_web/channels/terminal_channel.ex:609</code>
+(<code>git_credenciado</code>); <code>apps/engine/lib/engine/runners/credencial_de_git.ex:93</code>
+(<code>mensagem</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/index-handlers.spec.ts:366</code> (настоящий helper
+<code>git</code> получает учётные данные на хосте при активном контейнере — счастливый
+путь), <code>:391</code> (настоящий <code>git fetch origin</code> успешен на хосте), <code>:430</code> (<code>env</code>
+без метки по-прежнему отклоняется — случай сбоя); <code>apps/runner/src/channel.spec.ts:208</code>;
+<code>apps/engine/test/engine/actions/workspace_runner_test.exs:451</code>, <code>:466</code>,
+<code>:476</code>; <code>apps/engine/test/engine_web/channels/credencial_no_runner_test.exs:149</code>
+(AT-111: цепочка через настоящий <code>TerminalChannel</code> заканчивается
+<code>{:ok, _}</code>), <code>:177</code>. Тесты ExUnit не запускались в среде этой сдачи
+(<code>repo.hex.pm</code> 403); CI их доказывает.</li>
+<li><strong>Источник:</strong> AT-116 (доказательство: AT-111), решение владельца от 01.10</li>
+</ul>
+<h2 id="a-anamnese-religada-sujeito-elegível-e-fato-do-perfil-rn-680">Anamnese снова включена: допустимый субъект и факт профиля (RN-680)</h2>
+<h3 id="rn-688">RN-688 — Бинарник runner читает PTY собственным читателем под Bun, а самотест доказывает ВТОРОЕ чтение</h3>
+<p>Под Bun (бинарник из <code>bun build --compile</code>, <a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">ADR 0112</a>)
+<code>tty.ReadStream</code>, которым <code>node-pty</code> читает ведущую сторону PTY, — это
+<code>fs.ReadStream</code>, и первое чтение без данных из неблокирующего fd ПОДНИМАЕТСЯ
+как <code>EAGAIN</code>: поток уничтожается, закрывает fd, и после этого ни один
+<code>onData</code> не приходит (oven-sh/bun#25822). Интерактивный терминал бинарника
+останавливался после первого куска вывода на ТРЁХ Unix-платформах; Linux
+проходил проверку только потому, что первое чтение уже приносило эхо и ответ
+вместе.</p>
+<p><strong>Правило:</strong> под Bun и вне Windows <code>spawn</code> у <code>node-pty</code> выполняется с
+<code>tty.ReadStream</code>, заменённым собственным читателем, который читает ТОТ ЖЕ fd
+через <code>fs.read</code> и при <code>EAGAIN</code> ЖДЁТ и пробует снова (от 4 мс, удваивая до
+32 мс, возвращаясь к минимуму при каждых данных); <code>EIO</code> или ноль байт — конец.
+Замена действует только ВО ВРЕМЯ <code>spawn</code> и восстанавливается, даже когда он
+выбрасывает; под Node модуль возвращается НЕТРОНУТЫМ. fd и дочерний процесс
+остаются настоящими — ничто не имитирует вывод. А <code>--self-test-pty</code> делает
+ДВА прохода, второй после паузы, когда читать нечего: именно пауза заставляет
+чтение пройти через <code>EAGAIN</code>, и именно из-за неё старый читатель проваливается
+и на Linux. Когда проваливается, самотест говорит почему (куски, вывод
+дочернего процесса, зонд во втором PTY и события потока) — вердикт не
+меняется.</p>
+<p>Именно зонд измерил Windows: там сторона чтения — именованный pipe ConPTY,
+открытый <code>node-pty</code> как <code>net.Socket</code>, без fd, который мог бы взять читатель, и
+pipe заканчивается после первого куска — поэтому <code>win32-x64</code> ушёл из матрицы
+(<a href="../adr/0187-runner-sem-binario-win32-x64.html">ADR 0187</a>) вместо того, чтобы
+получить обходной путь.</p>
+<ul>
+<li><strong>Где:</strong> <code>apps/runner/src/leitor-de-pty.ts:60</code> (<code>precisaDoLeitorProprio</code>),
+<code>:70</code> (<code>LeitorDeFdNaoBloqueante</code>), <code>:115</code> (<code>agendar</code>), <code>:152</code>
+(<code>comLeitorDePtyProprio</code>); <code>apps/runner/src/native-pty-loader.ts:114</code>
+(<code>comLeitorDePtyProprio</code>); <code>apps/runner/src/index.ts:1268</code>
+(<code>PAUSA_ENTRE_VOLTAS_MS</code>), <code>:1291</code> (<code>sondarPty</code>), <code>:1346</code>
+(<code>rodarAutoTestePty</code>)</li>
+<li><strong>Тест:</strong> <code>apps/runner/src/leitor-de-pty.spec.ts:14</code> (только под Bun и вне
+Windows), <code>:23</code> (вне этого — ТОТ ЖЕ модуль), <code>:28</code> (замена только во время
+<code>spawn</code>, восстанавливается, когда он выбрасывает, — случай сбоя), <code>:48</code> (два
+прохода настоящего <code>cat</code>, с <code>EAGAIN</code> между ними); сквозное доказательство —
+<code>smoke:bin</code> матрицы, зелёный на <code>darwin-arm64</code>, <code>linux-x64</code> и <code>linux-arm64</code>
+в прогоне <code>36779817686</code></li>
+<li><strong>ADR:</strong> <a href="../adr/0112-binario-standalone-do-runner-via-bun-build-compile.html">0112</a>,
+<a href="../adr/0187-runner-sem-binario-win32-x64.html">0187</a></li>
+<li><strong>Источник:</strong> AT-342, AT-343</li>
+</ul>
+<nav class="site-pager"><a href="../business-rules/produto.html"></a><a href="../business-rules/web.html"></a></nav>
+</article>
+<footer class="site-foot"><a href="https://github.com/daneiel/brabo/blob/dev/apps/runner/docs/business-rules/runner.md">Редактировать страницу</a><span>Обновлено 2026-11-04T23:32:20-03:00 · Daniel Souza</span></footer>
+</main>
+<aside class="site-toc"><h2>На этой странице</h2><ul><li class="n2"><a href="#волна-1-adr-0104--execution_mode-с-тремя-значениями-workspace-подтверждаемый-runner">Волна 1 ADR 0104 — execution_mode с тремя значениями, workspace, подтверждаемый runner</a></li><li class="n3"><a href="#rn-423">RN-423 — Runner ПОДТВЕРЖДАЕТ путь; без подтверждения команда отклоняется — никогда не падает в контейнер</a></li><li class="n3"><a href="#rn-429">RN-429 — Навигация по локальной папке — чистая ретрансляция через Runner, никогда не перечисление контейнера силами api</a></li><li class="n2"><a href="#терминал-локального-runner-навсегда-застрявший-в-открытие-терминала-rn-433">Терминал локального runner, навсегда застрявший в &quot;Открытие терминала...&quot; (RN-433)</a></li><li class="n3"><a href="#rn-434">RN-434 — В Linux --dir локального runner принимается только внутри $HOME пользователя</a></li><li class="n3"><a href="#rn-435">RN-435 — Несуществующий --dir локального runner создаётся, а не отклоняется</a></li><li class="n2"><a href="#обозреватель-папок-runner-становится-трёхколоночным-а-создание-проекта-runner-перестаёт-ждать-последнего-шага-rn-436436">Обозреватель папок Runner становится трёхколоночным, а создание проекта runner перестаёт ждать последнего шага (RN-436/436)</a></li><li class="n3"><a href="#rn-452">RN-452 — node-pty разрешается внедрением, а не статическим импортом — и пробел, который это открыло в smoke npm, закрыт в том же коммите</a></li><li class="n2"><a href="#настройка-runner-через-браузер-rn-464466-adr-0118">Настройка runner через браузер (RN-464..466, ADR 0118)</a></li><li class="n3"><a href="#rn-466">RN-466 — brabo-runner работает без --project/--dir/--token, когда в папке есть локальная конфигурация, записанная браузером</a></li><li class="n2"><a href="#артефакт-решения-разговорных-агентов-rn-505">Артефакт решения разговорных агентов (RN-505)</a></li><li class="n3"><a href="#rn-507">RN-507 — Docker становится реальным предусловием режима runner: все ТРИ режима выполнения требуют ОДНОГО И ТОГО ЖЕ предиката</a></li><li class="n2"><a href="#o-espelho-copia-o-trabalho-para-a-pasta-do-usuário-rn-516">Зеркало копирует работу в папку пользователя (RN-516)</a></li><li class="n3"><a href="#rn-516">RN-516 — Назначение зеркала передаётся в ПРЕДОСТАВЛЕНИИ join, зеркало копирует список git в одну сторону и никогда не удаляет, а триггер — именованный момент, никогда watcher</a></li><li class="n2"><a href="#o-agente-local-vira-serviço-de-usuário-e-status-não-colapsa-estado-rn-518">Локальный агент становится сервисом ПОЛЬЗОВАТЕЛЯ, а status не сливает состояния (RN-518)</a></li><li class="n3"><a href="#rn-518">RN-518 — brabo-runner service install|uninstall|status устанавливает на уровне ПОЛЬЗОВАТЕЛЯ и никогда root; uninstall чистит папку, которую регистрирует UNIT; status отвечает четырьмя состояниями, не сливая ни одного; Windows — именованный отказ</a></li><li class="n2"><a href="#a-flag-que-liga-um-agente-tem-de-chegar-ao-processo-rn-540">Флаг, включающий агента, должен ДОХОДИТЬ до процесса (RN-540)</a></li><li class="n3"><a href="#rn-529">RN-529 — brabo-runner рождается с локальной БАЗОЙ, каждый проект — её подпапка, и база НИКОГДА не делает --dir недействительным</a></li><li class="n2"><a href="#a-base-do-agente-local-ganha-um-consumidor-a-pasta-do-projeto-nasce-pelo-canal-rn-532">База локального агента получает потребителя: папка проекта рождается через канал (RN-532)</a></li><li class="n3"><a href="#rn-532">RN-532 — workspace_create создаёт папку под ЛОКАЛЬНОЙ базой, а ЗАПИСЫВАЕТ по-прежнему уже существовавший workspace_confirm</a></li><li class="n2"><a href="#o-agente-local-abre-n-conexões-uma-por-projeto-rn-544-fase-30">Локальный агент открывает N соединений, по одному на проект (RN-544, ФАЗА 30)</a></li><li class="n3"><a href="#rn-544">RN-544 — Локальный агент открывает N соединений, по одному на проект, обнаруженный маршрутом, — а потолок попыток и отказ join перестают принадлежать ПРОЦЕССУ</a></li><li class="n2"><a href="#a-unit-de-máquina-convivendo-com-as-por-projeto-rn-545">Unit МАШИНЫ, сосуществующая с unit по проектам (RN-545)</a></li><li class="n3"><a href="#rn-545">RN-545 — service install --machine устанавливает ОДНУ unit для машины, и два вида не перекрываются</a></li><li class="n2"><a href="#o-agente-de-máquina-espera-o-primeiro-projeto-e-a-chave-nasce-no-terminal-rn-550551-fase-30">Агент машины ждёт первого проекта, а ключ рождается в терминале (RN-550/551, ФАЗА 30)</a></li><li class="n3"><a href="#rn-550">RN-550 — При НУЛЕ соединений локальный агент НЕ выходит: он ждёт и перезапрашивает список; при живом соединении запрос по-прежнему только при старте</a></li><li class="n3"><a href="#rn-551">RN-551 — brabo-runner device-key create/finish: пара Ed25519 рождается НА МАШИНЕ, приватный ключ никогда не передаётся, а файл, который читает runner, никогда не существует без kid</a></li><li class="n2"><a href="#a-credencial-que-não-atravessa-o-container-do-agente-local-rn-558">Учётные данные, которые не пересекают контейнер локального агента (RN-558)</a></li><li class="n3"><a href="#rn-558">RN-558 — Учётные данные в exec при активном контейнере ОТКЛОНЯЮТСЯ runner с именованным итогом и источником politica</a></li><li class="n2"><a href="#o-git-credenciado-roda-no-host-do-runner-rn-676">Git с учётными данными выполняется на хосте runner (RN-676)</a></li><li class="n3"><a href="#rn-676">RN-676 — При активном контейнере git fetch с учётными данными из RunnerGit выполняется на ХОСТЕ runner, помеченный engine; код остаётся в контейнере</a></li><li class="n2"><a href="#a-anamnese-religada-sujeito-elegível-e-fato-do-perfil-rn-680">Anamnese снова включена: допустимый субъект и факт профиля (RN-680)</a></li><li class="n3"><a href="#rn-688">RN-688 — Бинарник runner читает PTY собственным читателем под Bun, а самотест доказывает ВТОРОЕ чтение</a></li></ul></aside>
+</div>
+<script src="../../assets/site.js"></script>
+<script defer src="../assets/busca.js" data-indice="../assets/busca-ru.json" data-base="../"></script></body>
+</html>
