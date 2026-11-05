@@ -29,6 +29,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
+import { RAIZES_DE_DOC as RAIZES_CANONICAS } from '../raizes-de-doc.mjs';
 
 export const LOCALE_FONTE = 'pt-BR';
 export const LOCALES = ['pt-BR', 'en', 'ru', 'zh-Hans'];
@@ -81,7 +82,7 @@ export function urlRelativa(deUrl, paraUrl) {
 }
 
 /** As raízes de doc (AT-693), canônicas e relativas ao repositório, na ordem de `raizes-de-doc.mjs`. */
-export const RAIZES_DE_DOC = ['docs', 'apps/api/docs', 'apps/engine/docs', 'apps/web/docs', 'apps/runner/docs', 'apps/broker/docs', 'packages/docs', 'deploy/docs', 'scripts/ci/docs'];
+export const RAIZES_DE_DOC = Object.values(RAIZES_CANONICAS);
 
 /** As que existem sob `raiz`; `docs/` é a do agregador e sempre conta. */
 export function raizesExistentes(raiz, candidatas = RAIZES_DE_DOC) {
