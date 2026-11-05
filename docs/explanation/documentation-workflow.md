@@ -1027,3 +1027,23 @@ alguma regra. Entregar só o que o CI cobra é como as duas frases sobre
 `OTEL_EXPORTER_OTLP_ENDPOINT` ficaram erradas por meses. Quando você
 mudar código, varra `docs/` procurando o que a mudança tornou falso —
 inclusive o que ninguém pediu para você olhar.
+
+## Raízes de doc por área {#raizes-de-doc-por-area}
+
+Desde o [ADR 0254](../adr/0254-a-doc-de-cada-area-mora-na-raiz-dela.md) a doc de cada área mora em `<raiz>/docs/` (a lista está em `scripts/docs/raizes-de-doc.mjs`, o mapa nome→pasta em `scripts/docs/fontes.yml` ou no arquivo de `BRABO_FONTES`), e `docs/` segue como agregador. O site é a **árvore de união**: o arquivo mantém o caminho relativo que tinha, a URL pública não muda e os links entre páginas usam as coordenadas do site, não as do disco.
+
+```mermaid
+flowchart LR
+  A["apps/api/docs"] --> U
+  W["apps/web/docs"] --> U
+  E["apps/engine/docs"] --> U
+  R["apps/runner/docs · broker · packages"] --> U
+  I["deploy/docs · scripts/ci/docs"] --> U
+  P["docs/ (agregador)"] --> U
+  U(("união")) --> S["site: mesmas URLs"]
+```
+
+- **RN nova** vai em `<raiz>/docs/business-rules/<raiz>.md`, na raiz que hospeda a primeira ref `caminho:N`. A numeração é global e a âncora `{#rn-NNN}` não muda; `docs/business-rules.md` é índice gerado e `custo.md`/`autenticacao.md` são stubs congelados.
+- **`docs:check`** soma todas as raízes e reprova RN duplicada entre elas. Com `--raiz <nome>` roda por raiz o que só depende dela (âncoras, refs internas, glob do docmap, drift) e deixa para o agregador o que cruza raízes (contagens, índice de RN, paridade, links entre idiomas).
+- **Traduções** ficam em `<raiz>/docs/i18n/<locale>/`, com um só `traducao.json`. Mover arquivos exige dois commits: a mudança e depois o recarimbo de `traducao_de`.
+- **Preço:** link entre raízes dá 404 na visualização do GitHub; no site funciona.
