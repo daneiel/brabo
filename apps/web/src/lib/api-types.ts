@@ -5,7 +5,7 @@
 //
 // `ActionType`, abaixo, NÃO é mais cópia à mão: sai de
 // `./api-types.generated.ts`, gerado por `pnpm --filter web run openapi:types`
-// a partir de `docs/reference/openapi.json` (por sua vez gerado de
+// a partir de `apps/api/docs/reference/openapi.json` (por sua vez gerado de
 // `apps/api` via `pnpm docs:generate` — ver docs/.docmap.yml, regra
 // `referencia-openapi`). É a correção estrutural para a divergência que já
 // aconteceu duas vezes em produção (os três tipos do bootstrap de Gitflow, e

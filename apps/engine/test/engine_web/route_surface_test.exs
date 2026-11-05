@@ -26,7 +26,7 @@ defmodule EngineWeb.RouteSurfaceTest do
   serviço: as três probes (kubelet) e o `/metrics` (Prometheus). A exposição
   delas é contida por REDE — a NetworkPolicy só libera o namespace
   `monitoring`, e o Ingress de produção bloqueia `/metrics` e `/internal`.
-  Justificativa completa em `docs/security-surface.md`.
+  Justificativa completa em `apps/api/docs/security-surface.md`.
   """
   use EngineWeb.ConnCase, async: false
 
@@ -110,7 +110,7 @@ defmodule EngineWeb.RouteSurfaceTest do
 
     Ou a rota entrou no escopo errado do router (fora do `scope "/internal"`,
     que é quem passa pelo VerifyServiceToken), ou ela é intencionalmente pública —
-    e nesse caso precisa de justificativa em docs/security-surface.md e de uma
+    e nesse caso precisa de justificativa em apps/api/docs/security-surface.md e de uma
     linha em @sem_auth.
     """
   end
