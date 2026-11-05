@@ -59,8 +59,8 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 | # | 发现 | 位置 | 优先级 | 状态 |
 |---|---|---|---|---|
 | 1 | 产品不会把项目指向已有仓库。`createRepo` 是无条件的；`getRepo` 存在但没有任何用例调用；DTO 没有 `externalId` 字段 | `provision-repository.use-case.ts:144` | **P1** | **已关闭** — [ADR 0044](../adr/0044-adocao-de-repositorio-existente.md) |
-| 2 | GitHub 上的 `protectBranch` 在已有保护之上施加 `enforce_admins: true` + 1 名审查者，而不读取当前状态——可能锁住所有者的手动合并 | `github-provider.ts:170-175` | **P1** | **已关闭** — 成为产品规则（[RN-045](../business-rules/custo.md#rn-045)） |
-| 3 | 引导会创建并保护一个 Brabo 分支策略（Fase 6）并不使用的 `rc` 分支 | `bootstrap-steps.ts:94,195` | P2 | **已关闭** — [RN-029](../business-rules.md#rn-029) |
+| 2 | GitHub 上的 `protectBranch` 在已有保护之上施加 `enforce_admins: true` + 1 名审查者，而不读取当前状态——可能锁住所有者的手动合并 | `github-provider.ts:170-175` | **P1** | **已关闭** — 成为产品规则（[RN-045](../business-rules/api.md#rn-045)） |
+| 3 | 引导会创建并保护一个 Brabo 分支策略（Fase 6）并不使用的 `rc` 分支 | `bootstrap-steps.ts:94,195` | P2 | **已关闭** — [RN-029](../business-rules/api.md#rn-029) |
 | 4 | `agent_areas`/`agent_area_members` 不存在；区域、lead 和成员硬编码在两个可能分歧的地方 | `schema.ts:781-786` | P2 | Fase 8 记录在案的切分 |
 | 5 | Fase 9b 的六个 LLM provider 没有进入，而 CLAUDE.md 把 Fase 9 描述得好像它们已经进入 | ADR 0042:147-156 | P2 | 在 Fase 11 关闭 |
 | 6 | `git-providers.md` 声称 Bitbucket 和 Generic "不在范围内"；CLAUDE.md 把两者标为进行中的阶段 | `docs/reference/git-providers.md:170-174` | P2 | 在 Fase 10 本身关闭 |
@@ -73,8 +73,8 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 |---|---|---|---|---|
 | 9 | **Criativo 无法被省掉。** 认领要求故事处于 `ready`；`ready` 要求 ≥1 条业务规则；id 要对照真实事件校验；而只有 Criativo 有 `emit_artifact` | `story-readiness.ts:46`, `po_server.ex:18` | **P1** | 开放 |
 | 10 | **一个 dev agent 处理一个 task 就停下。** `:work` 只在激活和接受并行化时触发 | `dev_agent_server.ex:76-91,306-327` | **P1** | **已关闭** — [ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md) |
-| 11 | 重新激活执行不会重新触发 `:work`，还会多创建一个没有绑定 agent 的会话 | `dev_agent_supervisor.ex:33-52` | P2 | **已关闭** — [RN-053](../business-rules/custo.md#rn-053) |
-| 12 | 不存在向任选 agent 的手动 handoff，而 ADR 0038 的目标校验从未实现 | `SessionPage.tsx:403-407` | P2 | **关闭一半** — 目标校验见 [RN-054](../business-rules.md#rn-054)；手动 handoff 仍开放 |
+| 11 | 重新激活执行不会重新触发 `:work`，还会多创建一个没有绑定 agent 的会话 | `dev_agent_supervisor.ex:33-52` | P2 | **已关闭** — [RN-053](../business-rules/api.md#rn-053) |
+| 12 | 不存在向任选 agent 的手动 handoff，而 ADR 0038 的目标校验从未实现 | `SessionPage.tsx:403-407` | P2 | **关闭一半** — 目标校验见 [RN-054](../business-rules/api.md#rn-054)；手动 handoff 仍开放 |
 | 13 | 不存在"晋升为 ready"：晋升在创建时自动发生。`TransitionStoryUseCase` 没有连接到任何路由——是死代码 | `create-story.use-case.ts:75-78` | P2 → **P1** | **已关闭** — [ADR 0046](../adr/0046-promocao-de-story-com-autoridade-do-usuario.md) |
 | 14 | 不存在退回给 PO——没有状态、事件或按钮 | — | P2 | 与 #13 一起**关闭** |
 | 15 | 团队面板和 Psicólogo 的假设共用同一个标签页，而它是项目的默认标签页 | `ProjectOverviewTab.tsx:227-263` | P2 | **已关闭** — 独立的 Insights 标签页，带计数器 |
@@ -91,7 +91,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 :::
 
-有两项作为**记录而非缺陷**进入，以免收获把它们与缺口混淆：**在产品之外的合并**（`awaiting_user` 有意是终态，[RN-014](../business-rules.md#rn-014)——engine 甚至不认识 `git_merge`），以及非功能需求中**按关键词省掉 QA**（`qa_lead.ex:20-28`），那是声明过的启发式，不是 NLP。
+有两项作为**记录而非缺陷**进入，以免收获把它们与缺口混淆：**在产品之外的合并**（`awaiting_user` 有意是终态，[RN-014](../business-rules/api.md#rn-014)——engine 甚至不认识 `git_merge`），以及非功能需求中**按关键词省掉 QA**（`qa_lead.ex:20-28`），那是声明过的启发式，不是 NLP。
 
 ## 没有测量的内容 {#o-que-não-foi-medido}
 

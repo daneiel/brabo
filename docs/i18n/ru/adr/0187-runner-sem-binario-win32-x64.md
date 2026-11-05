@@ -32,7 +32,7 @@ Windows целиком). Не редактирует ни один из них.
    `Cannot find package 'node-pty'`: загрузчик получал форму БЕЗ
    двоеточия (`B/~BUN/root/`) и падал в обычный `import('node-pty')`.
    Исправлено. В этом же run `darwin-arm64` и две Linux ПРОШЛИ с
-   собственным читателем PTY из AT-342 ([RN-688](../business-rules.md#rn-688)).
+   собственным читателем PTY из AT-342 ([RN-688](../business-rules/runner.md#rn-688)).
 3. **Run `36780804339`** — `node-pty` загружается, а от `cmd.exe` приходят лишь
    начальные последовательности ConPTY (`ESC[?9001h ESC[?1004h`), даже без приглашения.
    Самотест получил ЗОНД, не зависящий от ввода, чтобы отделить
@@ -72,7 +72,7 @@ ADR 0174 меняются вместе:
   `win32-x64` и не получает его.
 - Браузер продолжает **обнаруживать** `win32-x64` и не запрашивает загрузку: он
   попадает в `SEM_BINARIO_PUBLICADO`, который заранее падает и переходит к обычному
-  best-effort (`falhaDoBinario` → команда npm, [RN-473](../business-rules.md#rn-473)).
+  best-effort (`falhaDoBinario` → команда npm, [RN-473](../business-rules/web.md#rn-473)).
 - `scripts/ci/alvos-do-runner.spec.ts` связывает четыре места и начинает
   отклонять `windows-latest` в матрице.
 

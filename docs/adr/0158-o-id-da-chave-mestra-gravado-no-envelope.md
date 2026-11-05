@@ -5,7 +5,7 @@
 **Accepted.** Corresponde ao `BRB-016` do registro do mantenedor, que declara
 depender do `BRB-010` — e a dependência é literal: esta decisão muda o formato
 do envelope, e a prova de que o formato atual sobrevive a uma rotação inteira
-nasceu na mesma entrega, na [RN-562](../business-rules.md#rn-562), **antes**
+nasceu na mesma entrega, na [RN-562](../business-rules/api.md#rn-562), **antes**
 desta linha de código. Não revoga o
 [ADR 0027](0027-fase5-backup-hardening-release.md): o esquema de envelope, o
 `CREDENTIALS_MASTER_KEY_PREVIOUS` e o `rewrap-deks.ts` seguem como estão.
@@ -42,7 +42,7 @@ Disso saem dois defeitos concretos:
    republicar a chave anterior, o outro pede investigar o registro.
 
 A lição que governa esta área é a
-[RN-475](../business-rules.md#rn-475): um id que devia estar gravado dentro do
+[RN-475](../business-rules/web.md#rn-475): um id que devia estar gravado dentro do
 material e não estava fez o modo automático nunca autenticar, e custou uma
 caçada por um defeito de uma linha.
 

@@ -6,10 +6,10 @@
   audiências do mesmo gasto), no ponto em que o membro só enxergava o PRÓPRIO
   consumo; o [ADR 0076](0076-provider-volta-a-ser-dimensao-de-gasto.md) segue
   valendo inteiro (provider é eixo do owner e fora do alcance por tipo)
-- **Contexto anterior:** [RN-058](../business-rules/custo.md#rn-058),
-  [RN-060](../business-rules/custo.md#rn-060),
-  [RN-101](../business-rules/custo.md#rn-101),
-  [RN-187](../business-rules/custo.md#rn-187)
+- **Contexto anterior:** [RN-058](../business-rules/api.md#rn-058),
+  [RN-060](../business-rules/api.md#rn-060),
+  [RN-101](../business-rules/api.md#rn-101),
+  [RN-187](../business-rules/api.md#rn-187)
 
 ## Contexto
 

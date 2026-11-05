@@ -8,7 +8,7 @@ description: O instrumento que mede a heurística de detecção de idioma da AT-
 
 > AT-160 (EP-028, HS-053). A heurística medida é a que a especificação da
 > AT-080 propôs ("A — heurística própria, sem dependência"). Desde a AT-163
-> ([RN-624](../business-rules.md#rn-624)) o produto a roda: a api detecta
+> ([RN-624](../business-rules/api.md#rn-624)) o produto a roda: a api detecta
 > o idioma do autor com ela e PERGUNTA antes de qualquer coisa mudar. Os
 > limiares do produto são **provisórios** — veja
 > [Os limiares provisórios do produto](#the-products-provisional-thresholds).
@@ -169,7 +169,7 @@ a heurística. Os limiares da AT-163 deveriam vir do corpus real.
 
 A AT-163 tinha de sair com *algum* número antes de o corpus real existir, então
 a api lê `PARAMETROS_PROVISORIOS` — **provisórios, não calibrados**, e assim
-declarados na [RN-624](../business-rules.md#rn-624):
+declarados na [RN-624](../business-rules/api.md#rn-624):
 
 | parâmetro | provisório | candidato da AT-080 | por quê |
 |---|---|---|---|
@@ -462,7 +462,7 @@ O limiar de aprovação é 91 acertos de 95 (94,7% reprova). Lendo a tabela:
   resposta em inglês (6 só no formulário, 2 intercaladas), enquanto 7 são inglês
   limpo, formulários incluídos. O modelo consegue escrever o formulário em
   inglês — faz isso mais ou menos metade das vezes.
-  **De onde veio (AT-282, [RN-667](../business-rules.md#rn-667)):** a própria
+  **De onde veio (AT-282, [RN-667](../business-rules/engine.md#rn-667)):** a própria
   descrição da ferramenta dizia ao modelo que o `label` era "o texto da pergunta,
   **em pt-BR**" — uma segunda instrução de idioma, fixa, fora da fachada,
   competindo com a orientação do fim em toda chamada. Agora ela diz "no idioma

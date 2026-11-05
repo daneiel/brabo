@@ -74,7 +74,7 @@ graph TB
 outbox 排空三种 `aggregate_type`：`session`（自 Fase 5 起）、`task`（Fase 12b——
 `task.gate_resolved`/`task.became_claimable`，在 gate 解决或新任务变得可领取后对 dev
 agent 的重新调度）以及 `container`（[ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502)——`container.running`，在记录项目容器到达
+/[RN-502](business-rules/engine.md#rn-502)——`container.running`，在记录项目容器到达
 `running` 的同一事务中附加，使因其缺失而停在 `:idle` 的 dev agents 自行醒来；用一个
 独立的聚合而不是借用 `task`，因为这个事件与任何任务都无关）。
 它之所以是 outbox，而不是像其他一样的同步 HTTP 调用：在 gate 裁决和智能体反应之间
@@ -83,13 +83,13 @@ engine 的一次重启不能丢失信号——这一行能比要读取它的进�
 一个**崩溃**的 dev agent（任何不是 `:normal`/`:shutdown` 的退出）不被当作已结束：
 `Engine.Dev.Monitor` 记录一个持久的 `agent.error`（来源 `infra`），并从它在
 `dev_agent_states` 中自己的那一行重启它，最多三次；被中断的任务由已有的重启恢复
-机制带着诊断阻塞（[RN-742](business-rules.md#rn-742)）。
+机制带着诊断阻塞（[RN-742](business-rules/engine.md#rn-742)）。
 `dev_agent_states` 增加了 `consecutive_blocked`/`max_consecutive_blocked`
-（断路器，[RN-047](business-rules/custo.md#rn-047)）；完整决定在
+（断路器，[RN-047](business-rules/engine.md#rn-047)）；完整决定在
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md) 中。
 因网络/provider 的暂时故障（DNS、连接重置、5xx/429）而阻塞的任务，会在 1、3 和
 10 分钟后由一个 Oban job 再次解除阻塞（最多三次，通过人工解除阻塞的同一用例），
-dev agent 暂停一分钟而不是去领取下一个任务（[RN-864](business-rules.md#rn-864)）。
+dev agent 暂停一分钟而不是去领取下一个任务（[RN-864](business-rules/engine.md#rn-864)）。
 
 gate 智能体（`QaLeadServer`/`SecOpsAgentServer`）在中间转换时不经过 outbox
 （`correct`/`run_secops` 仍是内存中的直接调用——机制上的证明在
@@ -97,7 +97,7 @@ gate 智能体（`QaLeadServer`/`SecOpsAgentServer`）在中间转换时不经�
 outbox 传递），因此它们获得了与 dev agents 已有的**相同**的安全网：`gate_states`，
 外加一个 `GateRescuer`，扫描停滞的周期并自行恢复它们——outbox 路径不需要新表，因为
 问题不在于缺少 outbox，而在于同一进程中两次调用**之间**发生的事缺少持久状态。见
-[RN-140](business-rules.md#rn-140)、[ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md)。
+[RN-140](business-rules/engine.md#rn-140)、[ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md)。
 
 QA 的 gate 在 `approved`/`changes_requested` 之外还有**第三种**裁决：
 `needs_user_decision`，用于用户从未确认过的需求（或与现行决策相矛盾的需求）。它不
@@ -105,7 +105,7 @@ QA 的 gate 在 `approved`/`changes_requested` 之外还有**第三种**裁决�
 [ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md) 的机制**停放**，直到用户回答
 问题，这会恢复它。同一规则在会话侧的对应是工具 `declare_open_question`（Criativo、
 PO、Arquiteto、Dev Lead），它写入 `artifact.open_question`；用户的回答作为 dev-context
-中的"用户的决定"回到 dev 和 QA（[RN-862](business-rules.md#rn-862)、
+中的"用户的决定"回到 dev 和 QA（[RN-862](business-rules/engine.md#rn-862)、
 [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)）。
 
 **请求** gate 的从来不是 gate 自己：`Engine.Gates.Dispatcher` 是一个有五个回调的
@@ -117,7 +117,7 @@ GenServer 并对其 cast。这层间接是为调用方的测试而存在的：`E
 启动一个真实的 GenServer，会把 Dev Lead 的测试绑到数据库上。五个中最新的
 `run_appsec_design/2` 关闭了最后一个没有生产调用方也能触发的 gate：
 `assess_implementability` 现在**并行**请求用户故事的设计威胁模型——裁决从不等待它，
-并且每个用户故事只请求一次（[RN-539](business-rules.md#rn-539)、
+并且每个用户故事只请求一次（[RN-539](business-rules/engine.md#rn-539)、
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)）。
 
 ## 代码地图 {#code-map}
@@ -147,7 +147,7 @@ TypeScript 会把所有 `require` 提升到顶部，所以写在 import 之间�
 | `harness/` (33) | 上下文组装、ToolLoop、压缩。**没有任何 LLM 调用发生在这里之外** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents、worktrees、monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | QA 领域（Lead + 自动化，Performance/安全以及 QA 策略的子专长——Lead 的第二时刻，ADR 0090——全部使用 LLM）和 SecOps（确定性） | `gates/qa_lead_server.ex` |
-| `infra/` (9) | Infra 领域（会话型 Lead，限定于会话——自 [RN-617](business-rules.md#rn-617) 起是第七个会话型智能体，可通过 composer 访问并在 `TurnoAssincrono` 中运行其轮次——+ 通过 ToolLoop 的 Workflows 子专长——同一领域中的两个架构家族，见 RN-037） | `infra/infra_lead_server.ex` |
+| `infra/` (9) | Infra 领域（会话型 Lead，限定于会话——自 [RN-617](business-rules/engine.md#rn-617) 起是第七个会话型智能体，可通过 composer 访问并在 `TurnoAssincrono` 中运行其轮次——+ 通过 ToolLoop 的 Workflows 子专长——同一领域中的两个架构家族，见 RN-037） | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | 会话生命周期，`:global` 注册 | `sessions/session_server.ex` |
 | `actions/` (9) | 终端和 git 执行器，lint/扫描器检测器 | `actions/git_executor.ex` |
 | `agents/` (16) | Criativo、PO、Arquiteto、Dev Lead、Staff（ADR 0088，对自动触发处于休眠）——每个轮次在一个受监督的 Task 中运行（`TurnoAssincrono`，RN-122），不再在 `handle_call` 内部，因此 `:cancel` 确实能中断它 | `agents/turno_assincrono.ex` |
@@ -188,7 +188,7 @@ TypeScript 会把所有 `require` 提升到顶部，所以写在 import 之间�
 
 `lib/aprovacoes.ts` 回答第四个问题，而它不来自 event log："如果我批准会发生什么"。
 每种 `proposed_action` 的动词和句子都在那里，三个决策界面使用它们——审批队列、聊天中
-的卡片和 Insights 标签页（[RN-096](business-rules.md#rn-096)）。
+的卡片和 Insights 标签页（[RN-096](business-rules/produto.md#rn-096)）。
 
 **联合类型 `ActionType` 曾经是一份副本，而副本过时了——两次，在生产中**（Gitflow
 bootstrap 的三种类型；然后是 `parallelize`/`raise_max_parallel`），两次编译器都没有
@@ -210,13 +210,13 @@ N 个 dev 的会话中，按时间排列的列无法回答谁在做什么。三�
 那里按项目切分会变成 N+1——每张卡片七个带轮询的查询，23 个项目时 3.824 req/min，
 而限额是 300，界面会因 429 自己把自己拖垮。两者都读取
 `GET /workspaces/:id/projects-summary`——一个跨聚合（git、预算、会话、backlog、架构）
-的读模型，其与数据库的往返次数不随项目数量增长（[RN-090](business-rules.md#rn-090)）。
+的读模型，其与数据库的往返次数不随项目数量增长（[RN-090](business-rules/api.md#rn-090)）。
 
 铃铛抽屉遵循同样的切分，有一个值得记录的差异：它需要每个项目的已读截止点，而这个点
 是保存在查看者浏览器中的一个 `seq`（`lib/read-state.ts`）——服务器没有、也不会有
 "标记为已读"。因此客户端在 `POST /workspaces/:id/unread-events` 的请求体中**发送**
 `project → afterSeq` 映射，尽管动词如此，它是一次读取并返回 `200`
-（[RN-091](business-rules.md#rn-091)）。动词来自请求体，而不是一次变更：有几十对，
+（[RN-091](business-rules/api.md#rn-091)）。动词来自请求体，而不是一次变更：有几十对，
 这么长的查询字符串会在代理处断掉，还会把项目 id 放进访问日志。
 
 这个端点返回 event log 的**事实**，从不返回组装好的组件：`lib/agents.ts`（谁是 lead、
@@ -231,17 +231,17 @@ N 个 dev 的会话中，按时间排列的列无法回答谁在做什么。三�
 **安装决定项目向导提供什么。** `getProjectsBase`（`lib/api-client.ts`）读取
 `GET /workspaces/:workspaceId/projects-base`——本安装挂载项目的唯一基目录（[ADR
 0141](adr/0141-base-unica-dos-projetos-montados.md)）——新建项目向导是它唯一的调用方
-（[RN-513](business-rules.md#rn-513)）。`projectsBase: null` 是正常状态，不是故障：
+（[RN-513](business-rules/web.md#rn-513)）。`projectsBase: null` 是正常状态，不是故障：
 安装没有 `BRABO_PROJECTS_BASE`，于是挂载文件夹的卡片就不提供，`container` 仍是默认。
 响应在途中以及查询**失败**时同样如此——未知永远不会变成提供，与
-[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468) 是同一条规则。
+[RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468) 是同一条规则。
 有基目录时，卡片**预选**，路径字段以 `<base>/<slug>` 打开，由 `caminhoSugeridoNaBase`
 （`lib/wizard.ts`）组成——一个纯函数，旁边是 `caminhoDentroDaBase`，它按**路径段**回答
 "这个路径在基目录之下吗？"，并镜像 api 的 `dentroDoEscopo`。预选和建议都不会覆盖人的
 选择。
 
 **文件夹选择器是 web 中唯一有两种传输方式的读取**，使其成为一体的接口位于
-`lib/fs-browser.ts`（[RN-504](business-rules.md#rn-504)）。`FsBrowser`——
+`lib/fs-browser.ts`（[RN-504](business-rules/web.md#rn-504)）。`FsBrowser`——
 `listarDiretorio` / `diretorioInicial` / `fechar`——有两种实现，而它们不与同一台机器
 对话：`criarFsBrowserViaApi(workspaceId)` 调用 api 中的
 `GET /workspaces/:workspaceId/project-folders`，严格限定于 `BRABO_PROJECTS_BASE`
@@ -263,16 +263,16 @@ N 个 dev 的会话中，按时间排列的列无法回答谁在做什么。三�
 
 RN-504 把**两种**模式都指向 api 并声明了代价：对 `runner` 来说，列表不再是用户的机器，
 而变成了基目录。之所以接受，是因为 `runner` 模式本要从创建向导中移除——它没有被移除，
-而 [RN-533](business-rules.md#rn-533)（[ADR 0151](adr/0151-base-consentida-no-runner.md)
+而 [RN-533](business-rules/web.md#rn-533)（[ADR 0151](adr/0151-base-consentida-no-runner.md)
 第 7 点）撤销了它。现在是**模式**选择传输，因为它们回答不同的问题：`mounted` 询问 api
 （它的文件夹位于**服务器**上的基目录之下），`runner` 询问本地智能体（它的文件夹位于
 服务器看不到的机器上）。`runner` 分支锚定在向导已提前创建的项目上
-（[RN-437](business-rules.md#rn-437)）；当这次创建失败时，不会打开任何模态框，因为
+（[RN-437](business-rules/web.md#rn-437)）；当这次创建失败时，不会打开任何模态框，因为
 回落到 api 会在"你的机器"的标签下显示**服务器**的基目录。
 
 失败带有一个**可辨识**的原因（`MotivoDeFalhaDoAgente`）：`sem-agente` 是服务器**断言**
 没有 runner，`sem-resposta` 是超时、断开的 socket 或被拒绝的 ticket——无知，就作为无知
-说出（[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)）。组件过去
+说出（[RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468)）。组件过去
 用 `includes('Nenhum runner conectado')` 判断，匹配一句位于 engine 的 `.ex` 中的 pt-BR
 句子；子串匹配现在只在一个地方，即拥有通道协议的模块中，engine 改写过的消息会降级为
 `sem-resposta`，而绝不会变成"有一个智能体"。两个原因都会挂载 `EsperaDoRunner`——RN-474
@@ -281,10 +281,10 @@ RN-504 把**两种**模式都指向 api 并声明了代价：对 `runner` 来说
 已经显示一个的地方为假。而选择器在两种来源下都**说明**它正在列出的是谁的磁盘——此前
 唯一的线索是一个快捷方式的标签，它命名的是一个位置，而不是一台机器。
 
-**面板还会识别一台已配对的机器**（[RN-548](business-rules.md#rn-548)、
+**面板还会识别一台已配对的机器**（[RN-548](business-rules/web.md#rn-548)、
 [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)）。`lib/api-client.ts` 中的
 `listRunnerDeviceKeys` 读取 `GET /projects/:projectId/runner-device-keys`，自
-[RN-543](business-rules.md#rn-543) 起它标记每把密钥的**种类**——而整个派生都在组件之外，
+[RN-543](business-rules/produto.md#rn-543) 起它标记每把密钥的**种类**——而整个派生都在组件之外，
 在 `lib/agente-de-maquina.ts` 中，因为规则关乎**数据**，组件关乎绘制。七种状态，没有
 一种塌缩成另一种，失败由 `isError` 而不是某个状态派生，因此网络错误说"不知道"，而不是
 永远转着"正在检查……"。已注册的密钥**不是**正在运行的智能体——与 `workspaceVerifiedAt`
@@ -293,7 +293,7 @@ RN-504 把**两种**模式都指向 api 并声明了代价：对 `runner` 来说
 [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md) 的浏览器流程
 （生成密钥、下载二进制、写入文件夹）已在
 [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-（[RN-687](business-rules.md#rn-687)）中退役：面板现在显示 `install.sh` 的命令，当识别到
+（[RN-687](business-rules/web.md#rn-687)）中退役：面板现在显示 `install.sh` 的命令，当识别到
 服务于该项目的密钥时它就消失，而带 PAT 的手动命令放在一个以其回答的情况（另一台机器）
 命名的 `<details>` 中。读取的最低要求来自针对**端点**的 `developer` 的 `roleAtLeast`，
 真实的 403 落入同一状态——workspace 角色是代理，api 才是权威。
@@ -339,7 +339,7 @@ LEFT JOIN 容器行、批量的 `artifact.project_image` 事件、批量的待�
 `proposed_action`——页面从不直接调用 broker——每行的待处理动作（如果有）随同一次批量读取
 一起到来，渲染为内联的 `ApprovalCard`，与 `ProjectPrsTab.tsx` 用于合并提议的模式相同。
 
-自 [RN-521](business-rules.md#rn-521) 起 join 是 LEFT，页面列出 workspace 的**每个**
+自 [RN-521](business-rules/api.md#rn-521) 起 join 是 LEFT，页面列出 workspace 的**每个**
 项目，因为它成了人工启动**第一个**容器的路径：在登记之前就失败的启动不会留下行，而旧的
 INNER JOIN 恰好隐藏了需要这个页面的项目。因此 `ContainerOverviewItem.registrado` 可为
 空——类型中命名的第三种状态，不同于 `stopped` 和"无法观察"——没有容器的行永远没有资格
@@ -349,14 +349,14 @@ INNER JOIN 恰好隐藏了需要这个页面的项目。因此 `ContainerOvervie
 智能体确认过其文件夹的 `runner`、按 `roleAtLeast` 低于 `maintainer` 的角色），每种拒绝
 都有自己的文本——界面从不提议一个它已知会失败的动作，也从不隐藏原因。
 
-**另一个**提议者——Infra Lead 智能体——自 [RN-566](business-rules.md#rn-566) 起以同样
+**另一个**提议者——Infra Lead 智能体——自 [RN-566](business-rules/engine.md#rn-566) 起以同样
 方式分支。它的两个工具都经过 `infra_lead_server.ex` 中唯一的
 `recusa_local_de_subida/2`，它**只**读取项目一次（`Project.get/1`，同一个 BEAM 进程，
 从不 HTTP：智能体循环内的网络调用正是这次修正付不起的代价），返回 `nil` 或一个**命名**的
 原因，每个工具一个子句——`container`/`mounted` 提议 `container_start`，`runner` 被拒绝
 并指向 `container_start_via_runner`，而 `container_start` 的子句是与 broker 一样的
 **允许列表**，因此枚举中的新模式生来就被拒绝。拒绝是模型读取的工具**结果**文本（循环的
-输入，[RN-163](business-rules/autenticacao.md#rn-163)），绝不是 `agent.error`，并且
+输入，[RN-163](business-rules/engine.md#rn-163)），绝不是 `agent.error`，并且
 `tool.call` 仍会发出，使本地拒绝永远不会从时间线上消失。智能体**不**检查而界面检查的，
 是已决定的镜像和已确认的文件夹。
 
@@ -453,17 +453,17 @@ sequenceDiagram
 
 **8. 项目的容器是被决定的，绝不是隐含的。** 代码标签页只有在 Arquiteto 发出
 `artifact.project_image` 之后才解锁——在状态为 `sem_decisao` 时，读取代码返回 `409`
-（[RN-105](business-rules/autenticacao.md#rn-105)）。而 `git push`、开 PR 和部署不经过
+（[RN-105](business-rules/api.md#rn-105)）。而 `git push`、开 PR 和部署不经过
 终端，即使在项目范围之内：`decide()` 通过命令前缀识别它们，并在任何宽松步骤**之前**
 返回 `deny`——不是 `require_approval`，因为"总是允许"会把模式写入 `allow` 并重新打开
-这扇门（[RN-106](business-rules/autenticacao.md#rn-106)、
+这扇门（[RN-106](business-rules/api.md#rn-106)、
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)）。
 容器的生命周期（配置、回收、清理）尚不存在——FASE 25 的一个已声明的削减，记录在
 CLAUDE.md 中——因此这个不变量目前与
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) 的路径范围策略共存。
 
 而自 [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502) 起，已决定的镜像不再是唯一的前提条件：**在项目的
+/[RN-502](business-rules/engine.md#rn-502) 起，已决定的镜像不再是唯一的前提条件：**在项目的
 容器被登记为 `running` 之前，dev agent 不领取任何任务**。守卫位于
 `Engine.Dev.AgentIo.try_claim/2`——唯一的领取点——而不仅在 api 的
 `activate-execution` 中，因为重新水合会在不经过任何路由的情况下到达 `try_claim/2`
@@ -474,13 +474,13 @@ CLAUDE.md 中——因此这个不变量目前与
 
 **9. 会写的智能体必须能读，也必须能问。** 这两半是同一个教训，来自一个只有写入工具
 的智能体：PO 在 kickoff 时组装一次上下文，此后基于一张旧快照行事——面对缺口，它在
-编造和停止之间选择（[RN-164](business-rules/autenticacao.md#rn-164)、
-[RN-165](business-rules/autenticacao.md#rn-165)）。读取**不**变成 `proposed_action`
+编造和停止之间选择（[RN-164](business-rules/engine.md#rn-164)、
+[RN-165](business-rules/engine.md#rn-165)）。读取**不**变成 `proposed_action`
 （不变量 4 关乎**外部**效果，而读取不是），但它在
 [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md) 的意义上受到约束：范围由路由
 路径封闭、每次调用成本恒定、交给模型的文本有行数上限。而智能体的循环不会悄无声息地
 结束——迭代上限发出 `toolloop.limit_reached`，未履行的义务发出带来源的持久结果
-（[RN-166](business-rules/autenticacao.md#rn-166)）。
+（[RN-166](business-rules/engine.md#rn-166)）。
 
 ## 横切关注点 {#cross-cutting-concerns}
 
@@ -553,7 +553,7 @@ span 总是被创建，`trace_id` 总是进入日志，即使没有收集器；`
 一行都没有改。第二个实例表明模型并不要求相同的内部实现：`InfraLeadServer` 仍是一个
 限定于会话的会话型 GenServer（镜像 `ArquitetoServer`，按 CLAUDE.md 8c 的明确要求保持
 外部联系不变），并委派给 `WorkflowsAgent`——它在另一端没有用户，作为一个有限的
-`ToolLoop` 运行，与 QA 的子智能体一样。自 [RN-617](business-rules.md#rn-617)
+`ToolLoop` 运行，与 QA 的子智能体一样。自 [RN-617](business-rules/engine.md#rn-617)
 （[ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)）起，Infra Lead 也接收来自
 composer 的消息，它的三种轮次（kickoff、gate 修正、消息）运行在与其他六个会话型智能体
 相同的 `TurnoAssincrono` Task 中。8b 的通用 `delegations` 需要**一处**调整才能服务第二个
@@ -596,26 +596,26 @@ erDiagram
   users ||--o{ detected_language_declines : "idioma detectado que a pessoa recusou (RN-624)"
 ```
 
-总共 56 张表。最新的是 `detected_language_declines`（[RN-624](business-rules.md#rn-624)）：
+总共 56 张表。最新的是 `detected_language_declines`（[RN-624](business-rules/api.md#rn-624)）：
 每个人和语言一行，记录此人在被问到"我们注意到你用 X 写作——回答中使用 X 吗？"时**拒绝**
 的语言，以及日期。它的存在使同一问题不会再回来；之后确认该语言会删除这一行。检测本身
 不保存状态——样本通过部分索引 `session_events_evidencia_de_idioma_idx`（用户执行者、两种
 证据类型）从 `session_events` 读取，迟滞会重新计算——因此这张表和 `users` 中已确认的那对
 字段就是它写入的全部，而且只在本人回答时写入。在它之前，最新的是
-`session_language_overrides`（[RN-618](business-rules.md#rn-618)、
+`session_language_overrides`（[RN-618](business-rules/api.md#rn-618)、
 [ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)）：一个人在一个会话
 中固定的回答语言，以 `{session_id, user_id}` **对**为键，使两个参与者永不相互影响。它是
 配置，不是事件——再次固定是 upsert，释放是 `DELETE`。同一个 ADR 增加了
 `users.response_language`（`NULL` 表示"自动"）以及已确认检测的那对字段
 `users.detected_language` / `detected_language_confirmed_at`，由一个 CHECK 绑定；
 `users.locale` 仍是界面语言，限定为 `pt-BR`/`en`。而 `projects.language`
-（[RN-619](business-rules.md#rn-619)）是没有人类作者之物的语言——共享工件和无人输入的
+（[RN-619](business-rules/api.md#rn-619)）是没有人类作者之物的语言——共享工件和无人输入的
 轮次——始终是一个具体的 BCP-47 代码。在它之前，最新的是 `project_mirror_states`
-（[RN-517](business-rules.md#rn-517)、[ADR 0147](adr/0147-agente-local-com-capacidades.md)
+（[RN-517](business-rules/api.md#rn-517)、[ADR 0147](adr/0147-agente-local-com-capacidades.md)
 第 7 点）：每个项目一行，`project_id` 唯一，保存**最后一轮**镜像做了什么——最后一次成功
 同步及其三个计数和冻结的目标，加上最后一个错误。它是**表**而不是事件，原因与上面的
 `rag_searches` 相同：一轮镜像没有会话，而 `session_events.session_id` 是 `NOT NULL`，因此
-event log 会悄悄丢弃一切。三种永不塌缩的状态（[RN-088](business-rules.md#rn-088)）：
+event log 会悄悄丢弃一切。三种永不塌缩的状态（[RN-088](business-rules/web.md#rn-088)）：
 "从未同步"是**不存在**的行，"已同步但什么都没复制"是存在且 `files_copied = 0` 的行，
 "失败"是 `last_error_at` 比 `last_synced_at` 新。成功列和失败列是**不相交**的，任何写入都
 不触碰另一方的列——这正是界面能够说"从今天开始失败，最后一次好的复制是昨天，412 个文件"，
@@ -632,20 +632,20 @@ event log 会悄悄丢弃一切。三种永不塌缩的状态（[RN-088](busines
 纪律——使后来的校准不会悄悄改变之前每次测量的含义。`session_socket_tickets` 不在图中，
 原因与 `refresh_tokens`/`account_tokens` 相同：它是认证机制，不是领域关系。
 
-`projects.mirror_path`（FASE 28，[RN-515](business-rules.md#rn-515)、
+`projects.mirror_path`（FASE 28，[RN-515](business-rules/api.md#rn-515)、
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) 第 4 点）是一列而不是一张表，因为它是
 每个项目**一个**可选值：本地智能体的 `espelho` 能力把工作复制到的、位于**用户**机器上的
 绝对路径。它可为空，`NULL` 是**正常**状态——没有镜像的项目占大多数，产品从不自行选择
 目标。它故意**不**带有把它绑定到 `execution_mode` 的 CHECK，这与旁边的 `workspace_path`
 不同：`container` 不能有目标（它的来源是**服务器**上的托管卷，而会做复制的进程运行在用户
-机器上），但 `execution_mode` 是**可转换**的（[RN-447](business-rules.md#rn-447)、
+机器上），但 `execution_mode` 是**可转换**的（[RN-447](business-rules/api.md#rn-447)、
 [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)），所以 CHECK 会让
 向 `container` 的转换在 Postgres 中爆炸，而不是带着原因拒绝。拒绝放在用例中，转换会清空
 这一列——与 `workspace_verified_at` 的形式相同，还有一个额外原因：来源↔目标循环的两个方向
 都是针对**旧的** `workspace_path` 验证的。
-自 [RN-516](business-rules.md#rn-516) 起 engine **读取**这一列——由它决定 runner 的 `join`
+自 [RN-516](business-rules/runner.md#rn-516) 起 engine **读取**这一列——由它决定 runner 的 `join`
 是否要求 `espelho` 能力，也是它在该 join 的授予中传回（`Engine.Runners.Espelho`、
-`EngineWeb.TerminalChannel`）。engine 从不写它。自 [RN-517](business-rules.md#rn-517) 起
+`EngineWeb.TerminalChannel`）。engine 从不写它。自 [RN-517](business-rules/api.md#rn-517) 起
 附近**有**一个内部路由——`POST /internal/projects/:projectId/mirror-sync-result`——但它写入
 `project_mirror_states`，从不写这一列：目标是**配置**（用户声明它），一轮的结果是**遥测**
 （本地智能体报告它），把两者合并会让一次报告覆盖一个选择。
@@ -653,19 +653,19 @@ event log 会悄悄丢弃一切。三种永不塌缩的状态（[RN-088](busines
 范围的 `check`（项目**或**会话，绝不两者都有）、保证分析幂等性的部分索引——以及自 Fase 8b
 起，`delegations` 的三个 `check`，锁定每个 `status` 哪个字段是必需的（`completed` →
 `parecerArtifactId`，`failed` → `failureOrigin`，`dispensed` → `justification`；见
-[RN-036](business-rules.md#rn-036)）。`delegations.task_id` 生来是 `NOT NULL`，在 Fase 8c
+[RN-036](business-rules/engine.md#rn-036)）。`delegations.task_id` 生来是 `NOT NULL`，在 Fase 8c
 变为可空——Infra 领域针对会话委派，infra PR 背后没有 backlog 任务（见
-[RN-037](business-rules.md#rn-037)）。
+[RN-037](business-rules/ci.md#rn-037)）。
 
 `agent_areas`（FASE 14d，[ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md)）是 Fase 8
 曾经削减的东西。它回来了，因为 **dev** 领域无法在代码中枚举：`qa` 和 `infra` 能放进固定
 列表，但 dev 的成员是 `module_map` 中每个模块一个，由 Arquiteto 决定，每个项目都不同。唯一
 `(project_id, key)` 使播种幂等，`max_parallel`（默认 2）是 lead 无需询问就能使用的上限——
-超过它，就是 `proposed_action`（见 [RN-083](business-rules/custo.md#rn-083)）。
+超过它，就是 `proposed_action`（见 [RN-083](business-rules/api.md#rn-083)）。
 `budget_micros`/`spent_micros`（ADR 0110）在同一行中镜像 `max_parallel`——一个与
 `budgets`（项目/会话）**叠加**的花费上限，绝不是级联：它由已经负责项目和会话花费的同样的
 `CheckBudgetGateUseCase`/`RecordLlmUsageUseCase` 独立检查和递增（见
-[RN-443](business-rules.md#rn-443)）。不要把它与
+[RN-443](business-rules/api.md#rn-443)）。不要把它与
 [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md) 的模型 binding
 级联（`session > agent > area > project > workspace`）混淆——那个选择唯一的胜出者；领域预算
 从不选择。

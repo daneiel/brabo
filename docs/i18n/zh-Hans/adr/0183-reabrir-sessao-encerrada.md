@@ -7,7 +7,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## 状态 {#status}
 
 **Accepted.** 2026-09-30（AT-071，故事 HS-048，史诗 EP-027，第 30 轮）。
-修订 [RN-001](../business-rules.md#rn-001) 的一部分——*"terminal states have
+修订 [RN-001](../business-rules/api.md#rn-001) 的一部分——*"terminal states have
 no exit"*——并与 [ADR 0061](0061-tipo-da-sessao-na-criacao.md) 共存（会话有不可变的 `kind`，执行状态是事件 `execution.activated`）。两者都不被编辑：**向状态机增加一个转换**，并声明它不改变什么。
 
 本 ADR 的三项决定是**临时、保守、等待负责人的默认值**——最低角色、没有期限以及拒绝有执行的会话。它们在下文中如此标注，修改其中任何一项都不需要新的 ADR：只需替换所指的那一行以及引用它的 RN。
@@ -18,7 +18,7 @@ no exit"*——并与 [ADR 0061](0061-tipo-da-sessao-na-criacao.md) 共存（会
 （2026-09-13，`b61bc49cd`）：
 
 - `session-state-machine.ts` 声明了 `closed: []` 和 `closed_abnormally: []`，并带有注释 *"Estados terminais: nenhuma transição sai deles"*，测试固定了这一点。在 api、engine、web、ADR 和 RN 中都没有会话的 `reopen`/`reabrir`/`retomar`。
-- 真实案例（`exp001`，会话 `fe57b393…`）：因 `heartbeat_timeout` 而 `closed`，92 个事件，十一个 `artifact.business_rule`，五对结构化问题。整个对话都保存在 event log 中（RN-002），工件也是事件，但会话没有办法重新接受对话——自 [RN-581](../business-rules.md#rn-581) 起，api 会以 409 `sessao_encerrada` 拒绝终止会话中的所有对话事件。
+- 真实案例（`exp001`，会话 `fe57b393…`）：因 `heartbeat_timeout` 而 `closed`，92 个事件，十一个 `artifact.business_rule`，五对结构化问题。整个对话都保存在 event log 中（RN-002），工件也是事件，但会话没有办法重新接受对话——自 [RN-581](../business-rules/api.md#rn-581) 起，api 会以 409 `sessao_encerrada` 拒绝终止会话中的所有对话事件。
 - “开一个新会话”并不能替代：启用一个 agent 需要**本会话中**有 `accepted` 的 handoff（`agent-activation.ts`），PO 的 kickoff 读取**本会话的** brief 和规则。复制到新会话会重复工件并打断 Criativo → PO 的链条。
 - 两个依赖都已关闭：AT-072（RN-581——heartbeat 识别进行中的对话，上限 8h）和 AT-073（RN-580——重建读取整个对话）。在关闭时停止的对话型 agent 会在第一条消息时通过幂等的 `start_agent` 回来，并从日志重建历史。
 - `session.closed` 不是 `session_events` 的一行：它是 outbox。会话**何时**以及**为何**关闭的唯一持久记录，是 `sessions` 行中的 `closed_at` 和 `termination_reason` 列。

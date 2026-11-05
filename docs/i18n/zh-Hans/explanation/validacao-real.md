@@ -30,7 +30,7 @@ keywords: [验证, dogfooding, GitHub, dev agent, 测量, FASE 13b]
 | 远程接管（真实的 `getRepo`） | `origin: adopted`，默认分支 `main` |
 | dry-run 计划 | 6 个变更、6 条诊断，**决策为空** |
 | 在决策之前仓库未被触碰 | 经 API 验证：**零分支、零内容** |
-| 重新接管会收敛 | 第 1 轮 6 个变更，**第 2 轮 3 个**（[RN-046](../business-rules/custo.md#rn-046)） |
+| 重新接管会收敛 | 第 1 轮 6 个变更，**第 2 轮 3 个**（[RN-046](../business-rules/api.md#rn-046)） |
 | 唯一的 story 保持 `draft` + 提议 | 是，没有自动晋升 |
 | 晋升前的 `claimNext` | `null`——没有可领取的 |
 | 晋升 | 以**用户**为操作者记录 |
@@ -43,7 +43,7 @@ bootstrap 在 `protect_branches` 处停下，报
 `Upgrade to GitHub Pro or make this repository public`——免费计划上的私有仓库。这正是
 阶段 D 记录的场景，现在在测试之外被观察到了。
 
-而 [RN-078](../business-rules/custo.md#rn-078) 的前提也得到了确认：紧接着检查仓库，
+而 [RN-078](../business-rules/api.md#rn-078) 的前提也得到了确认：紧接着检查仓库，
 `dev`、`main` 和 `qa` 都存在，文件也都已 commit。这是**最后**一步，也是唯一一个失败后
 仍留下可用仓库的步骤。脚本识别出这一失败并继续执行，这正是为此设计的出口。
 
@@ -220,7 +220,7 @@ Psicólogo 再一次比脚本的断言更精确：
 
 ## 第六次执行：PR 在 GitHub 上打开了 {#a-sexta-execução-a-pr-abriu-no-github}
 
-在 [RN-082](../business-rules/custo.md#rn-082) 就位后，链路一直闭合到了 PR：
+在 [RN-082](../business-rules/api.md#rn-082) 就位后，链路一直闭合到了 PR：
 
 > **PR #1 — "Rota pública de saudação — Expor GET /saudacao"**,
 > de `feature/task-636ef1aa`, aberta em `daneiel/test`.
@@ -327,7 +327,7 @@ ls -la && echo "---" && cat package.json 2>/dev/null; …
 
 前十次都只有**一个模块**。这足以证明链路，却不足以证明并行性：只有一个故事时，Dev Lead
 会**拒绝**并行——“它们会撞上同样的文件”——而且它是对的。
-[RN-083](../business-rules/custo.md#rn-083) 的上限从未被真实工作查询过。
+[RN-083](../business-rules/api.md#rn-083) 的上限从未被真实工作查询过。
 
 于是有了三轮 `--modulos 2`（一个故事在 `api`，一个在 `web`）。前两轮记在
 [发现 AF](./achados-execucao-real.md) 中——一轮出了故障，一轮证明了修复。下面是**第三轮**，
@@ -374,7 +374,7 @@ Dev Lead 独立做了规划：
 对范围保持诚实，和它的姊妹验证一样：
 
 - **合并。** 按设计继续排除在外
-  （[RN-014](../business-rules.md#rn-014)），并将一直如此：在受保护分支上按下按钮的是你。
+  （[RN-014](../business-rules/api.md#rn-014)），并将一直如此：在受保护分支上按下按钮的是你。
 - **其余五个 provider。** 只有 OpenRouter 用真实凭据跑过；其余的因缺少 key 仍没有
   smoke，而对一个 provider 成立的结论，不能靠推理转移到其他 provider。
 - **隔离。** agent 与这个 monorepo 在同一个容器中执行。

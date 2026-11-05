@@ -7,12 +7,12 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## 状态 {#status}
 
 **Accepted.** 由维护者于 2026-09-18 决定（AT-085），对问题“安装程序启用 broker，还是界面不再提供无法运行的东西？”的回答是“两者都要”。修订
-[RN-513](../business-rules.md#rn-513)（[ADR 0146](0146-base-consentida-no-bootstrap.md)，第 4 点）的预选，并为
-[RN-521](../business-rules.md#rn-521) 增加一个本地拒绝原因。两者都不被编辑；本文档引用它们。**只交付了界面那一半**——安装程序那一半经测量后停下，原因见“停下的那一半”一节。
+[RN-513](../business-rules/web.md#rn-513)（[ADR 0146](0146-base-consentida-no-bootstrap.md)，第 4 点）的预选，并为
+[RN-521](../business-rules/api.md#rn-521) 增加一个本地拒绝原因。两者都不被编辑；本文档引用它们。**只交付了界面那一半**——安装程序那一半经测量后停下，原因见“停下的那一半”一节。
 
 ## Context {#context}
 
-2026-09-14 通过一行命令进行的一次 v6.1.0 真实安装，通过 web 以 `mounted` 创建了一个项目。它是**预选**的模式：`install.sh` 总是写入 `BRABO_PROJECTS_BASE`（经同意的基础目录，[RN-531](../business-rules.md#rn-531)），而有已知基础目录时 [RN-513](../business-rules.md#rn-513) 会预选 `mounted`。event log 中随后发生的是：
+2026-09-14 通过一行命令进行的一次 v6.1.0 真实安装，通过 web 以 `mounted` 创建了一个项目。它是**预选**的模式：`install.sh` 总是写入 `BRABO_PROJECTS_BASE`（经同意的基础目录，[RN-531](../business-rules/produto.md#rn-531)），而有已知基础目录时 [RN-513](../business-rules/web.md#rn-513) 会预选 `mounted`。event log 中随后发生的是：
 
 - 6× `dev.started` → 6× `dev.blocked_by_container`；
 - 2× `container.start_failed`，带有 *"BROKER_URL não está definida — o broker de
@@ -48,14 +48,14 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 - `GET workspaces/:workspaceId/containers`——按**行**，所有行同一值。响应是一个列表，换成信封结构会为一个属于安装的字段打破合约。
 
 来源是 `ContainerBrokerPort.configurado()`，与决定观测状态的读取是询问 broker 还是声明缺席的**同一个**——第二次读取 `BROKER_URL` 就会成为某天产生分歧的第二个来源。该字段说明变量**存在**，从不说明 broker **有响应**：知道这一点的仍然是
-`naoObservado`（[RN-486](../business-rules.md#rn-486)）。
+`naoObservado`（[RN-486](../business-rules/api.md#rn-486)）。
 
 ### 2. 向导在没有 broker 时不预选 `mounted`，而是提供 `runner` {#2-o-assistente-não-pré-seleciona-mounted-sem-broker-e-oferece-runner}
 
 三种状态，不会合并：
 
 - **broker 已确认**（`true`）：RN-513 的行为不变——有基础目录时预选 `mounted`；
-- **确认缺席**（`false`）：`container` 和 `mounted` 继续**在界面上**（移除卡片会隐藏信息——[RN-102](../business-rules/custo.md#rn-102) 的“移除的是控件，绝不是信息”尺子），但**不可用**，原因以文字在其下方说明**一**次，`runner` 是预选项。在响应到达之前所做的、处于被它变为不可执行的模式中的人为选择，会落到 `runner`——与基础目录消失时已经让 `mounted` 落下的规则相同；
+- **确认缺席**（`false`）：`container` 和 `mounted` 继续**在界面上**（移除卡片会隐藏信息——[RN-102](../business-rules/api.md#rn-102) 的“移除的是控件，绝不是信息”尺子），但**不可用**，原因以文字在其下方说明**一**次，`runner` 是预选项。在响应到达之前所做的、处于被它变为不可执行的模式中的人为选择，会落到 `runner`——与基础目录消失时已经让 `mounted` 落下的规则相同；
 - **不知道**（加载中、查询失败、字段缺失）：既不是“有”也不是“没有”。不预选 `mounted`——这是对 RN-513 的修订——也不锁定卡片，不以文字断言一个没人确认过的缺席：保持选中 `container`，与以前一样。
 
 ### 3. `/containers` 在点击之前拒绝启动，带专属原因 {#3-a-containers-recusa-a-subida-antes-do-clique-com-motivo-próprio}
@@ -67,16 +67,16 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 - 在通过 Release 的安装中，端到端可用的模式成为被建议的那个，而不可用的模式在有人选择之前就说明原因。代价：`runner` 要求本地 agent 在运行，以及用户机器上的 Docker——一行命令安装本已提供这些
   （[ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)）。
-- 在**开发**用 compose 中，broker 默认启动（[RN-512](../business-rules.md#rn-512)），但在有人把 `BROKER_URL` 放进 `.env` 之前它保持为空
+- 在**开发**用 compose 中，broker 默认启动（[RN-512](../business-rules/infra.md#rn-512)），但在有人把 `BROKER_URL` 放进 `.env` 之前它保持为空
   （`docker/docker-compose.yml`、`.env.example`）。没有它，开发者的向导开始显示提醒——而且这是**对**的：没有 `BROKER_URL`，api 从不调用正在运行的 broker，`container_start` 同样会失败。
 - RN-512 **不**改变：broker 在生产 compose 中仍处于 `profiles: ["container-broker"]` 之下，不在安装用 compose 中，五层约束都未被触碰。改变的是**界面**不再假设相反的情况。
 
 **超出范围，已声明：**
 
 - 安装程序那一半（上节）——取决于发布镜像；
-- 模式转换（`ExecutionModeSection`，[ADR 0111](0111-conversao-de-execution-mode-de-projeto-existente.md)）在没有 broker 的安装中仍可转换为 `container`/`mounted`；它读取同一路由，字段触手可及，但那是另一个界面，有另一把提供尺子（[RN-559](../business-rules.md#rn-559)）；
+- 模式转换（`ExecutionModeSection`，[ADR 0111](0111-conversao-de-execution-mode-de-projeto-existente.md)）在没有 broker 的安装中仍可转换为 `container`/`mounted`；它读取同一路由，字段触手可及，但那是另一个界面，有另一把提供尺子（[RN-559](../business-rules/web.md#rn-559)）；
 - 停止和移除（`container_stop`/`container_remove`）没有获得该拒绝：没有 broker 就不会有被登记为运行中的 `container`/`mounted` 容器可停止，这种情况没有测量；
 - Infra Lead 不知道 broker 缺席——它按**模式**拒绝
-  （[RN-566](../business-rules.md#rn-566)），而用安装信息丰富它的上下文是 RN-566 已声明的代价最高的那条战线；
+  （[RN-566](../business-rules/engine.md#rn-566)），而用安装信息丰富它的上下文是 RN-566 已声明的代价最高的那条战线；
 - 忽略被容器阻塞的 agent 的并行化建议；
 - `install.sh` 的结束语说没有 broker 时“Pasta montada 模式的项目不会启动容器”，却省略了同样不会启动的 `container` 模式——已测量的相邻问题，未在此修正，因为安装程序属于另一条并行战线。

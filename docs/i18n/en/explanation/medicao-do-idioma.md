@@ -9,7 +9,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 > AT-160 (EP-028, HS-053). The heuristic being measured is the one the AT-080
 > specification proposed ("A — own heuristic, no dependency"). Since AT-163
-> ([RN-624](../business-rules.md#rn-624)) the product runs it: the api detects
+> ([RN-624](../business-rules/api.md#rn-624)) the product runs it: the api detects
 > the author's language with it and ASKS before anything changes. The
 > product's thresholds are **provisional** — see
 > [The product's provisional thresholds](#the-products-provisional-thresholds).
@@ -164,7 +164,7 @@ the heuristic. The thresholds of AT-163 should come from the real corpus.
 
 AT-163 had to ship with *some* numbers before the real corpus exists, so the
 api reads `PARAMETROS_PROVISORIOS` — **provisional, not calibrated**, and
-declared so in [RN-624](../business-rules.md#rn-624):
+declared so in [RN-624](../business-rules/api.md#rn-624):
 
 | parameter | provisional | AT-080 candidate | why |
 |---|---|---|---|
@@ -449,7 +449,7 @@ The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:
   answers carry Portuguese text inside an English answer (6 form-only, 2
   interleaved), while 7 are clean English, forms included. The model can
   write the form in English — it does so about half of the time.
-  **Where it came from (AT-282, [RN-667](../business-rules.md#rn-667)):** the
+  **Where it came from (AT-282, [RN-667](../business-rules/engine.md#rn-667)):** the
   tool's own description told the model the `label` was "o texto da pergunta,
   **em pt-BR**" — a second, fixed language instruction outside the facade,
   competing with the trailing orientation in every call. It now says "no

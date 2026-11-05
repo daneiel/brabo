@@ -26,23 +26,23 @@ api и engine общаются **двумя** способами, и выбор 
 **Вне рамок этой страницы**: HTTP-маршруты, аутентифицируемые обычным JWT пользователя
 (RBAC по роли, `@RequireRole`) — такие как
 `/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
-([RN-267](../business-rules.md#rn-267)),
+([RN-267](../business-rules/api.md#rn-267)),
 `.../agents/criativo/validate-necessity` (гейт `necessidade-validada`,
-[RN-406](../business-rules.md#rn-406), ADR 0095) или CRUD
-`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+[RN-406](../business-rules/contracts.md#rn-406), ADR 0095) или CRUD
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules/api.md#rn-426),
 ADR 0105) — включая два маршрута `maintainer`
 (`GET .../personal-access-tokens/all`,
 `DELETE .../personal-access-tokens/:tokenId/admin`,
-[RN-427](../business-rules.md#rn-427)) — не являются «внутренними» в смысле этого документа, даже когда
+[RN-427](../business-rules/api.md#rn-427)) — не являются «внутренними» в смысле этого документа, даже когда
 фактически их вызывает агент. То же относится к четырём
 маршрутам `HuggingFaceModelsController` под
 `/workspaces/:workspaceId/huggingface/*`
-([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
+([RN-462](../business-rules/api.md#rn-462), [RN-463](../business-rules/api.md#rn-463),
 ADR 0115): `role:maintainer`, прямое действие человека в Настройках
 Проекта/Workspace, никогда не вызываемое engine. То же относится к двум маршрутам
 членства, `POST`/`DELETE /projects/:projectId/members`
-([RN-471](../business-rules.md#rn-471),
-[RN-472](../business-rules.md#rn-472), ADR 0127) — и там это факт
+([RN-471](../business-rules/web.md#rn-471),
+[RN-472](../business-rules/api.md#rn-472), ADR 0127) — и там это факт
 структурный, а не просто верный: два потолка понижения, которые маршрут теперь
 навязывает (никто не понижает `owner` workspace, никто не понижает сам себя),
 живут ВНУТРИ `AddProjectMemberUseCase`, поэтому их можно было бы обойти через любую
@@ -51,20 +51,20 @@ ADR 0115): `role:maintainer`, прямое действие человека в 
 RBAC. Общий
 service token НИКОГДА не служит учётными данными на этих маршрутах, а JWT
 пользователя никогда не работает на `/internal/*` — два механизма не пересекаются
-([RN-035](../business-rules/autenticacao.md#rn-035)).
+([RN-035](../business-rules/api.md#rn-035)).
 
 **Третьи учётные данные — ни service token, ни JWT пользователя**:
 `POST /projects/:projectId/runner-ticket` — это `role:developer`, как любой
 маршрут RBAC, но он не принимает обычный JWT сессии — только одни из ДВУХ
 учётных данных уровня устройства, оба обрабатываются одним `PatAuthGuard`/
 `@RequirePatAuth()` и по построению ограничены этим единственным маршрутом:
-Personal Access Token (`brb_…`, [RN-424](../business-rules.md#rn-424), ADR
+Personal Access Token (`brb_…`, [RN-424](../business-rules/api.md#rn-424), ADR
 0105) или самоподписанный короткоживущий (≤60s) JWT EdDSA, доказывающий владение
 ключом устройства Ed25519 в `runner_device_keys` — ключом машины, созданным в
 терминале и зарегистрированным установщиком
-([RN-552](../business-rules.md#rn-552)), или ключом проекта, который браузер
+([RN-552](../business-rules/api.md#rn-552)), или ключом проекта, который браузер
 зарегистрировал до того, как [ADR 0203](../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-вывел этот поток из эксплуатации ([RN-465](../business-rules.md#rn-465), ADR 0118) — в дополнение к PAT,
+вывел этот поток из эксплуатации ([RN-465](../business-rules/api.md#rn-465), ADR 0118) — в дополнение к PAT,
 никогда не вместо него. Это стоит отметить здесь, потому что именно это различие
 призвана объяснить эта страница: «не `/internal/*`» не означает «значит, это JWT
 пользователя» — учётные данные устройства являются третьим механизмом, без
@@ -106,7 +106,7 @@ broker ([ADR 0130](../adr/0130-broker-de-container.md)) вошёл в эту т�
 > `RateLimitGuard` (он выполняется до guard контроллера, поэтому освобождение
 > должно приходить из метаданных). Access token пользователя, даже `owner`,
 > не открывает ни один из них; а service token не открывает ни один другой маршрут. См.
-> [RN-035](../business-rules/autenticacao.md#rn-035).
+> [RN-035](../business-rules/api.md#rn-035).
 
 > **Ротация без простоя.** `BRABO_SERVICE_TOKEN` — отправляемое значение;
 > `BRABO_SERVICE_TOKEN_PREVIOUS` принимается **только при проверке**. Поскольку обе
@@ -163,7 +163,7 @@ engine никогда не пишет напрямую в таблицу соб�
 контролирует `seq` и атомарность с outbox.
 
 `POST /handoffs` поддерживает **не более одного handoff `offered` на (проект, цель)**
-([RN-635](../business-rules.md#rn-635),
+([RN-635](../business-rules/api.md#rn-635),
 [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Ответ — ДЕЙСТВУЮЩЕЕ
 предложение плюс `desfecho`: `criado`, `substituiu_oferta` (ожидающее стало
 `superseded`, с событием `handoff.superseded`) или `ja_oferecido` (без новой строки —
@@ -173,12 +173,12 @@ engine никогда не пишет напрямую в таблицу соб�
 (`Engine.Harness.Tools.OfferHandoff` передаёт её дословно;
 `FalhaDeTurno.origem/1` классифицирует её как `politica`). Необязательное поле тела
 `seAusente: true` — отправляемое AppSec через `create_handoff_if_absent/5`
-([RN-636](../business-rules.md#rn-636)) — возвращает ЛЮБОЕ ожидающее предложение
+([RN-636](../business-rules/engine.md#rn-636)) — возвращает ЛЮБОЕ ожидающее предложение
 цели вместо его замены.
 
 Предложение Criativo→PO, которое запросил клик «Я готов — потребность подтверждена»,
 ПРИНИМАЕТСЯ в том же вызове от имени того, кто кликнул
-([RN-658](../business-rules.md#rn-658),
+([RN-658](../business-rules/api.md#rn-658),
 [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md)): предложение
 `criativo` → `po`, из этой сессии, несущее `product_brief`, появившийся после
 последнего отмеченного `readiness.confirmed`. Принятие идёт через тот же
@@ -191,7 +191,7 @@ engine сопоставляет только `{:ok, _}`, поэтому с ег�
 `GET /events` — это то, что читают семь разговорных агентов, когда их процесс
 поднимается над сессией, в которой уже есть разговор, и то, что читают kickoff-ы,
 чтобы найти brief, правила, карту модулей и истории
-([RN-580](../business-rules.md#rn-580)). До этого маршрут понимал только
+([RN-580](../business-rules/engine.md#rn-580)). До этого маршрут понимал только
 `afterSeq` и `limit`, а engine отправлял только `limit=200` — поэтому получал
 **первые** 200 событий, и агент, разбуженный в разговоре из 201 события, поднимался
 без сообщения, на которое отвечал. Добавлены два параметра query, оба
@@ -211,12 +211,12 @@ engine сопоставляет только `{:ok, _}`, поэтому с ег�
 в `ActivateExecutionUseCase`: здешний `POST /events` и маршрут пользователя попадают в
 одну воронку. С ФАЗЫ 20 `execution.activated` в сессии `consultiva`
 отвечает **409** и по этому пути — тип есть намерение создания, и
-событие его не повышает ([RN-097](../business-rules.md#rn-097)). Никаких других
+событие его не повышает ([RN-097](../business-rules/api.md#rn-097)). Никаких других
 изменений контракта: остальные типы событий остаются идентичными, а отказ
 происходит **до** `incrementSeq`, поэтому отклонённая попытка не оставляет дыры
 в `seq`.
 
-С [RN-581](../business-rules.md#rn-581) та же воронка также отклоняет
+С [RN-581](../business-rules/api.md#rn-581) та же воронка также отклоняет
 **разговор** в сессии, уже `closed`/`closed_abnormally`:
 **409** с именованным телом — `{ message, reason: "sessao_encerrada", status,
 type }`. «Разговор» — это тип, существующий только как разговор
@@ -231,7 +231,7 @@ type }`. «Разговор» — это тип, существующий тол
 большинство его вызывающих отбрасывают возвращаемое значение.
 
 `ActivateExecutionUseCase` получил второй побочный эффект, который **не** проходит
-ни через один маршрут этого документа ([RN-135](../business-rules/custo.md#rn-135)): в
+ни через один маршрут этого документа ([RN-135](../business-rules/api.md#rn-135)): в
 конце активации, если маршрут пользователя передаёт `originSessionId` (сессию
 ЧАТА, откуда пришёл клик), он закрывает эту сессию через
 `TransitionSessionUseCase` — тот же путь, который `POST /termination` этой
@@ -239,14 +239,14 @@ type }`. «Разговор» — это тип, существующий тол
 обращения к engine. Ни одного нового маршрута, никаких изменений существующего контракта
 `engine → api`.
 
-`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/autenticacao.md#rn-139))
+`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/api.md#rn-139))
 — та же история наоборот: открывает через внешний HTTP чтение
 (`findActiveExecutionSession`), которое раньше существовало только внутри
 `ActivateExecutionUseCase`. Ни одного нового пути `engine → api`, никаких побочных
 эффектов — это `SELECT`, и критерий (сессия `active` с записанным `execution.activated`)
 ничего не меняет в том, что engine уже делал.
 
-С [RN-579](../business-rules.md#rn-579) (AT-093) фасад `EngineApiClient`
+С [RN-579](../business-rules/engine.md#rn-579) (AT-093) фасад `EngineApiClient`
 имеет побочный эффект поверх этих маршрутов, и он находится в СОБСТВЕННОМ канале
 engine, а не в api: когда api **подтверждает** запись в сессию —
 `POST /events` (как `append_event`, так и `append_event_returning`),
@@ -270,7 +270,7 @@ engine (`/internal/*`), не объявляются второй раз — кр
 и выполнил внутри того внутреннего запроса (`infra.pr_opened`,
 `adr.pr_opened`, `action.*`): фасад engine объявляет только ту запись, которую он
 запросил, поэтому эти объявляются один раз api
-([RN-848](../business-rules.md#rn-848)). Вызов выполняется
+([RN-848](../business-rules/api.md#rn-848)). Вызов выполняется
 по принципу best effort и никогда не ожидается; если он теряется, резервный опрос браузера раз в 15s
 покрывает это, как и раньше. `:id` отправляется только когда id сессии —
 UUID (тип столбца): api проверяет его там, где собирает URL, кодирует
@@ -303,7 +303,7 @@ UUID (тип столбца): api проверяет его там, где со�
 `%Req.TransportError{reason: :timeout}`, классифицированным как источник `infra`. С
 локальной моделью ход укладывался в 15s, и дефект не проявлялся.
 
-#### Каждый вызов без stream выполняется в собственном процессе ([RN-742](../business-rules.md#rn-742))
+#### Каждый вызов без stream выполняется в собственном процессе ([RN-742](../business-rules/engine.md#rn-742))
 
 `post_returning/3` и каждый GET в `EngineApiClient.Live` выполняют вызов `Req`
 внутри одноразового `Task` (`isolado/1`); заголовки собираются заранее, в
@@ -313,7 +313,7 @@ UUID (тип столбца): api проверяет его там, где со�
 вызывающем (его `into:` пишет в словарь процесса вызывающего, а
 разговорные агенты уже вызывают его из `Task` хода).
 
-#### Последнее сообщение может быть указанием языка ([RN-622](../business-rules.md#rn-622))
+#### Последнее сообщение может быть указанием языка ([RN-622](../business-rules/engine.md#rn-622))
 
 `messages`, которые engine отправляет в оба пути, могут заканчиваться ОДНИМ дополнительным
 сообщением `role: "system"` — указанием языка ответа, добавляемым
@@ -324,7 +324,7 @@ UUID (тип столбца): api проверяет его там, где со�
 любое другое, и его входные токены учитываются как остальные (18–29 на вызов, измерено
 с cl100k/o200k, под потолком в 50 токенов).
 
-С [RN-623](../business-rules.md#rn-623) фасад также читает `tools`
+С [RN-623](../business-rules/engine.md#rn-623) фасад также читает `tools`
 ТОГО ЖЕ вызова: в ходе с автором, когда эти инструменты включают тот, что
 записывает общий артефакт проекта, а язык проекта отличается от языка
 автора, то же сообщение получает вторую фразу ("Write project artifacts
@@ -332,7 +332,7 @@ in X." / "Artefatos do projeto: em X."). Это по-прежнему одно �
 до 42 токенов в худшей измеренной реальной паре. Тело запроса не
 меняется.
 
-С [RN-706](../business-rules.md#rn-706) вызовы агентов `dev-*` и
+С [RN-706](../business-rules/engine.md#rn-706) вызовы агентов `dev-*` и
 субагентов QA (`ToolLoop`) могут нести ЕЩЁ ОДНО эфемерное сообщение `role: "system"`
 ДО профиля автора и указания языка (языковое
 остаётся последним): окружение агента, собранное `Engine.Harness.AmbienteDoAgente`
@@ -343,27 +343,27 @@ in X." / "Artefatos do projeto: em X."). Это по-прежнему одно �
 любым другим системным сообщением и учитывает его токены как остальные. Тело
 запроса не меняется.
 
-С [RN-711](../business-rules.md#rn-711) вызовы семи
+С [RN-711](../business-rules/engine.md#rn-711) вызовы семи
 разговорных агентов несут ЕЩЁ ОДНО эфемерное сообщение `role: "system"`, после
 сообщения об окружении и ДО профиля автора и указания языка:
 поток поставки, собранный `Engine.Harness.FluxoDoTime` — семь этапов по
 порядку, где находится агент, реальный следующий шаг и кто его запускает (человек или
 система). Один и тот же текст в каждом ходе одного агента; никогда не сохраняется в
 истории агента. Тело запроса не меняется. С
-[RN-862](../business-rules.md#rn-862) то же сообщение заканчивается, только для Criativo,
+[RN-862](../business-rules/engine.md#rn-862) то же сообщение заканчивается, только для Criativo,
 PO, Arquiteto и Dev Lead (агентов с `declare_open_question`),
 центральной фразой: каждый вопрос, оставленный пользователю, становится
 `declare_open_question` с предложением агента и тем, на что он влияет, — никогда
 вопросом только в тексте хода.
 
-С [RN-874](../business-rules.md#rn-874) вызовы PO несут ещё одно
+С [RN-874](../business-rules/engine.md#rn-874) вызовы PO несут ещё одно
 эфемерное сообщение `role: "system"` сразу после сообщения о потоке, собранное
 `Engine.Harness.DecisoesDoProjeto`: решения пользователя (`decision_record`)
 и вопросы, всё ещё открытые в проекте, прочитанные локально из журнала событий,
 с потолком 10 + 10 элементов и 3 000 символов. Опускается, когда сказать
 нечего или чтение не удалось.
 
-#### Финальный фрейм несёт имя модели ([RN-146](../business-rules/autenticacao.md#rn-146))
+#### Финальный фрейм несёт имя модели ([RN-146](../business-rules/api.md#rn-146))
 
 `RunLlmTurnResult` и фрейм `final` из `LlmTurnStreamEvent` получают
 `modelName: string | null` — имя модели, которую api разрешил
@@ -376,7 +376,7 @@ binding или binding указывает на модель, которой бо
 (`modelName`), который `SessionPage.tsx` читает, чтобы показать модель рядом
 с именем агента.
 
-#### Jev может сузить меню инструментов ([RN-625](../business-rules.md#rn-625))
+#### Jev может сузить меню инструментов ([RN-625](../business-rules/engine.md#rn-625))
 
 С [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md) оба
 пути могут спросить маршрутизатор инструментов Jev, какой инструмент подходит шагу, прежде чем вызвать
@@ -402,7 +402,7 @@ binding или binding указывает на модель, которой бо
 Ход никогда не падает из-за маршрутизатора: любая ошибка откатывается к полному
 каталогу, с причиной в `toolRouting`. Ни один маршрут не добавлен и не удалён.
 
-#### `usage.costMicros` — реальная стоимость, когда провайдер её сообщает ([RN-665](../business-rules/custo.md#rn-665))
+#### `usage.costMicros` — реальная стоимость, когда провайдер её сообщает ([RN-665](../business-rules/api.md#rn-665))
 
 С [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) `usage.costMicros`,
 который возвращают оба пути — и который engine суммирует в бюджет области, — это
@@ -419,16 +419,16 @@ binding или binding указывает на модель, которой бо
 ошибки провайдера ([ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
 `null`, когда ошибки нет или когда ошибка не от провайдера (бюджет,
 отсутствующий binding модели). 402 от провайдера — это `insufficient_credit`
-([RN-730](../business-rules.md#rn-730)): engine решает «кредит исчерпан»
+([RN-730](../business-rules/api.md#rn-730)): engine решает «кредит исчерпан»
 сначала по этому коду (`FalhaDeTurno.credito_esgotado?/1`) и сохраняет сравнение текста
-только как запасной вариант для api, более старого, чем это поле ([RN-726](../business-rules.md#rn-726)).
+только как запасной вариант для api, более старого, чем это поле ([RN-726](../business-rules/engine.md#rn-726)).
 
 #### Ответ, обрезанный на потолке вывода: `truncated`
 
 Когда провайдер закрыл ответ на потолке вывода (`finish_reason:
 "length"` в OpenAI-совместимом диалекте, `stop_reason: "max_tokens"` в
 Anthropic), тело `/llm-turn` и фрейм `final` из `/llm-turn-stream`
-несут `truncated: true` ([RN-737](../business-rules.md#rn-737)). Поле
+несут `truncated: true` ([RN-737](../business-rules/api.md#rn-737)). Поле
 аддитивное и отсутствует в остальных случаях. Текст и аргументы `toolCalls` приходят обрезанными:
 engine не выполняет tool call из обрезанного ответа (возвращает в цикл
 именованную ошибку инструмента) и добавляет короткую строку «обрезано» к
@@ -445,7 +445,7 @@ Metering записывается **на этом** пути: каждый `/llm
 
 Это не организационная деталь: эти три маршрута ветвятся по **роли
 человека** — `owner` для счёта, `viewer` для собственного потребления
-([RN-101](../business-rules/custo.md#rn-101)). `X-Brabo-Service-Token` не несёт
+([RN-101](../business-rules/api.md#rn-101)). `X-Brabo-Service-Token` не несёт
 никакого человека, поэтому внутреннему аналогу пришлось бы выбирать между тем, чтобы не
 различать аудитории, или получать id актора как параметр — а это
 именно то, что [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
@@ -458,7 +458,7 @@ Metering записывается **на этом** пути: каждый `/llm
 здесь: `porProvider` существует только в отчёте workspace (`owner`), а потребление
 участника по-прежнему без провайдера и без учётных данных. Что действительно изменилось — это
 механизм гарантии: измерение, запрошенное с областью актора, **не компилируется**
-([RN-187](../business-rules/custo.md#rn-187)), вместо того чтобы зависеть от того, что маршрут не
+([RN-187](../business-rules/api.md#rn-187)), вместо того чтобы зависеть от того, что маршрут не
 предлагает параметр. Аргумент абзаца выше остаётся в силе — именно он
 объясняет, почему это чтение никогда не спускается сюда.
 
@@ -472,7 +472,7 @@ Metering записывается **на этом** пути: каждый `/llm
 неактивность ВКЛАДКИ — 30 секунд, — а закрытие сессии касается того, что РАБОТА
 завершена, а не того, кто ещё смотрит. В реальном выполнении это удержало
 handoff `offered` для Arquiteto внутри закрытой сессии
-([RN-064](../business-rules/custo.md#rn-064)).
+([RN-064](../business-rules/web.md#rn-064)).
 
 Ответ: `{ pending, motivo, aguardandoUsuarioDesde }`. `motivo` идёт в лог engine — сессию, которая
 отказывается закрываться, не говоря почему, невозможно диагностировать. А недоступный api
@@ -480,7 +480,7 @@ handoff `offered` для Arquiteto внутри закрытой сессии
 менять один дефект на другой.
 
 `aguardandoUsuarioDesde` — пятый сигнал
-([RN-581](../business-rules.md#rn-581)), и единственный с **потолком**:
+([RN-581](../business-rules/api.md#rn-581)), и единственный с **потолком**:
 когда самое недавнее событие конца хода в разговоре (`agent.response`,
 `chat.structured_question`, `agent.error` со стороны агента; `chat.message`,
 `chat.structured_question_answered` со стороны пользователя) пришло от
@@ -554,7 +554,7 @@ worker, что и `AnamneseSchedulerWorker`); учётные данные и
 (`sem_capability` | `sem_credencial` | `falha`) с `origemDaFalha`
 (`infra` | `modelo`) и `detalhe`. Пропущенный провайдер **ничего не отключает**:
 «не знаю, что там есть» не то же самое, что «там ничего нет»
-([RN-043](../business-rules/custo.md#rn-043)). Полное тело есть в
+([RN-043](../business-rules/api.md#rn-043)). Полное тело есть в
 [сгенерированном OpenAPI](api/internal.html) под тегом `internal`.
 
 Две вещи, которые этот маршрут **не** делает и которые раньше были иными:
@@ -562,11 +562,11 @@ worker, что и `AnamneseSchedulerWorker`); учётные данные и
 - **Он не включает и не выключает модель ни в одном workspace.** `descobertos` считает
   новые строки в `models`; ни одна из них не получает курирования. Обнаруженная модель
   не имеет строки в `workspace_models`, а отсутствие строки — это выключенное состояние
-  ([RN-052](../business-rules/custo.md#rn-052)).
+  ([RN-052](../business-rules/api.md#rn-052)).
 - **Он не меняет цену молча.** Цена, помеченная `manual_pricing`, сохраняется
   как есть, и каждое изменение, которое делает синхронизация, записывает строку в
   `model_price_changes` с источником `sync` — в той же транзакции, что и запись
-  ([RN-044](../business-rules/custo.md#rn-044), [RN-051](../business-rules/custo.md#rn-051)).
+  ([RN-044](../business-rules/api.md#rn-044), [RN-051](../business-rules/api.md#rn-051)).
 
 ### Рабочий remote проекта {#project-working-remote}
 
@@ -590,16 +590,16 @@ api. Без него проект у удалённого провайдера �
 
 > **`origin` никогда не несёт учётных данных.** Это значение, записанное в
 > `.git/config` workspace, **внутри папки, где dev agent имеет
-> автоодобренное чтение** ([RN-075](../business-rules/custo.md#rn-075)). URL вроде
+> автоодобренное чтение** ([RN-075](../business-rules/api.md#rn-075)). URL вроде
 > `https://x-access-token:TOKEN@…` там был бы в одном `cat .git/config`
 > от превращения в контекст LLM.
 
 У потребителя симметричная обязанность: внедрять токен **на каждый вызов**, в
 окружение дочернего процесса каждого вызова git, и никогда в argv или в
-файл ([RN-076](../business-rules/custo.md#rn-076), `Engine.Actions.GitAuth`).
+файл ([RN-076](../business-rules/engine.md#rn-076), `Engine.Actions.GitAuth`).
 
 Учётные данные — это данные **owner workspace**, через тот же резолвер, что и в
-[RN-058](../business-rules/custo.md#rn-058). Провайдер `local` **сюда не доходит**: он
+[RN-058](../business-rules/api.md#rn-058). Провайдер `local` **сюда не доходит**: он
 разрешается engine напрямую из базы, не имеет токена и не зависит от того, работает ли
 api, — это путь, который проверяют `pnpm dev` и весь набор тестов.
 
@@ -629,7 +629,7 @@ engine нужен `git-remote`, потому что он работает в **�
 ФИКСИРОВАННЫЙ провайдер `ollama` напрямую у `LLMProviderRegistry` — тот же путь, который
 RN-058 уже описывает как «поиск пропускается» для этого провайдера, — здесь нет
 пользовательского секрета для расшифровки, и поэтому также нет
-внутреннего маршрута, который нужно открывать ([RN-232](../business-rules.md#rn-232),
+внутреннего маршрута, который нужно открывать ([RN-232](../business-rules/api.md#rn-232),
 [ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
 
 ### Что перечитывает PO: бизнес-правила и бэклог
@@ -643,13 +643,13 @@ RN-058 уже описывает как «поиск пропускается» 
 же критерию, что и предыдущие: ресурс принадлежит **проекту**, и
 сегмент сессии здесь был бы декоративным — хуже, вводящим в заблуждение, потому что именно
 область сессии вызвала дефект, который исправляют эти маршруты
-([RN-164](../business-rules/autenticacao.md#rn-164)).
+([RN-164](../business-rules/engine.md#rn-164)).
 
 У PO было **четыре инструмента, и все на запись** (`create_epic`,
 `create_story`, `create_task`, `offer_handoff`). Его контекст собирался
 один раз, в kickoff, из **первых** 200 событий **текущей сессии** (эта
 страница говорила «последних»; это были первые, что и измерила и исправила
-[RN-580](../business-rules.md#rn-580)) —
+[RN-580](../business-rules/engine.md#rn-580)) —
 и после этого он больше ничего не перечитывал. В длинной сессии или при
 возобновлении он не знал, какие правила существуют, какие он уже покрыл и что
 уже создал сам. Симптом, проявившийся при реальном использовании, — бэклог с
@@ -684,7 +684,7 @@ id проекта**: ни поискового термина, ни пагина
 | GET | `/internal/projects/:projectId/product-metrics` (**не** ограничен сессией) |
 
 ТРЕТИЙ маршрут чтения PO, тот же дизайн, что и у двух выше
-([RN-407](../business-rules.md#rn-407)) — закрывает последний открытый пункт
+([RN-407](../business-rules/contracts.md#rn-407)) — закрывает последний открытый пункт
 аудита `fluxo.yml` × код
 ([пункт B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
 `docs/fluxo.yml` (роль `po`, вход `metricas-de-produto`) объявлял
@@ -716,7 +716,7 @@ rate) — инструмент PO (`listar_metricas_de_produto`) называе�
 | GET | `/internal/projects/:projectId/module-contracts` (**не** ограничен сессией) |
 
 Чтение dev agent контрактов Arquiteto
-([RN-684](../business-rules.md#rn-684),
+([RN-684](../business-rules/api.md#rn-684),
 [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)), чтобы
 он перестал читать worktree другого модуля, чтобы узнать интерфейс.
 Тот же дизайн, что и у чтений PO: никаких параметров, кроме проекта, постоянная стоимость
@@ -734,7 +734,7 @@ rate) — инструмент PO (`listar_metricas_de_produto`) называе�
 
 `execution_mode` проекта ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
-[RN-169](../business-rules/autenticacao.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+[RN-169](../business-rules/api.md#rn-169)/[RN-421](../business-rules/api.md#rn-421))
 следует тому же разделению. По нему проект может быть `container` (
 управляемая папка в `PROJECT_WORKSPACES_ROOT`, по умолчанию), `mounted` (
 абсолютный путь пользователя, смонтированный через bind-mount) или `runner` (абсолютный
@@ -759,7 +759,7 @@ engine отличает `container` от двух других по **начал
 
 **База проектов меняет то, где живут папки `mounted`, и намеренно ничего
 не меняет здесь** ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[RN-500](../business-rules.md#rn-500)). С этого ADR проекты `mounted` живут
+[RN-500](../business-rules/api.md#rn-500)). С этого ADR проекты `mounted` живут
 под единой базой, настроенной оператором, — `BRABO_PROJECTS_BASE`, — вместо того чтобы
 каждому нужна была строка bind-mount, написанная вручную в обоих сервисах. База
 монтируется по **идентичности** (`$X:$X`) в `api` и `engine`, и именно
@@ -772,7 +772,7 @@ engine отличает `container` от двух других по **начал
 
 **Отложенная проверка диска здесь тоже ничего не меняет**
 ([ADR 0142](../adr/0142-validacao-de-workspace-montado-adiada.md),
-[RN-501](../business-rules.md#rn-501)). Создание проекта `mounted` больше не
+[RN-501](../business-rules/api.md#rn-501)). Создание проекта `mounted` больше не
 требует существования папки — создание проверяет лексическую форму плюс
 базу, а папка создаётся, когда Infra поднимает контейнер, — поэтому между
 этими двумя моментами engine может прочитать `workspace_path`, указывающий на папку,
@@ -788,7 +788,7 @@ engine и так должен был это переживать, потому �
 
 Селектор папок, помогающий человеку выбрать, где будет жить проект `mounted`, —
 это `GET /workspaces/:workspaceId/project-folders`
-([RN-504](../business-rules.md#rn-504)) — **публичный** маршрут
+([RN-504](../business-rules/web.md#rn-504)) — **публичный** маршрут
 контроллера `workspaces`, за `@RequireRole('maintainer')` и задокументированный в
 [поверхности безопасности](../security-surface.md), а не `internal/`.
 
@@ -810,7 +810,7 @@ engine и так должен был это переживать, потому �
 Этот маршрут заменил первый для режима `mounted`, и только для него. RN-504
 направила ОБА режима сюда в предположении, что режим `runner` уйдёт из
 создания проекта; он не ушёл, и
-[RN-533](../business-rules.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
+[RN-533](../business-rules/web.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
 пункт 7) вернула селектор `runner` обратно в канал. Они не
 избыточны — они читают разные диски, и ни один не отвечает за другой: этот
 маршрут отвечает о ЕДИНСТВЕННОЙ папке, которую видит api, о базе выше; канал
@@ -819,7 +819,7 @@ engine и так должен был это переживать, потому �
 
 #### И объявление цели зеркала тоже нет
 
-`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules.md#rn-515),
+`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules/api.md#rn-515),
 [ADR 0147](../adr/0147-agente-local-com-capacidades.md) пункт 4) записывает
 папку, куда возможность `espelho` копирует работу проекта, — папку ВНЕ
 смонтированной базы. Это **публичный** маршрут контроллера `projects`,
@@ -831,7 +831,7 @@ engine и так должен был это переживать, потому �
 Этот маршрут решает только **где живёт цель и что считается
 допустимой**. Протокол, доставляющий её runner, и само копирование
 принадлежат engine и runner и существуют с
-[RN-516](../business-rules.md#rn-516) — **без нового внутреннего маршрута**, что
+[RN-516](../business-rules/runner.md#rn-516) — **без нового внутреннего маршрута**, что
 и стоит здесь записать. engine читает столбец напрямую —
 `mirror_path` в `projects`, `null`, когда у проекта нет зеркала, что является
 нормальным состоянием, — теми же чтениями `Engine.Projects.Project`, которые он уже
@@ -849,7 +849,7 @@ engine и так должен был это переживать, потому �
 это по содержимому, а не по ошибке. Из этого следуют два последствия, оба намеренные:
 объявленная цель делает `espelho` **обязательной** возможностью, поэтому
 `brabo-runner` старше этой версии перестаёт подключаться к этому проекту (именованный
-отказ, фатальный, без повторной попытки — см. [RN-514](../business-rules.md#rn-514)); и
+отказ, фатальный, без повторной попытки — см. [RN-514](../business-rules/engine.md#rn-514)); и
 смена цели при подключённом runner требует его переподключения,
 потому что предоставление принадлежит join.
 
@@ -860,7 +860,7 @@ engine и так должен был это переживать, потому �
 принадлежит runner (`apps/runner/src/espelho-guard.ts`, RN-516), и ничто
 в этом контракте не следует читать так, будто api её уже обеспечил.
 
-### Что СДЕЛАЛ раунд зеркала — отчёт, который ЯВЛЯЕТСЯ новым маршрутом ([RN-517](../business-rules.md#rn-517))
+### Что СДЕЛАЛ раунд зеркала — отчёт, который ЯВЛЯЕТСЯ новым маршрутом ([RN-517](../business-rules/api.md#rn-517))
 
 | метод | путь |
 |---|---|
@@ -885,7 +885,7 @@ engine НЕ пишет в таблицу. Он переводит pt-BR-слов
 api записывает `project_mirror_states` — ТАБЛИЦУ, никогда не журнал событий, потому что
 у раунда зеркала нет сессии, а `session_events.session_id` — `NOT NULL`
 (то же рассуждение, что сделало `rag_searches` таблицей,
-[RN-479](../business-rules.md#rn-479)), — и никогда не `proposed_action`, потому что
+[RN-479](../business-rules/api.md#rn-479)), — и никогда не `proposed_action`, потому что
 запись зеркала — это конфигурация, объявленная пользователем, а не агент, просящий разрешения
 действовать.
 
@@ -897,11 +897,11 @@ api записывает `project_mirror_states` — ТАБЛИЦУ, никог�
 
 Экран читает **публичный** маршрут, а не этот:
 `GET /projects/:projectId/mirror-state` (`viewer`), который разрешает три
-состояния [RN-088](../business-rules.md#rn-088) — `never` (строки нет), `synced`
+состояния [RN-088](../business-rules/web.md#rn-088) — `never` (строки нет), `synced`
 (возможно, с `filesCopied: 0`) и `failed` — на стороне api, чтобы у правила,
 решающего, какая из двух меток действующая, был единственный источник.
 
-### Подтверждение workspace со стороны runner — ЗАПИСЬ, которая является новым маршрутом ([RN-423](../business-rules.md#rn-423))
+### Подтверждение workspace со стороны runner — ЗАПИСЬ, которая является новым маршрутом ([RN-423](../business-rules/runner.md#rn-423))
 
 | метод | путь |
 |---|---|
@@ -934,7 +934,7 @@ api записывает `project_mirror_states` — ТАБЛИЦУ, никог�
 отказывает — никогда не откатываясь к `System.cmd`/bind-mount режима `mounted`, которого
 не существует для проекта `runner`.
 
-### Выполнение команды терминала внутри реального контейнера — новый маршрут ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+### Выполнение команды терминала внутри реального контейнера — новый маршрут ([RN-492](../business-rules/engine.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
 
 | метод | путь |
 |---|---|
@@ -971,11 +971,11 @@ motivo }` — НОРМАЛЬНАЯ форма этого; engine превращ�
 падение, никогда не молчаливый откат к `System.cmd` вне контейнера.
 
 **Каждый переход ждёт дольше, чем нижележащий**
-([RN-604](../business-rules.md#rn-604)). broker обрывает команду через
+([RN-604](../business-rules/api.md#rn-604)). broker обрывает команду через
 `timeoutMs` и отвечает `timedOut: true`; вызов api к broker ждёт
 `timeoutMs` плюс накладные расходы самого broker (`tetoDaOperacao` в
 `container-broker.client.ts` — не более `timeoutMs` + 45s, 5s для
-`inspect` экрана, 195s для `start`/`stop`/`remove` — [RN-605](../business-rules.md#rn-605)); а вызов engine к этому
+`inspect` экрана, 195s для `start`/`stop`/`remove` — [RN-605](../business-rules/contracts.md#rn-605)); а вызов engine к этому
 маршруту передаёт `receive_timeout: timeoutMs + 90s`
 (`teto_do_container_exec_ms/1`). До AT-233 engine падал на стандартные
 15s Req — то же число, что `TERMINAL_ACTION_TIMEOUT_MS`, — а api
@@ -984,7 +984,7 @@ motivo }` — НОРМАЛЬНАЯ форма этого; engine превращ�
 операцию и число (`teto-excedido`), отличное от недоступного
 broker.
 
-ВНЕШНИЙ переход тоже имеет потолок ([RN-757](../business-rules.md#rn-757)):
+ВНЕШНИЙ переход тоже имеет потолок ([RN-757](../business-rules/engine.md#rn-757)):
 действие `terminal`, которое api автоодобряет, выполняется внутри того же
 запроса `POST /internal/sessions/:sessionId/actions` (api →
 `/internal/actions/execute` → этот маршрут), поэтому engine вызывает его с
@@ -1008,7 +1008,7 @@ broker.
 нужно этой роли, и Harness не приходится фильтровать в engine то, что
 api мог бы просто не отправлять.
 
-`/dev-context` получил `siblingTasks` в AT-448 ([RN-765](../business-rules.md#rn-765))
+`/dev-context` получил `siblingTasks` в AT-448 ([RN-765](../business-rules/engine.md#rn-765))
 — ДРУГИЕ задачи той же истории, каждая `{id, title, status}`, без
 самой задачи (`tarefasIrmas` в `get-dev-task-context.use-case.ts`), пустой
 список, когда у истории одна задача. Это то, что `Engine.Gates.RecorteDaTarefa`
@@ -1018,7 +1018,7 @@ api мог бы просто не отправлять.
 guard `engine-service`: HTTP-поверхность не меняется.
 
 `/dev-context` также получил `task.primeiraDoModulo` в AT-433
-([RN-774](../business-rules/custo.md#rn-774)) — `true`, когда самый ранний
+([RN-774](../business-rules/engine.md#rn-774)) — `true`, когда самый ранний
 `backlog.task_claimed` проекта для этого модуля — это эта задача
 (`ehPrimeiraTarefaDoModulo` в `get-dev-task-context.use-case.ts`), `false`
 без модуля или вообще без claim. `Engine.Dev.TetoDaTarefa.efetivo/2`
@@ -1027,7 +1027,7 @@ guard `engine-service`: HTTP-поверхность не меняется.
 меняется.
 
 `/dev-context` также получил `moduleOpenTasks` и `moduleOpenTasksTotal` в
-AT-461 ([RN-785](../business-rules.md#rn-785)) — ещё не завершённые задачи
+AT-461 ([RN-785](../business-rules/api.md#rn-785)) — ещё не завершённые задачи
 ДРУГИХ историй того же модуля, каждая с заголовком истории, не более 20, с
 реальным итогом рядом (`tarefasAbertasDoModulo` в
 `get-dev-task-context.use-case.ts`); архивные истории не учитываются.
@@ -1037,7 +1037,7 @@ AT-461 ([RN-785](../business-rules.md#rn-785)) — ещё не завершён�
 не меняется.
 
 `/dev-context` также получил `moduleContract` в AT-462
-([RN-786](../business-rules.md#rn-786)) — действующий контракт
+([RN-786](../business-rules/api.md#rn-786)) — действующий контракт
 (`artifact.module_contracts`) модуля задачи, `null`, когда у истории
 больше одного модуля, а у задачи нет ни одного. Срез QA представляет его как
 источник интерфейса: когда история и контракт расходятся, вердикт
@@ -1046,12 +1046,12 @@ AT-461 ([RN-785](../business-rules.md#rn-785)) — ещё не завершён�
 меняется.
 
 `/dev-context` также получил `decisoes` в AT-521
-([RN-859](../business-rules.md#rn-859)) — `decision_record` пользователя, чей
+([RN-859](../business-rules/api.md#rn-859)) — `decision_record` пользователя, чей
 `afeta` касается задачи, её истории или одного из правил истории, сначала новые,
 не более 10, каждый текст обрезан до 1.500 символов. При
 конфликте они побеждают RF/DoR. Только чтение, тот же маршрут: HTTP-поверхность не меняется.
 
-С AT-526 ([RN-872](../business-rules.md#rn-872),
+С AT-526 ([RN-872](../business-rules/api.md#rn-872),
 [ADR 0215](../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md)) он также
 возвращает `decisoesDoProjeto`: остальные решения проекта, те, чей `afeta`
 не касается задачи, в отдельном списке в рамках ТОГО ЖЕ потолка в 10 (решения
@@ -1062,11 +1062,11 @@ engine, который его не знает, его игнорирует.
 `/infra-context` получил `gitProvider` в ФАЗЕ 8c (`null` без подготовленного
 репозитория) — так субагент Workflows выбирает `.github/workflows/
 ci.yml` × `.gitlab-ci.yml`, без нового маршрута (тот же шаблон «один GET на
-агента» — см. [RN-037](../business-rules.md#rn-037)). Это **не**
+агента» — см. [RN-037](../business-rules/ci.md#rn-037)). Это **не**
 `capabilities` у `GitProvider`: у GitHub и GitLab ОДИНАКОВЫЕ capabilities
 (`{protectBranch: true, pullRequests: true}`) — их различает только `provider.name`.
 
-`/infra-context` также получил `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules.md#rn-491))
+`/infra-context` также получил `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules/web.md#rn-491))
 — маршрутизированных кандидатов Arquiteto (`artifact.module_routing`,
 первый HTTP-потребитель `GetModuleRoutingUseCase`), `{status, roteamento,
 version, eventId, createdAt}`, `SEM_ROTEAMENTO`, когда Arquiteto ещё не
@@ -1074,7 +1074,7 @@ version, eventId, createdAt}`, `SEM_ROTEAMENTO`, когда Arquiteto ещё н�
 перечисляет, чтобы модель выбрала кандидата через `propose_container_start`,
 а не придумала образ вне их.
 
-`/infra-context` также получил `projectImage` ([RN-852](../business-rules.md#rn-852),
+`/infra-context` также получил `projectImage` ([RN-852](../business-rules/api.md#rn-852),
 ADR 0213) — ДЕЙСТВУЮЩЕЕ решение `artifact.project_image` (`{image,
 rationale, network, resources}`), `null`, когда ничего не решено. Это
 `FROM` Dockerfile и сеть, которую соблюдает compose Infra.
@@ -1102,7 +1102,7 @@ rationale, network, resources}`), `null`, когда ничего не реше�
 взять одну и ту же задачу. С RN-856 он возвращает СОБСТВЕННУЮ задачу агента `in_progress`
 (вне гейтов, не заблокированную) раньше очереди `todo`.
 `tasks/:taskId/unblock` — автоматическая повторная попытка engine после временного
-сбоя сети/провайдера ([RN-864](../business-rules.md#rn-864)): тот же сценарий
+сбоя сети/провайдера ([RN-864](../business-rules/engine.md#rn-864)): тот же сценарий
 использования, что и ручная разблокировка, с актором `system`, и без эффекта, когда задача
 уже не заблокирована.
 `tasks/in-progress-by-dev` перечисляет задачи проекта `in_progress`, удерживаемые
@@ -1111,7 +1111,7 @@ rationale, network, resources}`), `null`, когда ничего не реше�
 
 `/stories/:storyId/update` (заголовок и/или описание) и
 `/stories/:storyId/archive` (необязательный `reason`) — это `update_story` и
-`archive_story` у PO ([RN-727](../business-rules.md#rn-727),
+`archive_story` у PO ([RN-727](../business-rules/api.md#rn-727),
 [ADR 0212](../adr/0212-historia-arquivada.md)). Оба проходят через ту же мерку,
 что и маршруты пользователя, — только история `draft` без задачи `in_progress` или
 `in_review` — и отказывают с именованным 409 (`historia_arquivada`,
@@ -1124,7 +1124,7 @@ rationale, network, resources}`), `null`, когда ничего не реше�
 
 `/module-map` принимает для каждого модуля необязательный объект `resources` (`cpus`,
 `memoryMb`, `pidsLimit` — все три или ни одного): то, что нужно ЭТОМУ модулю самому по себе
-в контейнере проекта ([RN-683](../business-rules.md#rn-683),
+в контейнере проекта ([RN-683](../business-rules/api.md#rn-683),
 [ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)). Частичное
 объявление, значение выше потолка контейнера или СУММА модулей выше
 него возвращает `400` с причиной — модули делят ОДИН контейнер, поэтому сумма — это
@@ -1137,13 +1137,13 @@ rationale, network, resources}`), `null`, когда ничего не реше�
 (действующий — с наибольшим `version`). Образ без явного тега
 (`latest` отклоняется), короткий `rationale` или ресурс выше потолка возвращают `400` с
 полной причиной в теле — это позволяет модели исправиться по
-tool-result, а не повторять то же самое ([RN-061](../business-rules/custo.md#rn-061)).
+tool-result, а не повторять то же самое ([RN-061](../business-rules/engine.md#rn-061)).
 Пока ни одной версии нет, `GET /projects/:projectId/container` (публичный маршрут,
 `role:viewer`) возвращает `status: "sem_decisao"`, и это то же состояние, которое
-заставляет вкладку Код отвечать `409` ([RN-105](../business-rules/autenticacao.md#rn-105)).
+заставляет вкладку Код отвечать `409` ([RN-105](../business-rules/api.md#rn-105)).
 
 `/c4-diagram` — это инструмент `create_c4_diagram` Arquiteto
-([RN-149](../business-rules/autenticacao.md#rn-149),
+([RN-149](../business-rules/api.md#rn-149),
 [ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): генерирует синтаксис
 Mermaid уровней Context и Container диаграммы C4 (модель Simon
 Brown). Тот же калибр, что `/module-map`/`/project-image`, — артефакт ЕСТЬ
@@ -1158,7 +1158,7 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 и `adrs`.
 
 `/module-routing` — это инструмент `route_modules_to_infra` Arquiteto
-([RN-487](../business-rules.md#rn-487),
+([RN-487](../business-rules/api.md#rn-487),
 [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)): один образ-кандидат
 на модуль ДЕЙСТВУЮЩЕГО `module_map`, каждый с `porque`. Тот же
 калибр, что `/module-map`/`/c4-diagram`/`/project-image`, — артефакт ЕСТЬ
@@ -1172,7 +1172,7 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 последующий шаг, за Infra.
 
 `/module-contracts` — это инструмент `declare_module_contracts` Arquiteto
-([RN-684](../business-rules.md#rn-684),
+([RN-684](../business-rules/api.md#rn-684),
 [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)): для
 каждого модуля ДЕЙСТВУЮЩЕГО `module_map` — что он ПРЕДОСТАВЛЯЕТ тем, кто от него зависит.
 Тот же калибр, что `/module-routing`, — артефакт ЕСТЬ событие
@@ -1210,10 +1210,10 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 
 **Машина состояний гейта живёт в api**, а не в engine. engine сообщает
 вердикт; решает, законен ли переход, — и отклоняет попытку QA перепрыгнуть в
-`awaiting_user` — домен ([RN-014](../business-rules.md#rn-014)).
+`awaiting_user` — домен ([RN-014](../business-rules/api.md#rn-014)).
 
 С AT-521 `/gates/verdict` также принимает `veredito: "needs_user_decision"`
-(только QA — [RN-860](../business-rules.md#rn-860), ADR 0214), с `pergunta`
+(только QA — [RN-860](../business-rules/api.md#rn-860), ADR 0214), с `pergunta`
 и `sugestao` или существующим `openQuestionId`. Он удерживает тот же гейт, НЕ
 засчитывая исправление, записывает `artifact.open_question` (автор `qa-agent`,
 затрагивающий задачу), когда `openQuestionId` не передан, помечает `pr.gate_changed`
@@ -1221,22 +1221,22 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 `openQuestionId` — engine паркует цикл (ADR 0207), а ответ на
 вопрос его возобновляет. engine записывает `artifact.open_question` через
 `POST /events`, как любой другой артефакт; api проверяет его payload там же
-([RN-858](../business-rules.md#rn-858)). `stories/:storyId/update` и
+([RN-858](../business-rules/api.md#rn-858)). `stories/:storyId/update` и
 `stories/:storyId/complete` принимают необязательный `questionId`: история `ready`
 исправляется, только когда ссылается на вопрос, на который пользователь уже ответил
-([RN-859](../business-rules.md#rn-859)).
+([RN-859](../business-rules/api.md#rn-859)).
 
 С AT-526 `openQuestionId` в вердикте должен существовать в проекте и
-быть ОТКРЫТЫМ, что проверяется до любой записи ([RN-870](../business-rules.md#rn-870)):
+быть ОТКРЫТЫМ, что проверяется до любой записи ([RN-870](../business-rules/api.md#rn-870)):
 неизвестный (или из другого проекта) — **404** `reason: "pergunta_nao_encontrada"`;
 уже отвеченный — **409** `reason: "pergunta_ja_respondida"` с
 решением пользователя в `decisao` — ничего не записывается и `pr.gate_changed` не выпускается.
 В `POST /events` у `artifact.open_question`, чей `afeta.regras` хранит
 точный ЗАГОЛОВОК `artifact.business_rule` проекта, он преобразуется в id;
 всё, что не является ни id, ни точным заголовком, — **400**
-([RN-871](../business-rules.md#rn-871)).
+([RN-871](../business-rules/api.md#rn-871)).
 
-На стороне engine ([RN-862](../business-rules.md#rn-862),
+На стороне engine ([RN-862](../business-rules/engine.md#rn-862),
 [ADR 0214](../adr/0214-pergunta-em-aberto-vira-pendencia.md)) тело
 вердикта `needs_user_decision` несёт `pergunta`, `sugestao` и/или
 `openQuestionId` рядом с обычными полями (отсутствующие ключи опускаются; остальные
@@ -1245,7 +1245,7 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 заполненный `parked_at`, `gate.rescue_parked` в логе, — поэтому периодическое спасение никогда
 его не перезапускает; это не зависит от обратного чтения `await_user`. api возобновляет его
 через существующий `POST /internal/projects/:p/tasks/:t/gates/qa/resume`
-([RN-724](../business-rules.md#rn-724)).
+([RN-724](../business-rules/engine.md#rn-724)).
 
 `/delegations` ОТЛИЧАЕТСЯ от остальных трёх: он не двигает машину
 состояний гейта — только записывает исход делегата области (QA, ФАЗА 8b; Infra,
@@ -1253,7 +1253,7 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 вызывает этот маршрут один раз на делегата (`completed`/`failed`/`dispensed`),
 ОТДЕЛЬНО от вызова, который область использует, чтобы сообщить консолидированный результат
 наружу (`/gates/verdict` для QA, `open_infra_pr` для Infra) — см.
-[RN-036](../business-rules.md#rn-036)/[RN-037](../business-rules.md#rn-037).
+[RN-036](../business-rules/engine.md#rn-036)/[RN-037](../business-rules/ci.md#rn-037).
 Ограничен сессией, а не задачей: `taskId` идёт в ТЕЛЕ, необязательно — QA всегда
 его отправляет, Infra никогда (делегирование касается сессии, за PR infra нет
 задачи бэклога).
@@ -1268,12 +1268,12 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 | POST | `/instruction-patches` |
 | POST | `/max-parallel-proposals` |
 
-Проверка доказательств ([RN-021](../business-rules.md#rn-021)) и закрытый
-каталог компетенций ([RN-024](../business-rules.md#rn-024)) навязываются
+Проверка доказательств ([RN-021](../business-rules/api.md#rn-021)) и закрытый
+каталог компетенций ([RN-024](../business-rules/api.md#rn-024)) навязываются
 **здесь**, в api. engine не может записать гипотезу без валидного
 доказательства или профилировать компетенцию вне каталога, даже если модель об этом просит.
 
-`/anamnese-window` ([RN-722](../business-rules.md#rn-722)) закрывает проанализированное
+`/anamnese-window` ([RN-722](../business-rules/engine.md#rn-722)) закрывает проанализированное
 окно, когда раунд заканчивается БЕЗ профиля (`skip_proficiency`): записывает
 строку в `anamnese_runs` с нулём профилей, чтобы следующий раунд начинался с
 её `window_to`, а не перечитывал — и не оплачивал — одно и то же окно вечно.
@@ -1285,14 +1285,14 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 поднять потолок параллелизма области, и именно **api** отклоняет предложение,
 которое ничего не поднимает, — Анамнез запускается периодически, и без этого
 отказа он предлагал бы то же самое в каждом раунде. Действие, которое из этого рождается,
-**никогда не автоодобряется** ([RN-086](../business-rules/custo.md#rn-086)): автоматизировать корректировку
+**никогда не автоодобряется** ([RN-086](../business-rules/api.md#rn-086)): автоматизировать корректировку
 означало бы, что продукт сам поднимает собственный лимит расходов.
 
 Этот маршрут **отвечал `400` в каждом проекте** до ФАЗЫ 18, и ничто в контракте
 этого не выдавало: проверка `área "<key>" não existe neste projeto` — это
 первое, что он делает, а в `agent_areas` никогда не писали — у `upsert` репозитория
 не было ни одного вызывающего. Теперь область рождается вместе с проектом
-([RN-094](../business-rules/custo.md#rn-094)), и отказ снова означает то, что
+([RN-094](../business-rules/api.md#rn-094)), и отказ снова означает то, что
 говорит: несуществующий ключ области. Проекты, созданные до исправления, покрываются
 миграцией backfill.
 
@@ -1308,30 +1308,30 @@ Brown). Тот же калибр, что `/module-map`/`/project-image`, — а�
 Два маршрута шаблонов записывают/читают версии промптов в Neo4j, идемпотентно
 по хешу — `Engine.Harness.InstructionFiles` (источник `:graph`) и
 worker-ы Психолога/Анамнеза разрешают kickoff/идентичность здесь, всегда с откатом
-к встроенному тексту при любом сбое ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+к встроенному тексту при любом сбое ([RN-413](../business-rules/infra.md#rn-413)/[RN-417](../business-rules/engine.md#rn-417)).
 `scripts/dev/seed-prompts.ts` наполняет граф из `prompts/*.md`.
 
 `/internal/rag/search` — тонкая ПРОЕКЦИЯ поверх `HybridSearchUseCase` (того
 же гибридного векторно-лексического поиска, который уже использует вкладка «Chat RAG») — service
 token вместо JWT пользователя, тот же формат ответа с явным `degraded`,
 когда embedding был недоступен
-([RN-414](../business-rules.md#rn-414)). С [RN-479](../business-rules.md#rn-479)
+([RN-414](../business-rules/engine.md#rn-414)). С [RN-479](../business-rules/api.md#rn-479)
 его тело также несёт НЕОБЯЗАТЕЛЬНЫЕ `sessionId`/`agent`: api не может вывести
 ни одно из них, и именно они позволяют ему записать актора телеметрии и — только когда
 есть сессия — рассказать `rag.search` на временной шкале. Ответ получил
 `searchId` плюс `chunkId` на каждый результат, которые вместе образуют ссылку, нужную
 для голоса агента.
 
-`/internal/rag/feedback` — это и есть этот голос ([RN-480](../business-rules.md#rn-480)),
+`/internal/rag/feedback` — это и есть этот голос ([RN-480](../business-rules/api.md#rn-480)),
 инструмент `rag_feedback` на стороне engine. Он переиспользует ТОТ ЖЕ сценарий использования, что и
 человеческий маршрут — второго пути оценки нет, — и неизвестный
 `searchId`/`chunkId` возвращается как **400, который инструмент превращает в
-tool-result с ошибкой**, чтобы модель исправилась ([RN-061](../business-rules/custo.md#rn-061)),
+tool-result с ошибкой**, чтобы модель исправилась ([RN-061](../business-rules/engine.md#rn-061)),
 никогда не падение. **Ни один из четырёх не является путём ЗАПИСИ реляционной
 памяти** — handoff, гипотеза, профиль и закрытие сессии
 попадают в граф через `GraphProjector` на стороне api, вычерпывающий
 вторую линию транзакционного outbox; engine никогда не пишет в граф напрямую
-([RN-416](../business-rules.md#rn-416)).
+([RN-416](../business-rules/api.md#rn-416)).
 
 ## broker → api {#broker--api}
 
@@ -1352,18 +1352,18 @@ tool-result с ошибкой**, чтобы модель исправилась 
 удвоения того, что нужно ротировать вместе, — полное рассуждение находится
 в `apps/api/src/infrastructure/security/service-token.ts`.
 
-**Направление этого вызова — вся суть** ([RN-485](../business-rules.md#rn-485)).
+**Направление этого вызова — вся суть** ([RN-485](../business-rules/produto.md#rn-485)).
 broker не ПОЛУЧАЕТ spec контейнера — он получает `projectId` плюс одну
 из пяти операций и приходит сюда прочитать:
 
 1. идентичность проекта (`projectId`, `projectSlug`, `workspaceId`) и
-   `workspaceDirName`, имя папки, замороженное при создании ([RN-109](../business-rules/autenticacao.md#rn-109));
+   `workspaceDirName`, имя папки, замороженное при создании ([RN-109](../business-rules/api.md#rn-109));
 2. `executionMode`. broker обслуживает `container` **и** `mounted` и отклоняет
    `runner` с `409` — папка проекта runner находится на машине пользователя, и
-   этот хост её не видит ([RN-503](../business-rules.md#rn-503));
+   этот хост её не видит ([RN-503](../business-rules/api.md#rn-503));
 3. `localizacao`, размеченный локатор папки проекта — см. ниже;
 4. действующее решение Arquiteto об образе или `null`, пока его нет
-   ([RN-105](../business-rules/autenticacao.md#rn-105)), и в этом случае отклоняется только `start`,
+   ([RN-105](../business-rules/api.md#rn-105)), и в этом случае отклоняется только `start`,
    а остальные четыре операции продолжают работать.
 
 Исходя из этого, broker СОСТАВЛЯЕТ образ, сеть, ресурсы и единственный mount и
@@ -1378,14 +1378,14 @@ broker не ПОЛУЧАЕТ spec контейнера — он получает
 api) заставил бы демон создать и смонтировать ПУСТУЮ папку.
 
 **`localizacao`: какой корень плюс часть, которую этот корень не покрывает**
-([RN-503](../business-rules.md#rn-503),
+([RN-503](../business-rules/api.md#rn-503),
 [ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). У broker ДВА собственных
 корня, и spec говорит, какому из них принадлежит сегмент, вместо того чтобы
 broker угадывал:
 
 | `localizacao.tipo` | `segmento` | корень, относительно которого разрешается |
 |---|---|---|
-| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/autenticacao.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/api.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
 | `montada` | ОТНОСИТЕЛЬНЫЙ путь под базой (может содержать `/`) | `BRABO_PROJECTS_HOST_BASE` |
 | `indisponivel` | отсутствует — вместо него есть `motivo` | нет |
 
@@ -1408,7 +1408,7 @@ broker угадывал:
 
 `usuarioDaPasta` (`{ uid, gid }` или `null`) — это ВЛАДЕЛЕЦ папки, как его
 измерил api ([ADR 0180](../adr/0180-container-com-o-dono-da-pasta.md),
-[RN-627](../business-rules.md#rn-627)): broker поднимает контейнер с
+[RN-627](../business-rules/contracts.md#rn-627)): broker поднимает контейнер с
 `--user uid:gid`, чтобы dev agent мог писать в `/work` под `--cap-drop ALL`.
 `null`, когда папку нельзя измерить, владелец — root или проект —
 `runner`. Он никогда не передаётся в запросе к broker.
@@ -1425,20 +1425,20 @@ broker, пять операций плюс `/health`, доступная тол�
 Compose `internal: true`, без опубликованного порта). Порт api —
 `ContainerBrokerPort`, и сейчас у всех **пяти** есть вызывающие. `inspect` —
 единственное чтение: `GET /projects/:projectId/container/lifecycle` использует его, чтобы вернуть
-НАБЛЮДАЕМОЕ состояние рядом с ЗАРЕГИСТРИРОВАННЫМ ([RN-486](../business-rules.md#rn-486)).
+НАБЛЮДАЕМОЕ состояние рядом с ЗАРЕГИСТРИРОВАННЫМ ([RN-486](../business-rules/api.md#rn-486)).
 Остальные четыре являются внешним эффектом и не происходят без
 `proposed_action` — `start`/`stop`/`remove` за тремя типами действий
 жизненного цикла ([ADR 0133](../adr/0133-infra-elege-imagem-do-roteamento.md),
 [ADR 0136](../adr/0136-pagina-global-de-containers.md)) и `exec` за
 командой терминала dev agent внутри работающего контейнера
 ([ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md)). С
-[RN-503](../business-rules.md#rn-503) эти вызывающие достигают broker для
+[RN-503](../business-rules/api.md#rn-503) эти вызывающие достигают broker для
 проектов `container` **и** `mounted`; только `runner` идёт вместо этого
 в runner.
 
 ## install.sh → api
 
-С [RN-546](../business-rules.md#rn-546) /
+С [RN-546](../business-rules/produto.md#rn-546) /
 [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) существует ЧЕТВЁРТЫЙ
 вызывающий, и это не долгоживущий сервис: **однострочный установщик**, один раз,
 в конце установки.
@@ -1446,7 +1446,7 @@ Compose `internal: true`, без опубликованного порта). П�
 | метод | путь |
 |---|---|
 | POST | `/internal/first-account` (**не** ограничен сессией, **не** ограничен проектом) |
-| POST | `/internal/machine-device-keys` (аналогично — [RN-552](../business-rules.md#rn-552)) |
+| POST | `/internal/machine-device-keys` (аналогично — [RN-552](../business-rules/api.md#rn-552)) |
 
 Та же аутентификация, что и у всего выше, — и здесь выбор механизма
 делает больше работы, чем обычно. `BRABO_SERVICE_TOKEN` генерируется самим `install.sh`
@@ -1471,7 +1471,7 @@ Compose `internal: true`, без опубликованного порта). П�
 УСТАНОВКИ, а не запрошенной почты — почта, которую никто
 никогда не использовал, отклоняется точно так же. Именно это отличает его от создателя
 учётных записей: нет способа продолжать вызывать его с разными адресами.
-Восстановление миграции ([RN-530](../business-rules.md#rn-530)) заглушает шаг
+Восстановление миграции ([RN-530](../business-rules/infra.md#rn-530)) заглушает шаг
 тем же тестом.
 
 **Ни один публичный маршрут не появился.** Публичный маршрут «создать первого owner» — это гонка
@@ -1484,7 +1484,7 @@ Compose `internal: true`, без опубликованного порта). П�
 отбрасывается — никогда в `.env`, никогда в маркере установщика, никогда в
 логе — и никогда не генерируется никаким кодом, поэтому ни одна установка не рождается с
 паролем, который знает кто-то другой. Личный workspace
-([RN-410](../business-rules.md#rn-410)) создаётся в ТОЙ ЖЕ транзакции:
+([RN-410](../business-rules/api.md#rn-410)) создаётся в ТОЙ ЖЕ транзакции:
 учётная запись без него вошла бы в панель, где «Новый проект» негде
 создать.
 
@@ -1501,9 +1501,9 @@ Compose `internal: true`, без опубликованного порта). П�
 существовали, были привязаны к ПРОЕКТУ
 ([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)), в
 установке, где ещё нет проекта. С
-[RN-543](../business-rules.md#rn-543) ключ машины — это просто ключ устройства с
+[RN-543](../business-rules/produto.md#rn-543) ключ машины — это просто ключ устройства с
 `project_id NULL`; не хватало маршрута, который бы его создавал, и
-[RN-552](../business-rules.md#rn-552) — это он.
+[RN-552](../business-rules/api.md#rn-552) — это он.
 
 **Учётные данные — тот же service token, а альтернатива была отвергнута по
 записанной причине.** Требование учётных данных самого только что созданного пользователя
@@ -1517,7 +1517,7 @@ service token доказывает именно это.
 `{ id, userId, name, createdAt, replacedKeyIds }`. Пара генерируется НА
 МАШИНЕ, и отправляется только публичная половина; JWK, несущий `d`, отклоняется с
 `400`, который об этом говорит, и никогда не сохраняется. `id` — это поле, которое имеет значение: оно идёт
-ВНУТРЬ приватного JWK как `kid` ([RN-475](../business-rules.md#rn-475)) —
+ВНУТРЬ приватного JWK как `kid` ([RN-475](../business-rules/web.md#rn-475)) —
 единственная связь между файлом на диске и публичной половиной на сервере, — каждый
 последующий шаг лишь передаёт его дальше.
 
@@ -1548,26 +1548,26 @@ service token доказывает именно это.
 | метод | путь | что запускает |
 |---|---|---|
 | POST | `/sessions` | поднимает `SessionServer` |
-| POST | `/sessions/:id/event-appended` | тело `{type, actorId}` — api записал событие сам (AT-157, [RN-579](../business-rules.md#rn-579)); engine транслирует `event.appended` в `session:<id>` только с этими двумя полями. `204`; `400` без `type`. Процесс сессии не нужен: без подписчика трансляция ничего не делает |
+| POST | `/sessions/:id/event-appended` | тело `{type, actorId}` — api записал событие сам (AT-157, [RN-579](../business-rules/engine.md#rn-579)); engine транслирует `event.appended` в `session:<id>` только с этими двумя полями. `204`; `400` без `type`. Процесс сессии не нужен: без подписчика трансляция ничего не делает |
 | POST | `/sessions/:id/agent/start` | начинает ход агента |
-| POST | `/sessions/:id/agent/message` | сообщение пользователя в ленте — тело `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` при ПРИНЯТИИ**, до окончания хода: пустое тело, когда ход начался (`lida`), `{entrega: "enfileirada", posicao}`, когда агент был посреди хода и сообщение попало в его ОЧЕРЕДЬ — прочитанное вместе с остальными в одном ходе, когда текущий закончится ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}`, когда агент отказывает до начала: `aguardando_aprovacao` (Dev Lead приостановлен) или `fila_de_mensagens_cheia` (10 уже в очереди) — сообщение больше не получает `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` — id `chat.message`, который записал api; именно он отменяет сообщение в очереди. `idiomaDaResposta` НЕОБЯЗАТЕЛЕН: язык, который api определил для АВТОРА сообщения в этой сессии; engine добавляет его как эфемерное системное сообщение в конец каждого вызова LLM этого хода ([RN-622](../business-rules.md#rn-622)). Отсутствие (более старый api или определение не удалось) означает отсутствие указания — никогда не отказ |
-| POST | `/sessions/:id/agent/queued-message/cancel` | тело `{projectId, agent, mensagemId, userId}` — отменяет ОДНО сообщение, ожидающее в очереди агента ([RN-673](../business-rules.md#rn-673)); api уже проверил, что его отправил `userId`. Когда агент работает, решает его процесс: `204` или **`409`** `mensagem_fora_da_fila` (уже прочитано или отменено). Когда агент не работает, `chat.message_cancelled` записывается напрямую — очередь и есть лог. **`422`** для агента без разговора или неполного тела |
-| POST | `/sessions/:id/agent/cancel` | отменяет текущий ход активного агента ([RN-122](../business-rules.md#rn-122)) — убивает Task, удерживающий вызов LLM (`Task.shutdown/2`, `:brutal_kill`); идемпотентно, NO-OP без текущего хода |
-| POST | `/sessions/:id/agent/readiness` | подтверждение готовности — `202` при принятии; `409` ход в процессе, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/revise` | возвращает PO историю, продвижение которой пользователь отклонил (ФАЗА 12c — RN-048); **404, если PO не запущен**, и для api это не ошибка; `202` при принятии, `409` ход в процессе ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | предложение handoff в Infra — `202` при принятии, при этом завершающий ход ещё выполняется; `409` ход в процессе ([RN-578](../business-rules.md#rn-578)). Это ЕДИНСТВЕННОЕ предложение, которое делает подтверждение архитектуры: маршрут `offer-dev-handoff` удалён, и Dev Lead предлагается Infra Lead, когда контейнер проекта в состоянии `running` ([RN-672](../business-rules.md#rn-672)) |
+| POST | `/sessions/:id/agent/message` | сообщение пользователя в ленте — тело `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` при ПРИНЯТИИ**, до окончания хода: пустое тело, когда ход начался (`lida`), `{entrega: "enfileirada", posicao}`, когда агент был посреди хода и сообщение попало в его ОЧЕРЕДЬ — прочитанное вместе с остальными в одном ходе, когда текущий закончится ([RN-673](../business-rules/engine.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}`, когда агент отказывает до начала: `aguardando_aprovacao` (Dev Lead приостановлен) или `fila_de_mensagens_cheia` (10 уже в очереди) — сообщение больше не получает `turno_em_andamento` ([RN-578](../business-rules/engine.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` — id `chat.message`, который записал api; именно он отменяет сообщение в очереди. `idiomaDaResposta` НЕОБЯЗАТЕЛЕН: язык, который api определил для АВТОРА сообщения в этой сессии; engine добавляет его как эфемерное системное сообщение в конец каждого вызова LLM этого хода ([RN-622](../business-rules/engine.md#rn-622)). Отсутствие (более старый api или определение не удалось) означает отсутствие указания — никогда не отказ |
+| POST | `/sessions/:id/agent/queued-message/cancel` | тело `{projectId, agent, mensagemId, userId}` — отменяет ОДНО сообщение, ожидающее в очереди агента ([RN-673](../business-rules/engine.md#rn-673)); api уже проверил, что его отправил `userId`. Когда агент работает, решает его процесс: `204` или **`409`** `mensagem_fora_da_fila` (уже прочитано или отменено). Когда агент не работает, `chat.message_cancelled` записывается напрямую — очередь и есть лог. **`422`** для агента без разговора или неполного тела |
+| POST | `/sessions/:id/agent/cancel` | отменяет текущий ход активного агента ([RN-122](../business-rules/engine.md#rn-122)) — убивает Task, удерживающий вызов LLM (`Task.shutdown/2`, `:brutal_kill`); идемпотентно, NO-OP без текущего хода |
+| POST | `/sessions/:id/agent/readiness` | подтверждение готовности — `202` при принятии; `409` ход в процессе, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules/engine.md#rn-578)) |
+| POST | `/sessions/:id/agent/revise` | возвращает PO историю, продвижение которой пользователь отклонил (ФАЗА 12c — RN-048); **404, если PO не запущен**, и для api это не ошибка; `202` при принятии, `409` ход в процессе ([RN-578](../business-rules/engine.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | предложение handoff в Infra — `202` при принятии, при этом завершающий ход ещё выполняется; `409` ход в процессе ([RN-578](../business-rules/engine.md#rn-578)). Это ЕДИНСТВЕННОЕ предложение, которое делает подтверждение архитектуры: маршрут `offer-dev-handoff` удалён, и Dev Lead предлагается Infra Lead, когда контейнер проекта в состоянии `running` ([RN-672](../business-rules/api.md#rn-672)) |
 | POST | `/sessions/:id/execution/start` | активирует фазу выполнения |
 | POST | `/sessions/:id/execution/parallelize` | создаёт субагентов — **выполняет, а не решает** (см. ниже) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | перевзводит застрявшего dev agent (ФАЗА 12b — RN-047); 404, если не существует, **409, если не в `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | повторный анализ по требованию |
-| GET | `/psychologist/status` | читает глобальный флаг `PSYCHOLOGIST_ENABLED` ([RN-454](../business-rules.md#rn-454)) — без побочных эффектов, глобальный (не ограничен сессией) |
-| POST | `/projects/:id/anamnese/run` | раунд Анамнеза, поставленный в очередь с `origem: "manual"`: раунд без подходящего субъекта не вызывает LLM и записывает `anamnese.run_skipped` с `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules.md#rn-680)) |
-| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | возобновляет по действию человека ЗАПАРКОВАННЫЙ цикл гейта ([RN-724](../business-rules.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202`, и гейт отправляется заново; `409` `gate_nao_estacionado`, когда цикл не запаркован (или гейт не `qa`/`secops`) |
+| GET | `/psychologist/status` | читает глобальный флаг `PSYCHOLOGIST_ENABLED` ([RN-454](../business-rules/engine.md#rn-454)) — без побочных эффектов, глобальный (не ограничен сессией) |
+| POST | `/projects/:id/anamnese/run` | раунд Анамнеза, поставленный в очередь с `origem: "manual"`: раунд без подходящего субъекта не вызывает LLM и записывает `anamnese.run_skipped` с `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules/engine.md#rn-680)) |
+| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | возобновляет по действию человека ЗАПАРКОВАННЫЙ цикл гейта ([RN-724](../business-rules/engine.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202`, и гейт отправляется заново; `409` `gate_nao_estacionado`, когда цикл не запаркован (или гейт не `qa`/`secops`) |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | инвалидирует кеш инструкций |
 | POST | `/actions/execute` · `/actions/execute-git` | выполняет **уже одобренное** действие |
-| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | просит RUNNER, подключённый к проекту, поднять/остановить/удалить его контейнер ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — только для проектов `mounted`/`runner`; `container` по-прежнему идёт через broker, никогда не здесь |
-| POST | `/projects/:id/runner/disconnect` | обрывает ЖИВОЕ соединение runner этого пользователя в проекте, какие бы учётные данные ни использовались ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — с [ADR 0201](../adr/0201-revogacao-por-chave.md) вызывается при удалении участника ([RN-615](../business-rules.md#rn-615)) и как запасной вариант отзыва ключа; всегда `200`, с `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
-| POST | `/runner/disconnect-credential` | обрывает каждое соединение runner, открытое С учётными данными, в любом проекте, и аннулирует их ожидающие тикеты ([RN-685](../business-rules.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — вызывается, когда ключ устройства или PAT отзывается. Тело: `credentialKind` (`device_key` \| `pat`), `credentialId` и, только для УСТАРЕВШЕГО соединения (тикет без учётных данных), `userId` + `projectIds`. `200` со счётчиками `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` только для некорректных учётных данных |
+| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | просит RUNNER, подключённый к проекту, поднять/остановить/удалить его контейнер ([RN-497](../business-rules/produto.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — только для проектов `mounted`/`runner`; `container` по-прежнему идёт через broker, никогда не здесь |
+| POST | `/projects/:id/runner/disconnect` | обрывает ЖИВОЕ соединение runner этого пользователя в проекте, какие бы учётные данные ни использовались ([RN-520](../business-rules/api.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — с [ADR 0201](../adr/0201-revogacao-por-chave.md) вызывается при удалении участника ([RN-615](../business-rules/api.md#rn-615)) и как запасной вариант отзыва ключа; всегда `200`, с `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+| POST | `/runner/disconnect-credential` | обрывает каждое соединение runner, открытое С учётными данными, в любом проекте, и аннулирует их ожидающие тикеты ([RN-685](../business-rules/api.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — вызывается, когда ключ устройства или PAT отзывается. Тело: `credentialKind` (`device_key` \| `pat`), `credentialId` и, только для УСТАРЕВШЕГО соединения (тикет без учётных данных), `userId` + `projectIds`. `200` со счётчиками `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` только для некорректных учётных данных |
 
 **`runner/disconnect` — вторая половина отзыва, и решение
 принадлежит api.** `RevokeRunnerDeviceKeyUseCase` сначала записывает отзыв,
@@ -1609,7 +1609,7 @@ runner.** `ContainerCommandController.start/2` передаёт карту, не
 `imagemVersao`, `rede`, `cpus`, `memoriaMb`, `pidsLimit`), а runner передаёт
 эту карту, плюс `raizDoProjeto`, которую знает только он, в `especificacaoValidada`
 (`packages/docker-port`), которая отклоняет всю спецификацию, если не хватает любого
-из них. Она отклоняла каждый раз, пока [RN-508](../business-rules.md#rn-508)
+из них. Она отклоняла каждый раз, пока [RN-508](../business-rules/api.md#rn-508)
 не стала правдой в коде: `projectId` никогда не копировался, поэтому этот путь ни разу
 не поднял контейнер. Поскольку ничто посередине не проверяет карту, отсутствующее
 поле было бы невидимо для всех трёх наборов тестов — цепочку доказывает
@@ -1625,7 +1625,7 @@ runner.** `ContainerCommandController.start/2` передаёт карту, не
 
 #### Кто ЗАПРАШИВАЕТ `containers/start`, изменилось, и это по-прежнему не внутренний маршрут
 
-До [RN-521](../business-rules.md#rn-521) был ровно ОДИН способ добраться до
+До [RN-521](../business-rules/api.md#rn-521) был ровно ОДИН способ добраться до
 этих трёх маршрутов: Infra Lead внутри сессии, вызывающий собственный инструмент. Когда
 этот путь сломался в реальном выполнении `exp004`, не было способа повторить
 машинную операцию, кроме как открыть новую сессию и поговорить с агентом, — пять dev agents
@@ -1656,7 +1656,7 @@ engine напрямую, был бы чёрным ходом в обход ко�
 
 **`execution/parallelize` — тот же случай, и с ФАЗЫ 14d это видно.**
 ПУБЛИЧНЫЙ маршрут с тем же именем (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
-сначала проходит через потолок области ([RN-083](../business-rules/custo.md#rn-083)): в его
+сначала проходит через потолок области ([RN-083](../business-rules/api.md#rn-083)): в его
 пределах агент поднимается сразу; выше него api создаёт `proposed_action` и **не
 вызывает engine**. Когда engine получает эту команду, решение уже принято
 — потолком или вами.

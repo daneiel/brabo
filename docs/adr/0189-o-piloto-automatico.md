@@ -21,10 +21,10 @@ O uso real de 2026-09-29 mediu três defeitos de uma mesma política
 1. **"Sempre permitir" desligava o modo automático.** Os sete dev agents
    receberam a curinga `*: auto_approve` às 06:48:28–34 e, segundos depois,
    ganharam a linha `terminal: auto_approve` gravada pelo "Sempre permitir" de
-   dev agent ([RN-509](../business-rules.md#rn-509)). O repositório devolvia a
+   dev agent ([RN-509](../business-rules/api.md#rn-509)). O repositório devolvia a
    regra ESPECÍFICA antes da curinga, com origem `especifica`, e `decide()` só
    reconhece o modo automático com origem `curinga`
-   ([RN-603](../business-rules/autenticacao.md#rn-603)). Resultado: 97
+   ([RN-603](../business-rules/api.md#rn-603)). Resultado: 97
    pedidos "comando composto com ao menos um segmento não coberto por allow" e
    37 "escopo" com o modo automático aceso na tela.
 2. **O escopo comparava com a pasta onde o comando NÃO roda.** Os 37 "escopo"
@@ -33,7 +33,7 @@ O uso real de 2026-09-29 mediu três defeitos de uma mesma política
    engine executa o comando DENTRO dele (RN-492/RN-502), em `/work`, e traduz
    o `cwd` de host para `/work` só depois, no `terminal_executor.ex`.
 3. **O modo automático não dizia, na tela, o que libera.** O cartão de lote da
-   [RN-661](../business-rules.md#rn-661) dizia o que NÃO libera; o toggle do
+   [RN-661](../business-rules/web.md#rn-661) dizia o que NÃO libera; o toggle do
    card do agente e o `ApprovalCard` tinham frases diferentes, e nenhuma dizia
    que `git commit` e branch local passam.
 
@@ -59,7 +59,7 @@ AT-259 fecha só pela AT-255 e pela tela.
 A curinga `*: auto_approve` aprova TUDO, inclusive o composto sintetizado do
 `permissions.json` e caminho fora da pasta (RN-603, mantida), e `git commit` e
 criação de branch LOCAL. Seguem fora, nunca auto-aprováveis: git
-push/PR/merge/deploy pelo terminal ([RN-418](../business-rules.md#rn-418)),
+push/PR/merge/deploy pelo terminal ([RN-418](../business-rules/api.md#rn-418)),
 `sudo`/`doas`, merge em branch protegida, `container_remove`,
 `instruction_patch` e `parallelize`/`raise_max_parallel`. `deny` explícito
 continua vencendo, e um `ask` ESCRITO no arquivo continua pedindo — é regra do
@@ -139,7 +139,7 @@ for. As quatro sub-perguntas da AT-170 ficam respondidas: a unidade é esta; ela
 NÃO herda o allowlist de verbos (nenhuma lista de verbos nasce, e a dúvida entre
 argumento e subcomando cai do lado estreito); quem grava é o mesmo papel de
 hoje; e a precedência com a curinga é a do ponto 2. Detalhe na
-[RN-675](../business-rules.md#rn-675).
+[RN-675](../business-rules/api.md#rn-675).
 
 ## Consequences
 

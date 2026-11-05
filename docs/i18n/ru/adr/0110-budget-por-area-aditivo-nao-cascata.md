@@ -150,4 +150,4 @@ traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
   предикат
 - `apps/api/src/domain/agents/agent-areas.ts` — `areaDo`, чистый
   определитель членства, повторно используемый здесь
-- [RN-443](../business-rules.md#rn-443)
+- [RN-443](../business-rules/api.md#rn-443)

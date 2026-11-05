@@ -7,7 +7,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## Status
 
 **Accepted.** 2026-09-30 (AT-071, story HS-048, epic EP-027, round 30). Revises
-part of [RN-001](../business-rules.md#rn-001) — *"terminal states have no
+part of [RN-001](../business-rules/api.md#rn-001) — *"terminal states have no
 exit"* — and coexists with [ADR 0061](0061-tipo-da-sessao-na-criacao.md) (the
 session has an immutable `kind`, and the execution state is the
 `execution.activated` event). It edits neither: it **adds a transition** to the
@@ -32,7 +32,7 @@ Measured on `origin/dev` (`79e6b1209f`), from the AT-071 survey (2026-09-13,
   `heartbeat_timeout`, 92 events, eleven `artifact.business_rule`, five pairs of
   structured questions. The whole conversation survives in the event log
   (RN-002) and the artifacts are events, but the session had no way to go back
-  to accepting conversation — since [RN-581](../business-rules.md#rn-581) the
+  to accepting conversation — since [RN-581](../business-rules/api.md#rn-581) the
   api refuses, with 409 `sessao_encerrada`, every conversation event in a
   terminal session.
 - "Opening a new session" is no substitute: activating an agent requires an

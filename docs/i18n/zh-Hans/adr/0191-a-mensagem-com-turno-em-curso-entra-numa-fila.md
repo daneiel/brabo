@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **Accepted.** 2026-10-01（AT-267，负责人 10月1日的决定）。仅针对用户的**消息**，修订
 [ADR 0163](0163-o-clique-responde-ao-aceitar.md) 的同步拒绝 `turno_em_andamento`。ADR 0163 不被编辑：它所决定的立即接受继续有效，带名称的拒绝对非对话类命令继续有效（PO 的故事评审、Criativo 的就绪确认、Arquiteto 的 handoff 提议）。规则：
-[RN-673](../business-rules.md#rn-673)。
+[RN-673](../business-rules/engine.md#rn-673)。
 
 ## Context {#context}
 

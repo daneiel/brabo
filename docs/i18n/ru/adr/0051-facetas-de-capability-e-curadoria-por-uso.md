@@ -104,7 +104,7 @@ supportsVision: remoto.supportsVision ?? local?.supportsVision ?? false,
 - Отметка использования **не включает** модель в селекторе. Колонка `is_active` имеет DEFAULT
   `true`, поэтому строка, рождённая отметкой использования, вставляется с
   явным `isActive: false` — без этого мнение о модели разрешило бы ей
-  тратить, вопреки [RN-043](../business-rules/custo.md#rn-043).
+  тратить, вопреки [RN-043](../business-rules/api.md#rn-043).
 - Смена использования не выключает включённое: `is_active` остаётся вне `SET`
   в `ON CONFLICT`.
 - Экран никогда не пишет "не читает изображение". Метка утверждает только истинное, потому что
@@ -151,5 +151,5 @@ supportsVision: remoto.supportsVision ?? local?.supportsVision ?? false,
 сегодня; каждый из прочих нужно исследовать по официальной документации, как
 Фаза 11 сделала с quirks, — наследовать парсер одного в другом запрещено.
 
-Правила — в [RN-056](../business-rules/custo.md#rn-056) и
-[RN-057](../business-rules/custo.md#rn-057).
+Правила — в [RN-056](../business-rules/api.md#rn-056) и
+[RN-057](../business-rules/api.md#rn-057).

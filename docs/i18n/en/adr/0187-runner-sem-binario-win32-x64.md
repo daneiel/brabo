@@ -34,7 +34,7 @@ runner's:
    `Cannot find package 'node-pty'`: the loader received the form WITHOUT the
    colon (`B/~BUN/root/`) and fell into the plain `import('node-pty')`. Fixed.
    In this same run `darwin-arm64` and the two Linux ones PASSED with AT-342's
-   own PTY reader ([RN-688](../business-rules.md#rn-688)).
+   own PTY reader ([RN-688](../business-rules/runner.md#rn-688)).
 3. **Run `36780804339`** — `node-pty` loads, and from `cmd.exe` only the
    ConPTY's initial sequences arrive (`ESC[?9001h ESC[?1004h`), not even the
    prompt. The self-test gained a PROBE that does not depend on input, to
@@ -76,7 +76,7 @@ change together:
 - The browser keeps **detecting** `win32-x64` and does not request the
   download: it goes into `SEM_BINARIO_PUBLICADO`, which fails upfront and falls
   into the usual best-effort (`falhaDoBinario` → npm command,
-  [RN-473](../business-rules.md#rn-473)).
+  [RN-473](../business-rules/web.md#rn-473)).
 - `scripts/ci/alvos-do-runner.spec.ts` ties the four places together and now
   fails `windows-latest` in the matrix.
 

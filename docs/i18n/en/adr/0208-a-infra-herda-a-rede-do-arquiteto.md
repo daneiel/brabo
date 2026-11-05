@@ -46,4 +46,4 @@ network, and `npm install` does not run.
   asked for leaves the path by owner decision.
 - The version recorded by Infra now repeats the Arquiteto's network instead of
   downgrading it; the artifact's history stays coherent.
-- Rule: [RN-723](../business-rules.md#rn-723).
+- Rule: [RN-723](../business-rules/engine.md#rn-723).

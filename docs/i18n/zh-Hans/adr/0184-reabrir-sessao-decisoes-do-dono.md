@@ -28,7 +28,7 @@ ADR 0183 为会话的终止状态开了一个出口——重新打开，经由�
 
 ## 后果 {#consequences}
 
-- 三项决定不再是临时的。[RN-650](../business-rules.md#rn-650) 改为写 `developer`，[RN-649](../business-rules.md#rn-649) 在两项已确认的决定中引用本 ADR。
+- 三项决定不再是临时的。[RN-650](../business-rules/api.md#rn-650) 改为写 `developer`，[RN-649](../business-rules/api.md#rn-649) 在两项已确认的决定中引用本 ADR。
 - `docs/security-surface.md` 把该路由列为 `role:developer`；测试 `route-surface.spec.ts` 把表格与真实注解做比较。
 - 界面把文字原因从 “exige maintainer” 改为 “exige developer”（键 `ativacao.reabrirExigeDeveloper`，两种语言）。
 - 仍未决定、也不在此决定的：重新打开后 Psicólogo 的第二次自动分析（0183 的 Consequences）。

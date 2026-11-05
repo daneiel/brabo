@@ -10,13 +10,13 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 navegável à esquerda que pode ser expandida passa a ser a ÚNICA; retire a outra
 barra de navegação, mas contemple nesta todos os itens da barra excluída").
 Пересматривает [ADR 0126](0126-trilho-vertical-de-navegacao-do-projeto.md) — который
-остаётся принятым и не редактируется — и [RN-201](../business-rules/autenticacao.md#rn-201).
+остаётся принятым и не редактируется — и [RN-201](../business-rules/web.md#rn-201).
 
 ## Контекст {#context}
 
 Со времён ADR 0126 вкладки проекта существовали в ДВУХ местах: вертикальный рельс
 шириной 180px (`ProjectRail.tsx`, монтируемый в `ProjectPage.tsx`) и список проекта
-в боковой панели (`LinhaDeAba`, [RN-196](../business-rules/autenticacao.md#rn-196)).
+в боковой панели (`LinhaDeAba`, [RN-196](../business-rules/web.md#rn-196)).
 CLAUDE.md объявлял это пробелом ("reconciliar é decisão de produto à
 parte"), вместе с ценой рамки: 492px во вкладке Código (264 боковой панели +
 180 рельса + 48 `CodeShell`).
@@ -27,7 +27,7 @@ Aprovações, Backlog, Arquitetura), каждый на своей вкладке
 боковая панель показывала лишь Aprovações из сводки дашборда; клавиатура
 (`ArrowDown`/`ArrowUp`/`Home`/`End` с переходом по кругу, пересекая группы);
 прокрутка активной в видимую область; вертикальный `role="tablist"`; и на телефоне
-([RN-643](../business-rules.md#rn-643)) горизонтальная прокручиваемая панель над
+([RN-643](../business-rules/web.md#rn-643)) горизонтальная прокручиваемая панель над
 панелью содержимого. У боковой панели было, а у рельса нет: свёрнутый проект в рельсе
 шириной 62px, выдвижная панель телефона и ссылка на другое окно браузера.
 
@@ -42,7 +42,7 @@ Aprovações, Backlog, Arquitetura), каждый на своей вкладке
 2. **У пяти счётчиков ОДИН источник, без нового запроса.** Пять
    очередей начинают читаться одним хуком, `useContagensDoProjeto`
    (`apps/web/src/lib/contagens-do-projeto.ts`), который рамка использует для
-   панели "precisa de você" ([RN-467](../business-rules.md#rn-467)), а
+   панели "precisa de você" ([RN-467](../business-rules/web.md#rn-467)), а
    боковая панель — для чисел. Те же `queryKey`, дедуплицированные. Боковая панель
    включает его лишь пока рамка проекта СМОНТИРОВАНА — только в ней существовал
    рельс; на другом экране проекта (Sessão, например) и для закрытых проектов

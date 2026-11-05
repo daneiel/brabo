@@ -167,11 +167,11 @@ id было допустимым прочтением. С читаемым им�
 
 ## Ссылки {#referências}
 
-- [RN-109](../business-rules/autenticacao.md#rn-109) — имя папки замораживается при
+- [RN-109](../business-rules/api.md#rn-109) — имя папки замораживается при
   создании, а старый проект сохраняет UUID.
-- [RN-075](../business-rules/custo.md#rn-075) — область пути в политике
+- [RN-075](../business-rules/api.md#rn-075) — область пути в политике
   терминала (то, что этот ADR сохраняет).
-- [RN-092](../business-rules/custo.md#rn-092) — сдерживание пути при чтении
+- [RN-092](../business-rules/api.md#rn-092) — сдерживание пути при чтении
   кода (то же).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) —
   пересматриваемый документ.

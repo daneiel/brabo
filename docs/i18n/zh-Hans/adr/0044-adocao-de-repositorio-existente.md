@@ -34,7 +34,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 `project_repositories.origin` 和 `repo_bootstraps.origin`（`created` |
 `adopted`），由写入者显式写入——而不是由列的默认值，这样采纳在代码中就是可见的选择，而不是缺省
-（[RN-046](../business-rules/custo.md#rn-046)）。迁移 `0031` 的回填刻意是盲目的：在它之前不存在采纳，因此按定义每个既有行都是由 Brabo 创建的，没有会被分错的情况——不同于 `0026` 的定向回填。
+（[RN-046](../business-rules/api.md#rn-046)）。迁移 `0031` 的回填刻意是盲目的：在它之前不存在采纳，因此按定义每个既有行都是由 Brabo 创建的，没有会被分错的情况——不同于 `0026` 的定向回填。
 
 ### 计划住在游标里，而不是新表 {#o-plano-mora-no-cursor-não-em-tabela-nova}
 
@@ -46,7 +46,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ### 关口在 runner **之前** {#o-portão-fica-antes-do-runner}
 
 `plan_decision` 为空是重要的状态：计划已生成，尚无决定，**什么都不运行**。执行器内部没有过滤——`BootstrapRunner` 就是第 2 阶段的那个，原样提取出来（128 行逐字节核对）以便共享，它只是不被调用。加上 `:112` 的守卫，不存在任何在已批准计划之外保护分支的代码路径
-（[RN-045](../business-rules/custo.md#rn-045)）。
+（[RN-045](../business-rules/api.md#rn-045)）。
 
 批准是**全有或全无**：选择性批准会破坏级联
 `dev←main, qa←dev, rc←qa`（批准 `qa` 而不批准 `dev` 无法满足），并需要重写 runner。运行的是执行时由 `check()` **重新推导**的计划——等于或小于所展示的那个。

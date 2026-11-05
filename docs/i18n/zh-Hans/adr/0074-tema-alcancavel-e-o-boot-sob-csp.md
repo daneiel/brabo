@@ -79,5 +79,5 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 - [0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) — 自托管字体：同样的失败（handoff 要求 CSP 拦截的资源），同样的结局（意图是，机制否）。
 - [0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md) — 使内联脚本不可行的 CSP 策略。
-- [RN-182](../business-rules/autenticacao.md#rn-182), [RN-183](../business-rules/autenticacao.md#rn-183),
-  [RN-184](../business-rules/autenticacao.md#rn-184), [RN-185](../business-rules/autenticacao.md#rn-185).
+- [RN-182](../business-rules/web.md#rn-182), [RN-183](../business-rules/web.md#rn-183),
+  [RN-184](../business-rules/web.md#rn-184), [RN-185](../business-rules/web.md#rn-185).

@@ -7,7 +7,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## Статус {#status}
 
 **Accepted.** 2026-09-30 (AT-071, история HS-048, эпик EP-027, раунд 30).
-Пересматривает часть [RN-001](../business-rules.md#rn-001) — *«terminal states have
+Пересматривает часть [RN-001](../business-rules/api.md#rn-001) — *«terminal states have
 no exit»* — и сосуществует с [ADR 0061](0061-tipo-da-sessao-na-criacao.md) (у сессии
 есть `kind`, неизменяемый, а состояние выполнения — это событие `execution.activated`).
 Не редактирует ни один из них: **добавляет переход** в машину состояний и
@@ -31,7 +31,7 @@ no exit»* — и сосуществует с [ADR 0061](0061-tipo-da-sessao-na-
   `heartbeat_timeout`, 92 события, одиннадцать `artifact.business_rule`, пять пар
   структурированных вопросов. Вся беседа сохраняется в event log (RN-002), и
   артефакты — это события, но у сессии не было способа снова принимать беседу
-  — со времён [RN-581](../business-rules.md#rn-581) api отклоняет с 409
+  — со времён [RN-581](../business-rules/api.md#rn-581) api отклоняет с 409
   `sessao_encerrada` каждое событие беседы в терминальной сессии.
 - «Открыть новую сессию» не заменяет этого: включение агента требует
   `accepted` handoff **в самой сессии** (`agent-activation.ts`), а kickoff PO читает

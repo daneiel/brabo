@@ -65,7 +65,7 @@ supportsVision: remoto.supportsVision ?? local?.supportsVision ?? false,
 ### 3. 两条轴在 UI 和数据库中都不混合 {#3-os-dois-eixos-não-se-misturam-na-ui-nem-no-banco}
 
 - 能力徽章和用途徽章在目录行上有**不同的色调**，过滤 chip 由分隔线隔开。
-- 标记用途**不会**在选择器中打开模型。`is_active` 列的 DEFAULT 是 `true`，所以由用途标记产生的行以显式的 `isActive: false` 插入——没有这一点，对一个模型发表意见就会授权它花钱，违反 [RN-043](../business-rules/custo.md#rn-043)。
+- 标记用途**不会**在选择器中打开模型。`is_active` 列的 DEFAULT 是 `true`，所以由用途标记产生的行以显式的 `isActive: false` 插入——没有这一点，对一个模型发表意见就会授权它花钱，违反 [RN-043](../business-rules/api.md#rn-043)。
 - 更改用途不会关闭已打开的东西：`is_active` 不在 `ON CONFLICT` 的 `SET` 中。
 - 界面从不写“não lê imagem”。徽章只断言属实的东西，因为这里的 `false` 意味着“provider 没有声明”。
 
@@ -91,4 +91,4 @@ supportsVision: remoto.supportsVision ?? local?.supportsVision ?? false,
 
 **其他八个 provider 的维度。** 今天只有 OpenRouter 公布模态；其余每一个都需要对照官方文档进行调查，就像 Fase 11 对各种怪癖所做的那样——禁止把一个的解析器继承到另一个上。
 
-规则见 [RN-056](../business-rules/custo.md#rn-056) 和 [RN-057](../business-rules/custo.md#rn-057)。
+规则见 [RN-056](../business-rules/api.md#rn-056) 和 [RN-057](../business-rules/api.md#rn-057)。

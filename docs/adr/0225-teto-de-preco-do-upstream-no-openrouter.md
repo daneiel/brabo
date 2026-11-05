@@ -61,4 +61,4 @@ entrada e saída) que se combina com o `sort`, que é uma ORDEM.
 - [0166](0166-preferencia-de-roteamento-no-binding-de-modelo.md) — a preferência
   de roteamento.
 - [0221](0221-upstream-preso-por-sessao.md) — o `session_id`.
-- [RN-917](../business-rules/custo.md#rn-917).
+- [RN-917](../business-rules/api.md#rn-917).

@@ -28,7 +28,7 @@ de um gate `teste`/`ci` nomeia arquivos sob `apps/api/test/`, `scripts/ci/` e
 portanto, uma afirmação sobre o repositório, cobrada no CI, nunca pelo processo
 que serve `GET /gates` — por isso a api lê o registro sem procurá-los. Ela já
 procurou, e respondia `500` em toda instalação
-([RN-070](../business-rules/custo.md#rn-070)).
+([RN-070](../business-rules/api.md#rn-070)).
 
 > **`up --wait` só prova o que tem healthcheck.** No compose de
 > desenvolvimento, `api`, `engine` e `web` não tinham nenhum, então
@@ -60,7 +60,7 @@ produção.
 > AT-202), com o default do próprio código, salvo as duas chaves de boot dos
 > agentes de fundo que produção e instalação desligam de propósito, e
 > `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova o build para a
-> próxima que não estiver ([RN-540](../business-rules.md#rn-540)).
+> próxima que não estiver ([RN-540](../business-rules/engine.md#rn-540)).
 > O Kubernetes fica de fora dessa regra de propósito: um Deployment/ConfigMap
 > não intercepta nada, então ali não há chave quebrada a consertar.
 
@@ -69,9 +69,9 @@ produção.
 > Em produção eles precisam ser trocados — e para seis deles o processo
 > **recusa** subir sem a troca (api ou engine, marcados com 🔒). Cinco seguem o
 > padrão do
-> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/custo.md#rn-093):
+> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/api.md#rn-093):
 > ausente, igual ao literal público de exemplo ou curto demais derruba o boot.
-> Veja a [RN-114](../business-rules/custo.md#rn-114) para as quatro que se
+> Veja a [RN-114](../business-rules/api.md#rn-114) para as quatro que se
 > juntaram ao `GIT_OAUTH_STATE_SECRET` original.
 
 ## Compose de instalação (`docker-compose.install.yml`)
@@ -94,11 +94,11 @@ comportamento estranho em vez de recusa.
 
 Elas **não** estão no inventário gerado abaixo: o gerador varre `apps/`, e
 estas são lidas pelo Compose, não por código do produto
-([RN-527](../business-rules.md#rn-527)).
+([RN-527](../business-rules/infra.md#rn-527)).
 
 O **broker** está neste compose desde o [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
 **desligado**, sob o profile `container-broker`, e o `install.sh` o liga só
-quando pergunta e a resposta é "s" ([RN-575](../business-rules.md#rn-575)).
+quando pergunta e a resposta é "s" ([RN-575](../business-rules/produto.md#rn-575)).
 Então ele escreve quatro linhas, juntas ou nenhuma:
 
 | variável | o que o `install.sh` escreve |
@@ -113,7 +113,7 @@ Então ele escreve quatro linhas, juntas ou nenhuma:
 está no [runbook](../runbook.md#broker-na-instalacao).
 
 Os **modelos locais** (Ollama, o profile `llm`) são perguntados logo depois do
-broker ([RN-691](../business-rules.md#rn-691)). Responder "s" mede antes uma
+broker ([RN-691](../business-rules/produto.md#rn-691)). Responder "s" mede antes uma
 porta livre do host e escreve:
 
 | variável | o que o `install.sh` escreve |
@@ -147,7 +147,7 @@ Sem elas a checagem de duplicata semântica é pulada. Ligar depois está no
 |---|---|---|
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **só fora de produção** | embrulha as DEKs. **Em produção a api recusa subir** se ela falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114). Essa é só a checagem do BOOT: trocá-la por uma chave **válida mas diferente** sem re-embrulhar ainda deixa toda credencial ilegível sem erro nenhum — a falha aparece no primeiro uso. Veja a [rotação](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
-| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **só fora de produção** | assina o `state` do OAuth; fraca = CSRF no fluxo de conexão de git. **Em produção a api recusa subir** sem ela, com o default acima (que é público — está no `.env.example`) ou com menos de 16 caracteres. Gere com `openssl rand -base64 32`. Veja o [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) e a [RN-093](../business-rules/custo.md#rn-093) |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **só fora de produção** | assina o `state` do OAuth; fraca = CSRF no fluxo de conexão de git. **Em produção a api recusa subir** sem ela, com o default acima (que é público — está no `.env.example`) ou com menos de 16 caracteres. Gere com `openssl rand -base64 32`. Veja o [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) e a [RN-093](../business-rules/api.md#rn-093) |
 | `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **em produção a api recusa subir** se ela falta ou é `*`. O CORS é estrito por ambiente. **A porta faz parte do valor**: o web em `:5174` é outra origem e é bloqueado — veja o [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). Nos composes, o default **deriva de `WEB_PORT`**, então mudar a porta leva o CORS junto; definir `WEB_ORIGIN` à mão sobrepõe a derivação e mantê-la coerente passa a ser responsabilidade sua |
 | `WEB_PORT` | `5173` (dev) · `8088` (prod) | porta publicada do web no host. Nenhum serviço a lê — ela **alimenta o default de `WEB_ORIGIN`** nos composes, e é isso que impede porta e CORS de divergirem |
 
@@ -162,7 +162,7 @@ Decisões no
 |---|---|---|
 | `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **só fora de produção** | frase de onde o par Ed25519 do access token é **derivado** por scrypt — nenhuma chave privada é commitada. **Em produção a api recusa subir** se ela falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114) |
 | `AUTH_JWT_SECRET_PREVIOUS` | — | aceita **só para verificação**, durante a rotação; entra no JWKS e nunca assina |
-| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **só fora de produção** | chave HMAC do hash dos tokens opacos (refresh, vínculos de conta, PATs) e da chave do balde de bloqueio. **Segredo próprio — não cai mais em `AUTH_JWT_SECRET`** ([RN-613](../business-rules/autenticacao.md#rn-613)). **Em produção a api recusa subir** se ele falta, se é qualquer dos valores de exemplo deste repositório ou se tem menos de 16 caracteres. Instalação que rodou sem ele precisa defini-lo com o `AUTH_JWT_SECRET` **atual**, senão todo mundo é deslogado — veja o [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
+| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **só fora de produção** | chave HMAC do hash dos tokens opacos (refresh, vínculos de conta, PATs) e da chave do balde de bloqueio. **Segredo próprio — não cai mais em `AUTH_JWT_SECRET`** ([RN-613](../business-rules/api.md#rn-613)). **Em produção a api recusa subir** se ele falta, se é qualquer dos valores de exemplo deste repositório ou se tem menos de 16 caracteres. Instalação que rodou sem ele precisa defini-lo com o `AUTH_JWT_SECRET` **atual**, senão todo mundo é deslogado — veja o [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
 | `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 dias |
 | `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | teto absoluto da família, contado do login — sem ele a rotação concede sessão eterna |
@@ -192,7 +192,7 @@ Decisões no
 > `CREDENTIALS_MASTER_KEY_PREVIOUS` e `BRABO_SERVICE_TOKEN_PREVIOUS` estão
 > mapeadas no `environment:` dos três composes (dev, produção e instalação)
 > como `${X:-}` — a api recebe as três, o engine e o broker recebem
-> `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/autenticacao.md#rn-595)).
+> `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/api.md#rn-595)).
 > Vazio é o mesmo que ausente em todo leitor, então fora de uma rotação nada
 > muda; durante uma, basta defini-las no `.env` e recriar o serviço. Antes da
 > RN-595 elas não estavam mapeadas em lugar nenhum e o `docker compose` não
@@ -260,12 +260,12 @@ Janela deslizante no Postgres — não há Redis
 
 O segredo compartilhado que autentica api ↔ engine. **A mesma variável dos dois
 lados** — cada um envia o valor atual e aceita os dois, e é isso que torna a
-rotação possível sem indisponibilidade ([RN-035](../business-rules/autenticacao.md#rn-035)).
+rotação possível sem indisponibilidade ([RN-035](../business-rules/api.md#rn-035)).
 
 | variável | default | o que faz |
 |---|---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** | vai no cabeçalho `X-Brabo-Service-Token` e é o que o `EngineServiceGuard` compara em tempo constante. **Em produção a api recusa subir** se ele falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | aceito **só para verificação**, durante a rotação. Quando definido, passa pela **mesma** regra do token atual: o espaço em volta é aparado, e em produção a api recusa subir se ele é o default público ou tem menos de 16 caracteres. Diferente do atual, nunca é obrigatório ([RN-598](../business-rules/autenticacao.md#rn-598)) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | aceito **só para verificação**, durante a rotação. Quando definido, passa pela **mesma** regra do token atual: o espaço em volta é aparado, e em produção a api recusa subir se ele é o default público ou tem menos de 16 caracteres. Diferente do atual, nunca é obrigatório ([RN-598](../business-rules/api.md#rn-598)) |
 
 > Definir só o valor NOVO de um lado (sem passar pela dança do `_PREVIOUS`) não
 > quebra o boot de ninguém: o sintoma é `403` em `/internal/*` e `401` nas
@@ -299,7 +299,7 @@ escolhido na criação e nunca variável de ambiente. O que o AMBIENTE fornece �
 **base** sob a qual essas pastas moram — `BRABO_PROJECTS_BASE`, uma por
 instalação
 ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[RN-500](../business-rules.md#rn-500)):
+[RN-500](../business-rules/api.md#rn-500)):
 
 ```bash
 # .env — ABSOLUTO. `~` não é expandido pelo Compose.
@@ -381,8 +381,8 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 | `NEO4J_USER` | `neo4j` (dev) | chega ao container com o mesmo default que o serviço `neo4j` usa para `NEO4J_AUTH`, então defina-a só para TROCAR o usuário — trocar ali troca os dois lados de uma vez. Dois defaults independentes deixariam a api autenticando com uma credencial que o servidor não tem mais |
 | `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (só dev) | mesma regra de pareamento de `NEO4J_USER`. **Sem default público em produção** de propósito — não há "valor de exemplo" plausível para senha de banco, e o `docker-compose.prod.yml` mantém `NEO4J_AUTH` vazio para que o próprio entrypoint da imagem oficial recuse subir em vez de subir com uma senha adivinhável |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `graph_projection` da outbox e escreve handoffs/hipóteses/perfis/interações no grafo (RN-416) |
-| `CUSTO_RECONCILIACAO_INTERVAL_MS` | `300000` | período do job da api que troca a ESTIMATIVA de custo de uma chamada abortada pelo orçamento de raciocínio pelo custo real do `GET /generation` do OpenRouter ([RN-915](../business-rules/custo.md#rn-915)); `0` desliga |
-| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `artifact_projection` da outbox e escreve os artefatos de cada agente como Markdown sob a pasta `docs/` do projeto ([RN-523](../business-rules.md#rn-523)). Projeção DERIVADA: o event log continua sendo a fonte, e a pasta pode ser apagada e reconstruída |
+| `CUSTO_RECONCILIACAO_INTERVAL_MS` | `300000` | período do job da api que troca a ESTIMATIVA de custo de uma chamada abortada pelo orçamento de raciocínio pelo custo real do `GET /generation` do OpenRouter ([RN-915](../business-rules/api.md#rn-915)); `0` desliga |
+| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `artifact_projection` da outbox e escreve os artefatos de cada agente como Markdown sob a pasta `docs/` do projeto ([RN-523](../business-rules/engine.md#rn-523)). Projeção DERIVADA: o event log continua sendo a fonte, e a pasta pode ser apagada e reconstruída |
 
 ### Observabilidade
 
@@ -419,7 +419,7 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 | `DNS_CLUSTER_QUERY` | — | o Service headless que forma o cluster Erlang. **Sem ela cada réplica é uma ilha** e todo rollout drena tudo |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | janela do `preStop`. Sobe **junto** com `terminationGracePeriodSeconds`, nunca sozinha |
 | `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | quanto a sessão espera pelo heartbeat da aba antes de perguntar à api se há trabalho pendente |
-| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | teto de uma **conversa ociosa**: um agente conversacional esperando o usuário segura a sessão além do heartbeat por esse tempo, contado do fim do turno dele; passado isso a sessão fecha como `closed` com a causa `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)). Mapeada para o engine nos três composes (dev, produção, instalação) com esse mesmo default; **não** escrita em `deploy/k8s/`, de propósito — nada ali intercepta o ambiente, então a ausência é o default, e mudá-la é um item `env:` no patch do engine do overlay |
+| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | teto de uma **conversa ociosa**: um agente conversacional esperando o usuário segura a sessão além do heartbeat por esse tempo, contado do fim do turno dele; passado isso a sessão fecha como `closed` com a causa `conversation_idle_timeout` ([RN-581](../business-rules/api.md#rn-581)). Mapeada para o engine nos três composes (dev, produção, instalação) com esse mesmo default; **não** escrita em `deploy/k8s/`, de propósito — nada ali intercepta o ambiente, então a ausência é o default, e mudá-la é um item `env:` no patch do engine do overlay |
 | `RELEASE_NAME` / `RELEASE_NODE` | — | identidade do nó na distribuição |
 
 ### Harness
@@ -432,34 +432,34 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 | `DEFAULT_CONTEXT_WINDOW` | `128000` | usado quando o modelo não declara a janela (os agentes conversacionais nunca declaram); era `8192` até a RN-702 |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara a compactação |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
-| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | teto, em ms, de UMA chamada ao roteador de ferramentas Jev ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Lida pela **api**, não pelo engine. Passado o teto, o passo cai no catálogo inteiro de ferramentas com `motivoDaQueda: timeout`; o turno nunca falha por causa do Jev. 0 de 328 requisições medidas passou de 2 000 ms. A chave liga/desliga é por workspace (`PUT workspaces/:id/tool-router`), não variável de ambiente |
-| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | teto de um comando de terminal (2 min desde a [RN-757](../business-rules.md#rn-757): um `npm install` simples não cabia nos 15 s antigos). O engine espera esse valor + 90 s no `container-exec` e + 120 s no `propose_action` de uma ação `terminal`; acima de ~180 s a espera de fora passa do limite de 300 s de cabeçalhos do `fetch` do Node que a api usa para chamar `/internal/actions/execute` |
-| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | teto em BYTES da saída de um comando ([RN-074](../business-rules/custo.md#rn-074)). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore grande derruba a execução inteira com um `413` do provider |
-| `READ_FILE_MAX_BYTES` | `32768` | teto em BYTES do conteúdo lido por `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — a mesma classe de estouro da RN-074, pela porta do `read_file` em vez do terminal; variável independente, mesmo valor por coincidência de contexto |
-| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | teto em BYTES do texto final de `search_workspace` ([RN-150](../business-rules/autenticacao.md#rn-150)) — a mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente |
-| `SEARCH_WORKSPACE_MAX_HITS` | `500` | teto do NÚMERO de ocorrências que `search_workspace` coleta antes de montar a resposta ([RN-150](../business-rules/autenticacao.md#rn-150)) — para de varrer/ler conteúdo assim que bate o teto, evitando pagar I/O numa árvore com ocorrências demais só para truncar por bytes depois |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | teto, em ms, de UMA chamada ao roteador de ferramentas Jev ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules/engine.md#rn-625)). Lida pela **api**, não pelo engine. Passado o teto, o passo cai no catálogo inteiro de ferramentas com `motivoDaQueda: timeout`; o turno nunca falha por causa do Jev. 0 de 328 requisições medidas passou de 2 000 ms. A chave liga/desliga é por workspace (`PUT workspaces/:id/tool-router`), não variável de ambiente |
+| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | teto de um comando de terminal (2 min desde a [RN-757](../business-rules/engine.md#rn-757): um `npm install` simples não cabia nos 15 s antigos). O engine espera esse valor + 90 s no `container-exec` e + 120 s no `propose_action` de uma ação `terminal`; acima de ~180 s a espera de fora passa do limite de 300 s de cabeçalhos do `fetch` do Node que a api usa para chamar `/internal/actions/execute` |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | teto em BYTES da saída de um comando ([RN-074](../business-rules/engine.md#rn-074)). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore grande derruba a execução inteira com um `413` do provider |
+| `READ_FILE_MAX_BYTES` | `32768` | teto em BYTES do conteúdo lido por `read_file` ([RN-141](../business-rules/engine.md#rn-141)) — a mesma classe de estouro da RN-074, pela porta do `read_file` em vez do terminal; variável independente, mesmo valor por coincidência de contexto |
+| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | teto em BYTES do texto final de `search_workspace` ([RN-150](../business-rules/engine.md#rn-150)) — a mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente |
+| `SEARCH_WORKSPACE_MAX_HITS` | `500` | teto do NÚMERO de ocorrências que `search_workspace` coleta antes de montar a resposta ([RN-150](../business-rules/engine.md#rn-150)) — para de varrer/ler conteúdo assim que bate o teto, evitando pagar I/O numa árvore com ocorrências demais só para truncar por bytes depois |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
-| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | teto de TRANSPORTE que a compactação de contexto respeita por cima da janela do modelo ([RN-412](../business-rules.md#rn-412)) — a janela efetiva é `min(context_window, este teto convertido em tokens)`, então a compactação dispara ANTES de o corpo estourar o limite HTTP da api, não só quando o modelo "esqueceria" |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | teto de TRANSPORTE que a compactação de contexto respeita por cima da janela do modelo ([RN-412](../business-rules/api.md#rn-412)) — a janela efetiva é `min(context_window, este teto convertido em tokens)`, então a compactação dispara ANTES de o corpo estourar o limite HTTP da api, não só quando o modelo "esqueceria" |
 | `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | liga a fonte `:graph` de `InstructionFiles` — hoje só a identidade do ux-designer resolve um template do grafo antes do texto inline (RN-413). Nome PRÓPRIO, não o `GRAPH_TEMPLATES_ENABLED` abaixo — as duas colidiriam com defaults opostos se dividissem a chave |
 
 ### Psicólogo
 
 | variável | default | nota |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | pausa GLOBAL de rodadas NOVAS (automáticas e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug, mesma forma de flag de `ANAMNESE_ENABLED` abaixo (que foi religada na [RN-680](../business-rules.md#rn-680); esta não). Não apaga nada que já exista. Ligá-la exige reiniciar o engine ([RN-117](../business-rules/autenticacao.md#rn-117)). Nenhuma chave de boot faz par com ela: o gatilho automático do Psicólogo é o fechamento da sessão, não um tick |
+| `PSYCHOLOGIST_ENABLED` | `false` | pausa GLOBAL de rodadas NOVAS (automáticas e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug, mesma forma de flag de `ANAMNESE_ENABLED` abaixo (que foi religada na [RN-680](../business-rules/engine.md#rn-680); esta não). Não apaga nada que já exista. Ligá-la exige reiniciar o engine ([RN-117](../business-rules/engine.md#rn-117)). Nenhuma chave de boot faz par com ela: o gatilho automático do Psicólogo é o fechamento da sessão, não um tick |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | eventos na sessão que separam a análise **leve** da **pesada** |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | quantos eventos entram no prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncamento do payload de cada evento |
-| `PSYCHOLOGIST_RAG_TOP_K` | `3` | quantos trechos relevantes do `rag_search` entram no contexto, descontados do teto de eventos recentes acima ([RN-417](../business-rules.md#rn-417)) |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | liga a resolução de `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` como template do grafo — chave COMPARTILHADA entre Psicólogo, Anamnese e o prompt de sumarização do `ContextManager` ([RN-417](../business-rules.md#rn-417)), não confundir com `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` acima. Desligada (o default) quer dizer que a API do grafo nem é chamada; ligada, qualquer falha cai no texto inline sem erro |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | quantos trechos relevantes do `rag_search` entram no contexto, descontados do teto de eventos recentes acima ([RN-417](../business-rules/engine.md#rn-417)) |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | liga a resolução de `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` como template do grafo — chave COMPARTILHADA entre Psicólogo, Anamnese e o prompt de sumarização do `ContextManager` ([RN-417](../business-rules/engine.md#rn-417)), não confundir com `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` acima. Desligada (o default) quer dizer que a API do grafo nem é chamada; ligada, qualquer falha cai no texto inline sem erro |
 
 ### Anamnese
 
 | variável | default | nota |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `true` | flag de produto: pode acontecer uma rodada NOVA (periódica e sob demanda). `false` é uma pausa GLOBAL que não apaga nada ([RN-115](../business-rules/autenticacao.md#rn-115)); mudá-la exige reiniciar o engine. Foi `false` de 2026-08-10 (a pausa do usuário) até o dono religar a Anamnese com correções em 2026-10-01 ([RN-680](../business-rules.md#rn-680)): rodada sem sujeito elegível — membro efetivo do projeto com interação própria na janela — não faz chamada de LLM. **Sozinha não basta para a rodada PERIÓDICA**: `START_ANAMNESE` (chave de boot, abaixo) também precisa ser `true`, e as duas respondem perguntas diferentes |
+| `ANAMNESE_ENABLED` | `true` | flag de produto: pode acontecer uma rodada NOVA (periódica e sob demanda). `false` é uma pausa GLOBAL que não apaga nada ([RN-115](../business-rules/engine.md#rn-115)); mudá-la exige reiniciar o engine. Foi `false` de 2026-08-10 (a pausa do usuário) até o dono religar a Anamnese com correções em 2026-10-01 ([RN-680](../business-rules/engine.md#rn-680)): rodada sem sujeito elegível — membro efetivo do projeto com interação própria na janela — não faz chamada de LLM. **Sozinha não basta para a rodada PERIÓDICA**: `START_ANAMNESE` (chave de boot, abaixo) também precisa ser `true`, e as duas respondem perguntas diferentes |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min entre rodadas |
 | `ANAMNESE_MIN_EVENTS` | `10` | abaixo disso não roda — evita traçar perfil sobre ruído |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | janela da primeira rodada |
@@ -472,11 +472,11 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 
 | variável | default | nota |
 |---|---|---|
-| `START_OUTBOX_DRAIN` | `true` | chave de boot do drain da outbox (`Engine.Workers.OutboxDrainWorker`, a cada 2s) — o ÚNICO consumidor dos eventos `session`/`task`/`container` que a api escreve na outbox — mais a poda de worktree órfão e a adoção de sessão órfã. Desligada, ninguém entrega esses eventos: sessão que a api fechou continua com o processo e os agentes conversacionais rodando ([RN-581](../business-rules.md#rn-581)), e dev agent esperando decisão de ação, gate, a PR dele ou o container chegar a `running` nunca acorda. Ela NÃO liga o Psicólogo: o drain só o enfileira com `PSYCHOLOGIST_ENABLED=true`. `false` só no compose de produção (`docker-compose.prod.yml`), de propósito; o compose de instalação usa o `true` do código desde a AT-219 |
+| `START_OUTBOX_DRAIN` | `true` | chave de boot do drain da outbox (`Engine.Workers.OutboxDrainWorker`, a cada 2s) — o ÚNICO consumidor dos eventos `session`/`task`/`container` que a api escreve na outbox — mais a poda de worktree órfão e a adoção de sessão órfã. Desligada, ninguém entrega esses eventos: sessão que a api fechou continua com o processo e os agentes conversacionais rodando ([RN-581](../business-rules/api.md#rn-581)), e dev agent esperando decisão de ação, gate, a PR dele ou o container chegar a `running` nunca acorda. Ela NÃO liga o Psicólogo: o drain só o enfileira com `PSYCHOLOGIST_ENABLED=true`. `false` só no compose de produção (`docker-compose.prod.yml`), de propósito; o compose de instalação usa o `true` do código desde a AT-219 |
 | `START_ANAMNESE` | `true` | guarda de CARGA de teste/dev: impede que `kickoff/0` sequer seja chamado no boot, mas não decide nada de produto — não confundir com `ANAMNESE_ENABLED` (produto: pausa GLOBAL, sobrevive a qualquer valor desta). Desligá-la impede enfileiramentos **novos**, **não limpa a fila**. Os jobs acumulados rodam no próximo boot — a fila precisa ser expurgada. Veja o [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | tick periódico da sincronização do catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da página Providers chama o mesmo caso de uso ([RN-043](../business-rules/custo.md#rn-043)) |
+| `START_MODEL_SYNC` | `true` | tick periódico da sincronização do catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da página Providers chama o mesmo caso de uso ([RN-043](../business-rules/api.md#rn-043)) |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | o catálogo de um provider muda em escala de dias, e cada rodada gasta uma chamada de API por provider — daí o default generoso |
-| `START_GATE_RESCUE` | `true` | tick periódico do resgate de ciclo de gate (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Desligá-lo não muda o boot: o resgate roda ali uma vez de qualquer jeito |
+| `START_GATE_RESCUE` | `true` | tick periódico do resgate de ciclo de gate (`Engine.Gates.GateRescuer`, [RN-140](../business-rules/engine.md#rn-140)). Desligá-lo não muda o boot: o resgate roda ali uma vez de qualquer jeito |
 | `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | um gate travado bloqueia a PR inteira do usuário — intervalo bem mais curto que o da Anamnese/sincronização de modelos, e cada tick custa só uma consulta quase sempre vazia |
 | `GATE_RESCUE_STALE_AFTER_SECONDS` | `900` (15 min) | generoso de propósito: o ToolLoop de um subagente de QA pode legitimamente rodar até `TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterações, e um limiar curto resgataria — e duplicaria — um ciclo apenas lento |
 
@@ -484,8 +484,8 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 
 | variável | default |
 |---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** — **o mesmo valor da api**. O espaço em volta é aparado, e um valor só de espaço conta como ausente. Numa release `:prod` o engine recusa subir se ele falta, se é o default público acima ou se tem menos de 16 caracteres, nomeando a variável — a mesma regra da api ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só para verificação, durante a rotação. Aparado; numa release `:prod` o engine recusa subir se ele é o default público ou tem menos de 16 caracteres. Nunca obrigatório, e igual ao atual quer dizer que não há rotação ([RN-601](../business-rules/autenticacao.md#rn-601)) |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** — **o mesmo valor da api**. O espaço em volta é aparado, e um valor só de espaço conta como ausente. Numa release `:prod` o engine recusa subir se ele falta, se é o default público acima ou se tem menos de 16 caracteres, nomeando a variável — a mesma regra da api ([RN-601](../business-rules/engine.md#rn-601)) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só para verificação, durante a rotação. Aparado; numa release `:prod` o engine recusa subir se ele é o default público ou tem menos de 16 caracteres. Nunca obrigatório, e igual ao atual quer dizer que não há rotação ([RN-601](../business-rules/engine.md#rn-601)) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exportador Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — veja o ADR 0035 |
 | `WEB_ORIGIN` | — **a mesma variável da api**, e aqui ela alimenta DUAS coisas: o `check_origin` do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de saúde, que o navegador precisa para ler `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Ausente em produção fecha o CORS e mantém o `check_origin` no default estrito do Phoenix — o engine **sobe mesmo assim**, diferente da api |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **a mesma da api, no mesmo volume** |
@@ -666,12 +666,12 @@ docker compose -f docker/docker-compose.prod.yml \
 
 | variável | default | quando falha |
 |---|---|---|
-| `BROKER_URL` | `http://broker:8090` no compose de **dev**; vazia em produção e na instalação (lida pela **api**) | Vazia é estado NORMAL: quem lê o estado observado de um container diz então "não observado" em vez de herdar o registrado ([RN-486](../business-rules.md#rn-486)), e a api responde `brokerConfigurado: false`, então a criação de projeto só oferece `runner` ([RN-573](../business-rules.md#rn-573)). Localmente o broker sobe por padrão, então o compose de dev a aponta por default para o serviço que ele sobe ([RN-599](../business-rules.md#rn-599)) — um valor no `.env` ainda vence. Os composes de produção e de instalação não têm default de propósito: ali o broker fica sob profile, e quem o liga escreve a URL |
+| `BROKER_URL` | `http://broker:8090` no compose de **dev**; vazia em produção e na instalação (lida pela **api**) | Vazia é estado NORMAL: quem lê o estado observado de um container diz então "não observado" em vez de herdar o registrado ([RN-486](../business-rules/api.md#rn-486)), e a api responde `brokerConfigurado: false`, então a criação de projeto só oferece `runner` ([RN-573](../business-rules/api.md#rn-573)). Localmente o broker sobe por padrão, então o compose de dev a aponta por default para o serviço que ele sobe ([RN-599](../business-rules/infra.md#rn-599)) — um valor no `.env` ainda vence. Os composes de produção e de instalação não têm default de propósito: ali o broker fica sob profile, e quem o liga escreve a URL |
 | `BROKER_PORT` | `8090` | Porta em que o broker escuta. Ele NÃO publica nada no host — só a api o alcança, pela rede `internal: true` do compose |
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` em desenvolvimento | O MESMO segredo de api ↔ engine, no mesmo cabeçalho. Com `NODE_ENV=production` o broker recusa subir quando ele está vazio, quando é o literal público do repositório ou com menos de 16 caracteres — a regra da RN-114, que aqui guarda um processo que fala com o Docker do host. `BRABO_SERVICE_TOKEN_PREVIOUS`, quando definido, passa pela mesma regra salvo a obrigatoriedade: aparado, e em produção o broker recusa subir se ele é o literal público ou tem menos de 16 caracteres ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `API_URL` | `http://api:3000` | De onde o broker LÊ a decisão do Arquiteto. Ele não recebe uma especificação de container; ele vem buscá-la ([RN-485](../business-rules.md#rn-485)) |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` em desenvolvimento | O MESMO segredo de api ↔ engine, no mesmo cabeçalho. Com `NODE_ENV=production` o broker recusa subir quando ele está vazio, quando é o literal público do repositório ou com menos de 16 caracteres — a regra da RN-114, que aqui guarda um processo que fala com o Docker do host. `BRABO_SERVICE_TOKEN_PREVIOUS`, quando definido, passa pela mesma regra salvo a obrigatoriedade: aparado, e em produção o broker recusa subir se ele é o literal público ou tem menos de 16 caracteres ([RN-601](../business-rules/engine.md#rn-601)) |
+| `API_URL` | `http://api:3000` | De onde o broker LÊ a decisão do Arquiteto. Ele não recebe uma especificação de container; ele vem buscá-la ([RN-485](../business-rules/produto.md#rn-485)) |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | A raiz das pastas de projeto **no HOST**, não dentro de container nenhum. Sem ela, `start` recusa nomeando esta variável e as outras quatro operações continuam funcionando. Não a confunda com `PROJECT_WORKSPACES_ROOT`, que é o caminho dentro dos containers: o `-v` é resolvido pelo DAEMON contra o sistema de arquivos do host, e um caminho de dentro da api o faria criar e montar uma pasta VAZIA |
-| `DOCKER_GID` | `999` (compose) | O gid do grupo `docker` do host (`getent group docker \| cut -d: -f3`). O socket é `root:docker` e o broker roda sem root, então o compose usa `group_add`. O default é o mais comum e está errado em várias distribuições. Desde o [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) isso importa em TODA máquina de desenvolvimento, não só onde alguém ligou o profile — errar não quebra o boot, quebra o uso: toda operação morre com "permission denied" no socket, e isso só aparece quando alguém propõe `container_start`. O `pnpm dev` informa o estado desta variável a cada execução ([RN-512](../business-rules.md#rn-512)), e diz "não se aplica" numa máquina sem grupo `docker` em vez de acusá-la |
+| `DOCKER_GID` | `999` (compose) | O gid do grupo `docker` do host (`getent group docker \| cut -d: -f3`). O socket é `root:docker` e o broker roda sem root, então o compose usa `group_add`. O default é o mais comum e está errado em várias distribuições. Desde o [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) isso importa em TODA máquina de desenvolvimento, não só onde alguém ligou o profile — errar não quebra o boot, quebra o uso: toda operação morre com "permission denied" no socket, e isso só aparece quando alguém propõe `container_start`. O `pnpm dev` informa o estado desta variável a cada execução ([RN-512](../business-rules/infra.md#rn-512)), e diz "não se aplica" numa máquina sem grupo `docker` em vez de acusá-la |
 
 `PROJECT_WORKSPACES_HOST_ROOT` não pode ser derivada de um volume Docker
 gerenciado. No compose de **dev** ela deriva de `PROJECT_WORKSPACES_HOST_DIR`
@@ -679,7 +679,7 @@ gerenciado. No compose de **dev** ela deriva de `PROJECT_WORKSPACES_HOST_DIR`
 copiado, deixa o broker sem raiz e o modo `container` sem container: a stack
 sobe saudável e o `container_start` termina recusado. O `pnpm dev` informa isso
 a cada execução, no mesmo molde do `DOCKER_GID`, e nunca recusa subir
-([RN-599](../business-rules.md#rn-599)). Ele informa também o caso do `~`: o
+([RN-599](../business-rules/infra.md#rn-599)). Ele informa também o caso do `~`: o
 Compose expande `~` na origem do bind-mount que `api`/`engine` usam, mas NÃO na
 variável que o broker recebe (medido com `docker compose config`), então
 escreva o caminho JÁ EXPANDIDO. E um `PROJECT_WORKSPACES_HOST_ROOT` explícito
@@ -699,7 +699,7 @@ identidade). Defina-a explicitamente só se o daemon Docker alcança essa pasta
 por outro caminho.
 
 É ela que permite a um projeto **Mounted** ter container
-([RN-503](../business-rules.md#rn-503)): a api envia um localizador
+([RN-503](../business-rules/api.md#rn-503)): a api envia um localizador
 discriminado (`localizacao.tipo` — `gerenciada` ou `montada`) mais o segmento
 relativo, e o broker o resolve contra a raiz correspondente. As duas raízes
 nunca se substituem. Faltar esta faz o `start` de um projeto `mounted` recusar
@@ -741,7 +741,7 @@ imagem de produção como o usuário fixo `engine` (uid/gid `1000`, sem
 declarado `uid=1000,gid=1000,mode=0700` — não é variável — porque o semgrep (o
 gate de SecOps) escreve `~/.semgrep` ali; criado como root, o scan não devolve
 nada e o gate aprova sem análise estática
-([RN-707](../business-rules.md#rn-707), runbook
+([RN-707](../business-rules/engine.md#rn-707), runbook
 [O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)).
 
 As duas imagens do engine pinam o semgrep com o argumento de build

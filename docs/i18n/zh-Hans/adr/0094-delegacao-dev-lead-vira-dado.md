@@ -53,7 +53,7 @@ Dev Lead 没有这种模式。`dev-<modulo>` 的启用发生在 **API** 一侧�
 ### 没有 module_map：绝不使用假 id {#sem-module_map-nunca-um-id-falso}
 
 如果项目中没有任何 `artifact.module_map`——这本不该发生，因为 Arquiteto 总是在 Dev Lead 运作之前交付 module_map（这是 `docs/fluxo.yml` 中它的必需输入）——委派**不会**以编造的 id 写入。`AcceptParallelizationUseCase` 用 `Logger.error` 记录这一意外状态并返回，出于与
-[RN-059](../business-rules/custo.md#rn-059) 相同的教训：绝不静默失败，但也绝不假装存在一个并不存在的理由。
+[RN-059](../business-rules/engine.md#rn-059) 相同的教训：绝不静默失败，但也绝不假装存在一个并不存在的理由。
 
 ### 记录失败不会推翻启用 {#falha-ao-registrar-não-derruba-a-ativação}
 
@@ -102,7 +102,7 @@ síncrona, numa rodada só”）。
   （`recordDevDelegation`）
 - `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`
 - `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`
-- [RN-404](../business-rules.md#rn-404)（Dev Lead → dev 委派）
+- [RN-404](../business-rules/api.md#rn-404)（Dev Lead → dev 委派）
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)——第 5 项，此处撤销的切分
 - [ADR 0038](0038-hierarquia-de-agentes.md)——
   `delegations`/`RecordDelegationUseCase` 的原始设计

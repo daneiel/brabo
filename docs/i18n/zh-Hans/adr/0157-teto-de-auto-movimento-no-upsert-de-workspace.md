@@ -36,7 +36,7 @@ role)` 调用 `workspaces.addMember`。**它不接收操作者**，而 controlle
 
 1. **没有更高的层级来接住下坠。** 在项目中，自我降级会让有效角色降到 workspace 的角色，而后者往往能
    托住它。在 workspace 中角色就是角色：一个把自己写成 `viewer` 的 `owner` 会失去整个 workspace，连同
-   所有项目、按 [RN-060](../business-rules/custo.md#rn-060) 归其所有的 LLM 花费，以及邀请人来替补的
+   所有项目、按 [RN-060](../business-rules/api.md#rn-060) 归其所有的 LLM 花费，以及邀请人来替补的
    能力本身；
 2. **没有删除成员的路由可以从别的途径撤销。** `WorkspacesController` 没有删除成员的 `@Delete`——0156
    已经测量过这一点，并以此为理由没有在那个 PR 中扩展上限。撤销用的正是**这条**路由，而它要求的正是
@@ -79,7 +79,7 @@ controller 传入 `@CurrentUser()`，在那里修改**自己**的角色返回 40
 **层级倒置**的规则，而倒置在这个作用域中不可能发生：
 
 - 在项目中，`projectRole ?? workspaceRole` 让项目行**覆盖** workspace 行
-  （[RN-471](../business-rules.md#rn-471)），因此一个 `maintainer` 能触及在他**之上**的人。0127 正是
+  （[RN-471](../business-rules/web.md#rn-471)），因此一个 `maintainer` 能触及在他**之上**的人。0127 正是
   这样描述损害的：*"o dono perde o próprio projeto (…) restaurar exige `maintainer`, que o dono acabou
   de perder naquele escopo"*。行动者位于受害者**之下**；
 - 在 workspace 中这不会发生。`@RequireRole('owner')` 是 `ROLE_ORDER` 的顶端，因此调用路由的人从不在
@@ -109,7 +109,7 @@ offboarding、所有权轮换以及纠正一次错误的邀请，都将需要直
 
 **6. 消息按方向和作用域各自独立。** 共有四条，没有一条兼顾两件事：试图自我晋升的人不会收到
 降级的句子（那不是他做的），撞上 workspace 上限的人也不会被叫去找一个 `maintainer`——在那里能撤销的
-角色是 `owner`。这与 ADR 0156 第 5 点以及 [RN-470](../business-rules/custo.md#rn-470) 是同一种纪律：
+角色是 `owner`。这与 ADR 0156 第 5 点以及 [RN-470](../business-rules/web.md#rn-470) 是同一种纪律：
 不要因为两种状态共享同一个结果就把它们混为一谈。
 
 **7. 操作者的角色来自仓库，而不是来自
@@ -125,7 +125,7 @@ offboarding、所有权轮换以及纠正一次错误的邀请，都将需要直
 **9. 晋升被施加，即使在这条路由上通过 HTTP 不可达。** 在 `@RequireRole('owner')` 下，操作者已经在
 顶端，无处可升——在 workspace 作用域中，上限向上的一半是如今不会触发的机制。它仍然被加入，并且经过
 测试，理由与上限 2 一直不设阈值的理由相同：用例不预设 guard，而在路由改变最低要求的那一天，保持正确的
-是它。这与 [RN-514](../business-rules.md#rn-514) 按能力拒绝的设计相同，在有触发之前就已实现并测试。
+是它。这与 [RN-514](../business-rules/engine.md#rn-514) 按能力拒绝的设计相同，在有触发之前就已实现并测试。
 
 ## 本 ADR 明确拒绝的东西 {#o-que-este-adr-recusa-explicitamente}
 

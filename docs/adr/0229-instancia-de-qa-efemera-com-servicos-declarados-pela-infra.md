@@ -68,4 +68,4 @@ não um catálogo nosso.
 
 - [0130](0130-broker-de-container.md), [0189](0189-o-piloto-automatico.md),
   [0228](0228-comando-do-app-e-rede-do-container.md).
-- [RN-930](../business-rules.md#rn-930).
+- [RN-930](../business-rules/contracts.md#rn-930).

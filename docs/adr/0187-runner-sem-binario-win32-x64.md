@@ -28,7 +28,7 @@ exercitou. As camadas foram caindo uma a uma, e a última não é do runner:
    `Cannot find package 'node-pty'`: o carregador recebia a forma SEM os
    dois-pontos (`B/~BUN/root/`) e caía no `import('node-pty')` comum.
    Corrigido. Neste mesmo run o `darwin-arm64` e os dois Linux PASSARAM com o
-   leitor próprio de PTY da AT-342 ([RN-688](../business-rules.md#rn-688)).
+   leitor próprio de PTY da AT-342 ([RN-688](../business-rules/runner.md#rn-688)).
 3. **Run `36780804339`** — o `node-pty` carrega, e do `cmd.exe` só chegam as
    sequências iniciais do ConPTY (`ESC[?9001h ESC[?1004h`), sem nem o prompt.
    O auto-teste ganhou uma SONDA que não depende de entrada, para separar
@@ -68,7 +68,7 @@ ADR 0174 mudam juntos:
   `win32-x64` e não ganha.
 - O navegador continua **detectando** `win32-x64` e não pede o download: ele
   entra em `SEM_BINARIO_PUBLICADO`, que falha de antemão e cai no best-effort
-  de sempre (`falhaDoBinario` → comando npm, [RN-473](../business-rules.md#rn-473)).
+  de sempre (`falhaDoBinario` → comando npm, [RN-473](../business-rules/web.md#rn-473)).
 - `scripts/ci/alvos-do-runner.spec.ts` amarra os quatro lugares e passa a
   reprovar `windows-latest` na matriz.
 

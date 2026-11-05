@@ -102,7 +102,7 @@ que falta.
 409 e não 403: nada está errado com quem pediu nem com a permissão dele — o
 recurso ainda não existe neste estado. E a checagem mora no **mesmo funil** que
 a contenção de caminho (`alvo`), não nas quatro rotas, pelo motivo da
-[RN-092](../business-rules/custo.md#rn-092): checagem duplicada em quatro chamadores é
+[RN-092](../business-rules/api.md#rn-092): checagem duplicada em quatro chamadores é
 checagem que um dia diverge em um deles.
 
 ### 3. A fronteira: dentro é livre, fora é humano
@@ -129,7 +129,7 @@ container termina.
 Negar não tira poder do agente — **redireciona**. Foi assim que o dev agent
 sempre fez (`agent_io.ex` propõe `git_push`); o que muda é que agora está
 garantido, e não só combinado. E merge em branch protegida segue manual pela
-[RN-014](../business-rules.md#rn-014), intocada.
+[RN-014](../business-rules/api.md#rn-014), intocada.
 
 ### 4. Rede é postura do CONTAINER, decidida uma vez — não comando a comando
 
@@ -237,8 +237,8 @@ porta ficar permanentemente aberta.
   quem responde pelo projeto; a rede segue o mesmo critério.
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — o worktree é por
   AGENTE, não por task; é ele que passa a viver dentro do container.
-- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules/custo.md#rn-092),
-  [RN-105](../business-rules/autenticacao.md#rn-105), [RN-106](../business-rules/autenticacao.md#rn-106).
+- [RN-014](../business-rules/api.md#rn-014), [RN-092](../business-rules/api.md#rn-092),
+  [RN-105](../business-rules/api.md#rn-105), [RN-106](../business-rules/api.md#rn-106).
 - `docs/explanation/achados-execucao-real.md` — os achados Z, AD e AE.
 - `apps/api/src/domain/containers/project-container.ts`,
   `apps/api/src/domain/actions/external-effect.ts`,

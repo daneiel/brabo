@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 `ResolveEffectiveRoleUseCase.forProject` 自 Fase 1 起就是 `projectRole ?? workspaceRole`：只要 `project_members` 中有一行，它就**胜出**，不与 workspace 角色比较。覆盖在**两个**方向上都成立——可以升，也可以降。
 
-这是在审查 #444（它关闭了成员部分的角色 gate）时发现的，并记录在 [RN-471](../business-rules.md#rn-471)。这一发现有两半。第一半是文档层面的：**四**个地方承诺的恰恰相反——"the EFFECTIVE role is the higher of this one and what the person already has in the workspace"，"associating someone as `viewer` here doesn't downgrade a workspace `owner`"——三处 OpenAPI 描述和 `apps/web/src/lib/roles.ts` 中的一条注释。RN-471 修正了 web 那一处（它最糟：位于导出 `roleAtLeast` 和 `ROLE_ORDER` 的模块，也就是这一类问题的下一个人最先打开的代码），并把 api 那三处**声明**为未修正，因为那是契约变更。
+这是在审查 #444（它关闭了成员部分的角色 gate）时发现的，并记录在 [RN-471](../business-rules/web.md#rn-471)。这一发现有两半。第一半是文档层面的：**四**个地方承诺的恰恰相反——"the EFFECTIVE role is the higher of this one and what the person already has in the workspace"，"associating someone as `viewer` here doesn't downgrade a workspace `owner`"——三处 OpenAPI 描述和 `apps/web/src/lib/roles.ts` 中的一条注释。RN-471 修正了 web 那一处（它最糟：位于导出 `roleAtLeast` 和 `ROLE_ORDER` 的模块，也就是这一类问题的下一个人最先打开的代码），并把 api 那三处**声明**为未修正，因为那是契约变更。
 
 第二半没有被任何地方守住，这也是本 ADR 的原因：由于覆盖向下也成立，`AddProjectMemberUseCase` 只是对仓储 upsert 的一行透传，而 `RemoveProjectMemberUseCase` 只检查项目是否存在。两者都没有看目标**是谁**，也没有看操作者与目标之间的关系。今天任何 `maintainer` 都能触发两个后果：
 

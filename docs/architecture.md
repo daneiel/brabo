@@ -83,7 +83,7 @@ O outbox drena três `aggregate_type`s: `session` (desde a Fase 5),
 `task` (Fase 12b — `task.gate_resolved`/`task.became_claimable`, o
 reagendamento do dev agent depois que um gate resolve ou uma tarefa nova fica
 pegável) e `container` ([ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502) — `container.running`, anexado na
+/[RN-502](business-rules/engine.md#rn-502) — `container.running`, anexado na
 mesma transação que registra o container do projeto chegando a `running`, para
 que os dev agents que a ausência dele estacionou em `:idle` acordem sozinhos; um
 agregado próprio em vez de um `task` emprestado, porque o evento não é sobre
@@ -96,15 +96,15 @@ Um dev agent que CAI (qualquer saída que não seja `:normal`/`:shutdown`) não 
 tratado como encerrado: `Engine.Dev.Monitor` registra um `agent.error` durável
 (origem `infra`) e o reinicia a partir da própria linha em `dev_agent_states`, até
 três vezes; a tarefa interrompida é bloqueada com diagnóstico pela recuperação
-de reinício que já existia ([RN-742](business-rules.md#rn-742)).
+de reinício que já existia ([RN-742](business-rules/engine.md#rn-742)).
 `dev_agent_states` ganhou `consecutive_blocked`/`max_consecutive_blocked`
-(o disjuntor, [RN-047](business-rules/custo.md#rn-047)); a decisão completa está no
+(o disjuntor, [RN-047](business-rules/engine.md#rn-047)); a decisão completa está no
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 Uma tarefa bloqueada por falha transitória de rede/provider (DNS, conexão
 resetada, 5xx/429) é desbloqueada de novo por um job do Oban depois de 1, 3 e 10 min
 (até três vezes, pelo mesmo caso de uso de desbloqueio do humano), e o
 dev agent pausa por um minuto em vez de pegar a próxima tarefa
-([RN-864](business-rules.md#rn-864)).
+([RN-864](business-rules/engine.md#rn-864)).
 
 Os agentes de gate (`QaLeadServer`/`SecOpsAgentServer`) não passam pelo
 outbox nas transições intermediárias (`correct`/`run_secops` continuam uma
@@ -115,7 +115,7 @@ já tinham: `gate_states`, mais um `GateRescuer` que varre ciclos parados e os
 retoma sozinho — nenhuma tabela nova para o caminho do outbox, porque o problema
 não era falta de outbox, era falta de estado durável para o que acontece
 ENTRE duas chamadas no mesmo processo. Ver
-[RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
+[RN-140](business-rules/engine.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 O gate de QA tem um TERCEIRO veredito além de `approved`/`changes_requested`:
 `needs_user_decision`, para um requisito que o usuário nunca confirmou (ou que
@@ -125,7 +125,7 @@ o consolida acima de `approved`, e o ciclo é ESTACIONADO pelo mecanismo do
 pergunta, o que o retoma. O lado conversacional da mesma regra é a ferramenta
 `declare_open_question` (Criativo, PO, Arquiteto, Dev Lead), que grava
 `artifact.open_question`; as respostas do usuário voltam ao dev e ao QA como
-"decisões do usuário" no dev-context ([RN-862](business-rules.md#rn-862),
+"decisões do usuário" no dev-context ([RN-862](business-rules/engine.md#rn-862),
 [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 
 Quem PEDE um gate nunca é o próprio gate: `Engine.Gates.Dispatcher` é um
@@ -140,7 +140,7 @@ foi PEDIDO amarraria o teste do Dev Lead ao banco. O mais novo dos
 cinco, `run_appsec_design/2`, fechou o último gate que era acionável sem
 chamador de produção: `assess_implementability` agora pede o modelo de ameaças
 de design da história EM PARALELO — o veredito nunca espera por ele, e o pedido
-acontece uma única vez por história ([RN-539](business-rules.md#rn-539),
+acontece uma única vez por história ([RN-539](business-rules/engine.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ## Mapa do código {#code-map}
@@ -172,7 +172,7 @@ o topo, então uma chamada escrita entre imports rodaria tarde demais).
 | `harness/` (33) | montagem de contexto, ToolLoop, compactação. **Nenhuma chamada de LLM acontece fora daqui** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | a área de QA (Lead + Automação, subespecialidades de Performance/Segurança e de estratégia de QA — o segundo momento do Lead, ADR 0090 — todas com LLM) e SecOps (determinístico) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | a área de Infra (Lead conversacional, escopado à sessão — desde a [RN-617](business-rules.md#rn-617) o sétimo agente conversacional, alcançável pelo composer e rodando seus turnos no `TurnoAssincrono` — + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | a área de Infra (Lead conversacional, escopado à sessão — desde a [RN-617](business-rules/engine.md#rn-617) o sétimo agente conversacional, alcançável pelo composer e rodando seus turnos no `TurnoAssincrono` — + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | ciclo de vida da sessão, registro `:global` | `sessions/session_server.ex` |
 | `actions/` (9) | executores de terminal e git, detectores de lint/scanner | `actions/git_executor.ex` |
 | `agents/` (16) | Criativo, PO, Arquiteto, Dev Lead, Staff (ADR 0088, dormente para disparo automático) — cada turno roda numa Task supervisionada (`TurnoAssincrono`, RN-122), não mais dentro do `handle_call`, então um `:cancel` consegue de fato interrompê-lo | `agents/turno_assincrono.ex` |
@@ -216,7 +216,7 @@ Três derivações do mesmo event log, respondendo perguntas diferentes:
 event log: "o que acontece se eu aprovar". O verbo e a frase de cada tipo de
 `proposed_action` moram ali, e as três telas de decisão os consomem — a
 fila de Aprovações, o card dentro do chat e a aba Insights
-([RN-096](business-rules.md#rn-096)).
+([RN-096](business-rules/produto.md#rn-096)).
 
 **A união `ActionType` ERA uma cópia, e a cópia envelheceu — duas vezes, em
 produção** (os três tipos do bootstrap do Gitflow; depois
@@ -248,7 +248,7 @@ limite de 300, e a tela se derrubava sozinha com 429s. As duas leem
 de `GET /workspaces/:id/projects-summary` — um read model que atravessa
 agregados (git, orçamento, sessão, backlog, arquitetura) e cujo número de
 idas e voltas ao banco não cresce com a quantidade de projetos
-([RN-090](business-rules.md#rn-090)).
+([RN-090](business-rules/api.md#rn-090)).
 
 A gaveta do sino segue o mesmo recorte, com uma diferença que vale
 registrar: ela precisa do ponto de corte de leitura de cada projeto, e esse
@@ -256,7 +256,7 @@ ponto é um `seq` guardado no navegador de quem está olhando (`lib/read-state.t
 servidor não tem, e não vai ter, um "marcar como lido". Então o cliente
 **envia** o mapa `project → afterSeq` no corpo de
 `POST /workspaces/:id/unread-events`, que é uma leitura apesar do verbo e
-devolve `200` ([RN-091](business-rules.md#rn-091)). O verbo decorre
+devolve `200` ([RN-091](business-rules/api.md#rn-091)). O verbo decorre
 do corpo, não de uma mutação: são dezenas de pares, e uma query string desse
 tamanho quebra num proxy, além de pôr ids de projeto em logs de acesso.
 
@@ -275,12 +275,12 @@ navegador). Explicadas em `design/README.md`.
 (`lib/api-client.ts`) lê `GET /workspaces/:workspaceId/projects-base` — a
 base única de projetos montados desta instalação ([ADR
 0141](adr/0141-base-unica-dos-projetos-montados.md)) — e o assistente de Novo
-Projeto é seu único chamador ([RN-513](business-rules.md#rn-513)). `projectsBase:
+Projeto é seu único chamador ([RN-513](business-rules/web.md#rn-513)). `projectsBase:
 null` é um estado normal, não uma falha: a instalação não tem
 `BRABO_PROJECTS_BASE`, então o card de pasta montada simplesmente não é oferecido e
 `container` continua o padrão. O mesmo vale enquanto a resposta está a caminho e
 quando a consulta FALHA — desconhecido nunca vira oferta, a mesma regra da
-[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). Com uma
+[RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468). Com uma
 base, o card vem PRÉ-SELECIONADO e o campo de caminho abre em `<base>/<slug>`,
 composto por `caminhoSugeridoNaBase` (`lib/wizard.ts`) — uma função pura, ao lado
 de `caminhoDentroDaBase`, que responde "este caminho está sob a base?" por
@@ -289,7 +289,7 @@ sugestão sobrescrevem uma escolha humana.
 
 **O seletor de pastas é a única leitura do web com DOIS TRANSPORTES**, e a interface
 que a torna uma só mora em `lib/fs-browser.ts`
-([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /
+([RN-504](business-rules/web.md#rn-504)). `FsBrowser` — `listarDiretorio` /
 `diretorioInicial` / `fechar` — tem duas implementações, e elas não falam
 com a mesma máquina: `criarFsBrowserViaApi(workspaceId)` chama
 `GET /workspaces/:workspaceId/project-folders` na api, escopado rigidamente a
@@ -317,19 +317,19 @@ afirmaria "nada ficou de fora", o que é diferente de não saber.
 A RN-504 apontou OS DOIS modos para a api e declarou o preço: para `runner`, a
 lista deixou de ser a máquina do usuário e virou a base. Isso foi aceito
 porque o modo `runner` sairia do assistente de criação — não saiu, e a
-[RN-533](business-rules.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+[RN-533](business-rules/web.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
 ponto 7) o reverte. Agora é o MODO que escolhe o transporte, porque eles respondem
 perguntas diferentes: `mounted` pergunta à api (sua pasta mora sob a base, no
 SERVIDOR), `runner` pergunta ao agente local (sua pasta mora numa máquina que o
 servidor não enxerga). O ramo `runner` se ancora no projeto que o assistente
-já criou antecipadamente ([RN-437](business-rules.md#rn-437)); quando essa
+já criou antecipadamente ([RN-437](business-rules/web.md#rn-437)); quando essa
 criação falha, nenhum modal abre, porque cair para a api
 mostraria a base do SERVIDOR sob o rótulo "sua máquina".
 
 A falha carrega um motivo DISCRIMINADO (`MotivoDeFalhaDoAgente`): `sem-agente`
 é o servidor AFIRMANDO que não há runner, `sem-resposta` é um timeout, um
 socket caído ou um ticket recusado — ignorância, dita como ignorância
-([RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)). O
+([RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468)). O
 componente decidia por `includes('Nenhum runner conectado')`, casando uma
 frase em pt-BR que mora no `.ex` do engine; o casamento de substring agora mora
 em exatamente um lugar, o módulo dono do protocolo do canal, e uma mensagem do
@@ -342,10 +342,10 @@ DIZ de quem é o disco que está listando, nas duas origens — a única pista a
 o rótulo de um atalho, que nomeia um lugar, não uma máquina.
 
 **O painel também RECONHECE uma máquina que já está pareada**
-([RN-548](business-rules.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
+([RN-548](business-rules/web.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
 `listRunnerDeviceKeys` em `lib/api-client.ts` lê
 `GET /projects/:projectId/runner-device-keys`, que desde a
-[RN-543](business-rules.md#rn-543) marca a ESPÉCIE de cada chave — e a
+[RN-543](business-rules/produto.md#rn-543) marca a ESPÉCIE de cada chave — e a
 derivação inteira mora fora do componente, em `lib/agente-de-maquina.ts`, porque
 a regra é sobre o DADO e o componente é sobre o desenho. Sete estados,
 nenhum colapsando em outro, e a falha é derivada de `isError` e não
@@ -357,7 +357,7 @@ conta tem uma máquina pareada". Os dois limites são ditos na tela. O
 fluxo pelo navegador do [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 (gerar a chave, baixar o binário, gravar a pasta) foi
 aposentado no [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-([RN-687](business-rules.md#rn-687)): o painel agora mostra o comando do `install.sh`,
+([RN-687](business-rules/web.md#rn-687)): o painel agora mostra o comando do `install.sh`,
 que sai quando uma chave que atende o projeto é reconhecida, e o
 comando manual com PAT fica num `<details>` nomeado pelo caso que ele responde
 (outra máquina). O mínimo da leitura vem de `roleAtLeast`
@@ -418,7 +418,7 @@ diretamente — e a ação pendente de cada linha (se houver) vem junto na mesma
 leitura em lote, renderizada como um `ApprovalCard` inline, o mesmo padrão
 que `ProjectPrsTab.tsx` já usa para propostas de merge.
 
-Desde a [RN-521](business-rules.md#rn-521) o join é LEFT e a página
+Desde a [RN-521](business-rules/api.md#rn-521) o join é LEFT e a página
 lista TODO projeto do workspace, porque ela virou o caminho humano para subir
 o PRIMEIRO container: uma subida que falha antes de registrar não deixa linha, e
 o INNER JOIN antigo escondia exatamente o projeto que precisava da página.
@@ -433,7 +433,7 @@ imagem decidida, `runner` cuja pasta nenhum agente jamais confirmou, papel abaix
 nunca propõe uma ação que já sabe que vai falhar, e nunca esconde por quê.
 
 O OUTRO proponente — o agente Infra Lead — ramifica do mesmo jeito desde a
-[RN-566](business-rules.md#rn-566). As duas ferramentas dele passam por uma única
+[RN-566](business-rules/engine.md#rn-566). As duas ferramentas dele passam por uma única
 `recusa_local_de_subida/2` em `infra_lead_server.ex`, que lê o projeto
 UMA vez (`Project.get/1`, mesmo processo BEAM, nunca HTTP: uma chamada de rede dentro do
 laço do agente é o custo que esta correção não podia pagar) e devolve `nil` ou um motivo
@@ -441,7 +441,7 @@ NOMEADO, uma cláusula por ferramenta — `container`/`mounted` propõem `contai
 `runner` é recusado apontando para `container_start_via_runner`, e a
 cláusula de `container_start` é uma LISTA DE PERMITIDOS como a do broker, então um modo novo
 no enum nasce recusado. A recusa é texto de RESULTADO de ferramenta que o modelo lê (entrada do laço,
-[RN-163](business-rules/autenticacao.md#rn-163)), nunca um `agent.error`, e o `tool.call`
+[RN-163](business-rules/engine.md#rn-163)), nunca um `agent.error`, e o `tool.call`
 continua sendo emitido para que uma recusa local nunca suma da timeline. O que o
 agente NÃO checa, e a tela checa, é a imagem decidida e a
 pasta confirmada.
@@ -551,12 +551,12 @@ o modelo por um problema de infraestrutura.
 **8. O container de um projeto é decidido, nunca implícito.** A aba Código só
 destrava depois que o Arquiteto emite `artifact.project_image` — enquanto o
 estado é `sem_decisao`, ler código devolve `409`
-([RN-105](business-rules/autenticacao.md#rn-105)). E `git push`, abrir uma PR e
+([RN-105](business-rules/api.md#rn-105)). E `git push`, abrir uma PR e
 deploy não passam pelo terminal, mesmo dentro do escopo do projeto:
 `decide()` os reconhece pelo prefixo do comando e devolve `deny` ANTES de qualquer
 etapa permissiva — não `require_approval`, porque "sempre permitir" gravaria
 o padrão em `allow` e reabriria a porta
-([RN-106](business-rules/autenticacao.md#rn-106),
+([RN-106](business-rules/api.md#rn-106),
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
 O ciclo de vida do container (provisionar, reciclar, limpar) ainda não existe
 — um corte declarado da FASE 25, registrado no CLAUDE.md — então este invariante
@@ -564,7 +564,7 @@ convive, por ora, com a política de escopo de caminho do
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
 E desde o [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502), uma imagem decidida não é mais a única
+/[RN-502](business-rules/engine.md#rn-502), uma imagem decidida não é mais a única
 pré-condição: **um dev agent não pega tarefa nenhuma até o container do
 projeto estar REGISTRADO `running`**. A guarda mora em
 `Engine.Dev.AgentIo.try_claim/2` — o ponto único de claim — e não só no
@@ -581,15 +581,15 @@ modo `runner` já fazia.
 As duas metades são a mesma lição, e vieram de um agente que só tinha
 ferramentas de escrita: o PO montava o contexto uma vez, no kickoff, e agia dali em diante
 sobre um retrato velho — diante de uma lacuna, escolhia entre inventar e
-parar ([RN-164](business-rules/autenticacao.md#rn-164),
-[RN-165](business-rules/autenticacao.md#rn-165)). Ler **não** vira um
+parar ([RN-164](business-rules/engine.md#rn-164),
+[RN-165](business-rules/engine.md#rn-165)). Ler **não** vira um
 `proposed_action` (o invariante 4 é sobre efeito EXTERNO, e ler não é
 um), mas é contido no sentido do
 [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): escopo fechado pelo
 caminho da rota, custo constante por chamada e um teto de linhas no texto
 entregue ao modelo. E o laço de um agente não termina calado — um
 teto de iterações emite `toolloop.limit_reached`, uma obrigação não cumprida emite
-um desfecho durável com origem ([RN-166](business-rules/autenticacao.md#rn-166)).
+um desfecho durável com origem ([RN-166](business-rules/engine.md#rn-166)).
 
 ## Preocupações transversais {#cross-cutting-concerns}
 
@@ -687,7 +687,7 @@ segunda mostra que o modelo não exige a mesma implementação interna:
 (espelhando o `ArquitetoServer`, contato externo inalterado por pedido
 explícito do CLAUDE.md 8c), e delega ao `WorkflowsAgent` — que, sem
 usuário do outro lado, roda como um `ToolLoop` limitado, igual aos
-subagentes de QA. Desde a [RN-617](business-rules.md#rn-617)
+subagentes de QA. Desde a [RN-617](business-rules/engine.md#rn-617)
 ([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) o Infra Lead
 também recebe mensagens do composer, e os três turnos dele (kickoff, correção
 de gate, mensagem) rodam na mesma Task do `TurnoAssincrono` que os outros seis
@@ -735,8 +735,8 @@ erDiagram
   users ||--o{ detected_language_declines : "idioma detectado que a pessoa recusou (RN-624)"
 ```
 
-59 tabelas no total. A mais recente é `chat_attachments` ([RN-986](business-rules.md#rn-986): os bytes dos anexos do chat; o `chat.message` guarda só a referência, RN-987); antes dela veio `source_clicks` ([RN-983](business-rules.md#rn-983): o clique numa fonte consultada, que não é voto); antes dela veio `detected_language_declines`
-([RN-624](business-rules.md#rn-624)): uma linha por pessoa e idioma que a
+59 tabelas no total. A mais recente é `chat_attachments` ([RN-986](business-rules/api.md#rn-986): os bytes dos anexos do chat; o `chat.message` guarda só a referência, RN-987); antes dela veio `source_clicks` ([RN-983](business-rules/api.md#rn-983): o clique numa fonte consultada, que não é voto); antes dela veio `detected_language_declines`
+([RN-624](business-rules/api.md#rn-624)): uma linha por pessoa e idioma que a
 pessoa RECUSOU quando perguntada "notamos que você escreve em X — usar X nas
 respostas?", com a data. A presença dela é o que impede a mesma pergunta de
 voltar; confirmar esse idioma depois apaga a linha. A detecção
@@ -745,7 +745,7 @@ em si não guarda estado — a amostra é lida de `session_events` pelo
 tipos de evidência) e a histerese é recalculada —, então esta tabela e o
 par confirmado em `users` são tudo o que ela grava, e só quando a pessoa responde.
 Antes dela, a mais recente era `session_language_overrides`
-([RN-618](business-rules.md#rn-618),
+([RN-618](business-rules/api.md#rn-618),
 [ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): o
 idioma de resposta que uma pessoa fixou numa sessão, chaveado pelo PAR
 `{session_id, user_id}` para que dois participantes nunca se toquem. É
@@ -754,18 +754,18 @@ configuração, não evento — fixar de novo é um upsert, liberar é um
 e o par de detecção confirmada `users.detected_language` /
 `detected_language_confirmed_at`, amarrados por um CHECK; `users.locale` continua sendo o
 idioma da interface, fechado em `pt-BR`/`en`. E `projects.language`
-([RN-619](business-rules.md#rn-619)) é o idioma do que não tem autor
+([RN-619](business-rules/api.md#rn-619)) é o idioma do que não tem autor
 humano — artefatos compartilhados e turnos que ninguém digitou —, sempre um código
 BCP-47 concreto. Antes dela, a mais recente era
 `project_mirror_states`
-([RN-517](business-rules.md#rn-517),
+([RN-517](business-rules/api.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) ponto 7): uma linha por
 projeto, `project_id` único, guardando o que a ÚLTIMA rodada de espelho fez — a última
 sincronização bem-sucedida com suas três contagens e seu destino congelado, mais o último
 erro. Uma TABELA e não um evento pelo mesmo motivo de `rag_searches` logo
 acima: uma rodada de espelho não tem sessão, e `session_events.session_id` é
 `NOT NULL`, então o event log descartaria tudo em silêncio. Três estados
-que nunca colapsam ([RN-088](business-rules.md#rn-088)): "nunca sincronizado" é a
+que nunca colapsam ([RN-088](business-rules/web.md#rn-088)): "nunca sincronizado" é a
 linha AUSENTE, "sincronizado e não copiou nada" é uma linha presente com `files_copied = 0`,
 e "falhou" é `last_error_at` mais novo que `last_synced_at`. As colunas de sucesso e de falha
 são DISJUNTAS e nenhuma escrita toca as da outra — e é por isso que a
@@ -790,7 +790,7 @@ calibração posterior não mude em silêncio o que toda medição anterior sign
 `session_socket_tickets` fica fora do diagrama pelo mesmo motivo de
 `refresh_tokens`/`account_tokens`: um mecanismo de auth, não uma relação de domínio.
 
-`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+`projects.mirror_path` (FASE 28, [RN-515](business-rules/api.md#rn-515),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) ponto 4) é uma coluna e
 não uma tabela porque é UM valor opcional por projeto: o caminho absoluto,
 na máquina do USUÁRIO, para onde a capacidade `espelho` do agente local copia o
@@ -800,17 +800,17 @@ Ela deliberadamente **não** carrega CHECK que a amarre a `execution_mode`, ao c
 `workspace_path` logo ao lado: `container` não pode ter destino (sua
 origem é um volume gerenciado no SERVIDOR, e o processo que copiaria roda
 na máquina do usuário), mas `execution_mode` é CONVERSÍVEL
-([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+([RN-447](business-rules/api.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
 então um CHECK faria a conversão para `container` explodir no Postgres em vez de
 recusar com motivo. A recusa mora no caso de uso, e a conversão
 zera a coluna — a mesma forma de `workspace_verified_at`, e por um
 motivo adicional: os dois sentidos do laço origem↔destino foram
 validados contra o `workspace_path` ANTIGO.
-Desde a [RN-516](business-rules.md#rn-516) o engine LÊ esta coluna — é
+Desde a [RN-516](business-rules/runner.md#rn-516) o engine LÊ esta coluna — é
 ela que decide se o `join` do runner exige a capacidade `espelho`, e
 é ela que viaja de volta na concessão desse join (`Engine.Runners.Espelho`,
 `EngineWeb.TerminalChannel`). O engine nunca a escreve. Desde a
-[RN-517](business-rules.md#rn-517) HÁ uma rota interna na
+[RN-517](business-rules/api.md#rn-517) HÁ uma rota interna na
 vizinhança — `POST /internal/projects/:projectId/mirror-sync-result` — mas ela
 grava `project_mirror_states`, nunca esta coluna: o destino é
 CONFIGURAÇÃO (o usuário o declara) e o desfecho da rodada é TELEMETRIA (o
@@ -821,10 +821,10 @@ exatamente um escopo em `budgets` (projeto **ou** sessão, nunca os dois), os
 os três `check`s de `delegations` que travam qual campo é obrigatório por
 `status` (`completed` → `parecerArtifactId`, `failed` → `failureOrigin`,
 `dispensed` → `justification`; ver
-[RN-036](business-rules.md#rn-036)). `delegations.task_id` nasceu
+[RN-036](business-rules/engine.md#rn-036)). `delegations.task_id` nasceu
 `NOT NULL` e virou anulável na Fase 8c — a área de Infra delega sobre
 a sessão, sem tarefa de backlog por trás de uma PR de infra (ver
-[RN-037](business-rules.md#rn-037)).
+[RN-037](business-rules/ci.md#rn-037)).
 
 `agent_areas` (FASE 14d,
 [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md)) é o que a Fase 8
@@ -832,14 +832,14 @@ tinha cortado. Voltou porque a área de **dev** não é enumerável no código:
 `qa` e `infra` cabem numa lista fixa, mas os membros de dev são um por
 módulo do `module_map`, decididos pelo Arquiteto e diferentes em cada
 projeto. O unique `(project_id, key)` é o que torna a semeadura idempotente,
-e `max_parallel` (nasce com 5 no `dev`, 4 no `qa` e 2 na `infra`, [RN-910](business-rules/custo.md#rn-910)) é o teto que o lead usa sem perguntar
+e `max_parallel` (nasce com 5 no `dev`, 4 no `qa` e 2 na `infra`, [RN-910](business-rules/api.md#rn-910)) é o teto que o lead usa sem perguntar
 — acima dele, `proposed_action`
-(ver [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
+(ver [RN-083](business-rules/api.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) espelham `max_parallel` na mesma linha — um teto de gasto que é
 ADITIVO a `budgets` (projeto/sessão), nunca uma cascata: é checado
 e incrementado de forma independente, pelos mesmos `CheckBudgetGateUseCase`/
 `RecordLlmUsageUseCase` que já cuidam do gasto de projeto e de sessão (ver
-[RN-443](business-rules.md#rn-443)). Não confunda isso com a cascata de
+[RN-443](business-rules/api.md#rn-443)). Não confunda isso com a cascata de
 binding de modelo do [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
 (`session > agent > area > project > workspace`) — aquela escolhe um único
 vencedor; o orçamento de área nunca escolhe.

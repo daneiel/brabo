@@ -23,7 +23,7 @@ Only the first is a contract. The other two are transport and observation.
 ## Domain event
 
 A row in `session_events`, append-only, with a `seq` that's dense per session
-([RN-002](../business-rules.md#rn-002)). Columns:
+([RN-002](../business-rules/api.md#rn-002)). Columns:
 
 | column | what |
 |---|---|
@@ -51,7 +51,7 @@ A row in `session_events`, append-only, with a `seq` that's dense per session
 | `session.closed_abnormally` | termination with a cause — `node_shutdown` is the most common |
 | `session.reopened` | a `closed`/`closed_abnormally` session went back to `active` (ADR 0183) |
 
-**A terminal session no longer takes conversation ([RN-581](../business-rules.md#rn-581)).**
+**A terminal session no longer takes conversation ([RN-581](../business-rules/api.md#rn-581)).**
 Once a session is `closed` or `closed_abnormally`, appending a conversation
 event is refused with **409** and `reason: "sessao_encerrada"`. Conversation is
 either a type that only exists as conversation (`chat.message`,
@@ -67,7 +67,7 @@ outlives the session. A session closed because the conversation sat idle past
 its ceiling carries `termination_reason: "conversation_idle_timeout"` and ends
 `closed`, like `heartbeat_timeout`.
 
-**A closed session can be reopened ([RN-649](../business-rules.md#rn-649), ADR 0183).**
+**A closed session can be reopened ([RN-649](../business-rules/api.md#rn-649), ADR 0183).**
 `POST /projects/:projectId/sessions/:sessionId/reopen` (`developer`, ADR 0184) moves a
 `closed`/`closed_abnormally` session back to `active` and appends
 `session.reopened` with `{from, to, closedAt, terminationReason}` — the only
@@ -81,23 +81,23 @@ the session's `kind` does not change. A session that already has
 | type | when |
 |---|---|
 | `chat.message` | message in the session thread, from the user or the agent |
-| `chat.message_queued` | the message arrived while the agent was mid-turn and joined its QUEUE instead of being refused ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). Actor: the agent. Payload: `mensagemId` (the `chat.message` id), `texto`, `idioma` and `posicao`. The text travels here because it is what the queue re-reads after an engine restart. A queued message is PENDING until a `chat.message_delivered` or `chat.message_cancelled` names it; at most 10 per agent and session |
+| `chat.message_queued` | the message arrived while the agent was mid-turn and joined its QUEUE instead of being refused ([RN-673](../business-rules/engine.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). Actor: the agent. Payload: `mensagemId` (the `chat.message` id), `texto`, `idioma` and `posicao`. The text travels here because it is what the queue re-reads after an engine restart. A queued message is PENDING until a `chat.message_delivered` or `chat.message_cancelled` names it; at most 10 per agent and session |
 | `chat.message_delivered` | the turn that reads the queue started: the pending messages are read TOGETHER, in order, in one turn. Actor: the agent. Payload: `mensagemIds` |
-| `chat.message_cancelled` | the person who SENT a pending message cancelled it — no agent ever read it. Actor: that user. Payload: `mensagemId`, `agente`. Recorded by the engine; refused in a closed session ([RN-581](../business-rules.md#rn-581)) |
-| `chat.structured_question` | the Creative agent asked for SEVERAL answers at once, via a form — `ask_structured_questions` tool (RN-162). Each question carries `id`, `label`, `type`, `options` and `allowOther` — the latter is the `select`'s free-text output, and defaults to `true` when the model declares nothing ([RN-171](../business-rules/autenticacao.md#rn-171)) |
+| `chat.message_cancelled` | the person who SENT a pending message cancelled it — no agent ever read it. Actor: that user. Payload: `mensagemId`, `agente`. Recorded by the engine; refused in a closed session ([RN-581](../business-rules/api.md#rn-581)) |
+| `chat.structured_question` | the Creative agent asked for SEVERAL answers at once, via a form — `ask_structured_questions` tool (RN-162). Each question carries `id`, `label`, `type`, `options` and `allowOther` — the latter is the `select`'s free-text output, and defaults to `true` when the model declares nothing ([RN-171](../business-rules/engine.md#rn-171)) |
 | `chat.structured_question_answered` | the user answered the form; the answers also come back as `chat.message` for the agent to read |
 | `agent.activated` | an agent took on work in the session |
-| `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules/autenticacao.md#rn-175)). From a conversational agent, `content` is only the turn's CLOSING text and `passos` (absent when there is none) lists, in order, the text of the earlier rounds, which the thread folds under "Turn steps" ([RN-698](../business-rules.md#rn-698), AT-395) |
-| `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/custo.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
-| `tool_router.decided` | the step where the Jev chose the tool ([RN-625](../business-rules.md#rn-625), [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)): `menuAntes`/`menuDepois`, `escolha`, `confianca`, `segunda`, `anterior`, `aplicado` (the menu came out smaller than the catalog), `motivoDaQueda` + `origemDaQueda` (`infra`/`modelo`/`codigo`) when the Jev fell, `latenciaMs`, `custoMicros` (the REAL `usage.cost`) and `foraDoCardapio` (tools the model called that were not offered). Written by the engine facade for every agent; absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The measure of the gain (AT-239) is read from this event and from `token_usage`, never annotated |
-| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the seven conversational agents (the Infra Lead since [RN-617](../business-rules.md#rn-617)), by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules.md#rn-589)). The same payload comes from the Infra Lead for every tool it dispatches inline, and from the Dev Lead when a suspended call is settled — never while it waits for approval ([RN-593](../business-rules.md#rn-593)) |
+| `agent.response` | the agent's complete, consolidated response. `modelName` says WHICH model generated it, across the three producers (the five conversational agents, the `ToolLoop` of every execution/gate agent, and the api chat with no active agent) — `null` when the turn failed before resolving the binding, and absent in events recorded before the rule existed ([RN-175](../business-rules/engine.md#rn-175)). From a conversational agent, `content` is only the turn's CLOSING text and `passos` (absent when there is none) lists, in order, the text of the earlier rounds, which the thread folds under "Turn steps" ([RN-698](../business-rules/engine.md#rn-698), AT-395) |
+| `agent.error` | agent failure, with `origem` (`infra`/`modelo`/`codigo`/`politica`) and the `mensagem` it states in the thread ([RN-059](../business-rules/engine.md#rn-059)). Also emitted with `reason: turno_interrompido_por_reinicio` (origem `infra`) when the engine restarted mid-turn and the orphaned `working` status is closed on boot or agent start, followed by `agent.status: idle` ([RN-586](../business-rules/engine.md#rn-586)). Covers the whole turn as well as the failure of a SINGLE tool mid-loop, with `tool` and `retentativa` in the payload ([RN-163](../business-rules/engine.md#rn-163)) |
+| `tool_router.decided` | the step where the Jev chose the tool ([RN-625](../business-rules/engine.md#rn-625), [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)): `menuAntes`/`menuDepois`, `escolha`, `confianca`, `segunda`, `anterior`, `aplicado` (the menu came out smaller than the catalog), `motivoDaQueda` + `origemDaQueda` (`infra`/`modelo`/`codigo`) when the Jev fell, `latenciaMs`, `custoMicros` (the REAL `usage.cost`) and `foraDoCardapio` (tools the model called that were not offered). Written by the engine facade for every agent; absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The measure of the gain (AT-239) is read from this event and from `token_usage`, never annotated |
+| `tool.result` | result of a tool execution, recorded by the `Engine.Harness.Hooks.EventLog` hook and, for the seven conversational agents (the Infra Lead since [RN-617](../business-rules/engine.md#rn-617)), by their servers with `tool`, `ok` and `resultado` (or `erro`), cut at 2,000 characters with `resultadoTotal` when it cuts ([RN-589](../business-rules/engine.md#rn-589)). The same payload comes from the Infra Lead for every tool it dispatches inline, and from the Dev Lead when a suspended call is settled — never while it waits for approval ([RN-593](../business-rules/engine.md#rn-593)) |
 | `handoff.offered` | one agent offered the work to another |
-| `handoff.accepted` | the recipient accepted. Usually by a person (actor `user`). When the acceptance was implicit in the "I'm ready" click ([RN-658](../business-rules.md#rn-658)), the actor is still that person and the payload — and that of the `agent.activated` that follows — also carries `implicito: { via: "readiness.confirmed", readinessEventId }`. Since [RN-660](../business-rules.md#rn-660) ([ADR 0186](../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)) the PO's offer to the Architect can be accepted by the `system` actor `handoff-auto-accept`, and then the payload also carries `automatico: true`, `emNomeDe` (who opened the session — the repository is provisioned on their behalf) and `criterio` (`regras`, `cobertas`, `repositorio`) |
-| `handoff.auto_accept_failed` | the system decided to accept the PO's offer to the Architect ([RN-660](../business-rules.md#rn-660)) and the accept failed. Payload: `handoffId`, `toAgent`, `origem` (`infra`) and `error`. Actor `system` `handoff-auto-accept`. The offer keeps its button when it was not marked `accepted` |
-| `handoff.superseded` | an `offered` handoff stopped being the current one and can no longer be accepted ([RN-635](../business-rules.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — the target was activated by any path; `nova_oferta` — a newer offer to the same target in the project replaced it) and `substitutaId` (the offer that replaced it, `null` for `agente_ativado`). Recorded by the `system` actor `handoff-lifecycle` in the session of the OLD offer, which may be closed — it is bookkeeping, not conversation, so RN-581 lets it in. The row's `status` becomes `superseded`; the event is the history |
-| `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
+| `handoff.accepted` | the recipient accepted. Usually by a person (actor `user`). When the acceptance was implicit in the "I'm ready" click ([RN-658](../business-rules/api.md#rn-658)), the actor is still that person and the payload — and that of the `agent.activated` that follows — also carries `implicito: { via: "readiness.confirmed", readinessEventId }`. Since [RN-660](../business-rules/api.md#rn-660) ([ADR 0186](../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)) the PO's offer to the Architect can be accepted by the `system` actor `handoff-auto-accept`, and then the payload also carries `automatico: true`, `emNomeDe` (who opened the session — the repository is provisioned on their behalf) and `criterio` (`regras`, `cobertas`, `repositorio`) |
+| `handoff.auto_accept_failed` | the system decided to accept the PO's offer to the Architect ([RN-660](../business-rules/api.md#rn-660)) and the accept failed. Payload: `handoffId`, `toAgent`, `origem` (`infra`) and `error`. Actor `system` `handoff-auto-accept`. The offer keeps its button when it was not marked `accepted` |
+| `handoff.superseded` | an `offered` handoff stopped being the current one and can no longer be accepted ([RN-635](../business-rules/api.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — the target was activated by any path; `nova_oferta` — a newer offer to the same target in the project replaced it) and `substitutaId` (the offer that replaced it, `null` for `agente_ativado`). Recorded by the `system` actor `handoff-lifecycle` in the session of the OLD offer, which may be closed — it is bookkeeping, not conversation, so RN-581 lets it in. The row's `status` becomes `superseded`; the event is the history |
+| `context.compacted` | the context manager summarized the oldest turns of an agent's history to fit its window. Since [RN-580](../business-rules/engine.md#rn-580) the payload carries, besides `tokensBefore`/`tokensAfter`, the `summary` that replaced those turns, the `agent` whose history it was and `messagesSummarized`. Events recorded before that carry only the two counts — the summary is gone, and rehydration says so instead of inventing one |
 
-**What a conversational agent reads back ([RN-580](../business-rules.md#rn-580)).**
+**What a conversational agent reads back ([RN-580](../business-rules/engine.md#rn-580)).**
 When one of the seven conversational agents comes up over a session that already
 has a conversation, `Engine.Agents.Reidratacao` rebuilds its history from the
 **tail** of this log (the last 200 events): `chat.message`, `agent.response`,
@@ -107,8 +107,8 @@ id, so they are never replayed as `role: tool`). `chat.structured_question_answe
 is deliberately skipped: the api records the same answers as a `chat.message`
 right after it, and that is what the agent read live. A `chat.message` that was
 cancelled in the queue, or that is still pending for this agent, is skipped too
-([RN-673](../business-rules.md#rn-673)): the first was never said, the second
-arrives through the turn that reads the queue. Since [RN-589](../business-rules.md#rn-589) all seven record `tool.result`
+([RN-673](../business-rules/engine.md#rn-673)): the first was never said, the second
+arrives through the turn that reads the queue. Since [RN-589](../business-rules/engine.md#rn-589) all seven record `tool.result`
 with the text the tool returned (`resultado`, cut at 2,000 characters, with
 `resultadoTotal` giving the real length when it cuts); a call from a session
 recorded before that has no `tool.result` and the note says the log has no outcome.
@@ -120,7 +120,7 @@ compaction summary, and the opening messages.
 
 | type | when |
 |---|---|
-| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/custo.md#rn-049)). `payload.reason` says WHICH policy rule decided — the string `decide()` returns, on all three outcomes; absent on events recorded before the rule existed, which means "not recorded", never "no reason". The outbox row of the same name does NOT carry it ([RN-567](../business-rules.md#rn-567)). On `terminal` actions — the only type whose decision consults the path scope — `payload.scopeRoot` says WHICH root the scope compared against, as `{ executionMode, ancora, segmento }`: `container` → `ancora: raiz_gerenciada` and the `workspace_dir_name`; `mounted` → `ancora: base_de_projetos` and the segment under `BRABO_PROJECTS_BASE` (`ancora: indisponivel`, `segmento: null` when the folder is outside the base or there is none); `runner` → `ancora: nome_da_pasta` and the `workspace_dir_name`. NEVER the absolute path, which would expose the user's `$HOME` to every member. Absent on older events and on other action types; not in the outbox either ([RN-609](../business-rules.md#rn-609)) |
+| `proposed_action.created` | the action was born — before any execution. `payload.status` says how it was born (`pending`, `auto_approved` or `denied`), and that's what distinguishes a human decision from policy ([RN-049](../business-rules/api.md#rn-049)). `payload.reason` says WHICH policy rule decided — the string `decide()` returns, on all three outcomes; absent on events recorded before the rule existed, which means "not recorded", never "no reason". The outbox row of the same name does NOT carry it ([RN-567](../business-rules/api.md#rn-567)). On `terminal` actions — the only type whose decision consults the path scope — `payload.scopeRoot` says WHICH root the scope compared against, as `{ executionMode, ancora, segmento }`: `container` → `ancora: raiz_gerenciada` and the `workspace_dir_name`; `mounted` → `ancora: base_de_projetos` and the segment under `BRABO_PROJECTS_BASE` (`ancora: indisponivel`, `segmento: null` when the folder is outside the base or there is none); `runner` → `ancora: nome_da_pasta` and the `workspace_dir_name`. NEVER the absolute path, which would expose the user's `$HOME` to every member. Absent on older events and on other action types; not in the outbox either ([RN-609](../business-rules/api.md#rn-609)) |
 | `proposed_action.approved` | decided by the user — `actor` is **whoever clicked**. Auto-approval does NOT go through here: it shows up in `created` with `status: auto_approved` and an agent actor |
 | `proposed_action.denied` | denied — terminal state. `actor` is whoever refused it, and `payload.reason` is the reason |
 | `proposed_action.executed` | executed successfully |
@@ -133,50 +133,50 @@ compaction summary, and the opening messages.
 |---|---|
 | `backlog.epic_created` | — |
 | `backlog.story_created` | — |
-| `backlog.story_transitioned` | story state change. `actor` says who promoted it: `agent/po` in `auto` mode, `user` in `manual` mode ([RN-048](../business-rules/custo.md#rn-048)) |
-| `backlog.story_completed` | the PO completed an existing `draft` story with `complete_story` — rules linked, RF/DoD/DoR filled — instead of re-creating it ([RN-720](../business-rules.md#rn-720)) |
-| `backlog.story_promotion_proposed` | the PO finished a COMPLETE story in a project running `manual` mode: it stays `draft` awaiting the user's decision, and none of its tasks is claimable until then ([RN-048](../business-rules/custo.md#rn-048)) |
-| `backlog.story_promotion_returned` | the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev ([RN-048](../business-rules/custo.md#rn-048)) |
+| `backlog.story_transitioned` | story state change. `actor` says who promoted it: `agent/po` in `auto` mode, `user` in `manual` mode ([RN-048](../business-rules/api.md#rn-048)) |
+| `backlog.story_completed` | the PO completed an existing `draft` story with `complete_story` — rules linked, RF/DoD/DoR filled — instead of re-creating it ([RN-720](../business-rules/api.md#rn-720)) |
+| `backlog.story_promotion_proposed` | the PO finished a COMPLETE story in a project running `manual` mode: it stays `draft` awaiting the user's decision, and none of its tasks is claimable until then ([RN-048](../business-rules/api.md#rn-048)) |
+| `backlog.story_promotion_returned` | the user REFUSED to promote it and returned the story to the PO with a reason — which becomes a pinned message in its session, the same as a gate being returned to a dev ([RN-048](../business-rules/api.md#rn-048)) |
 | `backlog.story_updated` | the title and/or description of a `draft` story with no task in execution was corrected, by the user (Backlog tab) or the PO (`update_story`). Carries `previousTitle`, `title` and `descriptionChanged` (RN-727) |
 | `backlog.story_archived` | a `draft` story with no task in execution was ARCHIVED, by the user or the PO (`archive_story`): it and its tasks leave the backlog, coverage, plan and claim; the row stays. Carries `reason` and `taskIds` (RN-727, ADR 0212) |
-| `backlog.story_demoted` | a module disappeared from `module_map`; the story went back to `draft` ([RN-012](../business-rules.md#rn-012)) |
-| `backlog.story_overlap_warned` | the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap ([RN-081](../business-rules/custo.md#rn-081)) |
-| `backlog.semantic_duplicate_warned` | a story or business rule was written whose TITLE is, by embedding, at or above the threshold of an existing one of the same kind in the project — a warning, never a refusal; the payload names the similar item and the cosine. Actor `system`/`duplicata-semantica` ([RN-681](../business-rules/custo.md#rn-681)) |
-| `backlog.semantic_duplicate_check_skipped` | the semantic duplicate check could NOT run — no embedding provider, daemon down, the 10 s ceiling — and the `reason` says which; the item was written anyway ([RN-681](../business-rules/custo.md#rn-681)) |
+| `backlog.story_demoted` | a module disappeared from `module_map`; the story went back to `draft` ([RN-012](../business-rules/produto.md#rn-012)) |
+| `backlog.story_overlap_warned` | the story was created, but ALL the rules it cites were already covered by another one — a warning, not a block: the user is the one who judges whether it's overlap ([RN-081](../business-rules/api.md#rn-081)) |
+| `backlog.semantic_duplicate_warned` | a story or business rule was written whose TITLE is, by embedding, at or above the threshold of an existing one of the same kind in the project — a warning, never a refusal; the payload names the similar item and the cosine. Actor `system`/`duplicata-semantica` ([RN-681](../business-rules/api.md#rn-681)) |
+| `backlog.semantic_duplicate_check_skipped` | the semantic duplicate check could NOT run — no embedding provider, daemon down, the 10 s ceiling — and the `reason` says which; the item was written anyway ([RN-681](../business-rules/api.md#rn-681)) |
 | `backlog.story_modules_assigned` | story ↔ module link |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | a dev agent claimed the task |
 | `backlog.task_status_changed` | — |
-| `backlog.task_merge_conflict` | the approved merge of the task's PR was refused by a merge conflict: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. Since [RN-715](../business-rules.md#rn-715) the task goes back to `in_progress` and the owner dev agent is woken through the `task.merge_conflict` outbox row ([RN-705](../business-rules.md#rn-705)) |
+| `backlog.task_merge_conflict` | the approved merge of the task's PR was refused by a merge conflict: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. Since [RN-715](../business-rules/api.md#rn-715) the task goes back to `in_progress` and the owner dev agent is woken through the `task.merge_conflict` outbox row ([RN-705](../business-rules/api.md#rn-705)) |
 | `backlog.task_blocked` | fix-attempt cap exhausted, or an impediment was recorded |
 | `backlog.task_unblocked` | — |
-| `backlog.epic_without_story` | the PO ended a turn having created an epic and NO story for it. An epic doesn't generate a task — a story does —, so this is the state that stalls execution with no visible error. An explicit outcome in the [RN-059](../business-rules/custo.md#rn-059) pattern: a durable event with `origem`, `epicIds`/`epicTitles` and the message, plus the `agent.error` broadcast. Reported ONCE per occurrence, never in a loop ([RN-165](../business-rules/autenticacao.md#rn-165)) |
-| `backlog.handoff_not_offered` | the PO ended a turn with every business rule covered but did not get the handoff to the Architect offered: some story has no task (`origem: modelo`, with `storyIds`/`storyTitles`), or reading the backlog or creating the offer failed (`origem: infra`). With every story tasked, the PO server offers the handoff itself instead ([RN-700](../business-rules.md#rn-700)) |
+| `backlog.epic_without_story` | the PO ended a turn having created an epic and NO story for it. An epic doesn't generate a task — a story does —, so this is the state that stalls execution with no visible error. An explicit outcome in the [RN-059](../business-rules/engine.md#rn-059) pattern: a durable event with `origem`, `epicIds`/`epicTitles` and the message, plus the `agent.error` broadcast. Reported ONCE per occurrence, never in a loop ([RN-165](../business-rules/engine.md#rn-165)) |
+| `backlog.handoff_not_offered` | the PO ended a turn with every business rule covered but did not get the handoff to the Architect offered: some story has no task (`origem: modelo`, with `storyIds`/`storyTitles`), or reading the backlog or creating the offer failed (`origem: infra`). With every story tasked, the PO server offers the handoff itself instead ([RN-700](../business-rules/engine.md#rn-700)) |
 
 ### Execution and gates
 
 | type | when |
 |---|---|
-| `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
-| `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
+| `execution.plan_proposed` | **DISCONTINUED since ADR 0086** ([RN-284](../business-rules/engine.md#rn-284)) — older sessions may still have this type in the log; new sessions use a `proposed_action` of type `propose_execution_plan` (see `docs/reference/permissions.md`), because the Dev Lead's plan became a real decision, approved or refused in Approvals, no longer a plain event |
+| `execution.activated` | the execution phase began. **Only enters on a `criativa` session** — on a `consultiva` one the append responds 409 ([RN-097](../business-rules/api.md#rn-097)). It's still this event, not the `sessions.kind` column, that says whether a session IS executing |
 | `execution.parallelization_suggested` | the system proposed parallelizing — emitted at activation only when the project has a registered `running` container (otherwise the dev agents are blocked, `dev.blocked_by_container`, and more agents would only multiply the blocked ones; AT-104) |
-| `execution.plan_applied` | the human APPROVED the Dev Lead's `propose_execution_plan` (or it was auto-approved) and that approval ACTIVATED execution: each task in the plan got its module and `ActivateExecutionUseCase` ran ([RN-677](../business-rules.md#rn-677), [RN-678](../business-rules.md#rn-678)). Payload: `actionId`, `sessaoDeExecucao`, `modulos`, `tarefasAtribuidas`, and — when the plan carries `tarefas` — `tarefasPorModulo` and `modulosSemTarefa` (modules left without an agent, RN-709). Recorded on the Dev Lead's session, actor `system`/`action-executor` |
+| `execution.plan_applied` | the human APPROVED the Dev Lead's `propose_execution_plan` (or it was auto-approved) and that approval ACTIVATED execution: each task in the plan got its module and `ActivateExecutionUseCase` ran ([RN-677](../business-rules/api.md#rn-677), [RN-678](../business-rules/api.md#rn-678)). Payload: `actionId`, `sessaoDeExecucao`, `modulos`, `tarefasAtribuidas`, and — when the plan carries `tarefas` — `tarefasPorModulo` and `modulosSemTarefa` (modules left without an agent, RN-709). Recorded on the Dev Lead's session, actor `system`/`action-executor` |
 | `execution.plan_failed` | the approved plan did NOT activate execution — the plan no longer matches the current `module_map`, or the activation refused (e.g. 409 without a repository). Payload: the same fields plus `motivo`, the api's own sentence. The human's decision stays recorded; nothing was written to the tasks when the plan itself was refused |
 | `execution.parallelization_accepted` | accepted — the subagent inherits the base agent's cap |
 | `dev.started` | the dev agent began the cycle (activation, parallelization — NOT rehydration, which never re-fires) |
 | `dev.working` | claimed a task and set up the worktree |
 | `dev.idle` | the module's queue is empty — no task claimable right now |
-| `dev.blocked_by_container` | the agent did NOT claim, because the project has no container REGISTERED `running` ([RN-502](../business-rules.md#rn-502)). It stops in `:idle` like the two above — `idle` is the only state a wake still rescues — and this event is the only thing that tells "no container" apart from "empty queue" (`dev.idle`) and "the claim failed" (`dev.error`). The api never gets called: the guard runs BEFORE `claim_task/1`, so no task is ever left claimed without a live owner. It resolves on its own: `container.running` on the outbox wakes every `:idle` agent of the project |
-| `dev.awaiting_approval` | the git actions became pending approval (Phase 12e): **the gate does NOT open** — with no PR there's nothing to judge — and the worktree stays held until `task.pr_settled` ([RN-050](../business-rules/custo.md#rn-050)) |
+| `dev.blocked_by_container` | the agent did NOT claim, because the project has no container REGISTERED `running` ([RN-502](../business-rules/engine.md#rn-502)). It stops in `:idle` like the two above — `idle` is the only state a wake still rescues — and this event is the only thing that tells "no container" apart from "empty queue" (`dev.idle`) and "the claim failed" (`dev.error`). The api never gets called: the guard runs BEFORE `claim_task/1`, so no task is ever left claimed without a live owner. It resolves on its own: `container.running` on the outbox wakes every `:idle` agent of the project |
+| `dev.awaiting_approval` | the git actions became pending approval (Phase 12e): **the gate does NOT open** — with no PR there's nothing to judge — and the worktree stays held until `task.pr_settled` ([RN-050](../business-rules/engine.md#rn-050)) |
 | `dev.awaiting_gate` | PR open, waiting on the gate (Phase 12b) — `task_id`/`worktree` remain held |
-| `dev.blocked` | the task was returned with a diagnosis (iteration limit, budget exceeded, `report_blocked`, worktree/context failure). Since [RN-743](../business-rules.md#rn-743) it carries `trabalhoPreservado` (`{branch, commit}` or `null`): the uncommitted work was committed on the task branch as `<agent>[bot]`, and the agent's next task starts from that branch |
+| `dev.blocked` | the task was returned with a diagnosis (iteration limit, budget exceeded, `report_blocked`, worktree/context failure). Since [RN-743](../business-rules/engine.md#rn-743) it carries `trabalhoPreservado` (`{branch, commit}` or `null`): the uncommitted work was committed on the task branch as `<agent>[bot]`, and the agent's next task starts from that branch |
 | `dev.idle_tripped` | circuit breaker tripped (RN-047) — N consecutive blocked tasks stop the agent |
 | `dev.credit_exhausted` | the model provider refused for lack of credit (RN-726) — the agent pauses in `idle_tripped` without counting the breaker nor claiming the next task; Rearm resumes |
 | `dev.rearmed` | the user re-armed a stuck agent (Phase 12b) — `actor` is the USER who clicked, not the agent |
 | `pr.gate_changed` | the PR moved to a new gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
 | `infra.gate_changed` | Infra's gate |
-| `gate.rescue_parked` | the `GateRescuer` PARKED a QA/SecOps cycle stalled for more than 2 h instead of restarting it ([RN-722](../business-rules.md#rn-722), ADR 0207); the thread shows a "Resume gate" button ([RN-724](../business-rules.md#rn-724)). Payload: `taskId`, `gate`, `idadeSegundos`, `motivo`. Actor `system`/`gate-rescuer` |
-| `gate.interrupted` | on engine BOOT, a recent `in_progress` gate cycle had no live process on any node of the cluster: the restart killed it, and the rescuer restarts it at once instead of waiting for the 15-minute threshold ([RN-823](../business-rules.md#rn-823)). Payload: `taskId`, `gate`, `ultimaAtividadeEm`, `retomadoEm`. Actor `system`/`gate-rescuer`; the thread shows it as a notice. Not projected to the graph |
+| `gate.rescue_parked` | the `GateRescuer` PARKED a QA/SecOps cycle stalled for more than 2 h instead of restarting it ([RN-722](../business-rules/engine.md#rn-722), ADR 0207); the thread shows a "Resume gate" button ([RN-724](../business-rules/engine.md#rn-724)). Payload: `taskId`, `gate`, `idadeSegundos`, `motivo`. Actor `system`/`gate-rescuer` |
+| `gate.interrupted` | on engine BOOT, a recent `in_progress` gate cycle had no live process on any node of the cluster: the restart killed it, and the rescuer restarts it at once instead of waiting for the 15-minute threshold ([RN-823](../business-rules/engine.md#rn-823)). Payload: `taskId`, `gate`, `ultimaAtividadeEm`, `retomadoEm`. Actor `system`/`gate-rescuer`; the thread shows it as a notice. Not projected to the graph |
 | `infra.artifact_blocked` | Infra's artifact was rejected |
 
 ### Delegation (Phase 8b, ADR 0038)
@@ -196,11 +196,11 @@ behind it.
 
 | type | when |
 |---|---|
-| `toolloop.limit_reached` | the loop hit its iteration cap. `payload` carries `iteration` and `max_iterations` — the cap is per agent TYPE ([RN-085](../business-rules/custo.md#rn-085)) |
+| `toolloop.limit_reached` | the loop hit its iteration cap. `payload` carries `iteration` and `max_iterations` — the cap is per agent TYPE ([RN-085](../business-rules/engine.md#rn-085)) |
 | `toolloop.budget_exceeded` | that loop's token budget ran out before the work did; `payload` carries `tokens_spent_micros` and `token_budget_micros` |
 
 Emitted by `Engine.Harness.ToolLoop` and — since
-[RN-166](../business-rules/autenticacao.md#rn-166) — also by `PoServer`, which has its OWN
+[RN-166](../business-rules/engine.md#rn-166) — also by `PoServer`, which has its OWN
 loop and, until then, exhausted its cap **silently**. Same type and same
 payload on purpose: it's the same fact, and whoever reads the log shouldn't
 have to learn a second name just because the conversational agent doesn't use
@@ -212,16 +212,16 @@ have to learn a second name just because the conversational agent doesn't use
 |---|---|
 | `artifact.product_brief` | `title`, `summary`, `rules` |
 | `artifact.business_rule` | `title`, `description`, `origin` |
-| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules.md#rn-505)) |
+| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — a "summarized ADR" any of the six conversational agents can emit; reuses the generic pattern instead of the dedicated one, and coexists with `open_adr_pr` (Architect-only, a real committed document) ([RN-505](../business-rules/engine.md#rn-505)) |
 | `artifact.module_map` | the Architect's module map |
-| `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
-| `artifact.module_contracts` | the Architect's contract between modules: per module, what it EXPOSES (`modulo`, `expoe: [{tipo, assinatura, descricao}]`), with `version` — the whole list each time, the current one replaces the previous; what a module consumes is the `module_map`'s `dependsOn` ([RN-684](../business-rules.md#rn-684), [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) |
-| `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (who decided is the actor: `arquiteto` or `infra-lead`) — the project's container image, emitted by the api (`DecidirImagemDoProjetoUseCase`) when the Architect decides it or the Infra Lead elects a candidate ([RN-491](../business-rules.md#rn-491)); versioned, no table. The engine only READS whether one exists, to refuse `container_start_via_runner` locally without it ([RN-610](../business-rules.md#rn-610)) |
+| `artifact.module_routing` | the Architect's candidate image per module, one item per module of the current `module_map` — the Architect CANDIDATES, Infra ELECTS ([RN-487](../business-rules/api.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
+| `artifact.module_contracts` | the Architect's contract between modules: per module, what it EXPOSES (`modulo`, `expoe: [{tipo, assinatura, descricao}]`), with `version` — the whole list each time, the current one replaces the previous; what a module consumes is the `module_map`'s `dependsOn` ([RN-684](../business-rules/api.md#rn-684), [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) |
+| `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (who decided is the actor: `arquiteto` or `infra-lead`) — the project's container image, emitted by the api (`DecidirImagemDoProjetoUseCase`) when the Architect decides it or the Infra Lead elects a candidate ([RN-491](../business-rules/web.md#rn-491)); versioned, no table. The engine only READS whether one exists, to refuse `container_start_via_runner` locally without it ([RN-610](../business-rules/engine.md#rn-610)) |
 | `artifact.insight` | — |
-| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules.md#rn-286), ADR 0087) |
+| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — the UX Designer's prototype ([RN-286](../business-rules/engine.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (validated in `Engine.Agents.StaffTools`, not by `ArtifactSchemas` — same case as `artifact.insight`): `problema`, `opcoes` (list of `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, `descartavel: true` fixed). The Staff's RFC (ADR 0088), returned to the Architect via handoff in the same tool call |
-| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), written AFTER the dev's delivery and consumed by the `qa-verificada` cycle since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules.md#rn-674)) |
-| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — SecOps' "second moment" over a story's DESIGN ([RN-360](../business-rules.md#rn-360), ADR 0090) |
+| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — the QA-strategy deliverable (ADR 0090), written AFTER the dev's delivery and consumed by the `qa-verificada` cycle since [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules/engine.md#rn-674)) |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — SecOps' "second moment" over a story's DESIGN ([RN-360](../business-rules/engine.md#rn-360), ADR 0090) |
 
 The schemas are closed: a missing field rejects the emission
 (`Engine.Harness.ArtifactSchemas`).
@@ -231,8 +231,8 @@ The schemas are closed: a missing field rejects the emission
 | type | when |
 |---|---|
 | `architecture.readiness_confirmed` | — |
-| `readiness.confirmed` | the user clicked "I'm ready — the need is validated" with the Creative. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the payload carries `necessidadeValidada: true` and `aceiteImplicitoDoPo: true`, the mark the implicit PO acceptance reads ([RN-658](../business-rules.md#rn-658)); older events carry `{}` |
-| `necessity.validated` | `necessidade-validada` gate (Creative → PO): a person — never a model inference — declares that the business need the Creative agent consolidated is right. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) it is recorded by the SAME click as `readiness.confirmed`, once the engine accepts the turn, with `productBriefId: null` (the brief comes from that turn), `via: "readiness.confirmed"` and `readinessEventId` ([RN-657](../business-rules.md#rn-657)). Events from the separate click of ADR 0095 ([RN-406](../business-rules.md#rn-406)) carry `productBriefId` pointing at the validated `artifact.product_brief` |
+| `readiness.confirmed` | the user clicked "I'm ready — the need is validated" with the Creative. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) the payload carries `necessidadeValidada: true` and `aceiteImplicitoDoPo: true`, the mark the implicit PO acceptance reads ([RN-658](../business-rules/api.md#rn-658)); older events carry `{}` |
+| `necessity.validated` | `necessidade-validada` gate (Creative → PO): a person — never a model inference — declares that the business need the Creative agent consolidated is right. Since [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) it is recorded by the SAME click as `readiness.confirmed`, once the engine accepts the turn, with `productBriefId: null` (the brief comes from that turn), `via: "readiness.confirmed"` and `readinessEventId` ([RN-657](../business-rules/api.md#rn-657)). Events from the separate click of ADR 0095 ([RN-406](../business-rules/contracts.md#rn-406)) carry `productBriefId` pointing at the validated `artifact.product_brief` |
 
 ### Git and bootstrap
 
@@ -240,21 +240,21 @@ The schemas are closed: a missing field rejects the emission
 |---|---|
 | `project.git_connected` | git credential linked to the project |
 | `project.repository_provisioned` | repository **created** by Brabo |
-| `project.repository_adopted` | a repository that **already existed** became the project's ([RN-046](../business-rules/custo.md#rn-046)) |
+| `project.repository_adopted` | a repository that **already existed** became the project's ([RN-046](../business-rules/api.md#rn-046)) |
 | `bootstrap.repository_adopted` | the same fact in the dedicated session, with the `defaultBranch` observed from the provider |
 | `bootstrap.step_started` | one of the six Gitflow steps began |
 | `bootstrap.step_completed` | completed |
-| `bootstrap.step_skipped` | it was already done — **that's a success**, not an error ([RN-029](../business-rules.md#rn-029)) |
+| `bootstrap.step_skipped` | it was already done — **that's a success**, not an error ([RN-029](../business-rules/api.md#rn-029)) |
 | `bootstrap.step_degraded` | completed without one of the provider's capabilities (e.g. branch protection on Local) |
 | `bootstrap.step_failed` | failed; the bootstrap is resumable from this point |
-| `bootstrap.plan_approved` | the user approved the adoption plan — **only from here does bootstrap run on an adopted repo** ([RN-045](../business-rules/custo.md#rn-045)) |
+| `bootstrap.plan_approved` | the user approved the adoption plan — **only from here does bootstrap run on an adopted repo** ([RN-045](../business-rules/api.md#rn-045)) |
 | `bootstrap.adopted_as_is` | the user dismissed the bootstrap; no step ran, and the plan is kept as evidence of what wasn't applied |
 
 ### Cost
 
 | type | when |
 |---|---|
-| `budget.threshold_crossed` | 70%, 90% or 100% — **once per threshold** ([RN-018](../business-rules/custo.md#rn-018)) |
+| `budget.threshold_crossed` | 70%, 90% or 100% — **once per threshold** ([RN-018](../business-rules/api.md#rn-018)) |
 
 ### RAG telemetry (RN-479/480/481)
 
@@ -269,14 +269,14 @@ session timeline.
 
 | type | when |
 |---|---|
-| `rag.search` | an agent ran a hybrid search inside a session — payload carries the `searchId` of the telemetry row, the query, `topK`, how many hits passed the threshold, whether the search was `degraded`, and the chunk ids ([RN-479](../business-rules.md#rn-479), [RN-481](../business-rules.md#rn-481)) |
-| `rag.feedback` | an agent judged one retrieved chunk as `util`/`irrelevante` — payload carries `searchId`, `chunkId`, the verdict and the **rank** that chunk held in that search ([RN-480](../business-rules.md#rn-480)) |
+| `rag.search` | an agent ran a hybrid search inside a session — payload carries the `searchId` of the telemetry row, the query, `topK`, how many hits passed the threshold, whether the search was `degraded`, and the chunk ids ([RN-479](../business-rules/api.md#rn-479), [RN-481](../business-rules/produto.md#rn-481)) |
+| `rag.feedback` | an agent judged one retrieved chunk as `util`/`irrelevante` — payload carries `searchId`, `chunkId`, the verdict and the **rank** that chunk held in that search ([RN-480](../business-rules/api.md#rn-480)) |
 
 ### Local runner (ADR 0103/0104)
 
 | type | when |
 |---|---|
-| `project.workspace_verified` | `brabo-runner` connected and confirmed the path for a project with `execution_mode: runner` — the runner is the source of truth for the path, overwriting whatever was typed at creation ([RN-423](../business-rules.md#rn-423)) |
+| `project.workspace_verified` | `brabo-runner` connected and confirmed the path for a project with `execution_mode: runner` — the runner is the source of truth for the path, overwriting whatever was typed at creation ([RN-423](../business-rules/runner.md#rn-423)) |
 
 ### Psychologist
 
@@ -284,8 +284,8 @@ session timeline.
 |---|---|
 | `psychologist.analysis_completed` | — |
 | `psychologist.analysis_failed` | with a classified cause: `infra`, `modelo`, `código` or `política` |
-| `psychologist.analysis_skipped` | the session had no ANALYZABLE event and the analysis didn't run — `payload.analisaveis` and `payload.eventCount` show the difference ([RN-079](../business-rules/custo.md#rn-079)) |
-| `psychologist.hypothesis_proposed` | a hypothesis with valid `evidenceEventIds` ([RN-021](../business-rules.md#rn-021)) |
+| `psychologist.analysis_skipped` | the session had no ANALYZABLE event and the analysis didn't run — `payload.analisaveis` and `payload.eventCount` show the difference ([RN-079](../business-rules/engine.md#rn-079)) |
+| `psychologist.hypothesis_proposed` | a hypothesis with valid `evidenceEventIds` ([RN-021](../business-rules/api.md#rn-021)) |
 | `psychologist.hypothesis_accepted` | — |
 | `psychologist.hypothesis_dismissed` | — |
 | `psychologist.hypothesis_accepted_for_anamnese` | accepted and forwarded — the link that closes the loop with the Anamnesis |
@@ -296,11 +296,11 @@ session timeline.
 |---|---|
 | `anamnese.run_completed` | — |
 | `anamnese.run_failed` | — |
-| `anamnese.run_skipped` | the round ended WITHOUT a profile, on purpose — `payload.motivo` says why ([RN-063](../business-rules/custo.md#rn-063)) |
-| `anamnese.analysis` | the text the Anamnesis model wrote during the round (`payload.content`); never drawn in the session thread ([RN-695](../business-rules.md#rn-695)) |
+| `anamnese.run_skipped` | the round ended WITHOUT a profile, on purpose — `payload.motivo` says why ([RN-063](../business-rules/engine.md#rn-063)) |
+| `anamnese.analysis` | the text the Anamnesis model wrote during the round (`payload.content`); never drawn in the session thread ([RN-695](../business-rules/engine.md#rn-695)) |
 | `anamnese.profile_updated` | the `proficiency_profile` changed |
-| `anamnese.agent_deviation` | an AGENT deviation seen by the Anamnesis (loop, cancelled by the user, repaired by the user) — a product signal, never a user trait; `payload` is only `agente`, `tipo` and `evidenceEventIds`, no personal data, not projected into the graph ([RN-717](../business-rules.md#rn-717), [ADR 0205](../adr/0205-desvio-do-agente-como-sinal-do-produto.md)) |
-| `instruction.rolled_back` | rollback of an instruction version — creates a new version, doesn't delete ([RN-027](../business-rules.md#rn-027)) |
+| `anamnese.agent_deviation` | an AGENT deviation seen by the Anamnesis (loop, cancelled by the user, repaired by the user) — a product signal, never a user trait; `payload` is only `agente`, `tipo` and `evidenceEventIds`, no personal data, not projected into the graph ([RN-717](../business-rules/engine.md#rn-717), [ADR 0205](../adr/0205-desvio-do-agente-como-sinal-do-produto.md)) |
+| `instruction.rolled_back` | rollback of an instruction version — creates a new version, doesn't delete ([RN-027](../business-rules/api.md#rn-027)) |
 
 ---
 
@@ -318,7 +318,7 @@ reloads the page doesn't get them back — they get the event log back instead.
 | `event.appended` | a new event entered the log — the panel's refresh trigger; carries only `type` and `actorId` |
 
 A domain event almost always produces an `event.appended`; the reverse doesn't hold.
-Since [RN-579](../business-rules.md#rn-579) the engine emits it for **every**
+Since [RN-579](../business-rules/engine.md#rn-579) the engine emits it for **every**
 write the api confirmed through the `EngineApiClient` facade (appends, proposed
 actions, handoffs, the PO's backlog), and never for a refused one. Writes the
 api makes on its own — a human deciding an action, a session transition — reach
@@ -339,7 +339,7 @@ Before RN-108, the Phoenix socket's `connect/3` checked nothing beyond the
 to everything. The ticket isn't persisted/read in the event log — it lives in
 `session_socket_tickets`, verified and consumed by the engine itself — so it
 doesn't show up in the domain-event inventory below. See
-[RN-108](../business-rules/autenticacao.md#rn-108).
+[RN-108](../business-rules/web.md#rn-108).
 
 ## Span
 

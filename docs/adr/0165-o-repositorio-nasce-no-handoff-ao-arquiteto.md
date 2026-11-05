@@ -3,8 +3,8 @@
 ## Status
 
 **Accepted.** Decidido pelo mantenedor em 2026-09-18 (AT-092). Revisa o
-GATILHO da [RN-522](../business-rules.md#rn-522), que tinha nascido para
-cumprir a promessa da [RN-541](../business-rules.md#rn-541) ("o bootstrap é
+GATILHO da [RN-522](../business-rules/api.md#rn-522), que tinha nascido para
+cumprir a promessa da [RN-541](../business-rules/web.md#rn-541) ("o bootstrap é
 adiado até o handoff do Arquiteto"). Nenhuma das duas veio de um ADR — as duas
 nasceram de pedido direto do dono do produto e moram só em
 `docs/business-rules.md` —, então este é o primeiro registro estrutural do

@@ -14,17 +14,17 @@ terminal sem aprovação, inclusive fora da pasta do projeto"*. Пересмат
 Не редактирует ни 0055, ни [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
 (предел внешнего эффекта/привилегированной команды, RN-418), которые продолжают действовать
 целиком. Правило, рождающееся отсюда, —
-[RN-603](../business-rules/autenticacao.md#rn-603); оно пересматривает
-[RN-153](../business-rules/autenticacao.md#rn-153) и
-[RN-154](../business-rules/autenticacao.md#rn-154).
+[RN-603](../business-rules/api.md#rn-603); оно пересматривает
+[RN-153](../business-rules/api.md#rn-153) и
+[RN-154](../business-rules/api.md#rn-154).
 
 ## Контекст {#context}
 
-"Автоматический режим" ([RN-153](../business-rules/autenticacao.md#rn-153)) — это
+"Автоматический режим" ([RN-153](../business-rules/api.md#rn-153)) — это
 подстановочный знак `"*"` в `agent_autonomy`: автономия для любого типа действия
 агента. Он был задуман так, чтобы НЕ пробивать ни одного предела `decide()` — пределы
 действовали по `current.policy === 'auto_approve'`, не зная, откуда пришла
-разрешительность ([RN-154](../business-rules/autenticacao.md#rn-154)).
+разрешительность ([RN-154](../business-rules/api.md#rn-154)).
 
 Один из этих пределов — ОБЛАСТЬ ПУТЕЙ (ADR 0055): команда терминала, которая
 касается пути вне папки проекта, никогда не автоодобряется. Измерено в базе

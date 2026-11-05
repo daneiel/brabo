@@ -108,7 +108,7 @@ planned }`. Выход `telemetria-consolidada` получает поле
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md),
   [ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md) —
   та же дисциплина никогда не выдумывать число/оценку без реальных данных.
-- [RN-385](../business-rules.md#rn-385), [RN-386](../business-rules.md#rn-386).
+- [RN-385](../business-rules/contracts.md#rn-385), [RN-386](../business-rules/contracts.md#rn-386).
 - `apps/api/scripts/relatorio-telemetria.ts`,
   `apps/api/src/infrastructure/observability/domain-gauges.collector.ts`,
   `docs/fluxo.yml` (`camada_plataforma › platform`).

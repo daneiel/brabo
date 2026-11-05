@@ -26,8 +26,8 @@ Infra", без опубликованного порта в broker). Прави�
 - В контейнере проекта нет Docker (сдерживание ADR 0130), поэтому ничто
   внутри Brabo не может выполнить `docker compose up`, чтобы доказать compose.
 - Маршруты результата уже документируются dev в README
-  ([RN-850](../business-rules.md#rn-850)), а QA уже поднимает процессы в
-  фоне и завершает группу ([RN-817](../business-rules.md#rn-817)), но
+  ([RN-850](../business-rules/engine.md#rn-850)), а QA уже поднимает процессы в
+  фоне и завершает группу ([RN-817](../business-rules/engine.md#rn-817)), но
   ничто не связывало URL с тем, что открывает пользователь.
 
 ## Решение {#decision}
@@ -69,7 +69,7 @@ Infra", без опубликованного порта в broker). Прави�
    usuário"), никогда пункт плана.
 8. **Visão geral получает карточку "Rodar na sua máquina"** (RN-855): команда
    с кнопкой копирования и кликабельные URL, с текстом "declarado pela Infra,
-   não verificado na sua máquina" ([RN-468](../business-rules.md#rn-468)) —
+   não verificado na sua máquina" ([RN-468](../business-rules/web.md#rn-468)) —
    никогда зелёный.
 
 ## Последствия {#consequences}
@@ -85,8 +85,8 @@ Infra", без опубликованного порта в broker). Прави�
   [ADR 0190](0190-a-infra-sobe-o-container-no-aceite.md) и ресурсы,
   выводимые из `module_map`
   [ADR 0199](0199-recurso-minimo-derivado-do-module-map.md). Свидетельство
-  того, что точка входа поднимается ([RN-813](../business-rules.md#rn-813)), и HTTP-маршрут
-  в README ([RN-846](../business-rules.md#rn-846)) продолжают действовать; этот
+  того, что точка входа поднимается ([RN-813](../business-rules/engine.md#rn-813)), и HTTP-маршрут
+  в README ([RN-846](../business-rules/engine.md#rn-846)) продолжают действовать; этот
   ADR добавляет URL, который открывается, а не заменяет доказательство.
 
 ## Рассмотренные альтернативы {#alternatives-considered}

@@ -8,7 +8,7 @@ fez só para o Dev Lead suspenso. O ADR 0086 não é editado: o que ele decidiu
 (o turno que SUSPENDE responde ao `from` na hora e emite
 `agent.status: awaiting_approval` em vez de `agent.done`) continua valendo —
 este documento só antecipa o momento da resposta para TODO turno, e com isso o
-caso dele deixa de ser o único. Regra: [RN-578](../business-rules.md#rn-578).
+caso dele deixa de ser o único. Regra: [RN-578](../business-rules/engine.md#rn-578).
 
 ## Context
 

@@ -47,8 +47,8 @@ Nothing else in 0183 changes: the dedicated transition (`canReopen`), the
 ## Consequences
 
 - The three decisions stop being provisional.
-  [RN-650](../business-rules.md#rn-650) now says `developer`, and
-  [RN-649](../business-rules.md#rn-649) cites this ADR in the two confirmed
+  [RN-650](../business-rules/api.md#rn-650) now says `developer`, and
+  [RN-649](../business-rules/api.md#rn-649) cites this ADR in the two confirmed
   decisions.
 - `docs/security-surface.md` lists the route as `role:developer`; the
   `route-surface.spec.ts` test compares the table with the real annotation.

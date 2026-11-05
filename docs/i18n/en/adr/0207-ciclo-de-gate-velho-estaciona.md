@@ -46,4 +46,4 @@ that may have changed.
 - The pending item is read by SESSION, not by task: `proposed_actions` has no
   `task_id`. Two tasks in the same session with a pending QA action hold each
   other — an accepted price, the worst case is not rescuing, never paying twice.
-- Rule: [RN-722](../business-rules.md#rn-722), which revises RN-140.
+- Rule: [RN-722](../business-rules/engine.md#rn-722), which revises RN-140.

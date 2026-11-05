@@ -40,4 +40,4 @@ olhou por horas é reiniciado inteiro sobre um contexto que pode ter mudado.
 - A pendência é lida pela SESSÃO, não pela task: `proposed_actions` não tem
   `task_id`. Duas tasks na mesma sessão com ação pendente de QA seguram uma à
   outra — preço aceito, o pior caso é não resgatar, nunca pagar duas vezes.
-- Regra: [RN-722](../business-rules.md#rn-722), que revisa a RN-140.
+- Regra: [RN-722](../business-rules/engine.md#rn-722), que revisa a RN-140.

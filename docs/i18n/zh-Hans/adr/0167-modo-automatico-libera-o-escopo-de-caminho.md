@@ -7,11 +7,11 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## 状态 {#status}
 
 **已接受。** 由产品所有者于 2026-09-26 决定（AT-226），在三个选项中选择：*"com o modo automático ligado, o agente executa qualquer comando de
-terminal sem aprovação, inclusive fora da pasta do projeto"*。**仅**针对处于自动模式的 agent，修订 [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) 的路径范围上限。不编辑 0055，也不编辑 [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)（外部效果/特权命令的上限，RN-418），它们继续完整有效。由此产生的规则是 [RN-603](../business-rules/autenticacao.md#rn-603)；它修订 [RN-153](../business-rules/autenticacao.md#rn-153) 和 [RN-154](../business-rules/autenticacao.md#rn-154)。
+terminal sem aprovação, inclusive fora da pasta do projeto"*。**仅**针对处于自动模式的 agent，修订 [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) 的路径范围上限。不编辑 0055，也不编辑 [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)（外部效果/特权命令的上限，RN-418），它们继续完整有效。由此产生的规则是 [RN-603](../business-rules/api.md#rn-603)；它修订 [RN-153](../business-rules/api.md#rn-153) 和 [RN-154](../business-rules/api.md#rn-154)。
 
 ## 背景 {#context}
 
-“自动模式”（[RN-153](../business-rules/autenticacao.md#rn-153)）是 `agent_autonomy` 中的通配符 `"*"`：对一个 agent 的任何类型动作的自主权。它被设计为**不**突破 `decide()` 的任何上限——上限作用于 `current.policy === 'auto_approve'`，不知道宽松度来自哪里（[RN-154](../business-rules/autenticacao.md#rn-154)）。
+“自动模式”（[RN-153](../business-rules/api.md#rn-153)）是 `agent_autonomy` 中的通配符 `"*"`：对一个 agent 的任何类型动作的自主权。它被设计为**不**突破 `decide()` 的任何上限——上限作用于 `current.policy === 'auto_approve'`，不知道宽松度来自哪里（[RN-154](../business-rules/api.md#rn-154)）。
 
 其中一个上限是**路径范围**（ADR 0055）：触及项目文件夹之外路径的终端命令绝不可自动批准。2026-09-26 在所有者的数据库中测得，项目 `exp001`（`mounted` 模式，容器运行中）：在 dev agent 上开启自动模式后，仍有 **51** 个终端命令请求审批，其中 **47** 个只是因为引用了 `/work` 或 `/tmp`。dev agent 在容器**内部**运行，那里项目文件夹是 `/work`，而范围检查把命令与**主机**的根进行比较——于是 agent 针对它运行的地方正确写出的一切，都变成了“项目文件夹之外”。51 个中没有一个是 `git push`、PR、部署或 `sudo`。
 

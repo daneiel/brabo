@@ -12,13 +12,13 @@ de roteamento é CONFIGURÁVEL POR BINDING"*。扩展
 （两层 capability，只有在被证明时才声明）和
 [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 （产生数字的东西被冻结在 `token_usage` 的行中）。两者都不被编辑。由此诞生的规则是
-[RN-583](../business-rules/custo.md#rn-583)。
+[RN-583](../business-rules/api.md#rn-583)。
 
 ## Context {#context}
 
 在 v6.1.0 安装的 `token_usage` 中测量（2026-09-14）：24 次经由 `openrouter` 的
 `~deepseek/deepseek-v4-flash-latest` 调用。`upstream_provider`
-（[RN-042](../business-rules/custo.md#rn-042)）已经说明了每次由谁提供服务：
+（[RN-042](../business-rules/api.md#rn-042)）已经说明了每次由谁提供服务：
 **23 次是 Relace**，平均延迟 69,5 s（32 到 47 tok/s 之间），
 **1 次是 Baidu**，37,8 s（约 190 tok/s）。当请求什么都不说时，OpenRouter 通过一种偏重**价格**的负载均衡选择上游——而 `openrouter-provider.ts` 什么都没说：`/chat/completions` 的正文发出时没有 `provider`/`sort`。
 
@@ -38,7 +38,7 @@ latency`），**可为空**，位于 `model_bindings` 中。`null` 是今天的�
 
 - **偏好只有与选择它时所用的模型在一起才有意义。** 它为**一个** provider（hub）而存在；单独级联会产生没有人选择过的组合——agent 的模型落在一个没有该 capability 的 provider 上，加上项目的 `throughput`，或者 workspace 的 `latency` 被应用到一个 workspace 所有者从未见过的模型上。
 - **独立的级联会要求界面上有第二条链。**
-  [RN-470](../business-rules/custo.md#rn-470) 让**模型**的链逐节点可见；两条在同一行中落在不同层级的链，恰恰是界面无法解释的状态。
+  [RN-470](../business-rules/web.md#rn-470) 让**模型**的链逐节点可见；两条在同一行中落在不同层级的链，恰恰是界面无法解释的状态。
 - **被级联**跳过**的层级会把偏好一起带走。** 因不可用或缺少 tool calling 而被跳过的 binding 整体失效——模型和标准都是。只让标准幸存，会是第一个原因中的同一缺陷，由跳过所造成。
 
 写明的后果：要给整个区域设置 `throughput`，就写在**区域**的 binding 中；拥有自己 binding 而有所不同的 agent 使用**它自己的**偏好（在有人选择之前为空）。
@@ -73,7 +73,7 @@ latency`），**可为空**，位于 `model_bindings` 中。`null` 是今天的�
 `GET llm/provider-capabilities` 返回九个 provider 的 capabilities，从注册表的实例中读取——与适配器使用的是同一个来源。新路由，而不是现有响应中的一个字段，因为现有响应中没有任何一个是关于 **provider** 的：模型是目录的一行（厂商的事实，与实体 `MesmasChaves`），binding 是某个作用域的决定。没有角色要求（只需认证），就像 `users/me/credentials`：它是本安装代码的事实，对所有人都一样。
 
 控件住在编辑 binding 的地方——设置中的 agent 表和区域区块——使用**端点**的最低角色
-（[RN-102](../business-rules/custo.md#rn-102)）：agent 上为 `developer`，区域上为 `maintainer`。只有在**有**自己 binding 的那一行上才可编辑；在继承的那一行上，说明当前标准来自哪个层级。provider 没有该 capability 的模型不会获得选项——它获得一句说明原因的话。
+（[RN-102](../business-rules/api.md#rn-102)）：agent 上为 `developer`，区域上为 `maintainer`。只有在**有**自己 binding 的那一行上才可编辑；在继承的那一行上，说明当前标准来自哪个层级。provider 没有该 capability 的模型不会获得选项——它获得一句说明原因的话。
 
 ## Consequences {#consequences}
 

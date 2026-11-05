@@ -12,7 +12,7 @@ the user's MESSAGE, the synchronous `turno_em_andamento` refusal of
 immediate acceptance it decided still holds, and the named refusal still holds
 for commands that are not speech (the PO's story review, the Criativo's
 readiness, the Arquiteto's handoff offer). Rule:
-[RN-673](../business-rules.md#rn-673).
+[RN-673](../business-rules/engine.md#rn-673).
 
 ## Context
 

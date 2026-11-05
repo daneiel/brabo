@@ -56,7 +56,7 @@ ADR 0031 (auth first-party) и ADR 0032 (отказ от Keycloak) явно по
 (`{purpose: 'social_login', provider, nonce, expiresAt}`, без `projectId`
 и `userId` — для социального входа нет «где», есть только идентичность) и
 дискриминантом ЦЕЛИ, проверяемым ДО любого другого поля
-([RN-273](../business-rules.md#rn-273)). `state` из потока ПОДКЛЮЧЕНИЯ
+([RN-273](../business-rules/api.md#rn-273)). `state` из потока ПОДКЛЮЧЕНИЯ
 git, даже подписанный ТЕМ ЖЕ ключом, здесь не принимается — и набор тестов доказывает
 важное направление (state подключения git → верификатор социального входа):
 принять такой `state` в callback ВХОДА значило бы войти как
@@ -72,7 +72,7 @@ HMAC-ключ остаётся `GIT_OAUTH_STATE_SECRET`
 `buildLoginAuthorizeUrl` запрашивает `read:user user:email` (GitHub) и `read_user`
 (GitLab) — никогда `repo`/`api` потока подключения. Вход в учётную запись не
 должен предоставлять доступа ни к какому репозиторию
-([RN-277](../business-rules.md#rn-277)).
+([RN-277](../business-rules/api.md#rn-277)).
 
 ### 4. Новая таблица: `social_identities` {#4-tabela-nova-social_identities}
 
@@ -81,24 +81,24 @@ HMAC-ключ остаётся `GIT_OAUTH_STATE_SECRET`
 ДВУХ одновременных providers (пользователь может входить через GitHub и GitLab
 одновременно). `(provider, provider_user_id)` уникальна; `provider_user_id` — это
 ЧИСЛОВОЙ id provider, никогда не login/e-mail, — которые могут сменить владельца
-([RN-276](../business-rules.md#rn-276)). `user_id` — `NOT NULL`: связь
+([RN-276](../business-rules/api.md#rn-276)). `user_id` — `NOT NULL`: связь
 рождается на ТОМ ЖЕ шаге, который определяет идентичность, без промежуточного состояния
 «идентичность без владельца».
 
 ### 5. Три решения callback, по порядку {#5-as-três-decisões-do-callback-em-ordem}
 
 `SocialLoginCallbackUseCase` решает в таком порядке
-([RN-272](../business-rules.md#rn-272)):
+([RN-272](../business-rules/api.md#rn-272)):
 
 1. **Идентичность уже известна** (`(provider, providerUserId)` в
    `social_identities`) → прямой вход.
 2. **Новая идентичность, e-mail совпадает с существующей учётной записью И provider помечает
    e-mail как ПОДТВЕРЖДЁННЫЙ** → связывает и входит
-   ([RN-274](../business-rules.md#rn-274)). Связывание — это слияние учётных записей:
+   ([RN-274](../business-rules/api.md#rn-274)). Связывание — это слияние учётных записей:
    подтверждение со стороны PROVIDER играет роль, которую клик по ссылке подтверждения
    играет при регистрации по паролю, и поэтому, как побочный эффект, учётная запись,
    зарегистрированная по паролю и ни разу не подтверждённая, получает заполненный
-   `emailVerifiedAt` после связывания ([RN-279](../business-rules.md#rn-279)):
+   `emailVerifiedAt` после связывания ([RN-279](../business-rules/api.md#rn-279)):
    provider только что доказал, независимым путём, ровно то,
    что доказал бы тот клик.
 3. **Новая идентичность, e-mail совпадает, но НЕ подтверждён** → отказ
@@ -109,8 +109,8 @@ HMAC-ключ остаётся `GIT_OAUTH_STATE_SECRET`
 4. **Новая идентичность, без соответствующей учётной записи** → создаёт НОВОГО пользователя
    **без пароля** — повторно используя ТО ЖЕ состояние «ожидания», которое миграция
    Keycloak уже оставляет (`users` без строки в `auth_credentials`,
-   [RN-278](../business-rules.md#rn-278)). Здесь e-mail НЕ обязан быть
-   подтверждённым ([RN-275](../business-rules.md#rn-275)): нет существующей
+   [RN-278](../business-rules/api.md#rn-278)). Здесь e-mail НЕ обязан быть
+   подтверждённым ([RN-275](../business-rules/api.md#rn-275)): нет существующей
    учётной записи, которую можно захватить, есть только та, что рождается, а требование подтверждения
    удорожило бы обычный случай, ничего не защищая. `LoginUseCase` и
    `ResetPasswordUseCase` уже умеют обрабатывать это состояние — социальная учётная запись получает
@@ -124,9 +124,9 @@ HMAC-ключ остаётся `GIT_OAUTH_STATE_SECRET`
 (`restaurarSessao()`, вызываемая при КАЖДОЙ загрузке страницы, `apps/web/src/main.tsx`)
 уже обменивает только что записанный refresh на access token — ноль нового кода на
 стороне клиента, кроме двух кнопок и alias маршрута ошибки
-([RN-282](../business-rules.md#rn-282)). Сбой ведёт на
+([RN-282](../business-rules/api.md#rn-282)). Сбой ведёт на
 `WEB_ORIGIN/login?oauth_error=1`, без детализации причины — тот же шаблон, что у
-callback подключения git ([RN-283](../business-rules.md#rn-283)).
+callback подключения git ([RN-283](../business-rules/api.md#rn-283)).
 
 ### 7. Повторное использование ТОГО ЖЕ OAuth-приложения — без новой переменной окружения {#7-reuso-do-mesmo-app-oauth--sem-variável-de-ambiente-nova}
 
@@ -135,7 +135,7 @@ callback подключения git ([RN-283](../business-rules.md#rn-283)).
 потоку — это `redirect_uri` (`/auth/oauth/<provider>/callback` вместо
 `/git/oauth/<provider>/callback`) и запрашиваемый `scope` — оба решаются во
 время запроса, а не конфигурации
-([RN-281](../business-rules.md#rn-281)). **Действие оператора по-прежнему
+([RN-281](../business-rules/api.md#rn-281)). **Действие оператора по-прежнему
 необходимо**: второй callback URL нужно зарегистрировать в OAuth-приложении
 каждого provider (задокументировано в `.env.example`), — именно это требование, а не новая
 env var, оправдывает рождение ветки как `breaking/`.

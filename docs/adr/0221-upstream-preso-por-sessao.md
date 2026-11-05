@@ -57,4 +57,4 @@ primeira resposta com sucesso.
 
 - [0166](0166-preferencia-de-roteamento-no-binding-de-modelo.md) — a
   preferência de roteamento.
-- [RN-907](../business-rules/custo.md#rn-907).
+- [RN-907](../business-rules/api.md#rn-907).

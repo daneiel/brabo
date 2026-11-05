@@ -23,7 +23,7 @@ ADR 0123 оставил golden-set QA как `TODO(humano)` для CI, гово�
 - **AT-067 (2026-09-13):** на `ubuntu-latest` без GPU, с `qwen2.5-coder`,
   скачанным в Ollama самого job, время укладывается (19–23 мин
   `mix golden_set.qa`). Половина "новой инфраструктуры" отпала. Но счёт был 0/6 по
-  построению: с [RN-502](../business-rules.md#rn-502) `npm test`
+  построению: с [RN-502](../business-rules/engine.md#rn-502) `npm test`
   проекта `container` без контейнера `running` отклоняется, а seed никогда не поднимал
   его.
 - **AT-076 (2026-09-27):** seed начал поднимать контейнер продакшен-путём
@@ -77,7 +77,7 @@ ADR 0123 оставил golden-set QA как `TODO(humano)` для CI, гово�
 ссылка берётся из самого seed (`IMAGEM_DO_GOLDEN_SET_QA`, закреплённая по digest
 индекса), а не из второго литерала в workflow: `docker run` broker выполняется
 под 30-секундным управляющим пределом порта Docker
-([RN-604](../business-rules.md#rn-604)), и расхождение между тем, что скачивает job,
+([RN-604](../business-rules/api.md#rn-604)), и расхождение между тем, что скачивает job,
 и тем, что просит seed, поместило бы pull внутрь этого предела.
 
 ## Последствия {#consequences}

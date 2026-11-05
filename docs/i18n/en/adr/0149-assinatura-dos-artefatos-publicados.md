@@ -114,7 +114,7 @@ a signature:
 
 So the proxy checks the hash and **says it is only the hash** — in the docblock,
 in the OpenAPI description, in the refusal message and in
-[RN-525](../business-rules.md#rn-525). Whoever verifies the signature is
+[RN-525](../business-rules/produto.md#rn-525). Whoever verifies the signature is
 `install.sh`, which has real `cosign` through the path of decision 4. The
 consequence is recorded and not hidden: **BRB-005 closes for producing the
 signature and remains open for the provenance half of this route** — reopening

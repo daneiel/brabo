@@ -16,7 +16,7 @@ traducao_de: 2f301391630d5be632e27036026760d416d43da1
 
 - access token 存在内存中，refresh 在 `httpOnly` cookie 中，与可读的 `brabo_csrf` 配对，后者作为 `X-CSRF-Token` 发送；
 - web 在 `:8088` 提供，api 在 `:3000` 响应，所以每个已认证调用都是**跨源**的——预检、`SameSite`、`credentials: 'include'`；
-- 会话通道需要一次性 ticket（[RN-108](../business-rules/autenticacao.md#rn-108)），以及在**第三个**源上对 engine 的真实 WebSocket 握手。
+- 会话通道需要一次性 ticket（[RN-108](../business-rules/web.md#rn-108)），以及在**第三个**源上对 engine 的真实 WebSocket 握手。
 
 jsdom 这些都没有。它没有真实的源，不做预检，`httpOnly` 也不是它能强制执行的东西——一个断言 refresh 不可读的测试在那里会通过而什么都没证明。`apps/api/src/main.ts` 已经带有把这一点说得清清楚楚的注释：“teste não faz
 preflight.”

@@ -8,8 +8,8 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **Дата:** 2026-08-09
 - **Предшествующий контекст:** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
   (замороженная цена в `token_usage`, которая делает любой отчёт
-  воспроизводимым), [RN-058](../business-rules/custo.md#rn-058) (ключ, который тратит агент,
-  принадлежит owner) и [RN-060](../business-rules/custo.md#rn-060) (расход
+  воспроизводимым), [RN-058](../business-rules/api.md#rn-058) (ключ, который тратит агент,
+  принадлежит owner) и [RN-060](../business-rules/api.md#rn-060) (расход
   ключей принадлежит owner, и видит его только он)
 
 ## Контекст {#contexto}

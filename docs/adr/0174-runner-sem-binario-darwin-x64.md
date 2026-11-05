@@ -38,7 +38,7 @@ plataforma —, e o `CLAUDE.md` a registrava como decisão de dono.
 Enquanto isso, a promessa de cinco alvos custava em quatro lugares: a matriz
 enfileirava um job que nunca rodava; `ALVOS_ESPERADOS` fazia todo
 `checksums.txt` anunciar, para sempre, a falta de um alvo que já se sabia que
-não viria ([RN-565](../business-rules.md#rn-565)); o proxy
+não viria ([RN-565](../business-rules/ci.md#rn-565)); o proxy
 `GET /runner-releases/binary` aceitava `darwin-x64` só para responder 502
 `plataforma_nao_publicada`; e o `install.sh` pedia ao GitHub um asset que dá
 404 — com a mesma saída de "a Release não publica", indistinguível de uma
@@ -59,13 +59,13 @@ sob Node, onde a prova do `node-pty` passa.
 - O `install.sh`, em `darwin-amd64`, **não tenta baixar**: diz em texto que o
   Mac Intel não tem binário, que o resto da instalação está de pé e qual é o
   comando npm, e deixa `RUNNER_BIN` vazio — o mesmo sinal pelo qual o
-  fechamento ([RN-547](../business-rules.md#rn-547)) já relatava a pendência da
+  fechamento ([RN-547](../business-rules/produto.md#rn-547)) já relatava a pendência da
   chave e do serviço. A instalação em si continua suportada no Mac Intel (o
   `cosign` pinado para `darwin-amd64` fica), só o binário do agente local sai.
 - O navegador continua **detectando** `darwin-x64` — detectar Mac Intel é
   verdade, e é o que permite dizer o caminho certo —, mas o passo do binário
   não pede o download: falha de antemão, e cai no mesmo best-effort
-  (`falhaDoBinario` → comando npm) da [RN-473](../business-rules.md#rn-473).
+  (`falhaDoBinario` → comando npm) da [RN-473](../business-rules/web.md#rn-473).
 - `scripts/ci/alvos-do-runner.spec.ts` amarra os quatro lugares que enumeram
   alvos, em três linguagens: a matriz, a lista da api, o `case` do instalador
   e a do navegador. Tirar (ou devolver) um alvo num e esquecer outro reprova.

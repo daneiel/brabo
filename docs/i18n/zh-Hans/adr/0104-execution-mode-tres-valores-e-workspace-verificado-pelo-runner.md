@@ -15,14 +15,14 @@ traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
 
 [ADR 0072](0072-projeto-local-ou-container.md) 创建了
 `projects.workspace_mode`（`'container'|'local'`）+ `workspace_path`。在
-`local` 模式下，[RN-170](../business-rules/autenticacao.md#rn-170) 在**创建**时验证该文件夹是否已通过 **bind-mount 挂载**到 api 与 engine 的容器中——`apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+`local` 模式下，[RN-170](../business-rules/api.md#rn-170) 在**创建**时验证该文件夹是否已通过 **bind-mount 挂载**到 api 与 engine 的容器中——`apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
 （`validarCaminhoDeWorkspaceLocal`）**在 api 容器的进程内**执行 `access(W_OK|X_OK)`，找不到时以 400 拒绝。web 向导
 （`apps/web/src/routes/NewProjectWizard.tsx:71,462-468`）只教用户在 `docker/docker-compose.yml` 中添加一行 bind-mount——没有其他说明。
 
 [ADR 0103](0103-runner-local-execucao-na-maquina-do-usuario.md) 创建了
 `apps/runner`：一个运行在用户**机器**上的 CLI，**完全没有 bind-mount**，通过 Phoenix 通道（`/runner`，主题
 `terminal:<projectId>`）连接 engine，并以 engine 自己签发的一次性 ticket 认证。它执行已经过常规流水线批准的 agent 命令，并打开真正的交互式 PTY 终端——Terminal 标签页
-（`apps/web/src/routes/code/TerminalPanel.tsx`）为此已经真正使用 `@xterm/xterm`。[RN-420](../business-rules.md#rn-420) 决定何时把命令路由到 runner 而不是一贯的 `System.cmd`，它复用了**同一个**条件 `workspace_mode == "local"`（外加 runner 已连接）——ADR 0103 从未为该字段创建第三个值。
+（`apps/web/src/routes/code/TerminalPanel.tsx`）为此已经真正使用 `@xterm/xterm`。[RN-420](../business-rules/engine.md#rn-420) 决定何时把命令路由到 runner 而不是一贯的 `System.cmd`，它复用了**同一个**条件 `workspace_mode == "local"`（外加 runner 已连接）——ADR 0103 从未为该字段创建第三个值。
 
 实际结果：今天，为了**使用** runner——它存在的意义恰恰是免去 bind-mount——用户仍然必须仅仅为了创建项目而通过 ADR 0072 的 bind-mount 验证。产品的两半引用同一个两值枚举，来描述物理上毫无共同点的两种执行：一个挂载在两个容器中的文件夹，和一个只存在于用户机器上的文件夹。通过直接阅读代码确认：`apps/api/src/db/schema.ts:238-240`
 （`projectWorkspaceModeEnum = pgEnum('project_workspace_mode', ['container',

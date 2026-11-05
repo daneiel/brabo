@@ -7,7 +7,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## Статус {#status}
 
 Принят — реализован и доказан тестом в Фазе B backlog
-([RN-076](../business-rules/custo.md#rn-076)).
+([RN-076](../business-rules/engine.md#rn-076)).
 
 Открытие при реализации, зафиксированное потому, что оно меняет размер проблемы:
 **двум из четырёх потребителей учётные данные никогда не были нужны**.
@@ -68,7 +68,7 @@ token **рабочий remote** проекта в момент, когда ем�
 
 Очевидный путь — `remote add origin https://x-access-token:TOKEN@github.com/…`
 — записывает учётные данные **открытым текстом внутри папки проекта**. А
-[RN-075](../business-rules/custo.md#rn-075) только что дала dev agent
+[RN-075](../business-rules/api.md#rn-075) только что дала dev agent
 **автоодобряемое** чтение внутри этой папки: `cat .git/config` вернул бы токен
 без какого-либо одобрения, и он уехал бы к LLM-provider на
 следующем ходе, внутри истории цикла.
@@ -83,7 +83,7 @@ token **рабочий remote** проекта в момент, когда ем�
 
 ### 3. Учётные данные — владельца (OWNER) workspace {#3-a-credencial-é-a-do-owner-do-workspace}
 
-То же правило, что [RN-058](../business-rules/custo.md#rn-058) уже установила для
+То же правило, что [RN-058](../business-rules/api.md#rn-058) уже установила для
 ключа LLM, по той же причине: платит и авторизует владелец
 workspace, а не агент и не тот, кто открыл сессию.
 
@@ -141,7 +141,7 @@ FASE 13b: без этого не существует измеренного в�
   [backlog](../explanation/backlog.md).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — область, которая
   делает решение 2 обязательным.
-- [RN-058](../business-rules/custo.md#rn-058) — чьи учётные данные тратит
+- [RN-058](../business-rules/api.md#rn-058) — чьи учётные данные тратит
   агент.
 - `apps/engine/lib/engine/projects/project_repository.ex`,
   `apps/engine/lib/engine/actions/workspace.ex`,

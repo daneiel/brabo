@@ -50,7 +50,7 @@ mesmo com a autonomia ligada.
 
 Nos quatro gates que a constituição declara manuais, esse campo é
 invariante e travado por teste
-([RN-071](../business-rules/custo.md#rn-071)).
+([RN-071](../business-rules/api.md#rn-071)).
 
 ## Três formas de evidência, porque nem toda prova mora no log {#three-forms-of-evidence-because-not-every-proof-lives-in-the-log}
 
@@ -211,7 +211,7 @@ a descrever o que o código agora faz.
 
 Essa entrada não sobreviveu ao uso real.
 O [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
-([RN-674](../business-rules.md#rn-674)) moveu o plano de teste para
+([RN-674](../business-rules/engine.md#rn-674)) moveu o plano de teste para
 DEPOIS da entrega do dev — escrito ANTES do dev, ele não tinha código
 para ler e esgotava as iterações — e a `entrada` do gate mudou de
 `plano-de-teste` para `module_map`: o Dev Lead julga a história e o
@@ -225,7 +225,7 @@ QUÊ A QUEM, não para fazer um gate passar.
 `implementavel` é o exemplo de gate que precisou de código novo para
 sair de `planned`. `paralelismo-autorizado` é o oposto: o mecanismo
 (`RequestParallelizationUseCase`,
-[RN-083](../business-rules/custo.md#rn-083)) está em produção desde a
+[RN-083](../business-rules/api.md#rn-083)) está em produção desde a
 FASE 14d — foi o registro que ficou para trás, declarando `planned`
 sobre algo que já era `active` no irmão `packages/contracts/fluxo.yml` e no código. A
 auditoria fluxo.yml × código (achado A1/B5,
@@ -246,7 +246,7 @@ fluxo dele for outro.
 `implementavel` e `paralelismo-autorizado` são os dois exemplos de gate
 que já existia (declarado `planned` ou desatualizado) e ganhou a
 entrada no registro DEPOIS. `necessidade-validada`
-([RN-406](../business-rules.md#rn-406),
+([RN-406](../business-rules/contracts.md#rn-406),
 [ADR 0095](../adr/0095-gate-necessidade-validada.md)) é o terceiro
 padrão: mecanismo e registro nasceram na MESMA mudança, porque o
 próprio gate não existia em lugar nenhum — nem `planned` no arquivo,
@@ -262,7 +262,7 @@ existir. `block` prometeria uma trava que não existe; `warn` descreve
 exatamente o que o gate é: uma medição de que um humano validou o
 mérito da necessidade, não um gate que bloqueia o passo seguinte.
 
-`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+`workspace-verificado` ([RN-423](../business-rules/runner.md#rn-423),
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
 é o quarto exemplo, e o mais claro dos quatro sobre por que `warn` não
 é uma "trava fraca": o que trava de verdade AQUI não é o gate, é a
@@ -276,7 +276,7 @@ descreveria uma trava que já existe em outro lugar, do mesmo jeito que
 `necessidade-validada` teria mentido sobre uma que não existe em lugar
 nenhum.
 
-`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+`rag-acertivo` ([RN-490](../business-rules/api.md#rn-490)/[RN-498](../business-rules/ci.md#rn-498),
 [ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
 é o quinto exemplo, e o motivo de ele continuar `warn` mudou de forma
 uma vez, o que vale contar inteiro. Ele nasceu `warn` pelo motivo mais
@@ -334,7 +334,7 @@ abaixo do piso gravado de 1/6 — e não por causa do julgamento do
 modelo. O event log da segunda execução mostra o porquê: todo
 `npm test` que o QA propôs foi auto-aprovado (`permissions.json allow:
 npm test`) e depois **recusado pelo engine**, porque desde a
-[RN-502](../business-rules.md#rn-502)
+[RN-502](../business-rules/engine.md#rn-502)
 ([ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md),
 2026-09-04) um projeto `container` sem container `running` não roda
 comando de terminal em lugar nenhum. O script de seed é de 2026-08-30 e
@@ -380,7 +380,7 @@ um `artifact.project_image` novo por `DecidirImagemDoProjetoUseCase`
 máquina de estados. O seed propõe e aprova em vez de chamar o caso de
 uso de execução direto porque duas regras moram do lado da proposta — o
 409 nomeado `sem_broker_na_instalacao`
-([RN-591](../business-rules.md#rn-591)) e a política do `decide()` para
+([RN-591](../business-rules/api.md#rn-591)) e a política do `decide()` para
 `container_start` — e um harness que as pulasse deixaria de seguir a
 produção no dia em que qualquer uma mudasse.
 
@@ -484,7 +484,7 @@ ter recusa da RN-502 (a assinatura da AT-067) — e, na falha, imprime os
 logs, como o job do RAG faz. A imagem a pré-baixar é lida da própria
 constante do seed (`IMAGEM_DO_GOLDEN_SET_QA`), não de um segundo
 literal: o `docker run` do broker roda sob o teto de controle de 30 s
-da porta do Docker ([RN-604](../business-rules.md#rn-604)), e um job
+da porta do Docker ([RN-604](../business-rules/api.md#rn-604)), e um job
 que baixasse uma imagem enquanto o seed pedisse outra poria o pull
 dentro desse teto.
 
@@ -517,8 +517,8 @@ gate pode ser entregável numa e não existir em outra. Este é o
 envelhecendo na direção oposta.
 
 Ele entra como `planned`/`warn`, sem bloco `evidencia` e sem script de
-verificação, porque a [RN-070](../business-rules/custo.md#rn-070)/
-[RN-071](../business-rules/custo.md#rn-071) proíbem `block` sem um — e
+verificação, porque a [RN-070](../business-rules/api.md#rn-070)/
+[RN-071](../business-rules/api.md#rn-071) proíbem `block` sem um — e
 porque o que o bloqueia não é código. A infraestrutura existe
 (overlays, imagens no GHCR por digest, scripts de
 smoke/rollout/restore); o que falta é um ambiente de produção com
@@ -570,4 +570,4 @@ meio da trilha seria pior que a ausência dela.
   decisão
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — a
   decisão no event log, sem a qual não haveria o que medir
-- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)
+- [RN-070](../business-rules/api.md#rn-070), [RN-071](../business-rules/api.md#rn-071)

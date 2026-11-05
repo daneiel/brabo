@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **Accepted.** 2026-10-03 (AT-406; owner decision on 03/10: "PO and user" — the
 PO and the Backlog tab edit and archive a `draft` story with no task in
-execution). Rule in [RN-727](../business-rules.md#rn-727).
+execution). Rule in [RN-727](../business-rules/api.md#rn-727).
 
 ## Context
 

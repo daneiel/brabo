@@ -7,8 +7,8 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## Status
 
 **Accepted.** Decided by the maintainer on 2026-09-18 (AT-092). It revises the
-TRIGGER of [RN-522](../business-rules.md#rn-522), which had been born to keep the
-promise of [RN-541](../business-rules.md#rn-541) ("the bootstrap is deferred
+TRIGGER of [RN-522](../business-rules/api.md#rn-522), which had been born to keep the
+promise of [RN-541](../business-rules/web.md#rn-541) ("the bootstrap is deferred
 until the Arquiteto's handoff"). Neither came from an ADR — both were born from a
 direct request of the product owner and live only in `docs/business-rules.md` —,
 so this is the first structural record of the moment the repository is born. The

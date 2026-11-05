@@ -46,7 +46,7 @@ reasons that do not exist in the project:
    oneself drops the effective role to the workspace role, which often holds
    it. In the workspace the role is the role: an `owner` who writes themselves as
    `viewer` loses the whole workspace, and with it all projects, the LLM spend
-   that is theirs by [RN-060](../business-rules/custo.md#rn-060), and the very
+   that is theirs by [RN-060](../business-rules/api.md#rn-060), and the very
    ability to invite whoever would replace them;
 2. **there is no member removal route to undo it by another path.**
    `WorkspacesController` has no member `@Delete` — 0156 had already measured
@@ -107,7 +107,7 @@ ceiling 1 being a rule about **hierarchy inversion**, and inversion not being
 possible in this scope:
 
 - in the project, `projectRole ?? workspaceRole` makes the project row OVERRIDE
-  the workspace one ([RN-471](../business-rules.md#rn-471)), so a `maintainer`
+  the workspace one ([RN-471](../business-rules/web.md#rn-471)), so a `maintainer`
   reaches whoever is ABOVE them. That is how 0127 described the damage: *"the
   owner loses their own project (…) restoring requires `maintainer`, which the
   owner just lost in that scope"*. Whoever acted was BELOW whoever suffered;
@@ -156,7 +156,7 @@ none serves two things: whoever tried to promote themselves does not receive the
 downgrade sentence (it is not what they did), and whoever hits the workspace
 ceiling is not sent to talk to a `maintainer` — there the role that undoes is
 `owner`. It is the same discipline as point 5 of ADR 0156 and of
-[RN-470](../business-rules/custo.md#rn-470): do not collapse two states because
+[RN-470](../business-rules/web.md#rn-470): do not collapse two states because
 they share an outcome.
 
 **7. The actor's role comes from the repository, not from
@@ -181,7 +181,7 @@ mechanism that does not fire today. It enters anyway, and tested, for the reason
 ceiling 2 always had not to have a threshold: the use case does not presume the
 guard, and it is what stays right the day the route changes its minimum. It is
 the same design as the capability refusal of
-[RN-514](../business-rules.md#rn-514), implemented and tested before having a
+[RN-514](../business-rules/engine.md#rn-514), implemented and tested before having a
 trigger.
 
 ## What this ADR explicitly rejects

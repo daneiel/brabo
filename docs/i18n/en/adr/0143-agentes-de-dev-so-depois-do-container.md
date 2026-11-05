@@ -161,7 +161,7 @@ manual reactivation of the execution, which delivers the same
 `{:wake, :became_claimable}`.
 
 **REGISTERED `running` is still not OBSERVED `running`**
-([RN-486](../business-rules.md#rn-486)). A container that died from outside
+([RN-486](../business-rules/api.md#rn-486)). A container that died from outside
 still passes this guard; the agent claims, and the failure shows up on the first
 call to the broker, as a normal command failure. Merging the two would require a
 network call per claim, and RN-486 is explicit about not merging them.
@@ -176,4 +176,4 @@ network call per claim, and RN-486 is explicit about not merging them.
   applies in all three modes
 - [ADR 0137](0137-o-runner-sobe-o-container-do-projeto.md) — `mounted`/`runner`
   bringing up a container on the user's machine
-- [RN-502](../business-rules.md#rn-502)
+- [RN-502](../business-rules/engine.md#rn-502)

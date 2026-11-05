@@ -7,7 +7,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **状态：** 已接受
 - **日期：** 2026-08-09
 - **先前背景：** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
-  （`token_usage` 中冻结的价格，正是它让任何报表可复现）、[RN-058](../business-rules/custo.md#rn-058)（agent 花费的密钥是 owner 的）以及 [RN-060](../business-rules/custo.md#rn-060)（密钥的花费属于 owner，只有他能看）
+  （`token_usage` 中冻结的价格，正是它让任何报表可复现）、[RN-058](../business-rules/api.md#rn-058)（agent 花费的密钥是 owner 的）以及 [RN-060](../business-rules/api.md#rn-060)（密钥的花费属于 owner，只有他能看）
 
 ## 背景 {#contexto}
 

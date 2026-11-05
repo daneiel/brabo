@@ -46,7 +46,7 @@ GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-dev-oauth-state-secret-change-
 
 ### 为什么用一个函数，而不是在每个调用方检查 {#por-que-uma-função-e-não-a-checagem-em-cada-chamador}
 
-与促成 `projectScopeRoot()` 存在的理由相同（[RN-092](../business-rules/custo.md#rn-092)）：同一个字面量有两份副本，在不同的文件中（`start-git-oauth.use-case.ts` 和 `handle-git-oauth-callback.use-case.ts`）。重复的检查总有一天会分歧——而在这里分歧的话，回调会拒绝所有合法的 `state`。有一个测试专门覆盖两端用同一把密钥签名和验证。
+与促成 `projectScopeRoot()` 存在的理由相同（[RN-092](../business-rules/api.md#rn-092)）：同一个字面量有两份副本，在不同的文件中（`start-git-oauth.use-case.ts` 和 `handle-git-oauth-callback.use-case.ts`）。重复的检查总有一天会分歧——而在这里分歧的话，回调会拒绝所有合法的 `state`。有一个测试专门覆盖两端用同一把密钥签名和验证。
 
 ### 为什么设长度下限 {#por-que-um-piso-de-tamanho}
 

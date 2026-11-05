@@ -6,9 +6,9 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 - **Status:** accepted
 - **Date:** 2026-08-15
-- **Prior context:** [RN-048](../business-rules/custo.md#rn-048)
-  (pending story promotion), [RN-104](../business-rules.md#rn-104) (Chat and
-  Creative as places, with the `sessions` key), [RN-121](../business-rules.md#rn-121)
+- **Prior context:** [RN-048](../business-rules/api.md#rn-048)
+  (pending story promotion), [RN-104](../business-rules/web.md#rn-104) (Chat and
+  Creative as places, with the `sessions` key), [RN-121](../business-rules/web.md#rn-121)
   (Executors tab, dev agent and QA kept out of the mixed "agent team"),
   [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) (embeddings in
   the `LLMProvider` contract — foundation with no consumer yet)

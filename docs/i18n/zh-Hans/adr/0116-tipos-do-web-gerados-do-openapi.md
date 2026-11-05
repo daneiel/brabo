@@ -91,4 +91,4 @@ export type ActionType =
 - `.github/workflows/docs-check.yml` — `openapi:types:check`，连接在 `openapi.json` 新鲜度步骤之后
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — 每个 `ActionType` 都需要一句葡萄牙语句子
+- [RN-096](../business-rules/produto.md#rn-096) — 每个 `ActionType` 都需要一句葡萄牙语句子

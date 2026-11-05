@@ -81,7 +81,7 @@ acontecer, já que o Arquiteto sempre entrega module_map antes do Dev Lead
 operar (entrada obrigatória dele em `docs/fluxo.yml`) —, a delegação NÃO é
 gravada com um id inventado. `AcceptParallelizationUseCase` loga o estado
 inesperado com `Logger.error` e retorna, pela mesma lição da
-[RN-059](../business-rules/custo.md#rn-059): nunca falha silenciosa, mas também
+[RN-059](../business-rules/engine.md#rn-059): nunca falha silenciosa, mas também
 nunca finge uma justificativa que não existe.
 
 ### Falha ao registrar não derruba a ativação
@@ -166,7 +166,7 @@ lacuna que este ADR fecha.
   (`recordDevDelegation`)
 - `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`
 - `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`
-- [RN-404](../business-rules.md#rn-404) (delegação Dev Lead → dev)
+- [RN-404](../business-rules/api.md#rn-404) (delegação Dev Lead → dev)
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — item 5,
   corte revogado aqui
 - [ADR 0038](0038-hierarquia-de-agentes.md) — desenho original de

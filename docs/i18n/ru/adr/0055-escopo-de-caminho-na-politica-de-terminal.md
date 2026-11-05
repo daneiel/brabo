@@ -105,8 +105,8 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 4. **`deny` по-прежнему побеждает, всегда и первым.** Область никогда не отменяет
    `deny`, ни встроенные шаблоны, ни два потолка (merge в защищённую
    ветку и `instruction_patch`), которые остаются нетронутыми
-   ([RN-006](../business-rules.md#rn-006),
-   [RN-007](../business-rules.md#rn-007)).
+   ([RN-006](../business-rules/api.md#rn-006),
+   [RN-007](../business-rules/api.md#rn-007)).
 
 5. **Вне области — `require_approval`, а не `deny`.** У агента может быть законная
    причина посмотреть наружу; решает по-прежнему пользователь. Меняется то,
@@ -165,9 +165,9 @@ engine, без файла посередине. Это шире, чем проб
 - [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) — агент
   ждёт решения вместо того, чтобы сжигать итерации; этот ADR атакует причину того, что
   решений, которых нужно ждать, так много.
-- [RN-004](../business-rules.md#rn-004), [RN-005](../business-rules.md#rn-005),
-  [RN-068](../business-rules/custo.md#rn-068),
-  [RN-073](../business-rules/custo.md#rn-073).
+- [RN-004](../business-rules/api.md#rn-004), [RN-005](../business-rules/api.md#rn-005),
+  [RN-068](../business-rules/api.md#rn-068),
+  [RN-073](../business-rules/engine.md#rn-073).
 - `apps/api/src/domain/actions/decide.ts`,
   `apps/api/src/domain/actions/command-matcher.ts`,
   `apps/api/src/domain/actions/dev-terminal-patterns.ts`,

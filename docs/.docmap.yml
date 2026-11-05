@@ -44,7 +44,7 @@ rules:
     watch:
       - "apps/api/src/domain/actions/**"
       - "apps/api/src/application/use-cases/actions/**"
-    docs: ["docs/reference/permissions.md"]
+    docs: ["apps/api/docs/reference/permissions.md"]
     # A RN pode morar em QUALQUER um dos três arquivos desde que o
     # `business-rules.md` foi partido por tamanho (Custo e Autenticação
     # sozinhas eram metade de uma página de 640 KB). Disjunção, não
@@ -169,7 +169,7 @@ rules:
     watch:
       - "apps/engine/lib/engine/harness/artifact_schemas.ex"
       - "apps/api/src/domain/sessions/**"
-    docs: ["docs/reference/events.md", "docs/reference/artifacts.md"]
+    docs: ["docs/reference/events.md", "apps/api/docs/reference/artifacts.md"]
     severity: block
 
   # O engine_api_client.ex é onde o contrato api↔engine se materializa, e não
@@ -183,23 +183,6 @@ rules:
       # `interfaces/http/internal/` (a api é o CLIENTE, não a rota).
       - "apps/api/src/infrastructure/http-clients/session-channel-notifier.ts"
     docs: ["docs/reference/internal-api.md"]
-    severity: block
-
-  # DIVIDIDA na FASE 29, e o motivo é o mesmo que este arquivo já usa duas
-  # vezes (a separação de `checks-e-rulesets` e a exclusão de `scripts/ci/`):
-  # a regra era uma conjunção — `docs:` exige TODOS —, então QUALQUER mudança
-  # em QUALQUER controller HTTP cobrava também `internal-api.md`, que
-  # documenta as rotas `/internal/*` entre api e engine. Uma rota pública não
-  # tem o que dizer ali, e cobrar isso ensina a usar o escape hatch por
-  # reflexo — aí ele para de significar alguma coisa.
-  #
-  # `security-surface.md` continua cobrindo TODO controller, e tem de
-  # continuar: ele é o inventário de TODAS as rotas, e um teste
-  # (`route-surface.spec.ts`) reprova rota sem linha.
-  - id: superficie-http
-    watch:
-      - "apps/api/src/interfaces/http/**"
-    docs: ["docs/security-surface.md"]
     severity: block
 
   - id: superficie-http-interna
@@ -228,7 +211,7 @@ rules:
       - "apps/api/src/**/*.dto.ts"
       - "apps/api/src/infrastructure/openapi/**"
     docs:
-      - "docs/reference/openapi.json"
+      - "apps/api/docs/reference/openapi.json"
       - "apps/web/src/lib/api-types.generated.ts"
     generated: true
     severity: block
@@ -284,23 +267,8 @@ rules:
       - "apps/api/src/infrastructure/git/**"
       - "apps/api/src/domain/git/**"
       - "packages/shared/src/**"
-    docs: ["docs/reference/git-providers.md"]
+    docs: ["apps/api/docs/reference/git-providers.md"]
     severity: warn
-
-  - id: llm-providers
-    watch:
-      - "apps/api/src/infrastructure/llm/**"
-      - "apps/api/src/domain/llm/**"
-      - "apps/api/test/contract/llm-provider.contract.ts"
-    docs:
-      - "docs/reference/llm-providers.md"
-      # O aceite com credencial real (Fase 13a): mexer num provider invalida a
-      # linha dele na tabela de aceite, e sem esta regra ninguém era cobrado.
-      - "docs/explanation/aceite-providers.md"
-    severity: warn
-    note: "Até a Fase 9a NENHUMA regra observava a camada de LLM — provider, capabilities e taxonomia de erro mudavam sem doc cobrando nada. Contrato, capabilities e divergências por dialeto vivem no doc apontado (ADR 0041)."
-
-  # ---------------------------------------------------------------- agentes
 
   - id: harness-e-gates
     watch:
@@ -463,8 +431,8 @@ rules:
       - "apps/engine/lib/engine/telemetry/**"
       - "apps/web/src/lib/logger.ts"
     docs:
-      - "docs/explanation/observability.md"
-      - "docs/runbook.md"
+      - "deploy/docs/explanation/observability.md"
+      - "deploy/docs/runbook.md"
     severity: warn
     note: "`trace_id` é contrato (Alloy + derivedFields do Loki). Formato de log e propagação mudam o runbook."
 
@@ -473,7 +441,7 @@ rules:
       - "docker/docker-compose*.yml"
       - ".env.example"
       - "docker/**"
-    docs: ["docs/reference/configuration.md", "docs/runbook.md"]
+    docs: ["docs/reference/configuration.md", "deploy/docs/runbook.md"]
     generated: true
     severity: block
     note: "Vars do ambiente de inferência (ADR 0020) vivem no runbook."
@@ -490,7 +458,7 @@ rules:
       - "packages/docker-port/**"
     docs:
       - "docs/reference/internal-api.md"
-      - "docs/runbook.md"
+      - "deploy/docs/runbook.md"
     severity: warn
     note: "Cinco operações, e a especificação é COMPUTADA — mudar isso muda o contrato e o runbook."
 
@@ -509,8 +477,8 @@ rules:
       - "apps/runner/**"
     docs:
       - "apps/runner/README.md"
-      - "docs/security-surface.md"
-      - "docs/runbook.md"
+      - "apps/api/docs/security-surface.md"
+      - "deploy/docs/runbook.md"
     severity: warn
     note: "O agente local roda na máquina do usuário: o que ele DECLARA no join e o que ele instala são contrato, não detalhe."
 
@@ -525,7 +493,7 @@ rules:
       - "apps/api/src/application/graph-projection/**"
       - "apps/api/src/scripts/reprojetar-grafo.ts"
     docs:
-      - "docs/runbook.md"
+      - "deploy/docs/runbook.md"
       - "docs/business-rules.md"
     severity: warn
     note: "O que a reprojeção reconstrói (e o que NÃO) é o que o runbook diz a quem perdeu o grafo."
@@ -539,17 +507,10 @@ rules:
       - "apps/api/src/application/artifact-projection/**"
       - "apps/api/src/scripts/reprojetar-artefatos.ts"
     docs:
-      - "docs/runbook.md"
+      - "deploy/docs/runbook.md"
       - "docs/business-rules.md"
     severity: warn
     note: "O que a reprojeção da pasta docs/ reconstrói (e o que NÃO) é o que o runbook diz a quem a perdeu."
-
-  - id: deploy-e-runbook
-    watch:
-      - "deploy/k8s/**"
-      - "Makefile"
-    docs: ["docs/runbook.md"]
-    severity: warn
 
   # O instrumento de idioma da AT-160: a heurística, os dois corpora e os
   # números que saíram do sintético moram numa página só. Mudar a heurística,
@@ -599,48 +560,6 @@ rules:
 
   # -------------------------------------------------------------------- ADR
 
-  # A política de branches é executada por workflow. Mudar o mecanismo sem
-  # mudar a fonte faz a doc descrever um sistema que não existe — e aqui isso é
-  # pior que o normal, porque a política é o que as pessoas leem quando o CI as
-  # reprova.
-  - id: politica-de-branches
-    watch:
-      - ".github/workflows/pr-police.yml"
-      - ".github/workflows/approval-ladder.yml"
-      - ".github/workflows/promote.yml"
-      - ".github/workflows/promotion-check.yml"
-      - ".github/workflows/tag-release.yml"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/backmerge-gate.yml"
-      # Os scripts de `scripts/ci/` que SÃO a política: os que declaram no
-      # docblock que a fonte deles é `branching-policy.md` (pr-police,
-      # approval-ladder, promote, promotion-check, tag-release, version,
-      # archive-branch, os quatro do gate, alarme-de-tag e os dois do
-      # Dependabot), e o spec de cada um. LISTA DE PERMITIDOS, e não mais o
-      # extglob `scripts/ci/!(…)*` que excluía caso a caso: aquele casava com
-      # todo spec novo de `scripts/ci/` — onde moram os testes que leem o
-      # repositório inteiro como texto —, e cada um que nascia sem nada a ver
-      # com degrau, destino ou versão (coverage-floor, actions-pinadas, as flags
-      # do compose, a marca da RN-558, o teto ocioso, onze até a AT-206) virava
-      # `docs-not-needed` ou mais uma exclusão. Regra que cobra o que não faz
-      # sentido ensina a usar o escape hatch por reflexo.
-      #
-      # O preço de trocar exclusão por inclusão era perder o "falha fechado"
-      # (script de política NOVO passaria sem cobrar a doc), e ele NÃO é pago:
-      # `scripts/docs/politica-de-branches.spec.ts` deriva o conjunto do
-      # próprio repositório — todo arquivo de `scripts/ci/` que cita
-      # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
-      # lista divergir. Script de política novo declara a fonte no cabeçalho,
-      # como os catorze, e o spec o cobra aqui.
-      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
-      # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
-      # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
-      # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
-    docs:
-      - "docs/explanation/branching-policy.md"
-    severity: block
-    note: "Regra nova no mecanismo exige a regra escrita na política."
-
   # SEPARADA da regra acima de propósito, mesmo motivo de checks-e-rulesets
   # logo abaixo: `politica-de-branches` cobre o MECANISMO da escada
   # (approval-ladder.ts muda → branching-policy.md muda); esta cobre o
@@ -649,7 +568,7 @@ rules:
   - id: governanca
     watch:
       - "scripts/ci/approval-ladder.ts"
-      - "docs/explanation/branching-policy.md"
+      - "scripts/ci/docs/explanation/branching-policy.md"
     docs:
       - "GOVERNANCE.md"
     severity: warn
@@ -672,42 +591,9 @@ rules:
     watch:
       - "install.sh"
     docs:
-      - "docs/runbook.md"
+      - "deploy/docs/runbook.md"
     severity: warn
     note: "O que o instalador verifica, e o que ele nunca apaga, são contrato."
-
-  - id: checks-e-rulesets
-    watch:
-      - ".github/workflows/*.yml"
-    docs:
-      - "docs/reference/rulesets.md"
-    severity: warn
-    note: "Nome de job ou gatilho novo muda a lista de checks required."
-
-  # A cadeia de suprimentos do CI é a única coisa que decide QUE CÓDIGO DE
-  # TERCEIRO roda no runner que tem o checkout e, no release, as credenciais.
-  # A regra dela morava só em comentário de workflow — e foi exatamente por
-  # isso que ficou meio feita por meses (o #408 pinou o ci.yml e só ele).
-  #
-  # Vigia o CHECK, não os workflows: mudar a regra de pin exige mudar a doc;
-  # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
-  # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
-  # atualização de action.
-  #
-  # `imagens-pinadas.ts` entra pelo MESMO critério, e o de terceiro que ele
-  # cobre é mais amplo que o do irmão: além do runner do CI (as imagens de
-  # `services:`), ele decide o que entra na imagem que publicamos no GHCR (as
-  # bases dos `FROM`) e o que sobe ao lado do Postgres de quem instalou o
-  # produto (o `docker-compose.install.yml`).
-  - id: cadeia-de-suprimentos-do-ci
-    watch:
-      - "scripts/ci/actions-pinadas.ts"
-      - "scripts/ci/imagens-pinadas.ts"
-      - "scripts/ci/imagens-do-compose.ts"
-    docs:
-      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
-    severity: block
-    note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."
 
   # O QUE a esteira publica — os alvos do bake e o manifesto por digest que o
   # instalador e o overlay leem. Até o ADR 0162 nenhuma regra vigiava estes
@@ -723,7 +609,7 @@ rules:
       - "scripts/ci/images-manifest.ts"
       - "scripts/ci/aplicar-imagens.ts"
     docs:
-      - "docs/explanation/cadeia-de-suprimentos-do-ci.md"
+      - "scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md"
     severity: warn
     note: "Imagem publicada a mais ou a menos muda o que se escaneia, assina, instala e aplica no overlay."
 
@@ -794,15 +680,15 @@ rules:
       - "docs/adr/**"
       - "docs/explanation/**"
       - "docs/missions/**"
-      - "docs/reference/artifacts.md"
+      - "apps/api/docs/reference/artifacts.md"
       - "docs/reference/brb.md"
       - "docs/reference/configuration.md"
       - "docs/reference/events.md"
-      - "docs/reference/git-providers.md"
+      - "apps/api/docs/reference/git-providers.md"
       - "docs/reference/internal-api.md"
-      - "docs/reference/llm-providers.md"
-      - "docs/reference/permissions.md"
-      - "docs/reference/rulesets.md"
+      - "apps/api/docs/reference/llm-providers.md"
+      - "apps/api/docs/reference/permissions.md"
+      - "scripts/ci/docs/reference/rulesets.md"
       - "docs/reference/scripts.md"
     docs:
       - "docs/i18n/"

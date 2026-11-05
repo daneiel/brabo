@@ -35,18 +35,18 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 ### 各个部件 {#as-peças}
 
-1. **`Engine.Gates.QaEstrategiaContext.fetch/3`**——**轻量**上下文：只有 story（来自 `EngineApiClient.list_backlog/1`，PO 自 [RN-164](../business-rules/autenticacao.md#rn-164) 起就在读的那棵树）和当前 `module_map`（来自 `EngineApiClient.get_infra_context/2`，Infra Lead 所消费的**同一个** `GetInfraContextUseCase`，这里只用 `moduleMap` 字段）——**没有** `dev_state`，**没有** `worktree_path`。api 中没有新路由：这两个函数早已存在，而 gate `implementavel` 在 PRE-DEV 运行——还没有 dev agent、worktree 或 `task_id`。
+1. **`Engine.Gates.QaEstrategiaContext.fetch/3`**——**轻量**上下文：只有 story（来自 `EngineApiClient.list_backlog/1`，PO 自 [RN-164](../business-rules/engine.md#rn-164) 起就在读的那棵树）和当前 `module_map`（来自 `EngineApiClient.get_infra_context/2`，Infra Lead 所消费的**同一个** `GetInfraContextUseCase`，这里只用 `moduleMap` 字段）——**没有** `dev_state`，**没有** `worktree_path`。api 中没有新路由：这两个函数早已存在，而 gate `implementavel` 在 PRE-DEV 运行——还没有 dev agent、worktree 或 `task_id`。
 2. **`Engine.Gates.QaEstrategiaAgent`**——**无状态**模块（不是 `GenServer`），与 `Engine.Gates.QaPerformanceSegurancaAgent` 形式相同：**没有** `Terminal` 的工具注册表（`ReadFile`、`SearchWorkspace`、`EmitPlanoDeTeste`），运行 harness 的通用 `ToolLoop`。三个工具都不经过 `Engine.Harness.Hooks.ActionPipeline`（只有 `terminal`/`write_file` 经过）——这个 agent **从不**挂起，`run_design/3` 在自己的 `handle_cast` 内同步运行。它在调用它的会话的 event log 中发出 `artifact.plano_de_teste`（schema 在 `Engine.Harness.ArtifactSchemas` 中校验）。
 3. **`Engine.Gates.QaLeadServer.run_design/3`**——`GenServer.cast`，与 `run/2` 同一风格，**没有** `DevAgentState.find_by_task_id`。通过 `Engine.Gates.Dispatcher.run_qa_estrategia/3` 调用（与 `run_qa/2`/`run_secops/2` 早已使用的、在测试中可替换的**同一**间接层——避免在轻量测试中启动真实的 GenServer）。
 4. **`Engine.Agents.DevLeadTools.assess_implementability`**——Dev Lead 的新工具。在 Dev Lead **自己**会话的历史中读取该 story 最新的 `artifact.plano_de_teste`：
-   - **还没有计划**——触发 `Dispatcher.run_qa_estrategia/3` 并返回 `{:error, texto}`，请求再试一次。工具错误是循环的**输入**，不是终点（[RN-163](../business-rules/autenticacao.md#rn-163)）——Dev Lead 有 14 次迭代可以在计划存在之后再试；
-   - **有计划**——组装意见（`implementavel`/`inviavel` + 理由，测试计划嵌入 payload），并以 `"assess_implementability"` 调用 `EngineApiClient.propose_action/5`，与 `propose_execution_plan` 相同的三结局模式（[RN-284](../business-rules.md#rn-284)，ADR 0086）。
+   - **还没有计划**——触发 `Dispatcher.run_qa_estrategia/3` 并返回 `{:error, texto}`，请求再试一次。工具错误是循环的**输入**，不是终点（[RN-163](../business-rules/engine.md#rn-163)）——Dev Lead 有 14 次迭代可以在计划存在之后再试；
+   - **有计划**——组装意见（`implementavel`/`inviavel` + 理由，测试计划嵌入 payload），并以 `"assess_implementability"` 调用 `EngineApiClient.propose_action/5`，与 `propose_execution_plan` 相同的三结局模式（[RN-284](../business-rules/engine.md#rn-284)，ADR 0086）。
 5. **`decide.ts`** 增加 `assess_implementability`，最低角色 `maintainer`，**有意**放在绝对上限块之外——与 `propose_execution_plan` 同样的推理：它是会话的初始决定，不是对已授权上限的突破。
 6. **`docs/gates.yml`**，`implementavel`：`status: planned` → `active`，`evidencia` 指向 event log（按 `actionType: assess_implementability` 过滤的 `proposed_action.created`）。`severidade` 仍然是 `warn`——没有被触碰；登记早已写着"即使激活也以 warn 诞生"。
 
 ### 为什么迭代上限**没有**增加新子句 {#por-que-o-teto-de-iterações-não-ganhou-cláusula-nova}
 
-`Engine.Harness.Iteracoes.tipo/1` 把未知 agent 归类为 `:conversacional`（上限 8）。`"qa-estrategia"` 落入这个默认值，这是**正确**的决定——不是缺口。[RN-085](../business-rules/custo.md#rn-085) 的标准不是"谁干得多"：而是"在迭代上限之外是什么拦住花费"。这个 agent 在**没有** `token_budget_micros` 的情况下运行（没有 task，PRE-DEV），与 `infra-workflows` 的情况相同——后者即使使用工具也保持在 8，因为在底下没有预算的情况下提高上限，会把最坏情况成倍放大而没有任何东西来约束。
+`Engine.Harness.Iteracoes.tipo/1` 把未知 agent 归类为 `:conversacional`（上限 8）。`"qa-estrategia"` 落入这个默认值，这是**正确**的决定——不是缺口。[RN-085](../business-rules/engine.md#rn-085) 的标准不是"谁干得多"：而是"在迭代上限之外是什么拦住花费"。这个 agent 在**没有** `token_budget_micros` 的情况下运行（没有 task，PRE-DEV），与 `infra-workflows` 的情况相同——后者即使使用工具也保持在 8，因为在底下没有预算的情况下提高上限，会把最坏情况成倍放大而没有任何东西来约束。
 
 ## 后果 {#consequências}
 

@@ -10,7 +10,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 declares a dependency on `BRB-010` — and the dependency is literal: this decision
 changes the envelope format, and the proof that the current format survives a
 whole rotation was born in the same delivery, in
-[RN-562](../business-rules.md#rn-562), **before** this line of code. It does not
+[RN-562](../business-rules/api.md#rn-562), **before** this line of code. It does not
 revoke [ADR 0027](0027-fase5-backup-hardening-release.md): the envelope scheme,
 `CREDENTIALS_MASTER_KEY_PREVIOUS` and `rewrap-deks.ts` remain as they are.
 
@@ -44,7 +44,7 @@ Two concrete defects come out of this:
    generic failure, and they are diagnoses with opposite actions: one asks to
    republish the previous key, the other asks to investigate the record.
 
-The lesson that governs this area is [RN-475](../business-rules.md#rn-475): an
+The lesson that governs this area is [RN-475](../business-rules/web.md#rn-475): an
 id that should have been recorded inside the material and was not made automatic
 mode never authenticate, and cost a hunt for a one-line defect.
 

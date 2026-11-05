@@ -55,7 +55,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 1. **`Engine.Gates.QaEstrategiaContext.fetch/3`** — ЛЁГКИЙ контекст: только
    story (из `EngineApiClient.list_backlog/1`, дерево, которое PO читает уже с
-   [RN-164](../business-rules/autenticacao.md#rn-164)) и действующий
+   [RN-164](../business-rules/engine.md#rn-164)) и действующий
    `module_map` (из `EngineApiClient.get_infra_context/2`, ТОТ ЖЕ
    `GetInfraContextUseCase`, который потребляет Infra Lead, здесь только по
    полю `moduleMap`) — БЕЗ `dev_state`, БЕЗ `worktree_path`. Никакого нового
@@ -82,13 +82,13 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
    - **плана ещё нет** — запускает `Dispatcher.run_qa_estrategia/3` и
      возвращает `{:error, texto}` с просьбой попробовать снова. Ошибка
      инструмента — это ВХОД цикла, а не конец пути
-     ([RN-163](../business-rules/autenticacao.md#rn-163)) — у Dev Lead есть 14
+     ([RN-163](../business-rules/engine.md#rn-163)) — у Dev Lead есть 14
      итераций, чтобы попробовать снова после появления плана;
    - **план есть** — собирает заключение (`implementavel`/`inviavel` +
      обоснование, с планом тестирования, встроенным в payload) и вызывает
      `EngineApiClient.propose_action/5` с `"assess_implementability"`, ТОТ ЖЕ
      образец из трёх исходов, что у `propose_execution_plan`
-     ([RN-284](../business-rules.md#rn-284), ADR 0086).
+     ([RN-284](../business-rules/engine.md#rn-284), ADR 0086).
 5. **`decide.ts`** получает `assess_implementability`, минимальная роль
    `maintainer`, НАМЕРЕННО вне блока абсолютных потолков — то же рассуждение,
    что у `propose_execution_plan`: это начальное решение сессии, а не
@@ -104,7 +104,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 `Engine.Harness.Iteracoes.tipo/1` классифицирует неизвестного агента как
 `:conversacional` (потолок 8). `"qa-estrategia"` попадает в это значение по
 умолчанию, и это ПРАВИЛЬНОЕ решение — не пробел. Критерий
-[RN-085](../business-rules/custo.md#rn-085) — не «кто много работает», а «что
+[RN-085](../business-rules/engine.md#rn-085) — не «кто много работает», а «что
 удерживает расход сверх потолка итераций». Этот агент работает БЕЗ
 `token_budget_micros` (нет task, PRE-DEV), та же ситуация, что у
 `infra-workflows`, — который тоже остаётся на 8, хотя использует инструмент,

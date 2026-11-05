@@ -17,7 +17,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 Пересматривает дизайн [ADR 0095](0095-gate-necessidade-validada.md) (gate
 `necessidade-validada` закрывается ОТДЕЛЬНЫМ кликом) и
-[RN-406](../business-rules.md#rn-406). Не редактирует 0095: фиксирует, что меняется и
+[RN-406](../business-rules/contracts.md#rn-406). Не редактирует 0095: фиксирует, что меняется и
 что из него продолжает действовать.
 
 ## Контекст {#context}
@@ -156,9 +156,9 @@ composer — это жест его вызова, тот же, что приня
 - [ADR 0095](0095-gate-necessidade-validada.md) — дизайн, который этот пересматривает
 - [ADR 0163](0163-o-clique-responde-ao-aceitar.md) — клик отвечает при принятии
 - [ADR 0182](0182-ciclo-de-vida-do-handoff.md) — `superseded`, сохранено
-- [RN-406](../business-rules.md#rn-406), [RN-657](../business-rules.md#rn-657),
-  [RN-658](../business-rules.md#rn-658), [RN-633](../business-rules.md#rn-633),
-  [RN-635](../business-rules.md#rn-635)
+- [RN-406](../business-rules/contracts.md#rn-406), [RN-657](../business-rules/api.md#rn-657),
+  [RN-658](../business-rules/api.md#rn-658), [RN-633](../business-rules/web.md#rn-633),
+  [RN-635](../business-rules/api.md#rn-635)
 - `apps/api/src/domain/sessions/estou-pronto.ts`
 - `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts`
 - `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts`

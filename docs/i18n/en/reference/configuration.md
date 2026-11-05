@@ -28,7 +28,7 @@ and `.github/`, and none of those are in the image. Checking that those
 targets exist is therefore a claim about the repository, enforced in CI,
 never by the process serving `GET /gates` — which is why the api reads the
 registry without looking for them. It used to look, and it answered `500`
-in every installation ([RN-070](../business-rules/custo.md#rn-070)).
+in every installation ([RN-070](../business-rules/api.md#rn-070)).
 
 > **`up --wait` only proves what has a healthcheck.** In the development
 > compose, `api`, `engine` and `web` had none, so `docker compose up --wait`
@@ -60,7 +60,7 @@ failure mode in production.
 > the code's own default except for the two background-agent boot keys that
 > production and installation turn off on purpose, and
 > `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
-> one that isn't ([RN-540](../business-rules.md#rn-540)).
+> one that isn't ([RN-540](../business-rules/engine.md#rn-540)).
 > Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
 > intercepts nothing, so there is no broken switch to fix there.
 
@@ -69,9 +69,9 @@ failure mode in production.
 > production they need to be changed — and for six of them the process
 > **refuses** to boot without changing them (api or engine, marked with 🔒).
 > Five follow the pattern of
-> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/custo.md#rn-093):
+> [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/api.md#rn-093):
 > missing, set to the public example literal, or too short brings the boot
-> down. See [RN-114](../business-rules/custo.md#rn-114) for the four that joined the
+> down. See [RN-114](../business-rules/api.md#rn-114) for the four that joined the
 > original `GIT_OAUTH_STATE_SECRET`.
 
 ## Installation compose (`docker-compose.install.yml`)
@@ -94,11 +94,11 @@ strange behaviour instead of a refusal.
 
 These are **not** in the generated inventory below: the generator scans
 `apps/`, and these are read by Compose, not by product code
-([RN-527](../business-rules.md#rn-527)).
+([RN-527](../business-rules/infra.md#rn-527)).
 
 The **broker** is in this compose since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
 **off**, under the `container-broker` profile, and `install.sh` turns it on
-only when asked and answered "s" ([RN-575](../business-rules.md#rn-575)). Then
+only when asked and answered "s" ([RN-575](../business-rules/produto.md#rn-575)). Then
 it writes four lines, together or not at all:
 
 | variable | what `install.sh` writes |
@@ -113,7 +113,7 @@ it writes four lines, together or not at all:
 is in the [runbook](../runbook.md#broker-na-instalacao).
 
 The **local models** (Ollama, the `llm` profile) are asked about right after
-the broker ([RN-691](../business-rules.md#rn-691)). Answering "s" measures a
+the broker ([RN-691](../business-rules/produto.md#rn-691)). Answering "s" measures a
 free host port first and writes:
 
 | variable | what `install.sh` writes |
@@ -147,7 +147,7 @@ in the [runbook](../runbook.md#modelos-locais-na-instalacao).
 |---|---|---|
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **only outside production** | wraps the DEKs. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114). This is only the BOOT check: swapping it for a **valid but different** key without re-wrapping still makes every credential unreadable with no error at all — the failure shows up on first use. See [rotation](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | only during rotation. Present = the api tries the previous key when the current one fails |
-| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **only outside production** | signs the OAuth `state`; weak = CSRF in the git connection flow. **In production the api refuses to boot** without it, with the default above (which is public — it's in `.env.example`), or with fewer than 16 characters. Generate with `openssl rand -base64 32`. See [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) and [RN-093](../business-rules/custo.md#rn-093) |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **only outside production** | signs the OAuth `state`; weak = CSRF in the git connection flow. **In production the api refuses to boot** without it, with the default above (which is public — it's in `.env.example`), or with fewer than 16 characters. Generate with `openssl rand -base64 32`. See [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) and [RN-093](../business-rules/api.md#rn-093) |
 | `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **in production the api refuses to boot** if it's missing or is `*`. CORS is strict per environment. **The port is part of the value**: the web on `:5174` is a different origin and gets blocked — see [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). In the composes, the default **derives from `WEB_PORT`**, so changing the port carries CORS with it; setting `WEB_ORIGIN` by hand overrides the derivation and it becomes your responsibility to keep it consistent again |
 | `WEB_PORT` | `5173` (dev) · `8088` (prod) | published port of the web on the host. Not read by any service — it **feeds the default of `WEB_ORIGIN`** in the composes, and that's what keeps port and CORS from diverging |
 
@@ -162,7 +162,7 @@ issuer. Decisions in
 |---|---|---|
 | `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **only outside production** | passphrase the access token's Ed25519 pair is **derived** from via scrypt — no private key is committed. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
 | `AUTH_JWT_SECRET_PREVIOUS` | — | accepted **only for verification**, during rotation; enters the JWKS and never signs |
-| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **only outside production** | HMAC key for hashing opaque tokens (refresh, account links, PATs) and the lockout bucket key. **Its own secret — it no longer falls back to `AUTH_JWT_SECRET`** ([RN-613](../business-rules/autenticacao.md#rn-613)). **In production the api refuses to boot** if it's missing, set to either example value from this repository, or shorter than 16 characters. An installation that ran without it must set it to the **current** `AUTH_JWT_SECRET`, or everyone is logged out — see the [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
+| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **only outside production** | HMAC key for hashing opaque tokens (refresh, account links, PATs) and the lockout bucket key. **Its own secret — it no longer falls back to `AUTH_JWT_SECRET`** ([RN-613](../business-rules/api.md#rn-613)). **In production the api refuses to boot** if it's missing, set to either example value from this repository, or shorter than 16 characters. An installation that ran without it must set it to the **current** `AUTH_JWT_SECRET`, or everyone is logged out — see the [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
 | `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 days |
 | `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | absolute ceiling of the family, counted from login — without it rotation grants an eternal session |
@@ -192,7 +192,7 @@ issuer. Decisions in
 > `CREDENTIALS_MASTER_KEY_PREVIOUS` and `BRABO_SERVICE_TOKEN_PREVIOUS` are
 > mapped in the `environment:` of all three composes (dev, production and
 > install) as `${X:-}` — the api gets the three, the engine and the broker get
-> `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/autenticacao.md#rn-595)).
+> `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/api.md#rn-595)).
 > Empty is the same as absent in every reader, so outside a rotation nothing
 > changes; during one, setting them in `.env` and recreating the service is
 > enough. Before RN-595 they were mapped nowhere and `docker compose` doesn't
@@ -261,12 +261,12 @@ Sliding window in Postgres — there's no Redis
 
 The shared secret that authenticates api ↔ engine. **The same variable on both
 sides** — each one sends the current value and accepts both, and that's what
-makes rotation possible without downtime ([RN-035](../business-rules/autenticacao.md#rn-035)).
+makes rotation possible without downtime ([RN-035](../business-rules/api.md#rn-035)).
 
 | variable | default | what it does |
 |---|---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** | goes in the `X-Brabo-Service-Token` header and is what `EngineServiceGuard` compares in constant time. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | accepted **only for verification**, during rotation. When set, it goes through the **same** rule as the current token: surrounding whitespace is trimmed, and in production the api refuses to boot if it's the public default or shorter than 16 characters. Unlike the current token, it's never required ([RN-598](../business-rules/autenticacao.md#rn-598)) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | accepted **only for verification**, during rotation. When set, it goes through the **same** rule as the current token: surrounding whitespace is trimmed, and in production the api refuses to boot if it's the public default or shorter than 16 characters. Unlike the current token, it's never required ([RN-598](../business-rules/api.md#rn-598)) |
 
 > Setting only the NEW value on one side (without going through the
 > `_PREVIOUS` dance) doesn't break anyone's boot: the symptom is `403` on
@@ -298,7 +298,7 @@ The path of a given project is a project-level datum
 variable. What the ENVIRONMENT provides is the **base** those folders live
 under — `BRABO_PROJECTS_BASE`, one per installation
 ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[RN-500](../business-rules.md#rn-500)):
+[RN-500](../business-rules/api.md#rn-500)):
 
 ```bash
 # .env — ABSOLUTE. `~` is not expanded by Compose.
@@ -378,7 +378,7 @@ preflight because it runs on the host, and the api can only compare against
 | `NEO4J_USER` | `neo4j` (dev) | reaches the container with the same default the `neo4j` service uses for `NEO4J_AUTH`, so set it only to CHANGE the user — changing it there changes both sides at once. Two independent defaults would leave the api authenticating with credentials the server no longer has |
 | `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (dev only) | same pairing rule as `NEO4J_USER`. **No public default in production** on purpose — there's no plausible "example value" for a database password, and `docker-compose.prod.yml` keeps `NEO4J_AUTH` empty so the official image's own entrypoint refuses to start rather than booting with a guessable one |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `graph_projection` queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416) |
-| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `artifact_projection` queue and writes each agent's artifacts as Markdown under the project's `docs/` folder ([RN-523](../business-rules.md#rn-523)). A DERIVED projection: the event log stays the source, and the folder can be deleted and rebuilt |
+| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `artifact_projection` queue and writes each agent's artifacts as Markdown under the project's `docs/` folder ([RN-523](../business-rules/engine.md#rn-523)). A DERIVED projection: the event log stays the source, and the folder can be deleted and rebuilt |
 
 ### Observability
 
@@ -415,7 +415,7 @@ preflight because it runs on the host, and the api can only compare against
 | `DNS_CLUSTER_QUERY` | — | the headless Service that forms the Erlang cluster. **Without it each replica is an island** and every rollout drains everything |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | `preStop` window. Goes up **together** with `terminationGracePeriodSeconds`, never alone |
 | `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | how long the session waits for the tab's heartbeat before asking the api whether there is pending work |
-| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | ceiling of an **idle conversation**: a conversational agent waiting for the user holds the session past the heartbeat for this long, counted from the end of its turn; past it the session closes as `closed` with cause `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)). Mapped to the engine in all three composes (dev, production, installation) with this same default; **not** written in `deploy/k8s/`, on purpose — nothing there intercepts the environment, so absence is the default, and changing it is an `env:` item in the overlay's engine patch |
+| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | ceiling of an **idle conversation**: a conversational agent waiting for the user holds the session past the heartbeat for this long, counted from the end of its turn; past it the session closes as `closed` with cause `conversation_idle_timeout` ([RN-581](../business-rules/api.md#rn-581)). Mapped to the engine in all three composes (dev, production, installation) with this same default; **not** written in `deploy/k8s/`, on purpose — nothing there intercepts the environment, so absence is the default, and changing it is an `env:` item in the overlay's engine patch |
 | `RELEASE_NAME` / `RELEASE_NODE` | — | node identity in the distribution |
 
 ### Harness
@@ -428,34 +428,34 @@ preflight because it runs on the host, and the api can only compare against
 | `DEFAULT_CONTEXT_WINDOW` | `128000` | used when the model doesn't declare its window (the conversational agents never do); was `8192` until RN-702 |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
-| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
-| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | ceiling for a terminal command (2 min since [RN-757](../business-rules.md#rn-757): a plain `npm install` did not fit in the old 15 s). The engine waits this value + 90 s on `container-exec` and + 120 s on the `propose_action` of a `terminal` action; above ~180 s the outer wait passes the 300 s header limit of the Node `fetch` the api uses to call `/internal/actions/execute` |
-| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/custo.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
-| `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
-| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | BYTE ceiling of `search_workspace`'s final text ([RN-150](../business-rules/autenticacao.md#rn-150)) — same class of overflow as RN-074/RN-141, through the search door; independent variable |
-| `SEARCH_WORKSPACE_MAX_HITS` | `500` | ceiling on the NUMBER of hits `search_workspace` collects before assembling the response ([RN-150](../business-rules/autenticacao.md#rn-150)) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules/engine.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
+| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | ceiling for a terminal command (2 min since [RN-757](../business-rules/engine.md#rn-757): a plain `npm install` did not fit in the old 15 s). The engine waits this value + 90 s on `container-exec` and + 120 s on the `propose_action` of a `terminal` action; above ~180 s the outer wait passes the 300 s header limit of the Node `fetch` the api uses to call `/internal/actions/execute` |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/engine.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
+| `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/engine.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
+| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | BYTE ceiling of `search_workspace`'s final text ([RN-150](../business-rules/engine.md#rn-150)) — same class of overflow as RN-074/RN-141, through the search door; independent variable |
+| `SEARCH_WORKSPACE_MAX_HITS` | `500` | ceiling on the NUMBER of hits `search_workspace` collects before assembling the response ([RN-150](../business-rules/engine.md#rn-150)) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min for the SecOps scanner |
-| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | TRANSPORT ceiling that context compaction respects on top of the model's window ([RN-412](../business-rules.md#rn-412)) — the effective window is `min(context_window, this ceiling converted to tokens)`, so compaction fires BEFORE the body overflows the api's HTTP limit, not only when the model would "forget" |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | TRANSPORT ceiling that context compaction respects on top of the model's window ([RN-412](../business-rules/api.md#rn-412)) — the effective window is `min(context_window, this ceiling converted to tokens)`, so compaction fires BEFORE the body overflows the api's HTTP limit, not only when the model would "forget" |
 | `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | turns on the `:graph` source of `InstructionFiles` — today only the ux-designer identity resolves a template from the graph before the inline text (RN-413). Its OWN name, not `GRAPH_TEMPLATES_ENABLED` below — the two would collide with opposite defaults if they shared the key |
 
 ### Psychologist
 
 | variable | default | note |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same flag shape as `ANAMNESE_ENABLED` below (which was turned back on in [RN-680](../business-rules.md#rn-680); this one was not). Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)). No boot key pairs with it: the Psychologist's automatic trigger is session close, not a tick |
+| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same flag shape as `ANAMNESE_ENABLED` below (which was turned back on in [RN-680](../business-rules/engine.md#rn-680); this one was not). Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/engine.md#rn-117)). No boot key pairs with it: the Psychologist's automatic trigger is session close, not a tick |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | events in the session that separate a **light** analysis from a **heavy** one |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0.05 and USD 0.30 per analysis |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | how many events go into the prompt |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncation of each event's payload |
-| `PSYCHOLOGIST_RAG_TOP_K` | `3` | how many relevant `rag_search` snippets go into the context, deducted from the recent-events ceiling above ([RN-417](../business-rules.md#rn-417)) |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` as a graph template — key SHARED between Psychologist, Anamnese and the `ContextManager`'s summarization prompt ([RN-417](../business-rules.md#rn-417)), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above. Off (the default) means the graph API is never even called; on, any failure falls back to the inline text with no error |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | how many relevant `rag_search` snippets go into the context, deducted from the recent-events ceiling above ([RN-417](../business-rules/engine.md#rn-417)) |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` as a graph template — key SHARED between Psychologist, Anamnese and the `ContextManager`'s summarization prompt ([RN-417](../business-rules/engine.md#rn-417)), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above. Off (the default) means the graph API is never even called; on, any failure falls back to the inline text with no error |
 
 ### Anamnese
 
 | variable | default | note |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `true` | product flag: may a NEW round happen (periodic and on-demand). `false` is a GLOBAL pause that erases nothing ([RN-115](../business-rules/autenticacao.md#rn-115)); changing it requires restarting the engine. It was `false` from 2026-08-10 (the user's pause) until the owner turned the Anamnesis back on with fixes on 2026-10-01 ([RN-680](../business-rules.md#rn-680)): a round with no eligible subject — an effective project member with their own interaction in the window — makes no LLM call. **On its own it is not enough for the PERIODIC round**: `START_ANAMNESE` (boot key, below) also has to be `true`, and the two answer different questions |
+| `ANAMNESE_ENABLED` | `true` | product flag: may a NEW round happen (periodic and on-demand). `false` is a GLOBAL pause that erases nothing ([RN-115](../business-rules/engine.md#rn-115)); changing it requires restarting the engine. It was `false` from 2026-08-10 (the user's pause) until the owner turned the Anamnesis back on with fixes on 2026-10-01 ([RN-680](../business-rules/engine.md#rn-680)): a round with no eligible subject — an effective project member with their own interaction in the window — makes no LLM call. **On its own it is not enough for the PERIODIC round**: `START_ANAMNESE` (boot key, below) also has to be `true`, and the two answer different questions |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min between runs |
 | `ANAMNESE_MIN_EVENTS` | `10` | below this it doesn't run — avoids profiling on noise |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | window of the first run |
@@ -468,11 +468,11 @@ preflight because it runs on the host, and the api can only compare against
 
 | variable | default | note |
 |---|---|---|
-| `START_OUTBOX_DRAIN` | `true` | boot key of the outbox drain (`Engine.Workers.OutboxDrainWorker`, every 2s) — the ONLY consumer of the `session`/`task`/`container` events the api writes to the outbox — plus orphan-worktree pruning and orphan-session adoption. Off, nobody delivers those events: a session the api closed keeps its process and conversational agents running ([RN-581](../business-rules.md#rn-581)), and a dev agent waiting for an action decision, a gate, its PR or the container reaching `running` is never woken. It does NOT turn the Psychologist on: the drain only enqueues it with `PSYCHOLOGIST_ENABLED=true`. `false` only in the production compose (`docker-compose.prod.yml`), on purpose; the install compose uses the code's `true` since AT-219 |
+| `START_OUTBOX_DRAIN` | `true` | boot key of the outbox drain (`Engine.Workers.OutboxDrainWorker`, every 2s) — the ONLY consumer of the `session`/`task`/`container` events the api writes to the outbox — plus orphan-worktree pruning and orphan-session adoption. Off, nobody delivers those events: a session the api closed keeps its process and conversational agents running ([RN-581](../business-rules/api.md#rn-581)), and a dev agent waiting for an action decision, a gate, its PR or the container reaching `running` is never woken. It does NOT turn the Psychologist on: the drain only enqueues it with `PSYCHOLOGIST_ENABLED=true`. `false` only in the production compose (`docker-compose.prod.yml`), on purpose; the install compose uses the code's `true` since AT-219 |
 | `START_ANAMNESE` | `true` | test/dev LOAD guard: prevents `kickoff/0` from even being called on boot, but doesn't decide anything about product — not to be confused with `ANAMNESE_ENABLED` (product: GLOBAL pause, survives any value of this one). Turning it off prevents **new** enqueues, **it doesn't clear the queue**. Accumulated jobs run on the next boot — the queue needs to be purged. See [inference environment](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case ([RN-043](../business-rules/custo.md#rn-043)) |
+| `START_MODEL_SYNC` | `true` | periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case ([RN-043](../business-rules/api.md#rn-043)) |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | a provider's catalog changes on a scale of days, and each round spends one API call per provider — hence the generous default |
-| `START_GATE_RESCUE` | `true` | periodic tick of the gate-cycle rescue (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Turning it off doesn't change the boot: the rescue runs once there regardless |
+| `START_GATE_RESCUE` | `true` | periodic tick of the gate-cycle rescue (`Engine.Gates.GateRescuer`, [RN-140](../business-rules/engine.md#rn-140)). Turning it off doesn't change the boot: the rescue runs once there regardless |
 | `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | a stuck gate blocks the user's entire PR — a much shorter interval than Anamnese/model sync, and each tick costs only a query that's almost always empty |
 | `GATE_RESCUE_STALE_AFTER_SECONDS` | `900` (15 min) | generous on purpose: a QA subagent's ToolLoop can legitimately run up to `TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterations, and a short threshold would rescue — and duplicate — a merely slow cycle |
 
@@ -480,8 +480,8 @@ preflight because it runs on the host, and the api can only compare against
 
 | variable | default |
 |---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** — **the same value as the api**. Surrounding whitespace is trimmed, and a whitespace-only value counts as missing. In a `:prod` release the engine refuses to boot if it's missing, the public default above, or shorter than 16 characters, naming the variable — the same rule as the api ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — accepted only for verification, during rotation. Trimmed; in a `:prod` release the engine refuses to boot if it's the public default or shorter than 16 characters. Never required, and equal to the current one means no rotation ([RN-601](../business-rules/autenticacao.md#rn-601)) |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** — **the same value as the api**. Surrounding whitespace is trimmed, and a whitespace-only value counts as missing. In a `:prod` release the engine refuses to boot if it's missing, the public default above, or shorter than 16 characters, naming the variable — the same rule as the api ([RN-601](../business-rules/engine.md#rn-601)) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — accepted only for verification, during rotation. Trimmed; in a `:prod` release the engine refuses to boot if it's the public default or shorter than 16 characters. Never required, and equal to the current one means no rotation ([RN-601](../business-rules/engine.md#rn-601)) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — the Elixir exporter speaks **HTTP/protobuf on 4318**, not gRPC on 4317. Missing turns off only the export (`traces_exporter: :none`), not instrumentation — see ADR 0035 |
 | `WEB_ORIGIN` | — **the same variable as the api**, and it feeds TWO things here: the Phoenix socket's `check_origin` (the live team panel) and the HTTP CORS of the health routes, which the browser needs to read `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Missing in production closes CORS and keeps `check_origin` at Phoenix's strict default — the engine **still boots** regardless, unlike the api |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **same as the api's, on the same volume** |
@@ -660,12 +660,12 @@ docker compose -f docker/docker-compose.prod.yml \
 
 | variable | default | when it fails |
 |---|---|---|
-| `BROKER_URL` | `http://broker:8090` in the **dev** compose; empty in production and installation (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)), and the api answers `brokerConfigurado: false`, so project creation only offers `runner` ([RN-573](../business-rules.md#rn-573)). Locally the broker is up by default, so the dev compose defaults it to the service it brings up ([RN-599](../business-rules.md#rn-599)) — a value in `.env` still wins. The production and installation composes keep no default on purpose: there the broker is under a profile, and whoever turns it on writes the URL |
+| `BROKER_URL` | `http://broker:8090` in the **dev** compose; empty in production and installation (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules/api.md#rn-486)), and the api answers `brokerConfigurado: false`, so project creation only offers `runner` ([RN-573](../business-rules/api.md#rn-573)). Locally the broker is up by default, so the dev compose defaults it to the service it brings up ([RN-599](../business-rules/infra.md#rn-599)) — a value in `.env` still wins. The production and installation composes keep no default on purpose: there the broker is under a profile, and whoever turns it on writes the URL |
 | `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker. `BRABO_SERVICE_TOKEN_PREVIOUS`, when set, goes through the same rule except the requirement: trimmed, and in production the broker refuses to boot if it's the public literal or under 16 characters ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker. `BRABO_SERVICE_TOKEN_PREVIOUS`, when set, goes through the same rule except the requirement: trimmed, and in production the broker refuses to boot if it's the public literal or under 16 characters ([RN-601](../business-rules/engine.md#rn-601)) |
+| `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules/produto.md#rn-485)) |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
-| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
+| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules/infra.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
 
 `PROJECT_WORKSPACES_HOST_ROOT` cannot be derived from a managed Docker volume.
 In the **dev** compose it derives from `PROJECT_WORKSPACES_HOST_DIR` (above) —
@@ -673,7 +673,7 @@ so leaving that one unset, the state of a freshly copied `.env.example`, leaves
 the broker with no root and `container` mode with no container: the stack comes
 up healthy and `container_start` ends refused. `pnpm dev` reports that on every
 run, in the same mould as `DOCKER_GID`, and never refuses to start
-([RN-599](../business-rules.md#rn-599)). It also reports the `~` case: Compose
+([RN-599](../business-rules/infra.md#rn-599)). It also reports the `~` case: Compose
 expands `~` in the bind-mount source that `api`/`engine` use, but NOT in the
 variable the broker receives (measured with `docker compose config`), so write
 the path ALREADY EXPANDED. And an explicit `PROJECT_WORKSPACES_HOST_ROOT` that
@@ -693,7 +693,7 @@ does not need to be filled in: the compose derives it from
 daemon reaches that folder by a different path.
 
 It is what makes a **Mounted** project able to have a container at all
-([RN-503](../business-rules.md#rn-503)): the api sends a discriminated locator
+([RN-503](../business-rules/api.md#rn-503)): the api sends a discriminated locator
 (`localizacao.tipo` — `gerenciada` or `montada`) plus the relative segment, and
 the broker resolves it against the matching root. The two roots never stand in
 for each other. Missing this one makes `start` of a `mounted` project refuse
@@ -736,7 +736,7 @@ its production image as the fixed `engine` user (uid/gid `1000`, no
 declared `uid=1000,gid=1000,mode=0700` — not a variable — because semgrep (the
 SecOps gate) writes `~/.semgrep` there; created as root, the scan returns
 nothing and the gate approves without static analysis
-([RN-707](../business-rules.md#rn-707), runbook
+([RN-707](../business-rules/engine.md#rn-707), runbook
 [The SecOps gate is stuck on "SAST não rodou"](../runbook.md#semgrep-do-gate)).
 
 Both engine images pin semgrep with the build argument `SEMGREP_VERSION`

@@ -83,7 +83,7 @@ Outbox опустошает три `aggregate_type`: `session` (с Фазы 5), 
 — `task.gate_resolved`/`task.became_claimable`, перепланирование dev agent
 после того, как gate разрешается или новая задача становится доступной) и
 `container` ([ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502) — `container.running`, присоединяемый в
+/[RN-502](business-rules/engine.md#rn-502) — `container.running`, присоединяемый в
 той же транзакции, что регистрирует достижение контейнером проекта
 состояния `running`, чтобы dev agents, которых его отсутствие поставило на
 стоянку в `:idle`, проснулись сами; собственный агрегат, а не
@@ -97,15 +97,15 @@ Dev agent, который ПАДАЕТ (любой выход, кроме `:norm
 `agent.error` (источник `infra`) и перезапускает его из собственной строки в
 `dev_agent_states`, до трёх раз; прерванная задача блокируется с диагнозом
 уже существовавшим восстановлением после перезапуска
-([RN-742](business-rules.md#rn-742)).
+([RN-742](business-rules/engine.md#rn-742)).
 `dev_agent_states` получила `consecutive_blocked`/`max_consecutive_blocked`
-(предохранитель, [RN-047](business-rules/custo.md#rn-047)); полное решение — в
+(предохранитель, [RN-047](business-rules/engine.md#rn-047)); полное решение — в
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 Задача, заблокированная из-за временного сбоя сети/провайдера (DNS, сброшенное
 соединение, 5xx/429), снова разблокируется job Oban через 1, 3 и 10 мин (до
 трёх раз, тем же сценарием разблокировки, что и у человека), а dev agent
 делает паузу на минуту вместо того, чтобы брать следующую задачу
-([RN-864](business-rules.md#rn-864)).
+([RN-864](business-rules/engine.md#rn-864)).
 
 Агенты gate (`QaLeadServer`/`SecOpsAgentServer`) не проходят через outbox на
 промежуточных переходах (`correct`/`run_secops` остаются прямым вызовом в
@@ -117,7 +117,7 @@ Dev agent, который ПАДАЕТ (любой выход, кроме `:norm
 новой таблицы для пути outbox, потому что проблема была не в отсутствии
 outbox, а в отсутствии долговременного состояния для того, что происходит
 МЕЖДУ двумя вызовами в одном процессе. См.
-[RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
+[RN-140](business-rules/engine.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 У gate QA есть ТРЕТИЙ вердикт помимо `approved`/`changes_requested`:
 `needs_user_decision` — для требования, которое пользователь никогда не
@@ -128,7 +128,7 @@ outbox, а в отсутствии долговременного состоян
 ответит на вопрос, что его возобновляет. Разговорная сторона того же правила —
 инструмент `declare_open_question` (Criativo, PO, Arquiteto, Dev Lead),
 записывающий `artifact.open_question`; ответы пользователя возвращаются к dev и
-QA как «решения пользователя» в dev-context ([RN-862](business-rules.md#rn-862),
+QA как «решения пользователя» в dev-context ([RN-862](business-rules/engine.md#rn-862),
 [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 
 Тот, кто ЗАПРАШИВАЕТ gate, никогда не является самим gate:
@@ -145,7 +145,7 @@ Lead к базе. Самый новый из пяти, `run_appsec_design/2`, з
 gate, который был вызываемым без вызывающего в production:
 `assess_implementability` теперь запрашивает модель угроз проектирования
 истории ПАРАЛЛЕЛЬНО — вердикт никогда её не ждёт, а запрос происходит один
-раз на историю ([RN-539](business-rules.md#rn-539),
+раз на историю ([RN-539](business-rules/engine.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ## Карта кода {#code-map}
@@ -177,7 +177,7 @@ OpenTelemetry не подхватывает уже загруженный мод
 | `harness/` (33) | сборка контекста, ToolLoop, сжатие. **Ни один вызов LLM не происходит вне его** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, монитор | `dev/dev_agent_server.ex` |
 | `gates/` (20) | область QA (Lead + Автоматизация, подспециальности Performance/Безопасность и стратегии QA — второй этап Lead, ADR 0090 — все с LLM) и SecOps (детерминированный) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | область Infra (разговорный Lead в рамках сессии — с [RN-617](business-rules.md#rn-617) седьмой разговорный агент, доступный через composer и выполняющий свои ходы в `TurnoAssincrono`, — + подспециальность Workflows через ToolLoop — два архитектурных семейства в одной области, см. RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | область Infra (разговорный Lead в рамках сессии — с [RN-617](business-rules/engine.md#rn-617) седьмой разговорный агент, доступный через composer и выполняющий свои ходы в `TurnoAssincrono`, — + подспециальность Workflows через ToolLoop — два архитектурных семейства в одной области, см. RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | жизненный цикл сессии, реестр `:global` | `sessions/session_server.ex` |
 | `actions/` (9) | исполнители терминала и git, детекторы lint/сканеров | `actions/git_executor.ex` |
 | `agents/` (16) | Criativo, PO, Arquiteto, Dev Lead, Staff (ADR 0088, спящий для автоматического запуска) — каждый ход выполняется в супервизируемом Task (`TurnoAssincrono`, RN-122), а не внутри `handle_call`, поэтому `:cancel` действительно может его прервать | `agents/turno_assincrono.ex` |
@@ -222,7 +222,7 @@ OpenTelemetry не подхватывает уже загруженный мод
 «что произойдёт, если я одобрю». Глагол и фраза каждого типа
 `proposed_action` живут там, и их потребляют три экрана решений — очередь
 Aprovações, карточка внутри чата и вкладка Insights
-([RN-096](business-rules.md#rn-096)).
+([RN-096](business-rules/produto.md#rn-096)).
 
 **Объединение `ActionType` БЫЛО копией, и копия устарела — дважды, в
 production** (три типа bootstrap Gitflow; затем
@@ -254,7 +254,7 @@ workspace.** Внутри проекта запросы идут по сесси
 экран ронял сам себя ответами 429. Оба читают
 `GET /workspaces/:id/projects-summary` — read model, пересекающую агрегаты
 (git, бюджет, сессия, backlog, архитектура), число обращений к базе в которой
-не растёт с количеством проектов ([RN-090](business-rules.md#rn-090)).
+не растёт с количеством проектов ([RN-090](business-rules/api.md#rn-090)).
 
 Ящик колокольчика следует тому же срезу, с одним отличием, которое стоит
 зафиксировать: ему нужна точка отсечки прочитанного для каждого проекта, а
@@ -262,7 +262,7 @@ workspace.** Внутри проекта запросы идут по сесси
 у сервера её нет и не будет «отметить как прочитанное». Поэтому клиент
 **отправляет** карту `project → afterSeq` в теле
 `POST /workspaces/:id/unread-events`, которое является чтением, несмотря на
-глагол, и возвращает `200` ([RN-091](business-rules.md#rn-091)). Глагол
+глагол, и возвращает `200` ([RN-091](business-rules/api.md#rn-091)). Глагол
 вытекает из тела, а не из мутации: это десятки пар, а строка запроса такого
 размера ломается на прокси, не говоря уже о том, что кладёт id проектов в
 логи доступа.
@@ -281,13 +281,13 @@ api говорит, что произошло, а web решает, что из 
 (`lib/api-client.ts`) читает `GET /workspaces/:workspaceId/projects-base` —
 единую базу смонтированных проектов этой установки ([ADR
 0141](adr/0141-base-unica-dos-projetos-montados.md)), — и мастер Нового
-проекта — её единственный вызывающий ([RN-513](business-rules.md#rn-513)).
+проекта — её единственный вызывающий ([RN-513](business-rules/web.md#rn-513)).
 `projectsBase: null` — нормальное состояние, а не сбой: у установки нет
 `BRABO_PROJECTS_BASE`, поэтому карточка смонтированной папки просто не
 предлагается, а `container` остаётся по умолчанию. То же верно, пока ответ в
 пути и когда запрос ПРОВАЛИВАЕТСЯ — неизвестное никогда не становится
 предложением, то же правило, что в
-[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). С базой
+[RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468). С базой
 карточка приходит ПРЕДВЫБРАННОЙ, а поле пути открывается с `<base>/<slug>`,
 составленным `caminhoSugeridoNaBase` (`lib/wizard.ts`) — чистой функцией рядом
 с `caminhoDentroDaBase`, которая отвечает «находится ли этот путь под базой?»
@@ -296,7 +296,7 @@ api говорит, что произошло, а web решает, что из 
 
 **Выбор папки — единственное чтение web с ДВУМЯ ТРАНСПОРТАМИ**, а интерфейс,
 делающий его одним, живёт в `lib/fs-browser.ts`
-([RN-504](business-rules.md#rn-504)). У `FsBrowser` — `listarDiretorio` /
+([RN-504](business-rules/web.md#rn-504)). У `FsBrowser` — `listarDiretorio` /
 `diretorioInicial` / `fechar` — две реализации, и они говорят не с одной и той
 же машиной: `criarFsBrowserViaApi(workspaceId)` вызывает
 `GET /workspaces/:workspaceId/project-folders` в api, жёстко ограниченный
@@ -326,19 +326,19 @@ api говорит, что произошло, а web решает, что из 
 RN-504 направила ОБА режима в api и объявила цену: для `runner` список
 перестал быть машиной пользователя и стал базой. Это было принято, потому
 что режим `runner` должен был уйти из мастера создания, — он не ушёл, и
-[RN-533](business-rules.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+[RN-533](business-rules/web.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
 пункт 7) это отменяет. Теперь транспорт выбирает РЕЖИМ, потому что они
 отвечают на разные вопросы: `mounted` спрашивает api (ваша папка живёт под
 базой, на СЕРВЕРЕ), `runner` спрашивает локального агента (ваша папка живёт на
 машине, которую сервер не видит). Ветвь `runner` опирается на проект, который
-мастер уже создал заранее ([RN-437](business-rules.md#rn-437)); когда это
+мастер уже создал заранее ([RN-437](business-rules/web.md#rn-437)); когда это
 создание проваливается, никакое модальное окно не открывается, потому что
 откат на api показал бы базу СЕРВЕРА под подписью «ваша машина».
 
 Сбой несёт РАЗМЕЧЕННУЮ причину (`MotivoDeFalhaDoAgente`): `sem-agente` — это
 сервер, УТВЕРЖДАЮЩИЙ, что runner нет, `sem-resposta` — таймаут, упавший socket
 или отвергнутый ticket, — незнание, названное незнанием
-([RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)).
+([RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468)).
 Компонент решал по `includes('Nenhum runner conectado')`, сопоставляя
 фразу на pt-BR, живущую в `.ex` engine; сопоставление подстроки теперь живёт
 ровно в одном месте — модуле, владеющем протоколом канала, — и переписанное
@@ -352,10 +352,10 @@ RN-504 направила ОБА режима в api и объявила цен�
 подпись ярлыка, которая называет место, а не машину.
 
 **Панель также РАСПОЗНАЁТ уже сопряжённую машину**
-([RN-548](business-rules.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
+([RN-548](business-rules/web.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
 `listRunnerDeviceKeys` в `lib/api-client.ts` читает
 `GET /projects/:projectId/runner-device-keys`, который начиная с
-[RN-543](business-rules.md#rn-543) помечает ВИД каждого ключа, — а весь вывод
+[RN-543](business-rules/produto.md#rn-543) помечает ВИД каждого ключа, — а весь вывод
 живёт вне компонента, в `lib/agente-de-maquina.ts`, потому что правило
 касается ДАННЫХ, а компонент — отрисовки. Семь состояний, ни одно не
 схлопывается в другое, и сбой выводится из `isError`, а не из статуса,
@@ -368,7 +368,7 @@ RN-504 направила ОБА режима в api и объявила цен�
 [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 (сгенерировать ключ, скачать бинарник, записать папку) был выведен из
 употребления в [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-([RN-687](business-rules.md#rn-687)): панель теперь показывает команду
+([RN-687](business-rules/web.md#rn-687)): панель теперь показывает команду
 `install.sh`, которая уходит, когда распознан ключ, обслуживающий проект, а
 ручная команда с PAT остаётся в `<details>`, названном по случаю, на который
 она отвечает (другая машина). Минимум для чтения берётся из `roleAtLeast`
@@ -430,7 +430,7 @@ WORKSPACE**, а не проекта, — `getContainersOverview` в `lib/api-cli
 `ApprovalCard`, тот же шаблон, что `ProjectPrsTab.tsx` уже использует для
 предложений merge.
 
-Начиная с [RN-521](business-rules.md#rn-521) join — LEFT, и страница
+Начиная с [RN-521](business-rules/api.md#rn-521) join — LEFT, и страница
 перечисляет ВСЕ проекты workspace, потому что она стала человеческим путём
 для подъёма ПЕРВОГО контейнера: подъём, проваливающийся до регистрации, не
 оставляет строки, а старый INNER JOIN скрывал ровно тот проект, которому
@@ -447,7 +447,7 @@ WORKSPACE**, а не проекта, — `getContainersOverview` в `lib/api-cli
 почему.
 
 ДРУГОЙ предлагающий — агент Infra Lead — ветвится так же начиная с
-[RN-566](business-rules.md#rn-566). Оба его инструмента проходят через единую
+[RN-566](business-rules/engine.md#rn-566). Оба его инструмента проходят через единую
 `recusa_local_de_subida/2` в `infra_lead_server.ex`, которая читает проект
 ОДИН раз (`Project.get/1`, тот же процесс BEAM, никогда HTTP: сетевой вызов
 внутри цикла агента — та цена, которую это исправление не могло платить) и
@@ -456,7 +456,7 @@ WORKSPACE**, а не проекта, — `getContainersOverview` в `lib/api-cli
 указанием на `container_start_via_runner`, а ветвь `container_start` — СПИСОК
 РАЗРЕШЁННЫХ, как у broker, поэтому новый режим в enum рождается отвергнутым.
 Отказ — текст РЕЗУЛЬТАТА инструмента, который читает модель (вход цикла,
-[RN-163](business-rules/autenticacao.md#rn-163)), а не `agent.error`, а
+[RN-163](business-rules/engine.md#rn-163)), а не `agent.error`, а
 `tool.call` по-прежнему порождается, чтобы локальный отказ никогда не исчезал
 из timeline. Чего агент НЕ проверяет, а экран проверяет, — решённый образ и
 подтверждённую папку.
@@ -568,12 +568,12 @@ sequenceDiagram
 **8. Контейнер проекта решается, а не подразумевается.** Вкладка Код
 разблокируется только после того, как Arquiteto выпустит
 `artifact.project_image`, — пока состояние `sem_decisao`, чтение кода
-возвращает `409` ([RN-105](business-rules/autenticacao.md#rn-105)). А
+возвращает `409` ([RN-105](business-rules/api.md#rn-105)). А
 `git push`, открытие PR и deploy не проходят через терминал даже в рамках
 проекта: `decide()` распознаёт их по префиксу команды и возвращает `deny` ДО
 любого разрешающего шага — не `require_approval`, потому что «всегда
 разрешать» записало бы шаблон в `allow` и снова открыло бы дверь
-([RN-106](business-rules/autenticacao.md#rn-106),
+([RN-106](business-rules/api.md#rn-106),
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
 Жизненного цикла контейнера (подготовить, перезапустить, очистить) пока не
 существует — объявленный срез FASE 25, записанный в CLAUDE.md, — поэтому
@@ -581,7 +581,7 @@ sequenceDiagram
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
 А начиная с [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502) решённый образ больше не единственное
+/[RN-502](business-rules/engine.md#rn-502) решённый образ больше не единственное
 предусловие: **dev agent не берёт ни одной задачи, пока контейнер проекта не
 ЗАРЕГИСТРИРОВАН как `running`**. Страж живёт в
 `Engine.Dev.AgentIo.try_claim/2` — единственной точке claim, — а не только в
@@ -598,15 +598,15 @@ sequenceDiagram
 Обе половины — один и тот же урок, и пришли они от агента, у которого были
 только инструменты записи: PO собирал контекст один раз, при kickoff, и с тех
 пор действовал по устаревшему снимку — перед пробелом он выбирал между
-выдумыванием и остановкой ([RN-164](business-rules/autenticacao.md#rn-164),
-[RN-165](business-rules/autenticacao.md#rn-165)). Чтение **не** становится
+выдумыванием и остановкой ([RN-164](business-rules/engine.md#rn-164),
+[RN-165](business-rules/engine.md#rn-165)). Чтение **не** становится
 `proposed_action` (инвариант 4 касается ВНЕШНЕГО эффекта, а чтение им не
 является), но оно ограничено в смысле
 [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): область закрыта путём
 маршрута, стоимость постоянна на вызов, и есть потолок строк в тексте,
 передаваемом модели. И цикл агента не заканчивается молча — потолок итераций
 порождает `toolloop.limit_reached`, невыполненное обязательство порождает
-долговременный исход с источником ([RN-166](business-rules/autenticacao.md#rn-166)).
+долговременный исход с источником ([RN-166](business-rules/engine.md#rn-166)).
 
 ## Сквозные вопросы {#cross-cutting-concerns}
 
@@ -701,7 +701,7 @@ outbox, поэтому асинхронная работа, запущенная
 контакт неизменен по явной просьбе CLAUDE.md 8c) и делегирует
 `WorkflowsAgent` — который, без пользователя на другой стороне, работает как
 ограниченный `ToolLoop`, как субагенты QA. Начиная с
-[RN-617](business-rules.md#rn-617)
+[RN-617](business-rules/engine.md#rn-617)
 ([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) Infra Lead также
 получает сообщения из composer, и три его хода (kickoff, исправление gate,
 сообщение) выполняются в том же Task `TurnoAssincrono`, что и у остальных
@@ -750,7 +750,7 @@ erDiagram
 ```
 
 Всего 56 таблиц. Самая новая — `detected_language_declines`
-([RN-624](business-rules.md#rn-624)): одна строка на человека и язык, от
+([RN-624](business-rules/api.md#rn-624)): одна строка на человека и язык, от
 которого человек ОТКАЗАЛСЯ, когда его спросили «мы заметили, что вы пишете на
 X, — использовать X в ответах?», с датой. Её присутствие и не даёт тому же
 вопросу вернуться; подтверждение этого языка позже удаляет строку. Само
@@ -759,7 +759,7 @@ X, — использовать X в ответах?», с датой. Её пр
 два типа доказательств), а гистерезис пересчитывается, — поэтому эта
 таблица и подтверждённая пара в `users` — всё, что оно записывает, и только
 когда человек отвечает. До неё самой новой была `session_language_overrides`
-([RN-618](business-rules.md#rn-618),
+([RN-618](business-rules/api.md#rn-618),
 [ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): язык
 ответа, который человек закрепил в сессии, с ключом по ПАРЕ
 `{session_id, user_id}`, чтобы два участника никогда не касались друг друга.
@@ -768,11 +768,11 @@ X, — использовать X в ответах?», с датой. Её пр
 (`NULL` — «автоматически») и пару подтверждённого определения
 `users.detected_language` / `detected_language_confirmed_at`, связанные CHECK;
 `users.locale` остаётся языком интерфейса, закрытым в `pt-BR`/`en`. А
-`projects.language` ([RN-619](business-rules.md#rn-619)) — язык того, у чего
+`projects.language` ([RN-619](business-rules/api.md#rn-619)) — язык того, у чего
 нет автора-человека, — общих артефактов и ходов, которые никто не набирал, —
 всегда конкретный код BCP-47. До неё самой новой была
 `project_mirror_states`
-([RN-517](business-rules.md#rn-517),
+([RN-517](business-rules/api.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) пункт 7): одна строка на
 проект, `project_id` уникален, хранящая то, что сделал ПОСЛЕДНИЙ прогон
 зеркала, — последнюю успешную синхронизацию с её тремя счётчиками и
@@ -780,7 +780,7 @@ X, — использовать X в ответах?», с датой. Её пр
 причине, что и `rag_searches` чуть выше: у прогона зеркала нет сессии, а
 `session_events.session_id` — `NOT NULL`, поэтому event log молча отбросил бы
 всё. Три состояния, которые никогда не схлопываются
-([RN-088](business-rules.md#rn-088)): «никогда не синхронизировано» —
+([RN-088](business-rules/web.md#rn-088)): «никогда не синхронизировано» —
 ОТСУТСТВУЮЩАЯ строка, «синхронизировано и ничего не скопировано» —
 присутствующая строка с `files_copied = 0`, а «упало» — `last_error_at` новее
 `last_synced_at`. Колонки успеха и сбоя НЕПЕРЕСЕКАЮЩИЕСЯ, и ни одна запись не
@@ -806,7 +806,7 @@ log молча отбросил бы ровно те поиски, которы�
 что и `refresh_tokens`/`account_tokens`: это механизм auth, а не доменное
 отношение.
 
-`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+`projects.mirror_path` (FASE 28, [RN-515](business-rules/api.md#rn-515),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) пункт 4) — колонка, а не
 таблица, потому что это ОДНО необязательное значение на проект: абсолютный
 путь на машине ПОЛЬЗОВАТЕЛЯ, куда capability `espelho` локального агента
@@ -816,17 +816,17 @@ log молча отбросил бы ровно те поиски, которы�
 отличие от соседнего `workspace_path`: у `container` не может быть цели (его
 источник — управляемый том на СЕРВЕРЕ, а процесс, который копировал бы,
 работает на машине пользователя), но `execution_mode` ПРЕОБРАЗУЕМ
-([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+([RN-447](business-rules/api.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
 поэтому CHECK заставил бы преобразование в `container` взорваться в Postgres,
 вместо того чтобы отказать с причиной. Отказ живёт в сценарии использования,
 а преобразование обнуляет колонку — та же форма, что у
 `workspace_verified_at`, и по дополнительной причине: оба направления цикла
 источник↔цель проверялись против СТАРОГО `workspace_path`.
-Начиная с [RN-516](business-rules.md#rn-516) engine ЧИТАЕТ эту колонку —
+Начиная с [RN-516](business-rules/runner.md#rn-516) engine ЧИТАЕТ эту колонку —
 именно она решает, требует ли `join` runner capability `espelho`, и именно
 она путешествует обратно в разрешении этого join (`Engine.Runners.Espelho`,
 `EngineWeb.TerminalChannel`). Engine никогда её не пишет. Начиная с
-[RN-517](business-rules.md#rn-517) ПО СОСЕДСТВУ ЕСТЬ внутренний маршрут —
+[RN-517](business-rules/api.md#rn-517) ПО СОСЕДСТВУ ЕСТЬ внутренний маршрут —
 `POST /internal/projects/:projectId/mirror-sync-result`, — но он пишет
 `project_mirror_states`, никогда эту колонку: цель — КОНФИГУРАЦИЯ
 (пользователь её объявляет), а исход прогона — ТЕЛЕМЕТРИЯ (локальный агент о
@@ -837,10 +837,10 @@ log, `check`, требующий ровно одной области в `budget
 начиная с Фазы 8b, три `check` в `delegations`, фиксирующие, какое поле
 обязательно по `status` (`completed` → `parecerArtifactId`, `failed` →
 `failureOrigin`, `dispensed` → `justification`; см.
-[RN-036](business-rules.md#rn-036)). `delegations.task_id` родился
+[RN-036](business-rules/engine.md#rn-036)). `delegations.task_id` родился
 `NOT NULL` и стал nullable в Фазе 8c — область Infra делегирует по сессии, без
 задачи backlog за PR инфраструктуры (см.
-[RN-037](business-rules.md#rn-037)).
+[RN-037](business-rules/ci.md#rn-037)).
 
 `agent_areas` (FASE 14d,
 [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md)) — то, что Фаза 8
@@ -850,12 +850,12 @@ log, `check`, требующий ровно одной области в `budget
 Уникальность `(project_id, key)` делает засев идемпотентным, а `max_parallel`
 (по умолчанию 2) — потолок, который lead использует, не спрашивая, — выше
 него — `proposed_action`
-(см. [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
+(см. [RN-083](business-rules/api.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) отражают `max_parallel` в той же строке — потолок расходов,
 АДДИТИВНЫЙ к `budgets` (проект/сессия), никогда не каскад: он проверяется и
 увеличивается независимо, теми же `CheckBudgetGateUseCase`/
 `RecordLlmUsageUseCase`, которые уже ведают расходами проекта и сессии (см.
-[RN-443](business-rules.md#rn-443)). Не путайте это с каскадом binding
+[RN-443](business-rules/api.md#rn-443)). Не путайте это с каскадом binding
 модели из [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
 (`session > agent > area > project > workspace`) — тот выбирает единственного
 победителя; бюджет области никогда не выбирает.

@@ -207,5 +207,5 @@ governing comment explaining WHY the sentence-per-type rule exists
   the `openapi.json` freshness step
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — every `ActionType` needs a
+- [RN-096](../business-rules/produto.md#rn-096) — every `ActionType` needs a
   Portuguese sentence

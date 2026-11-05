@@ -2,9 +2,9 @@
 
 - **Status:** aceito
 - **Data:** 2026-08-15
-- **Contexto anterior:** [RN-048](../business-rules/custo.md#rn-048)
-  (promoção de história pendente), [RN-104](../business-rules.md#rn-104) (Chat e
-  Criativo como lugares, com a chave `sessions`), [RN-121](../business-rules.md#rn-121)
+- **Contexto anterior:** [RN-048](../business-rules/api.md#rn-048)
+  (promoção de história pendente), [RN-104](../business-rules/web.md#rn-104) (Chat e
+  Criativo como lugares, com a chave `sessions`), [RN-121](../business-rules/web.md#rn-121)
   (aba Executores, dev agent e QA fora do "Time de agentes" misturado),
   [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) (embeddings no
   contrato de `LLMProvider` — fundação sem consumo)

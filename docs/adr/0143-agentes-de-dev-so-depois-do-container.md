@@ -153,7 +153,7 @@ o próximo evento — inclusive uma reativação manual da execução, que entre
 o mesmo `{:wake, :became_claimable}`.
 
 **`running` REGISTRADO continua não sendo `running` OBSERVADO**
-([RN-486](../business-rules.md#rn-486)). Um container que morreu por fora
+([RN-486](../business-rules/api.md#rn-486)). Um container que morreu por fora
 ainda passa por esta guarda; o agente claima, e a falha aparece na primeira
 chamada ao broker, como falha normal de comando. Fundir os dois exigiria uma
 chamada de rede por claim, e a RN-486 é explícita em não fundi-los.
@@ -168,4 +168,4 @@ chamada de rede por claim, e a RN-486 é explícita em não fundi-los.
   passou a valer nos três modos
 - [ADR 0137](0137-o-runner-sobe-o-container-do-projeto.md) — `mounted`/`runner`
   subindo container na máquina do usuário
-- [RN-502](../business-rules.md#rn-502)
+- [RN-502](../business-rules/engine.md#rn-502)

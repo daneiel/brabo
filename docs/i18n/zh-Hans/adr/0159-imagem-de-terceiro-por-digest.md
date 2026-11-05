@@ -27,8 +27,8 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **"我们不发布的镜像"。** 2026-09-12 测得：共有 **37** 个第三方引用，而它们运行的地方中有三处并不是"日常"。
 
-- 十三个是 Dockerfile 的 `FROM`——`node:24.11.1-alpine3.21`、`hexpm/elixir:1.17.3-…`、`nginx:1.27.5-alpine`、`alpine:3.20`/`3.20.3`、`node:24-alpine`。它们是**我们发布的镜像的基础**：我们用 `cosign` 签名（[RN-524](../business-rules.md#rn-524)）并交付给他人的第三方字节。顺带一提，`docker/backup/Dockerfile.prod` 的 `alpine:3.20` 是 `BRB-004` 本身唯一点名的 `FROM`。
-- 四个位于 `docker/docker-compose.install.yml`，它是在**安装了产品的人的机器上**启动的东西，就在此人的 Postgres 旁边（[RN-527](../business-rules.md#rn-527)）。在**同一个文件**中，四个自有镜像通过已按 digest 解析的变量到达，而第三方镜像却按 tag 到达。
+- 十三个是 Dockerfile 的 `FROM`——`node:24.11.1-alpine3.21`、`hexpm/elixir:1.17.3-…`、`nginx:1.27.5-alpine`、`alpine:3.20`/`3.20.3`、`node:24-alpine`。它们是**我们发布的镜像的基础**：我们用 `cosign` 签名（[RN-524](../business-rules/ci.md#rn-524)）并交付给他人的第三方字节。顺带一提，`docker/backup/Dockerfile.prod` 的 `alpine:3.20` 是 `BRB-004` 本身唯一点名的 `FROM`。
+- 四个位于 `docker/docker-compose.install.yml`，它是在**安装了产品的人的机器上**启动的东西，就在此人的 Postgres 旁边（[RN-527](../business-rules/infra.md#rn-527)）。在**同一个文件**中，四个自有镜像通过已按 digest 解析的变量到达，而第三方镜像却按 tag 到达。
 - 四个位于 `.github/workflows/ci.yml` 和 `golden-set-rag.yml`，作为 job 的 `services:`。这**正是** actions 规则所要保护的 runner，只是从另一扇门进入——而这两个文件从未以这种眼光被审视过。`BRB-004` 也没有列出它们。
 
 **"维护成本"。** 它是真实的，不会消失，但它与仓库在 actions 上早已接受的成本**相同**，后者的固定也是手工移动的。它买到的东西也一样：引用的是内容，而不是一个由别人控制的名字。
@@ -84,6 +84,6 @@ digest 是**索引**（manifest list）的，绝不是某个平台的：固定 `
 
 **本 ADR 不做什么：**
 
-- **不扩展到签名。** digest 是所取内容的完整性；来源证明是 `BRB-005`，其开放的那一半（代理验证清单的签名）已被测量并以数字拒绝（[RN-525](../business-rules.md#rn-525)）。
+- **不扩展到签名。** digest 是所取内容的完整性；来源证明是 `BRB-005`，其开放的那一半（代理验证清单的签名）已被测量并以数字拒绝（[RN-525](../business-rules/produto.md#rn-525)）。
 - **不覆盖 `deploy/k8s/helm/otel-collector-values.yaml`**，那里 `image:` 打开一个带 `repository:` 且没有 tag 的映射：在那里选择 tag 的是 chart，固定它还需要决定 chart 的版本。已**声明**，未覆盖。
 - **不创建 RN。** 这条规则是禁止按 tag 使用 `uses:` 那条规则的兄弟，而那条也没有 RN：两者都存在于 `CLAUDE.md`（发布 CI/CD 一节）和 `docs/explanation/cadeia-de-suprimentos-do-ci.md` 中，后者由 `docs/.docmap.yml` 以 `block` 监视。把其中之一放进 `docs/business-rules.md`，会给同一个策略两个地址。

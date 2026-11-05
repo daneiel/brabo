@@ -35,7 +35,7 @@ This ADR is that next person, and the foreseen cost was exactly the one charged.
 (`@Delete(':projectId/members/:userId')`, `@RequireRole('maintainer')`) called it
 with the two route parameters, without `@CurrentUser()`. Since
 `ResolveEffectiveRoleUseCase.forProject` is `projectRole ?? workspaceRole`
-([RN-471](../business-rules.md#rn-471)), deleting the project row does not delete
+([RN-471](../business-rules/web.md#rn-471)), deleting the project row does not delete
 a role: it SWAPS the effective role for the second term. When the workspace role
 is lower, the net effect is the downgrade ceiling 2 exists to prevent, with the
 same irreversibility — going back is `POST :projectId/members`, which requires
@@ -139,7 +139,7 @@ ceiling 2 already produced through `add`.
 
 **The screen still offers the button the api refuses, and the refusal shows.**
 `MembersSection.handleRemove` already has a `try/catch` with `mensagemDaApi`
-([RN-471](../business-rules.md#rn-471)), so the api's sentence reaches the toast
+([RN-471](../business-rules/web.md#rn-471)), so the api's sentence reaches the toast
 without a single web line. Unlike ceiling 1, this gate IS computable on the
 client — `userIdDaSessao()` and the effective role are there —, but computing
 only it would produce a button honest about one refusal and silent about the

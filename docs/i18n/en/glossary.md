@@ -25,13 +25,13 @@ agent concept is rare; the common path is arriving by topic.
 **Session** — a conversation with effect, from start to close. It's the
 unit of work, of cost, and of tracing: a session is a root trace in
 observability and a budget scope. It moves through five states
-([RN-001](business-rules.md#rn-001)).
+([RN-001](business-rules/api.md#rn-001)).
 
 **Event log** — the `session_events` table. Append-only: there's never an
 `UPDATE`. Every row has a continuous `seq` within the session. It's the
 source of truth for what happened, and what makes the Psychologist's
 evidence traceable
-([RN-002](business-rules.md#rn-002)).
+([RN-002](business-rules/api.md#rn-002)).
 
 **`seq`** — the event's order number within the session. Dense: starts at
 1 and has no gaps. A gap in `seq` is corruption, and restore fails because
@@ -63,7 +63,7 @@ canonical roles today, defined in
 |---|---|
 | `criativo` | runs ideation with the user and emits business rules |
 | `po` | turns the brief into a backlog (epics, stories, tasks) with DoD and DoR |
-| `arquiteto` | technical decisions (ADRs), the module map and the contract between modules ([RN-684](business-rules.md#rn-684)) |
+| `arquiteto` | technical decisions (ADRs), the module map and the contract between modules ([RN-684](business-rules/api.md#rn-684)) |
 | `dev-backend` · `dev-frontend` | implement; run in an isolated worktree |
 | `infra` | provisioning, deploy, and environments — **proactive**, not an executor |
 | `qa` | semantic gate: tests and acceptance criteria |
@@ -116,13 +116,13 @@ artifact.
 session-scoped conversational agents (Creative, PO, Architect, Dev Lead,
 UX Designer, Staff — from ADR 0088, dormant for automatic triggering, but
 activatable via manual handoff — and, since
-[RN-617](business-rules.md#rn-617), the Infra Lead): one streamed call to the LLM plus the
-tool loop it triggers. Since [RN-122](business-rules.md#rn-122) it runs on
+[RN-617](business-rules/engine.md#rn-617), the Infra Lead): one streamed call to the LLM plus the
+tool loop it triggers. Since [RN-122](business-rules/engine.md#rn-122) it runs on
 a supervised `Task` (`Engine.Agents.TurnoAssincrono`), no longer inside
 the `handle_call` that received the message — that's what lets the
 composer's **"Stop"** button actually cancel the turn (kills the task,
 cuts the connection to the api) instead of just stopping the client-side
-render. Since [RN-578](business-rules.md#rn-578) the command that starts a
+render. Since [RN-578](business-rules/engine.md#rn-578) the command that starts a
 turn is answered on ACCEPTANCE: the click returns as soon as the Task is up,
 and the end of the turn arrives through the session channel and the event
 log, never through that HTTP response. Each one has its OWN ceiling on loop rounds (Creative and PO 12,
@@ -133,10 +133,10 @@ Staff is the only one with no `kickoff/1`: it stays idle until the first
 `user_message`, because there's no session artifact to synthesize an
 opening from. Of the four that existed at the time, the Creative agent
 was the last to get the loop, via
-[RN-163](business-rules/autenticacao.md#rn-163): until then it called the model once
+[RN-163](business-rules/engine.md#rn-163): until then it called the model once
 per turn and promised a correction that never happened. That own ceiling
 also stopped being silent: once exhausted, it emits the SAME
-`toolloop.limit_reached` ([RN-166](business-rules/autenticacao.md#rn-166)), because
+`toolloop.limit_reached` ([RN-166](business-rules/engine.md#rn-166)), because
 it's the same fact and whoever reads the event log shouldn't need a
 second name for it.
 
@@ -144,7 +144,7 @@ second name for it.
 process rebuilds its history from the event log when it comes up over a
 session that already has a conversation (restart, or the PO taking over from
 the Creative agent). One path for the seven, `Engine.Agents.Reidratacao`
-([RN-580](business-rules.md#rn-580)): it reads the **tail** (the last 200
+([RN-580](business-rules/engine.md#rn-580)): it reads the **tail** (the last 200
 events, not the first), brings back structured questions and the agent's own
 tool calls, and when the conversation doesn't fit, opens with a system message
 that states how many earlier events were left out.
@@ -159,7 +159,7 @@ schemas (`note`, `business_rule`, `product_brief`, `decision_record`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): a missing field
 fails the emission. It's how a gate's verdict becomes data, not text.
 `business_rule` fails for a second reason: a title already registered in
-the project ([RN-080](business-rules/custo.md#rn-080)) — since an artifact is an
+the project ([RN-080](business-rules/engine.md#rn-080)) — since an artifact is an
 immutable event, emission is the only moment where a duplicate can be
 refused.
 
@@ -172,7 +172,7 @@ it while a gate still needs to read it.
 **Workspace mode** — where a project's code lives on disk, chosen at
 creation and **frozen** afterward
 ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-[RN-169](business-rules/autenticacao.md#rn-169)). `container` is the managed folder
+[RN-169](business-rules/api.md#rn-169)). `container` is the managed folder
 under `PROJECT_WORKSPACES_ROOT` — the default and the usual behavior;
 `local` is an absolute path of the user's own, which only works if it's
 mounted into the container. Don't confuse it with IAM's **workspace**
@@ -181,15 +181,15 @@ and mode is about disk.
 
 **Dev agent states** — `working` (implementing), `awaiting_approval`
 (proposed a commit/push/PR and one is pending approval — **no gate opens
-without a PR**, [RN-050](business-rules/custo.md#rn-050)), `awaiting_gate` (PR
+without a PR**, [RN-050](business-rules/engine.md#rn-050)), `awaiting_gate` (PR
 open, waiting for the verdict), `idle` (no claimable task, process alive),
 and `idle_tripped` (circuit breaker tripped, only exits via explicit
-rearm — [RN-047](business-rules/custo.md#rn-047)). The first three hold the
+rearm — [RN-047](business-rules/engine.md#rn-047)). The first three hold the
 worktree.
 
 `idle` covers **three** different reasons, on purpose: the queue was empty,
 the claim failed, and — since
-[RN-502](business-rules.md#rn-502) — the project has no container
+[RN-502](business-rules/engine.md#rn-502) — the project has no container
 REGISTERED `running`, which stops the claim before it happens. There is no
 fourth status for that last one: `idle` is the only state a wake still
 rescues, and every `handle_info/2` guard is keyed to it. What tells the three
@@ -203,7 +203,7 @@ which is durable, never the status.
 **`proposed_action`** — every action with an external effect (a terminal
 command, commit, push, PR, merge, spend) is **born** here, it never
 executes directly. Twenty-one types. Six states
-([RN-003](business-rules.md#rn-003)).
+([RN-003](business-rules/api.md#rn-003)).
 
 **`permissions.json`** — the project's policy file. Matches a command
 pattern (structured, not substring) and returns `allow`, `deny`, or
@@ -212,12 +212,12 @@ pattern (structured, not substring) and returns `allow`, `deny`, or
 **`deny` beats `allow`** — the rule that runs through the whole system.
 The decision evaluates IAM → `agent_autonomy` → `permissions.json`, and
 `deny` at any stage returns immediately
-([RN-004](business-rules.md#rn-004)).
+([RN-004](business-rules/api.md#rn-004)).
 
 **Ceiling** — a downgrade applied **after** the whole policy, that no
 configuration can promote past. There are two: merging into a protected
-branch ([RN-006](business-rules.md#rn-006)) and an instruction patch
-([RN-007](business-rules.md#rn-007)). A ceiling is the difference between
+branch ([RN-006](business-rules/api.md#rn-006)) and an instruction patch
+([RN-007](business-rules/api.md#rn-007)). A ceiling is the difference between
 "no by default" and "no".
 
 **`agent_autonomy`** — a project's agent operating mode: `manual` (every
@@ -238,7 +238,7 @@ domain is the gate
 **QA** (semantic, runs an LLM) and **SecOps** (deterministic, runs a
 scanner). The order is immutable:
 `awaiting_qa → awaiting_secops → awaiting_user`
-([RN-014](business-rules.md#rn-014)).
+([RN-014](business-rules/api.md#rn-014)).
 
 **`awaiting_user`** — the gate machine's terminal state. Terminal on
 purpose: the system never merges.
@@ -249,7 +249,7 @@ same branch**. Doesn't open a new PR.
 **Cycle K** — the ceiling on corrections per task. Every return consumes
 one round; once exhausted, the task is blocked with a reason instead of
 spinning forever. The subagent inherits the base agent's ceiling
-([RN-015](business-rules.md#rn-015)).
+([RN-015](business-rules/api.md#rn-015)).
 
 **`task_blocked`** — the artifact emitted when a task stalls: carries
 `reason` and `diagnosis`. It's a readable record of failure, not silence.
@@ -260,12 +260,12 @@ boot or on its tick): it records `gate.rescue_parked` and sets `parked_at`, and
 only a human gesture resumes it — today `GateRescuer.retomar_estacionado/3`
 through the operator's `bin/engine rpc`
 ([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md),
-[RN-722](business-rules.md#rn-722)). A cycle whose session has an approval
+[RN-722](business-rules/engine.md#rn-722)). A cycle whose session has an approval
 pending from a gate actor is not restarted either: it is waiting for you.
 A RECENT `in_progress` cycle that the engine restart itself killed is not
 parked nor left waiting for the 15-minute threshold: on boot, when no node of
 the cluster has it in flight, the rescuer records `gate.interrupted` and
-restarts it at once ([RN-823](business-rules.md#rn-823)).
+restarts it at once ([RN-823](business-rules/engine.md#rn-823)).
 
 **`implementavel` (implementable) gate** — a PRE-DEV gateway, before a dev
 agent or worktree exists: the Dev Lead assesses whether a story is
@@ -280,7 +280,7 @@ deliverable separate from the PR verdict): it produces the **test plan**
 (synthesis, executable criteria, automation strategy) for ONE task's
 DELIVERY, AFTER the dev agent delivered — the first step of the
 `qa-verificada` review, as input to it, never a verdict of its own
-([RN-674](business-rules.md#rn-674),
+([RN-674](business-rules/engine.md#rn-674),
 [ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md)). Never suspends —
 none of its tools go through the action pipeline.
 
@@ -291,7 +291,7 @@ STRIDE-lite **threat model** over a story's DESIGN — no worktree, no
 anything; it ends by emitting `artifact.threat_model` and handing it off to
 the architect, the Dev Lead and Infra. Triggered by the Dev Lead's
 `assess_implementability`, in parallel, once per story
-([RN-360](business-rules.md#rn-360), [RN-539](business-rules.md#rn-539),
+([RN-360](business-rules/engine.md#rn-360), [RN-539](business-rules/engine.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ---
@@ -300,20 +300,20 @@ the architect, the Dev Lead and Infra. Triggered by the Dev Lead's
 
 **Business rule (RN)** — a unit emitted by the Creative agent and tied to
 stories. A rule with no story is a **coverage gap**, not an error
-([RN-011](business-rules.md#rn-011)).
+([RN-011](business-rules/api.md#rn-011)).
 
 **Story** — four states; leaving `draft` requires a DoD, a DoR, at least
 one functional requirement, and at least one linked rule
-([RN-010](business-rules.md#rn-010)).
+([RN-010](business-rules/api.md#rn-010)).
 
 **DoD / DoR** — Definition of Done and Definition of Ready. Here they're
 not ceremony: without both, the story doesn't change state.
 
 **`module_map`** — the system's module map, from the Architect. Defines
 how many dev agents exist (one per module) and which module each story
-belongs to. Can't have a cycle ([RN-013](business-rules.md#rn-013)); a
+belongs to. Can't have a cycle ([RN-013](business-rules/api.md#rn-013)); a
 removed module demotes the stories that depended on it
-([RN-012](business-rules.md#rn-012)).
+([RN-012](business-rules/produto.md#rn-012)).
 
 **Project image (`artifact.project_image`)** — the Architect's decision
 about which container runs the project's code: an OCI image (explicit tag
@@ -321,7 +321,7 @@ required, `latest` refused), a network posture (`none` by default,
 `egress` authorized), and a resource ceiling. Versioned in the event log,
 like the `module_map`. Until it exists, the `sem_decisao` (no decision)
 state keeps the Code tab closed
-([RN-105](business-rules/autenticacao.md#rn-105)).
+([RN-105](business-rules/api.md#rn-105)).
 
 ---
 
@@ -332,32 +332,32 @@ tokens, cost in micros, latency, model, agent. It's a **record, not a
 refund**.
 
 **Budget** — a spending ceiling with an exclusive scope: project **or**
-session, never both ([RN-017](business-rules/custo.md#rn-017)). Notifies at
+session, never both ([RN-017](business-rules/api.md#rn-017)). Notifies at
 70/90/100% without repeating.
 
 **`policy`** — the budget's behavior at the ceiling: `block` refuses the
 call, `allow` only records it. A project on `allow` **doesn't stop on its
 own** — it's the most common cause of "the budget didn't hold"
-([RN-019](business-rules/custo.md#rn-019)).
+([RN-019](business-rules/api.md#rn-019)).
 
 **Binding** — the tie between a scope and an LLM model. Resolves in a
 cascade: **session > agent > area > project > workspace**, the first one
-that exists ([RN-020](business-rules/custo.md#rn-020)). That's why you can put
+that exists ([RN-020](business-rules/api.md#rn-020)). That's why you can put
 an expensive model just on QA. `area` is the DEFAULT that a lead and its
 subagents share, and the agent can diverge from it
-([RN-102](business-rules/custo.md#rn-102)).
+([RN-102](business-rules/api.md#rn-102)).
 
 **Capability facet** — what the **provider declares** about a model:
 reads image, generates image, does thinking, accepts `tools`. Comes from
 the remote catalog at sync time; `false` means "didn't declare it", never
 "doesn't do it"
-([RN-056](business-rules/custo.md#rn-056)).
+([RN-056](business-rules/api.md#rn-056)).
 
 **Model use** — what **this workspace** uses that model for (`codigo`,
 `documentacao`, `analise`, `imagem`, `conversa`). It's the operator's
 opinion, not a capability: no catalog publishes "good for code". Tagging a
 use **doesn't enable** the model in the picker
-([RN-057](business-rules/custo.md#rn-057)).
+([RN-057](business-rules/api.md#rn-057)).
 
 ---
 
@@ -365,36 +365,36 @@ use **doesn't enable** the model in the picker
 
 **Hypothesis** — the Psychologist's output: a claim about the team with
 `evidenceEventIds` pointing at real events from the analyzed session. With
-no valid evidence it isn't recorded ([RN-021](business-rules.md#rn-021)).
+no valid evidence it isn't recorded ([RN-021](business-rules/api.md#rn-021)).
 
 **Termination cause** — a deterministic classification of why something
 failed: `infra`, `modelo`, `código`, or `política`. Comes from the
 recorded reason, never from the LLM's judgment and never by elimination
-([RN-023](business-rules.md#rn-023)).
+([RN-023](business-rules/engine.md#rn-023)).
 
 **`proficiency_profile`** — the user's proficiency profile maintained by
 Anamnesis, per competency. Six process competencies, **closed** (`git`,
 `agile`, `arquitetura`, `testes`, `seguranca`, `infra`), plus the
 technical stacks derived from the `module_map`. Nothing outside the
-catalog has a write path ([RN-024](business-rules.md#rn-024)) — Anamnesis
+catalog has a write path ([RN-024](business-rules/api.md#rn-024)) — Anamnesis
 profiles technical competency, not the person.
 
 **Eligible subject** — who an Anamnesis round may profile: an EFFECTIVE
 project member (the project row, or else the workspace one), outside the
 opt-out, with their OWN interaction in the window. With nobody, the round
-makes no LLM call ([RN-680](business-rules.md#rn-680)).
+makes no LLM call ([RN-680](business-rules/engine.md#rn-680)).
 
 **Profile fact** (`FatoDoPerfil`) — a Psychologist hypothesis that the
 person the session belongs to ACCEPTED, projected into the graph from
 `psychologist.hypothesis_accepted` and handed to the agents that talk to
 that person as an ephemeral system message
-([RN-680](business-rules.md#rn-680)).
+([RN-680](business-rules/engine.md#rn-680)).
 
 **`instruction_patch`** — a versioned proposal to change an agent's
-instruction. Never auto-approvable ([RN-007](business-rules.md#rn-007));
-a denied one isn't re-proposed ([RN-026](business-rules.md#rn-026));
+instruction. Never auto-approvable ([RN-007](business-rules/api.md#rn-007));
+a denied one isn't re-proposed ([RN-026](business-rules/api.md#rn-026));
 rollback creates a new version instead of deleting
-([RN-027](business-rules.md#rn-027)).
+([RN-027](business-rules/api.md#rn-027)).
 
 ---
 
@@ -406,11 +406,11 @@ three.
 
 **Capability** — a declaration of what that provider supports. An
 unsupported operation is rejected with an explicit error, never a silent
-failure ([RN-028](business-rules.md#rn-028)).
+failure ([RN-028](business-rules/contracts.md#rn-028)).
 
 **Gitflow bootstrap** — the six steps that prepare the repository
 (permanent branches, protections, base files). Idempotent and resumable:
-`skip` is success ([RN-029](business-rules.md#rn-029)).
+`skip` is success ([RN-029](business-rules/api.md#rn-029)).
 
 **Envelope encryption** — every user secret is encrypted with its own
 **DEK** (data encryption key), and the DEK is "wrapped" by

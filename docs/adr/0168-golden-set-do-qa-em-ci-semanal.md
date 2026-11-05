@@ -19,7 +19,7 @@ Duas medições mudaram o quadro, e as duas estão em
 - **AT-067 (2026-09-13):** num `ubuntu-latest` sem GPU, com o `qwen2.5-coder`
   puxado no Ollama do próprio job, o relógio cabe (19–23 min de
   `mix golden_set.qa`). A metade "infra nova" caiu. Mas o placar era 0/6 por
-  construção: desde a [RN-502](../business-rules.md#rn-502) o `npm test` de um
+  construção: desde a [RN-502](../business-rules/engine.md#rn-502) o `npm test` de um
   projeto `container` sem container `running` é recusado, e o seed nunca subia
   um.
 - **AT-076 (2026-09-27):** o seed passou a subir o container pelo caminho de
@@ -73,7 +73,7 @@ api e engine rodam no host (`PROJECT_WORKSPACES_ROOT` =
 referência vem do próprio seed (`IMAGEM_DO_GOLDEN_SET_QA`, presa por digest do
 índice), não de um segundo literal no workflow: o `docker run` do broker roda
 sob o teto de controle de 30 s da porta de Docker
-([RN-604](../business-rules.md#rn-604)), e uma divergência entre o que o job
+([RN-604](../business-rules/api.md#rn-604)), e uma divergência entre o que o job
 puxa e o que o seed pede poria o pull dentro desse teto.
 
 ## Consequences

@@ -17,7 +17,7 @@ YES:
 
 Revises the design of [ADR 0095](0095-gate-necessidade-validada.md) (the
 `necessidade-validada` gate closes with a SEPARATE click) and
-[RN-406](../business-rules.md#rn-406). It does not edit 0095: it records what
+[RN-406](../business-rules/contracts.md#rn-406). It does not edit 0095: it records what
 changes and what of it still holds.
 
 ## Context
@@ -165,9 +165,9 @@ the PERSON recorded.
 - [ADR 0095](0095-gate-necessidade-validada.md) — the design this revises
 - [ADR 0163](0163-o-clique-responde-ao-aceitar.md) — the click responds on accept
 - [ADR 0182](0182-ciclo-de-vida-do-handoff.md) — `superseded`, preserved
-- [RN-406](../business-rules.md#rn-406), [RN-657](../business-rules.md#rn-657),
-  [RN-658](../business-rules.md#rn-658), [RN-633](../business-rules.md#rn-633),
-  [RN-635](../business-rules.md#rn-635)
+- [RN-406](../business-rules/contracts.md#rn-406), [RN-657](../business-rules/api.md#rn-657),
+  [RN-658](../business-rules/api.md#rn-658), [RN-633](../business-rules/web.md#rn-633),
+  [RN-635](../business-rules/api.md#rn-635)
 - `apps/api/src/domain/sessions/estou-pronto.ts`
 - `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts`
 - `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts`

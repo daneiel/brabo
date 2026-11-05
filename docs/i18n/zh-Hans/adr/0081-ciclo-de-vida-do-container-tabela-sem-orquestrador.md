@@ -81,7 +81,7 @@ Onda 4 中还没有任何东西通过 HTTP 消费这张表——交互式终端�
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — **继续**按原样有效的终端策略；这里没有任何一行改变。
 - [ADR 0072](0072-projeto-local-ou-container.md) — `workspace_mode`，决定项目是否有容器生命周期。
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — 持久化的状态机（`dev_agent_states`），其设计（每个 agent 一行，`status` 在列之外校验）被本表在容器上镜像。
-- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-169](../business-rules/autenticacao.md#rn-169),
-  [RN-243](../business-rules.md#rn-243)–[RN-248](../business-rules.md#rn-248).
+- [RN-105](../business-rules/api.md#rn-105), [RN-169](../business-rules/api.md#rn-169),
+  [RN-243](../business-rules/api.md#rn-243)–[RN-248](../business-rules/api.md#rn-248).
 - `docs/explanation/achados-execucao-real.md` — Z 和 AD 发现，本文档明确**不**关闭它们。
 - `apps/api/src/domain/containers/container-lifecycle.ts`、`apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts`、`apps/api/src/application/use-cases/containers/obter-ciclo-de-vida-do-container.use-case.ts`、`apps/api/src/db/migrations/0046_chilly_forgotten_one.sql`。

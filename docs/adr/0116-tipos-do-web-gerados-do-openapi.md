@@ -197,5 +197,5 @@ comentário que explica POR QUE existe a regra de uma frase por tipo (RN-096).
   passo de frescor do `openapi.json`
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — todo `ActionType` precisa de uma
+- [RN-096](../business-rules/produto.md#rn-096) — todo `ActionType` precisa de uma
   frase em português

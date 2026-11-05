@@ -74,7 +74,7 @@ GIT_OAUTH_STATE_SECRET: ${GIT_OAUTH_STATE_SECRET:-dev-oauth-state-secret-change-
 ### Почему функция, а не проверка в каждом вызывающем {#por-que-uma-função-e-não-a-checagem-em-cada-chamador}
 
 По той же причине, по которой появился `projectScopeRoot()`
-([RN-092](../business-rules/custo.md#rn-092)): было две копии одного литерала, в
+([RN-092](../business-rules/api.md#rn-092)): было две копии одного литерала, в
 разных файлах (`start-git-oauth.use-case.ts` и
 `handle-git-oauth-callback.use-case.ts`). Дублированная проверка — это проверка,
 которая однажды разойдётся, — а разойдясь здесь, callback отклонял бы каждый

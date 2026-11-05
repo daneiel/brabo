@@ -40,7 +40,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 三个指标位于输出的“Não medido, de propósito”一节中，只要以下前提不变，保持这种状态的决定就是永久的——不是下一轮要填补的缺口：
 
-1. **完整的产品漏斗（构思 → commit）。** `sessions` 没有 `storyId`——[RN-230](../business-rules/autenticacao.md#rn-230) 已在 Criativo 标签页（`apps/web/src/routes/ProjectSessionsTab.tsx`）中声明了这一缺口。关闭它需要新 schema（新列，可能是 `sessions` 中的迁移或一张关联表），按原则不在本战线范围内：**本轮没有迁移**。
+1. **完整的产品漏斗（构思 → commit）。** `sessions` 没有 `storyId`——[RN-230](../business-rules/web.md#rn-230) 已在 Criativo 标签页（`apps/web/src/routes/ProjectSessionsTab.tsx`）中声明了这一缺口。关闭它需要新 schema（新列，可能是 `sessions` 中的迁移或一张关联表），按原则不在本战线范围内：**本轮没有迁移**。
 2. **按功能的采用证据。** 与第一项不同，这不是缺少**收集**的数据：这是产品今天**没有任何路径**可以拥有的能力。Brabo 不对它所**构建**的项目做埋点——没有从生成代码流出的使用遥测流水线，也没有关于它将如何存在的产品决定。在这里声明“缺失”遵循与 ADR 0042 对模型评分以及 ADR 0077（RN-210）对“理想”排名相同的原则：绝不以一个看起来真实的数字来近似。
 3. **MTTR 和 change failure rate。** 两者都需要真实生产事件的信号，这与 `docs/fluxo.yml` 已为 `secops-runtime`/`platform` 角色（`status: proposto`/
    `planned`，启用与 `DEPLOY_ENABLED` 同步）记录的依赖相同。这是另一条战线的工作，不是本战线的。
@@ -68,6 +68,6 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
   （形式先例，第 13b 阶段）
 - `apps/api/src/domain/git/git-action-execution-result.ts`
 - `docs/gates.yml`（gate `backmerge`）
-- [RN-230](../business-rules/autenticacao.md#rn-230)——构思 → commit 的缺口，已在 Criativo 标签页中声明
+- [RN-230](../business-rules/web.md#rn-230)——构思 → commit 的缺口，已在 Criativo 标签页中声明
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)——绝不伪造不存在的数据的原则
 - [ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)——同样的拒绝应用于“理想模型”

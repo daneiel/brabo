@@ -39,14 +39,14 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 显而易见的替代方案——每个 workspace 一行 `models`——被否决：
 
 - 它会产生**关于同一个模型的 N 个事实**。`gpt-4o` 的价格对所有人都一样；把它保存在 N 行中保证它们会分歧。
-- 它会把 `token_usage.model_id` 和 `model_bindings.model_id` 一分为二：成本历史指向 `models` 的一行，复制它就需要重写过去——这正是 [RN-044](../business-rules/custo.md#rn-044) 禁止的。
+- 它会把 `token_usage.model_id` 和 `model_bindings.model_id` 一分为二：成本历史指向 `models` 的一行，复制它就需要重写过去——这正是 [RN-044](../business-rules/api.md#rn-044) 禁止的。
 - 目录同步会开始写 N 次今天只写一次的东西。
 
 ### 没有行**就是**关闭 {#ausência-de-linha-é-o-desligado}
 
 不存在与“关闭”分开的第三种“从未决定”状态。同步发现的模型在 `workspace_models` 中干脆**没有行**，读取会把它当作未激活。
 
-这保留了 [RN-043](../business-rules/custo.md#rn-043)（“modelo descoberto entra desligado”），**而 `models` 中没有任何可供同步践踏的列**——同步的 upsert 中不再有任何策展字段。规则从“同步写入 `false`”变成了“同步够不到这个决定”，这更强。
+这保留了 [RN-043](../business-rules/api.md#rn-043)（“modelo descoberto entra desligado”），**而 `models` 中没有任何可供同步践踏的列**——同步的 upsert 中不再有任何策展字段。规则从“同步写入 `false`”变成了“同步够不到这个决定”，这更强。
 
 不过，关闭是 `UPDATE` 而不是 `DELETE`：删除该行会连同是谁、何时做的决定一起删除。读取把两种情况都视为未激活；记录是为审计的人而存在的。
 

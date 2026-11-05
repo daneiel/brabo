@@ -12,7 +12,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 стороны — и вверх, и вниз.
 
 Это обнаружило ревью #444, закрывшее gate роли в разделе Участники, и это
-зафиксировано в [RN-471](../business-rules.md#rn-471). У находки две половины.
+зафиксировано в [RN-471](../business-rules/web.md#rn-471). У находки две половины.
 Первая — документационная: ЧЕТЫРЕ места обещали обратное — "the EFFECTIVE role is the
 higher of this one and what the person already has in the workspace",
 "associating someone as `viewer` here doesn't downgrade a workspace `owner`" —

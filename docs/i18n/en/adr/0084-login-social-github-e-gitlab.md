@@ -57,7 +57,7 @@ is its OWN module, with a structurally different payload
 (`{purpose: 'social_login', provider, nonce, expiresAt}`, without
 `projectId` or `userId` — there is no "where" for social login, only
 identity) and a PURPOSE discriminant checked BEFORE any other field
-([RN-273](../business-rules.md#rn-273)). A `state` from the git CONNECTION
+([RN-273](../business-rules/api.md#rn-273)). A `state` from the git CONNECTION
 flow, even signed by the SAME key, is not accepted here — and the test
 suite proves the direction that mattered (git-connect state →
 social-login verifier): accepting that `state` in the LOGIN callback would
@@ -74,7 +74,7 @@ the two purposes.
 `buildLoginAuthorizeUrl` requests `read:user user:email` (GitHub) and
 `read_user` (GitLab) — never the git-connection flow's `repo`/`api`.
 Logging into the account shouldn't grant access to any repository
-([RN-277](../business-rules.md#rn-277)).
+([RN-277](../business-rules/api.md#rn-277)).
 
 ### 4. New table: `social_identities`
 
@@ -83,25 +83,25 @@ Migration `0047`. A dedicated column on `users` was rejected for the reason
 scale to TWO simultaneous providers (a user may log in via GitHub and
 GitLab at once). `(provider, provider_user_id)` is unique;
 `provider_user_id` is the provider's NUMERIC id, never the login/email —
-which can change owners ([RN-276](../business-rules.md#rn-276)). `user_id`
+which can change owners ([RN-276](../business-rules/api.md#rn-276)). `user_id`
 is `NOT NULL`: the link is born in the SAME step that resolves identity,
 with no intermediate "identity without owner" state.
 
 ### 5. The callback's three decisions, in order
 
 `SocialLoginCallbackUseCase` decides, in this order
-([RN-272](../business-rules.md#rn-272)):
+([RN-272](../business-rules/api.md#rn-272)):
 
 1. **Identity already known** (`(provider, providerUserId)` in
    `social_identities`) → direct login.
 2. **New identity, email matches an existing account AND the provider
    marks the email as VERIFIED** → link and log in
-   ([RN-274](../business-rules.md#rn-274)). Linking is account merging —
+   ([RN-274](../business-rules/api.md#rn-274)). Linking is account merging —
    the PROVIDER's verification plays the role the click on the
    verification link plays during password registration, and so, as a
    side effect, an account registered by password and never verified ends
    up with `emailVerifiedAt` filled in after linking
-   ([RN-279](../business-rules.md#rn-279)): the provider just proved,
+   ([RN-279](../business-rules/api.md#rn-279)): the provider just proved,
    through an independent path, exactly what that click would prove.
 3. **New identity, email matches but is NOT verified** → refuse (`403`).
    An email typed in (unverified) at an OAuth provider is not proof of
@@ -111,8 +111,8 @@ with no intermediate "identity without owner" state.
 4. **New identity, no matching account** → provisions a NEW user, **with
    no password** — reusing the SAME "pending" state the Keycloak migration
    already leaves (`users` without a row in `auth_credentials`,
-   [RN-278](../business-rules.md#rn-278)). Here the email does NOT need
-   to be verified ([RN-275](../business-rules.md#rn-275)): there's no
+   [RN-278](../business-rules/api.md#rn-278)). Here the email does NOT need
+   to be verified ([RN-275](../business-rules/api.md#rn-275)): there's no
    existing account to take over, only one to be born, and requiring
    verification would make the common case more expensive without
    protecting anything. `LoginUseCase` and `ResetPasswordUseCase` already
@@ -128,9 +128,9 @@ the web boot (`restaurarSessao()`, called on EVERY page load,
 `apps/web/src/main.tsx`) already exchanges the freshly written refresh
 token for an access token — zero new client-side code beyond the two
 buttons and the error route alias
-([RN-282](../business-rules.md#rn-282)). Failure goes to
+([RN-282](../business-rules/api.md#rn-282)). Failure goes to
 `WEB_ORIGIN/login?oauth_error=1`, without detailing the reason — the same
-pattern as the git-connection callback ([RN-283](../business-rules.md#rn-283)).
+pattern as the git-connection callback ([RN-283](../business-rules/api.md#rn-283)).
 
 ### 7. Reuse of the SAME OAuth app — no new environment variable
 
@@ -139,7 +139,7 @@ remain those of the app already registered for git connection. What
 changes per flow is the `redirect_uri` (`/auth/oauth/<provider>/callback`
 instead of `/git/oauth/<provider>/callback`) and the requested `scope` —
 both decided at request time, not configuration time
-([RN-281](../business-rules.md#rn-281)). **Operator action is still
+([RN-281](../business-rules/api.md#rn-281)). **Operator action is still
 required**: the second callback URL needs to be registered in each
 provider's OAuth app (documented in `.env.example`) — it's this
 requirement, not a new env var, that justifies the branch being born

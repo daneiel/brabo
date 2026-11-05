@@ -107,8 +107,8 @@ Introduce **path scope** as a stage of the `terminal` decision.
 4. **`deny` keeps winning, always and first.** Scope never overrides a
    `deny`, nor the built-in patterns, nor the two absolute ceilings (merge to
    a protected branch and `instruction_patch`), which remain untouched
-   ([RN-006](../business-rules.md#rn-006),
-   [RN-007](../business-rules.md#rn-007)).
+   ([RN-006](../business-rules/api.md#rn-006),
+   [RN-007](../business-rules/api.md#rn-007)).
 
 5. **Out of scope is `require_approval`, not `deny`.** The agent may have a
    legitimate reason to look outside; the decision maker is still the user.
@@ -169,9 +169,9 @@ folder" — it would still be permission by verb, valid in any directory.
 - [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md) — the agent
   waits for the decision instead of burning iterations; this ADR attacks the
   root cause of there being so many decisions to wait for.
-- [RN-004](../business-rules.md#rn-004), [RN-005](../business-rules.md#rn-005),
-  [RN-068](../business-rules/custo.md#rn-068),
-  [RN-073](../business-rules/custo.md#rn-073).
+- [RN-004](../business-rules/api.md#rn-004), [RN-005](../business-rules/api.md#rn-005),
+  [RN-068](../business-rules/api.md#rn-068),
+  [RN-073](../business-rules/engine.md#rn-073).
 - `apps/api/src/domain/actions/decide.ts`,
   `apps/api/src/domain/actions/command-matcher.ts`,
   `apps/api/src/domain/actions/dev-terminal-patterns.ts`,

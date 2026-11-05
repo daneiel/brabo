@@ -135,5 +135,5 @@ task: это решение пользователя, и здесь действ
 
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — машина
   состояний и перепланирование по событию, которые расширяет этот ADR
-- [RN-047](../business-rules/custo.md#rn-047) — circuit breaker dev agent
+- [RN-047](../business-rules/engine.md#rn-047) — circuit breaker dev agent
 - Реальное выполнение: проект `saudacao-local`, task `cd652d85`, 2026-08-05

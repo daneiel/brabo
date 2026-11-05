@@ -27,7 +27,7 @@ ADR 0127 在 `project_members` 的**写入**路径上设置了两个上限——
 `(projectId, userId)`——**不接收参与者**——而 controller
 （`@Delete(':projectId/members/:userId')`，`@RequireRole('maintainer')`）只用两个路由参数调用，没有 `@CurrentUser()`。由于
 `ResolveEffectiveRoleUseCase.forProject` 是 `projectRole ?? workspaceRole`
-（[RN-471](../business-rules.md#rn-471)），删除项目行并不会删除一个角色：它把有效角色**换成**第二项。当 workspace 角色更低时，净效果就是上限 2 本要阻止的降级，而且同样不可逆——恢复需要 `POST :projectId/members`，而它要求的正是刚刚放弃的 `maintainer`。如果完全没有 workspace 角色，则降为**完全**无访问。
+（[RN-471](../business-rules/web.md#rn-471)），删除项目行并不会删除一个角色：它把有效角色**换成**第二项。当 workspace 角色更低时，净效果就是上限 2 本要阻止的降级，而且同样不可逆——恢复需要 `POST :projectId/members`，而它要求的正是刚刚放弃的 `maintainer`。如果完全没有 workspace 角色，则降为**完全**无访问。
 
 自 ADR 0127 起这个情况就已在测试中复现，测试名说明了它记录的内容：*"e a remoção SEGUE podendo rebaixar quem a chamou, quando o
 workspace não segura — lacuna declarada no ADR 0127"*。一个权限来自项目行、在 workspace 中为 `viewer` 的 `maintainer`，移除自己的行，就降为 `viewer`，且无法通过界面恢复。
@@ -66,7 +66,7 @@ workspace não segura — lacuna declarada no ADR 0127"*。一个权限来自项
 
 **界面仍然提供 api 会拒绝的按钮，而拒绝会显示出来。**
 `MembersSection.handleRemove` 已经有带 `mensagemDaApi` 的 `try/catch`
-（[RN-471](../business-rules.md#rn-471)），因此 api 的那句话无需一行 web 代码就能到达 toast。与上限 1 不同，这个 gate **可以**在客户端计算——`userIdDaSessao()` 和有效角色都在那里——但只计算它会产生一个对一种拒绝坦诚、对另一种沉默的按钮，而这正是 ADR 0127 拒绝的半个 gate。留给解决整个问题的 web PR。
+（[RN-471](../business-rules/web.md#rn-471)），因此 api 的那句话无需一行 web 代码就能到达 toast。与上限 1 不同，这个 gate **可以**在客户端计算——`userIdDaSessao()` 和有效角色都在那里——但只计算它会产生一个对一种拒绝坦诚、对另一种沉默的按钮，而这正是 ADR 0127 拒绝的半个 gate。留给解决整个问题的 web PR。
 
 **每次移除多两次查询**，即使目标是别人：参与者的 `forProject`（会重做 `findById`）和 `forWorkspace`。这是 ADR 0127 在 `add` 中已经接受的代价，在一条管理路由上；而替代方案——在读取前加一个 `if (atorId === alvoId)`——会在用例中重复纯函数本应包含的条款。
 

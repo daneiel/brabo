@@ -61,7 +61,7 @@ Trivy com as mesmas regras (`HIGH,CRITICAL`, `--ignore-unfixed`) e a provar que
 ele SOBE healthy com rootfs read-only. O `release.yml` o publica por DIGEST, o
 `images-manifest.ts` o exige (alvo faltando continua reprovando — cinco de cinco
 ou nenhum), e a assinatura `cosign` keyless e a verificação no mesmo run
-([RN-524](../business-rules.md#rn-524)) o cobrem sem linha nova, porque os dois
+([RN-524](../business-rules/ci.md#rn-524)) o cobrem sem linha nova, porque os dois
 laços leem o manifesto.
 
 O **Kubernetes não o conhece**, e isto é decisão, não esquecimento: não há

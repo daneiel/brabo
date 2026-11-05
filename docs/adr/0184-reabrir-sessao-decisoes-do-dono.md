@@ -42,8 +42,8 @@ Nada mais do 0183 muda: a transição própria (`canReopen`), o evento
 
 ## Consequences
 
-- As três decisões deixam de ser provisórias. A [RN-650](../business-rules.md#rn-650)
-  passa a dizer `developer`, e a [RN-649](../business-rules.md#rn-649) cita este
+- As três decisões deixam de ser provisórias. A [RN-650](../business-rules/api.md#rn-650)
+  passa a dizer `developer`, e a [RN-649](../business-rules/api.md#rn-649) cita este
   ADR nas duas decisões confirmadas.
 - `docs/security-surface.md` lista a rota como `role:developer`; o teste
   `route-surface.spec.ts` compara a tabela com a anotação real.

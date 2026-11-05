@@ -106,7 +106,7 @@ ADR: **путь к автономии не проходит через осла�
 409, а не 403: с запросившим и его разрешением всё в порядке — ресурса
 в этом состоянии ещё не существует. А проверка живёт в **той же воронке**, что и
 сдерживание пути (`alvo`), а не в четырёх маршрутах, по причине
-[RN-092](../business-rules/custo.md#rn-092): проверка, продублированная в четырёх вызывающих, — это
+[RN-092](../business-rules/api.md#rn-092): проверка, продублированная в четырёх вызывающих, — это
 проверка, которая однажды разойдётся в одном из них.
 
 ### 3. Граница: внутри свободно, снаружи — человек {#3-a-fronteira-dentro-é-livre-fora-é-humano}
@@ -133,7 +133,7 @@ ADR: **путь к автономии не проходит через осла�
 Запрет не отнимает силу у агента — он **перенаправляет**. Так dev agent
 всегда и делал (`agent_io.ex` предлагает `git_push`); меняется то, что теперь это
 гарантировано, а не просто договорено. А merge в защищённую ветку остаётся ручным по
-[RN-014](../business-rules.md#rn-014), нетронутой.
+[RN-014](../business-rules/api.md#rn-014), нетронутой.
 
 ### 4. Сеть — позиция КОНТЕЙНЕРА, решаемая один раз, — не команда за командой {#4-rede-é-postura-do-container-decidida-uma-vez--não-comando-a-comando}
 
@@ -241,8 +241,8 @@ push/PR/deploy — и потеря этого и есть суть.
   тот, кто отвечает за проект; сеть следует тому же критерию.
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — worktree принадлежит
   АГЕНТУ, а не task; именно он начинает жить внутри контейнера.
-- [RN-014](../business-rules.md#rn-014), [RN-092](../business-rules/custo.md#rn-092),
-  [RN-105](../business-rules/autenticacao.md#rn-105), [RN-106](../business-rules/autenticacao.md#rn-106).
+- [RN-014](../business-rules/api.md#rn-014), [RN-092](../business-rules/api.md#rn-092),
+  [RN-105](../business-rules/api.md#rn-105), [RN-106](../business-rules/api.md#rn-106).
 - `docs/explanation/achados-execucao-real.md` — находки Z, AD и AE.
 - `apps/api/src/domain/containers/project-container.ts`,
   `apps/api/src/domain/actions/external-effect.ts`,

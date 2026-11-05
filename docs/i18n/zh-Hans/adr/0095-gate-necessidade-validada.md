@@ -32,10 +32,10 @@ necessidade-validada, status: proposto }`。该 gate 从未真正存在：`docs/
 
 ## 决策 {#decisão}
 
-**gate 由用户明确且**单独**的一次点击关闭**——与“Confirmar arquitetura pronta”（[RN-160](../business-rules/autenticacao.md#rn-160)）同一交互模式：`SessionPage.tsx` 中一个专用按钮，一条专用 HTTP 路由
+**gate 由用户明确且**单独**的一次点击关闭**——与“Confirmar arquitetura pronta”（[RN-160](../business-rules/web.md#rn-160)）同一交互模式：`SessionPage.tsx` 中一个专用按钮，一条专用 HTTP 路由
 （`POST .../agents/criativo/validate-necessity`），一个专用用例
 （`ValidateNecessityUseCase`），写入领域事件
-`necessity.validated`（[RN-406](../business-rules.md#rn-406)）。
+`necessity.validated`（[RN-406](../business-rules/contracts.md#rn-406)）。
 
 ### 串联：在 `confirm_readiness` 之后，而不是与之并行 {#encadeamento-depois-de-confirm_readiness-não-em-paralelo-com-ele}
 
@@ -89,8 +89,8 @@ script`（验证脚本已经可以从 event log 中提取 `necessity.validated`�
   `necessidadeJaValidada`、`handleValidateNecessity`）
 - `docs/gates.yml`——gate `necessidade-validada`
 - `docs/fluxo.yml`——角色 `criativo`，`gate_saida`
-- [RN-406](../business-rules.md#rn-406)
-- [RN-160](../business-rules/autenticacao.md#rn-160)——被复制的交互模式
+- [RN-406](../business-rules/contracts.md#rn-406)
+- [RN-160](../business-rules/web.md#rn-160)——被复制的交互模式
 - `docs/explanation/modelo-de-time.md`——促成该决策的反模式（本 ADR 将其从待办列表中移除）
 - `docs/explanation/auditoria-fluxo-vs-codigo.md`——发现 B2，D 节
   （第 6 波，计划的最后一波）

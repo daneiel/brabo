@@ -10,17 +10,17 @@ agente em modo automático, o teto de escopo de caminho do
 Não edita o 0055 nem o [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
 (o teto de efeito externo/comando privilegiado, RN-418), que seguem valendo
 inteiros. A regra que nasce daqui é a
-[RN-603](../business-rules/autenticacao.md#rn-603); ela revê a
-[RN-153](../business-rules/autenticacao.md#rn-153) e a
-[RN-154](../business-rules/autenticacao.md#rn-154).
+[RN-603](../business-rules/api.md#rn-603); ela revê a
+[RN-153](../business-rules/api.md#rn-153) e a
+[RN-154](../business-rules/api.md#rn-154).
 
 ## Context
 
-O "modo automático" ([RN-153](../business-rules/autenticacao.md#rn-153)) é a
+O "modo automático" ([RN-153](../business-rules/api.md#rn-153)) é a
 curinga `"*"` em `agent_autonomy`: autonomia para qualquer tipo de ação de um
 agente. Ele foi desenhado para NÃO furar teto nenhum de `decide()` — os tetos
 agiam sobre `current.policy === 'auto_approve'`, sem saber de onde a
-permissividade veio ([RN-154](../business-rules/autenticacao.md#rn-154)).
+permissividade veio ([RN-154](../business-rules/api.md#rn-154)).
 
 Um desses tetos é o de ESCOPO DE CAMINHO (ADR 0055): comando de terminal que
 toca caminho fora da pasta do projeto nunca é auto-aprovável. Medido no banco

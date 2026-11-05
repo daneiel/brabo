@@ -6,7 +6,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ## 状态 {#status}
 
-**已接受。** 由维护者于 2026-09-18 决定（AT-092）。修订 [RN-522](../business-rules.md#rn-522) 的**触发条件**，它诞生是为了兑现 [RN-541](../business-rules.md#rn-541) 的承诺（"引导推迟到 Arquiteto 的 handoff"）。两者都不来自 ADR——两者都诞生于产品所有者的直接要求，只存在于 `docs/business-rules.md` 中——因此这是关于仓库诞生时刻的第一份结构性记录。开通**机制**不变：仍是同一个 `ProvisionRepositoryUseCase`，自 [ADR 0005](0005-repo-bootstrap-idempotent-steps.md) 起按设计就是幂等的，由同一个 `AcceptHandoffUseCase` 调用。[ADR 0038](0038-hierarquia-de-agentes.md) 的 handoff 目标规则（外部 handoff 只指向区域 lead 或无区域的 agent）以及 [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) 的 Arquiteto → Dev Lead 链条保持不变。
+**已接受。** 由维护者于 2026-09-18 决定（AT-092）。修订 [RN-522](../business-rules/api.md#rn-522) 的**触发条件**，它诞生是为了兑现 [RN-541](../business-rules/web.md#rn-541) 的承诺（"引导推迟到 Arquiteto 的 handoff"）。两者都不来自 ADR——两者都诞生于产品所有者的直接要求，只存在于 `docs/business-rules.md` 中——因此这是关于仓库诞生时刻的第一份结构性记录。开通**机制**不变：仍是同一个 `ProvisionRepositoryUseCase`，自 [ADR 0005](0005-repo-bootstrap-idempotent-steps.md) 起按设计就是幂等的，由同一个 `AcceptHandoffUseCase` 调用。[ADR 0038](0038-hierarquia-de-agentes.md) 的 handoff 目标规则（外部 handoff 只指向区域 lead 或无区域的 agent）以及 [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) 的 Arquiteto → Dev Lead 链条保持不变。
 
 ## 背景 {#context}
 

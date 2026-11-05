@@ -36,12 +36,12 @@ de terceiro, e três dos lugares onde elas rodam não são "o dia a dia".
 - Treze são `FROM` de Dockerfile — `node:24.11.1-alpine3.21`,
   `hexpm/elixir:1.17.3-…`, `nginx:1.27.5-alpine`, `alpine:3.20`/`3.20.3`,
   `node:24-alpine`. Essas são a **base das imagens que publicamos**: bytes de
-  terceiro que assinamos com `cosign` ([RN-524](../business-rules.md#rn-524)) e
+  terceiro que assinamos com `cosign` ([RN-524](../business-rules/ci.md#rn-524)) e
   entregamos a outras pessoas. O `alpine:3.20` do `docker/backup/Dockerfile.prod`
   é, aliás, o único `FROM` que o próprio `BRB-004` já nomeava.
 - Quatro estão em `docker/docker-compose.install.yml`, que é o que sobe **na
   máquina de quem instalou o produto**, ao lado do Postgres dessa pessoa
-  ([RN-527](../business-rules.md#rn-527)). No **mesmo arquivo**, as quatro
+  ([RN-527](../business-rules/infra.md#rn-527)). No **mesmo arquivo**, as quatro
   imagens próprias chegam por variável já resolvida por digest, e as de terceiro
   chegavam por tag.
 - Quatro estão em `.github/workflows/ci.yml` e `golden-set-rag.yml`, como
@@ -177,7 +177,7 @@ o levantou, no vault — a régua que o `docs/reference/brb.md` já enuncia.
 - **Não estende para assinatura.** Digest é integridade do que se pegou;
   procedência é o `BRB-005`, cuja metade aberta (o proxy verificar a assinatura
   do manifesto) foi medida e recusada com número
-  ([RN-525](../business-rules.md#rn-525)).
+  ([RN-525](../business-rules/produto.md#rn-525)).
 - **Não cobre `deploy/k8s/helm/otel-collector-values.yaml`**, onde `image:` abre
   um mapa com `repository:` e nenhuma tag: quem escolhe a tag ali é o chart, e
   pinar exigiria decidir também a versão do chart. Fica DECLARADO, não coberto.

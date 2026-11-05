@@ -67,8 +67,8 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
    `require_approval` 换成 `auto_approve`，**并且仅针对一组声明的读取和构建动词**——与今天 `DEV_TERMINAL_ALLOW_PATTERNS` 同一精神。在项目文件夹中并不会让 `curl … | sh` 变得安全。网络出站、安装软件包以及集合之外的动词继续需要请求。
 
 4. **`deny` 继续获胜，始终且最先。** 范围永远不会推翻 `deny`，也不会推翻内置模式，或两个上限（受保护分支上的合并和 `instruction_patch`），它们保持不动
-   （[RN-006](../business-rules.md#rn-006)、
-   [RN-007](../business-rules.md#rn-007)）。
+   （[RN-006](../business-rules/api.md#rn-006)、
+   [RN-007](../business-rules/api.md#rn-007)）。
 
 5. **范围之外是 `require_approval`，而不是 `deny`。** agent 可能有正当理由去看外面；做决定的仍然是用户。改变的是这变成了少见的例外，而不是常规。
 
@@ -102,9 +102,9 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ## 参考 {#referências}
 
 - [ADR 0052](0052-dev-agent-espera-aprovacao-no-meio-do-laco.md)——agent 等待决定而不是烧掉迭代；本 ADR 针对的是有那么多决定要等的原因。
-- [RN-004](../business-rules.md#rn-004)、[RN-005](../business-rules.md#rn-005)、
-  [RN-068](../business-rules/custo.md#rn-068)、
-  [RN-073](../business-rules/custo.md#rn-073)。
+- [RN-004](../business-rules/api.md#rn-004)、[RN-005](../business-rules/api.md#rn-005)、
+  [RN-068](../business-rules/api.md#rn-068)、
+  [RN-073](../business-rules/engine.md#rn-073)。
 - `apps/api/src/domain/actions/decide.ts`、
   `apps/api/src/domain/actions/command-matcher.ts`、
   `apps/api/src/domain/actions/dev-terminal-patterns.ts`、

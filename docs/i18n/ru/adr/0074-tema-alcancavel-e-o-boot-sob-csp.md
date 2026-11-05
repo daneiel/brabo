@@ -212,5 +212,5 @@ handoff.
   (намерение — да, механизм — нет).
 - [0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md) — политика CSP, которая делает встроенный
   скрипт невозможным.
-- [RN-182](../business-rules/autenticacao.md#rn-182), [RN-183](../business-rules/autenticacao.md#rn-183),
-  [RN-184](../business-rules/autenticacao.md#rn-184), [RN-185](../business-rules/autenticacao.md#rn-185).
+- [RN-182](../business-rules/web.md#rn-182), [RN-183](../business-rules/web.md#rn-183),
+  [RN-184](../business-rules/web.md#rn-184), [RN-185](../business-rules/web.md#rn-185).

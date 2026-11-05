@@ -123,7 +123,7 @@ incorretos” 的播报会开始包含 “a senha antiga não foi migrada”，�
 
 文案从 `E-mail ou senha inválidos.` 改为 `E-mail ou senha incorretos.`。403 的情况
 （`Confirme seu e-mail…`）仍然有区别，正如 ADR 0032 和
-[RN-032](../business-rules/autenticacao.md#rn-032) 所要求的：统一性存在于“不存在”、“密码错误”和
+[RN-032](../business-rules/api.md#rn-032) 所要求的：统一性存在于“不存在”、“密码错误”和
 “账户被锁定”之间——而不包括“邮箱未验证”，后者只有在密码被证明**之后**才可达。
 
 ### 6. 页脚中的真实版本，以及原本不存在的链路 {#6-a-versão-real-no-rodapé-e-a-cadeia-que-não-existia}

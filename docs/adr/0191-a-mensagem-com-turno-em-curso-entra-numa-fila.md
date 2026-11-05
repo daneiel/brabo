@@ -8,7 +8,7 @@ MENSAGEM do usuário, a recusa síncrona `turno_em_andamento` do
 aceite imediato que ele decidiu continua valendo, e a recusa nomeada continua
 valendo para os comandos que não são fala (revisão de história do PO,
 prontidão do Criativo, oferta de handoff do Arquiteto). Regra:
-[RN-673](../business-rules.md#rn-673).
+[RN-673](../business-rules/engine.md#rn-673).
 
 ## Context
 

@@ -13,7 +13,7 @@ BOTH directions — up and down.
 
 This was discovered by the review of #444, which closed the role gate of the
 Members section, and is recorded in
-[RN-471](../business-rules.md#rn-471). The finding has two halves. The first is
+[RN-471](../business-rules/web.md#rn-471). The finding has two halves. The first is
 documentary: FOUR places promised the opposite — "the EFFECTIVE role is the
 higher of this one and what the person already has in the workspace",
 "associating someone as `viewer` here doesn't downgrade a workspace `owner`" —

@@ -31,7 +31,7 @@ Este ADR é essa próxima pessoa, e o custo previsto foi exatamente o cobrado.
 (`@Delete(':projectId/members/:userId')`, `@RequireRole('maintainer')`) chamava
 com os dois parâmetros de rota, sem `@CurrentUser()`. Como
 `ResolveEffectiveRoleUseCase.forProject` é `projectRole ?? workspaceRole`
-([RN-471](../business-rules.md#rn-471)), apagar a linha de projeto não apaga um
+([RN-471](../business-rules/web.md#rn-471)), apagar a linha de projeto não apaga um
 papel: ela TROCA o papel efetivo pelo segundo termo. Quando o papel de
 workspace é menor, o efeito líquido é o rebaixamento que o teto 2 existe para
 impedir, com a mesma irreversibilidade — voltar é `POST :projectId/members`,
@@ -133,7 +133,7 @@ mesmo desfecho que o teto 2 já produzia pelo `add`.
 
 **A tela continua oferecendo o botão que a api recusa, e a recusa aparece.**
 `MembersSection.handleRemove` já tem `try/catch` com `mensagemDaApi`
-([RN-471](../business-rules.md#rn-471)), então a frase da api chega ao toast
+([RN-471](../business-rules/web.md#rn-471)), então a frase da api chega ao toast
 sem uma linha de web. Diferente do teto 1, este gate É calculável no cliente
 — `userIdDaSessao()` e o papel efetivo estão lá —, mas calcular só ele
 produziria um botão honesto sobre uma recusa e calado sobre a outra, que é

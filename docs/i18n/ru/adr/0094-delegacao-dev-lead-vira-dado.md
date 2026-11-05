@@ -85,7 +85,7 @@ engine, здесь получаемого через `SessionEventRepository.lis
 начинает работать (его обязательный вход в `docs/fluxo.yml`), — делегирование НЕ
 записывается с выдуманным id. `AcceptParallelizationUseCase` логирует
 неожиданное состояние через `Logger.error` и возвращается, по тому же уроку
-[RN-059](../business-rules/custo.md#rn-059): никогда не тихий сбой, но и
+[RN-059](../business-rules/engine.md#rn-059): никогда не тихий сбой, но и
 никогда не изображение оправдания, которого нет.
 
 ### Сбой записи не обрушивает включение {#falha-ao-registrar-não-derruba-a-ativação}
@@ -169,7 +169,7 @@ síncrona, numa rodada só»).
   (`recordDevDelegation`)
 - `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`
 - `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`
-- [RN-404](../business-rules.md#rn-404) (делегирование Dev Lead → dev)
+- [RN-404](../business-rules/api.md#rn-404) (делегирование Dev Lead → dev)
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — пункт 5,
   отсечение, отменённое здесь
 - [ADR 0038](0038-hierarquia-de-agentes.md) — исходный дизайн

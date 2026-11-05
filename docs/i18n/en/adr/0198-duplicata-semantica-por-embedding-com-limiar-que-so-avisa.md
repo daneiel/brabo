@@ -15,8 +15,8 @@ its own row). Opens ONE exception to the metering cut of
 the cut still holds for RAG indexing and search
 ([ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md)); only this check now
 records `token_usage`. Closes the half that
-[RN-080](../business-rules/custo.md#rn-080) and
-[RN-081](../business-rules/custo.md#rn-081) declared out of reach, without
+[RN-080](../business-rules/engine.md#rn-080) and
+[RN-081](../business-rules/api.md#rn-081) declared out of reach, without
 changing either: the EXACT duplicate is still refused.
 
 ## Context
@@ -110,7 +110,7 @@ engine only passes it on. The same check serves both types.
 the title ("Saudação com nome" × "Quem chama pode se identificar", RN-080's
 example) is not compared. A warning lost to timeout is stated, but the check is
 not redone. And the budget with `policy = 'block'`
-([RN-019](../business-rules/custo.md#rn-019)) is not checked BEFORE this call:
+([RN-019](../business-rules/api.md#rn-019)) is not checked BEFORE this call:
 the row adds to spending and may cross the thresholds, but the check is not
 refused for an exceeded budget — it blocks nothing, and with local Ollama the
 recorded cost is 0. If a paid embedding provider comes in, that choice is back on

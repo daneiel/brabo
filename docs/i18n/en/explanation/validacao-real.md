@@ -32,7 +32,7 @@ spending a cent** — it's the `--ate backlog` phase.
 | remote adoption (real `getRepo`) | `origin: adopted`, default branch `main` |
 | dry-run plan | 6 mutations, 6 diagnostics, **null decision** |
 | repository untouched until the decision | verified via the API: **zero branches, zero content** |
-| re-adoption converges | 6 mutations on the 1st pass, **3 on the 2nd** ([RN-046](../business-rules/custo.md#rn-046)) |
+| re-adoption converges | 6 mutations on the 1st pass, **3 on the 2nd** ([RN-046](../business-rules/api.md#rn-046)) |
 | single story becomes `draft` + proposed | yes, no automatic promotion |
 | `claimNext` before promotion | `null` — nothing claimable |
 | promotion | recorded with the **user** as the actor |
@@ -47,7 +47,7 @@ The bootstrap stopped at `protect_branches` with
 repository on the free plan. It's exactly the scenario Finding D
 documented, now observed outside a test.
 
-And [RN-078](../business-rules/custo.md#rn-078)'s premise was confirmed: checking
+And [RN-078](../business-rules/api.md#rn-078)'s premise was confirmed: checking
 the repository right after, `dev`, `main`, and `qa` existed and the files
 were committed. It's the **last** step, and the only one whose failure
 leaves a usable repository. The script recognizes the failure and moves on,
@@ -260,7 +260,7 @@ does the pushing, and it injects the owner's credential (RN-076).
 
 ## The sixth execution: the PR opened on GitHub
 
-With [RN-082](../business-rules/custo.md#rn-082) in place, the chain closed all
+With [RN-082](../business-rules/api.md#rn-082) in place, the chain closed all
 the way to the PR:
 
 > **PR #1 — "Public greeting route — Expose GET /greeting"**,
@@ -390,7 +390,7 @@ cover, relative to its
 The first ten runs used **one module**. That's enough to prove the chain,
 and not enough to prove parallelism: with a single story, the Dev Lead
 **refuses** to parallelize — "they'd collide on the same files" — and it's
-right. The cap from [RN-083](../business-rules/custo.md#rn-083) was never
+right. The cap from [RN-083](../business-rules/api.md#rn-083) was never
 actually consulted by real work.
 
 Then came three rounds with `--modulos 2` (one story in `api`, one in
@@ -449,7 +449,7 @@ it stops.
 
 Honesty about scope, as with its sibling:
 
-- **Merge.** Still out by design ([RN-014](../business-rules.md#rn-014)),
+- **Merge.** Still out by design ([RN-014](../business-rules/api.md#rn-014)),
   and will remain so: whoever presses the button on a protected branch is
   you.
 - **The other five providers.** Only OpenRouter ran with a real credential;

@@ -1,0 +1,77 @@
+version: 1
+
+rules:
+  # A política de branches é executada por workflow. Mudar o mecanismo sem
+  # mudar a fonte faz a doc descrever um sistema que não existe — e aqui isso é
+  # pior que o normal, porque a política é o que as pessoas leem quando o CI as
+  # reprova.
+  - id: politica-de-branches
+    watch:
+      - ".github/workflows/pr-police.yml"
+      - ".github/workflows/approval-ladder.yml"
+      - ".github/workflows/promote.yml"
+      - ".github/workflows/promotion-check.yml"
+      - ".github/workflows/tag-release.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/backmerge-gate.yml"
+      # Os scripts de `scripts/ci/` que SÃO a política: os que declaram no
+      # docblock que a fonte deles é `branching-policy.md` (pr-police,
+      # approval-ladder, promote, promotion-check, tag-release, version,
+      # archive-branch, os quatro do gate, alarme-de-tag e os dois do
+      # Dependabot), e o spec de cada um. LISTA DE PERMITIDOS, e não mais o
+      # extglob `scripts/ci/!(…)*` que excluía caso a caso: aquele casava com
+      # todo spec novo de `scripts/ci/` — onde moram os testes que leem o
+      # repositório inteiro como texto —, e cada um que nascia sem nada a ver
+      # com degrau, destino ou versão (coverage-floor, actions-pinadas, as flags
+      # do compose, a marca da RN-558, o teto ocioso, onze até a AT-206) virava
+      # `docs-not-needed` ou mais uma exclusão. Regra que cobra o que não faz
+      # sentido ensina a usar o escape hatch por reflexo.
+      #
+      # O preço de trocar exclusão por inclusão era perder o "falha fechado"
+      # (script de política NOVO passaria sem cobrar a doc), e ele NÃO é pago:
+      # `scripts/docs/politica-de-branches.spec.ts` deriva o conjunto do
+      # próprio repositório — todo arquivo de `scripts/ci/` que cita
+      # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
+      # lista divergir. Script de política novo declara a fonte no cabeçalho,
+      # como os catorze, e o spec o cobra aqui.
+      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
+      # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
+      # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
+      # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
+    docs:
+      - "scripts/ci/docs/explanation/branching-policy.md"
+    severity: block
+    note: "Regra nova no mecanismo exige a regra escrita na política."
+
+  - id: checks-e-rulesets
+    watch:
+      - ".github/workflows/*.yml"
+    docs:
+      - "scripts/ci/docs/reference/rulesets.md"
+    severity: warn
+    note: "Nome de job ou gatilho novo muda a lista de checks required."
+
+  # A cadeia de suprimentos do CI é a única coisa que decide QUE CÓDIGO DE
+  # TERCEIRO roda no runner que tem o checkout e, no release, as credenciais.
+  # A regra dela morava só em comentário de workflow — e foi exatamente por
+  # isso que ficou meio feita por meses (o #408 pinou o ci.yml e só ele).
+  #
+  # Vigia o CHECK, não os workflows: mudar a regra de pin exige mudar a doc;
+  # trocar um SHA por outro, não. `.github/workflows/*.yml` já é vigiado por
+  # `checks-e-rulesets`, e repetir o glob aqui cobraria esta página em toda
+  # atualização de action.
+  #
+  # `imagens-pinadas.ts` entra pelo MESMO critério, e o de terceiro que ele
+  # cobre é mais amplo que o do irmão: além do runner do CI (as imagens de
+  # `services:`), ele decide o que entra na imagem que publicamos no GHCR (as
+  # bases dos `FROM`) e o que sobe ao lado do Postgres de quem instalou o
+  # produto (o `docker-compose.install.yml`).
+  - id: cadeia-de-suprimentos-do-ci
+    watch:
+      - "scripts/ci/actions-pinadas.ts"
+      - "scripts/ci/imagens-pinadas.ts"
+      - "scripts/ci/imagens-do-compose.ts"
+    docs:
+      - "scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md"
+    severity: block
+    note: "Regra nova sobre o que pode entrar no runner, na imagem publicada ou na instalação exige a regra escrita."

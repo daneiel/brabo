@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **Accepted.** 2026-10-03 (AT-406; решение владельца от 03.10: "PO e usuário" —
 PO и вкладка Backlog редактируют и архивируют историю `draft` без задачи в
-выполнении). Правило в [RN-727](../business-rules.md#rn-727).
+выполнении). Правило в [RN-727](../business-rules/api.md#rn-727).
 
 ## Контекст {#context}
 

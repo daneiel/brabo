@@ -40,4 +40,4 @@ sobrescrevendo a decisão do Arquiteto. O container Node subiu sem rede, e o
   §4 pedia sai do caminho por decisão do dono.
 - A versão gravada pela Infra passa a repetir a rede do Arquiteto em vez de
   rebaixá-la; o histórico do artefato fica coerente.
-- Regra: [RN-723](../business-rules.md#rn-723).
+- Regra: [RN-723](../business-rules/engine.md#rn-723).

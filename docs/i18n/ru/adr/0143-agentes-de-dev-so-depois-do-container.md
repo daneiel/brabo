@@ -157,7 +157,7 @@ setup в каждом (`Engine.DataCase.container_running!/1`), а не моду
 то же `{:wake, :became_claimable}`.
 
 **ЗАРЕГИСТРИРОВАННЫЙ `running` по-прежнему не является НАБЛЮДАЕМЫМ `running`**
-([RN-486](../business-rules.md#rn-486)). Контейнер, умерший извне,
+([RN-486](../business-rules/api.md#rn-486)). Контейнер, умерший извне,
 всё ещё проходит эту защиту; агент делает claim, и сбой проявляется при первом
 вызове broker, как обычный сбой команды. Слияние двух потребовало бы
 сетевого вызова на каждый claim, а RN-486 явно отказывается их сливать.
@@ -172,4 +172,4 @@ setup в каждом (`Engine.DataCase.container_running!/1`), а не моду
   стал действовать во всех трёх режимах
 - [ADR 0137](0137-o-runner-sobe-o-container-do-projeto.md) — `mounted`/`runner`,
   поднимающие контейнер на машине пользователя
-- [RN-502](../business-rules.md#rn-502)
+- [RN-502](../business-rules/engine.md#rn-502)

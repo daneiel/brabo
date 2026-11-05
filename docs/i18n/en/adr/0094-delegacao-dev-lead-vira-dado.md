@@ -90,7 +90,7 @@ the Dev Lead operates (a mandatory input of his in `docs/fluxo.yml`) —,
 the delegation is NOT recorded with a made-up id.
 `AcceptParallelizationUseCase` logs the unexpected state with
 `Logger.error` and returns, by the same lesson as
-[RN-059](../business-rules/custo.md#rn-059): never fail silently, but also never
+[RN-059](../business-rules/engine.md#rn-059): never fail silently, but also never
 fake a justification that doesn't exist.
 
 ### A failure to record doesn't roll back the activation
@@ -176,7 +176,7 @@ would be worse than the gap this ADR closes.
   (`recordDevDelegation`)
 - `apps/api/src/application/use-cases/execution/record-delegation.use-case.ts`
 - `apps/api/test/application/use-cases/execution/accept-parallelization.use-case.spec.ts`
-- [RN-404](../business-rules.md#rn-404) (Dev Lead → dev delegation)
+- [RN-404](../business-rules/api.md#rn-404) (Dev Lead → dev delegation)
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — item 5, cut
   revoked here
 - [ADR 0038](0038-hierarquia-de-agentes.md) — original design of

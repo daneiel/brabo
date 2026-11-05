@@ -23,12 +23,12 @@ agente é raro; o caminho comum é chegar pelo tema.
 **Sessão** — uma conversa com efeito, do início ao fechamento. É a unidade de
 trabalho, de custo e de rastreio: uma sessão é um trace raiz na
 observabilidade e um escopo de orçamento. Passa por cinco estados
-([RN-001](business-rules.md#rn-001)).
+([RN-001](business-rules/api.md#rn-001)).
 
 **Event log** — a tabela `session_events`. Append-only: nunca há `UPDATE`.
 Toda linha tem um `seq` contínuo dentro da sessão. É a fonte de verdade do que
 aconteceu, e o que torna rastreável a evidência do Psicólogo
-([RN-002](business-rules.md#rn-002)).
+([RN-002](business-rules/api.md#rn-002)).
 
 **`seq`** — o número de ordem do evento dentro da sessão. Denso: começa em 1
 e não tem buracos. Buraco no `seq` é corrupção, e a restauração falha por
@@ -57,7 +57,7 @@ canônicos hoje, definidos em `apps/engine/lib/engine/harness/agents.ex`:
 |---|---|
 | `criativo` | conduz a ideação com o usuário e emite regras de negócio |
 | `po` | transforma o brief em backlog (épicos, histórias, tarefas) com DoD e DoR |
-| `arquiteto` | decisões técnicas (ADRs), o mapa de módulos e o contrato entre módulos ([RN-684](business-rules.md#rn-684)) |
+| `arquiteto` | decisões técnicas (ADRs), o mapa de módulos e o contrato entre módulos ([RN-684](business-rules/api.md#rn-684)) |
 | `dev-backend` · `dev-frontend` | implementam; rodam num worktree isolado |
 | `infra` | provisionamento, deploy e ambientes — **proativo**, não executor |
 | `qa` | gate semântico: testes e critérios de aceite |
@@ -109,13 +109,13 @@ iterações; esgotado, o agente termina com um artefato de bloqueio.
 conversacionais escopados à sessão (Criativo, PO, Arquiteto, Dev Lead, UX
 Designer, Staff — desde o ADR 0088, dormente para disparo automático, mas
 acionável por handoff manual — e, desde a
-[RN-617](business-rules.md#rn-617), o Infra Lead): uma chamada em streaming ao
+[RN-617](business-rules/engine.md#rn-617), o Infra Lead): uma chamada em streaming ao
 LLM mais o laço de ferramentas que ela dispara. Desde a
-[RN-122](business-rules.md#rn-122) ele roda numa `Task` supervisionada
+[RN-122](business-rules/engine.md#rn-122) ele roda numa `Task` supervisionada
 (`Engine.Agents.TurnoAssincrono`), não mais dentro do `handle_call` que recebeu
 a mensagem — é isso que deixa o botão **"Parar"** do composer cancelar o turno
 de verdade (mata a task, corta a conexão com a api) em vez de só parar a
-renderização no cliente. Desde a [RN-578](business-rules.md#rn-578) o comando
+renderização no cliente. Desde a [RN-578](business-rules/engine.md#rn-578) o comando
 que inicia um turno é respondido no ACEITE: o clique volta assim que a Task
 sobe, e o fim do turno chega pelo canal da sessão e pelo event log, nunca por
 essa resposta HTTP. Cada um tem teto PRÓPRIO de voltas do laço (Criativo e PO
@@ -125,10 +125,10 @@ no servidor do próprio agente, não o teto do `ToolLoop`
 Staff é o único sem `kickoff/1`: fica ocioso até a primeira `user_message`,
 porque não há artefato de sessão de onde sintetizar uma abertura. Dos quatro
 que existiam na época, o Criativo foi o último a ganhar o laço, pela
-[RN-163](business-rules/autenticacao.md#rn-163): até ali ele chamava o modelo
+[RN-163](business-rules/engine.md#rn-163): até ali ele chamava o modelo
 uma vez por turno e prometia uma correção que nunca acontecia. Esse teto
 próprio também deixou de ser calado: esgotado, emite o MESMO
-`toolloop.limit_reached` ([RN-166](business-rules/autenticacao.md#rn-166)),
+`toolloop.limit_reached` ([RN-166](business-rules/engine.md#rn-166)),
 porque é o mesmo fato e quem lê o event log não deveria precisar de um segundo
 nome para ele.
 
@@ -136,7 +136,7 @@ nome para ele.
 conversacional reconstrói o histórico a partir do event log quando sobe sobre
 uma sessão que já tem conversa (reinício, ou o PO assumindo depois do
 Criativo). Um caminho só para os sete, `Engine.Agents.Reidratacao`
-([RN-580](business-rules.md#rn-580)): lê a **cauda** (os últimos 200 eventos,
+([RN-580](business-rules/engine.md#rn-580)): lê a **cauda** (os últimos 200 eventos,
 não os primeiros), traz de volta as perguntas estruturadas e as chamadas de
 ferramenta do próprio agente, e, quando a conversa não cabe, abre com uma
 mensagem de sistema que diz quantos eventos anteriores ficaram de fora.
@@ -151,7 +151,7 @@ fechados (`note`, `business_rule`, `product_brief`, `decision_record`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): campo faltando
 reprova a emissão. É como o veredito de um gate vira dado, não texto.
 `business_rule` reprova por um segundo motivo: título já registrado no projeto
-([RN-080](business-rules/custo.md#rn-080)) — como artefato é evento imutável,
+([RN-080](business-rules/engine.md#rn-080)) — como artefato é evento imutável,
 a emissão é o único momento em que dá para recusar uma duplicata.
 
 **Worktree** — `git worktree`: uma cópia de trabalho isolada por dev agent,
@@ -163,7 +163,7 @@ precisa lê-lo.
 **Modo do workspace** — onde o código de um projeto mora no disco, escolhido
 na criação e **congelado** depois
 ([ADR 0072](adr/0072-projeto-local-ou-container.md),
-[RN-169](business-rules/autenticacao.md#rn-169)). `container` é a pasta
+[RN-169](business-rules/api.md#rn-169)). `container` é a pasta
 gerenciada sob `PROJECT_WORKSPACES_ROOT` — o padrão e o comportamento de
 sempre; `local` é um caminho absoluto do próprio usuário, que só funciona se
 estiver montado no container. Não confunda com o **workspace** do IAM (o
@@ -172,14 +172,14 @@ modo é sobre disco.
 
 **Estados do dev agent** — `working` (implementando), `awaiting_approval`
 (propôs commit/push/PR e há aprovação pendente — **nenhum gate abre sem PR**,
-[RN-050](business-rules/custo.md#rn-050)), `awaiting_gate` (PR aberta,
+[RN-050](business-rules/engine.md#rn-050)), `awaiting_gate` (PR aberta,
 esperando o veredito), `idle` (sem tarefa pegável, processo vivo) e
 `idle_tripped` (circuit breaker disparado, só sai por rearme explícito —
-[RN-047](business-rules/custo.md#rn-047)). Os três primeiros seguram o
+[RN-047](business-rules/engine.md#rn-047)). Os três primeiros seguram o
 worktree.
 
 `idle` cobre **três** motivos diferentes, de propósito: a fila estava vazia, o
-claim falhou e — desde a [RN-502](business-rules.md#rn-502) — o projeto não
+claim falhou e — desde a [RN-502](business-rules/engine.md#rn-502) — o projeto não
 tem container REGISTRADO `running`, o que para o claim antes de acontecer. Não
 há um quarto status para esse último: `idle` é o único estado que um wake
 ainda resgata, e toda guarda de `handle_info/2` é chaveada nele. O que
@@ -192,7 +192,7 @@ distingue os três é o EVENTO (`dev.idle`, `dev.error`,
 
 **`proposed_action`** — toda ação com efeito externo (comando de terminal,
 commit, push, PR, merge, gasto) **nasce** aqui, nunca executa direto.
-São 23 tipos e 6 estados ([RN-003](business-rules.md#rn-003)).
+São 23 tipos e 6 estados ([RN-003](business-rules/api.md#rn-003)).
 
 **`permissions.json`** — o arquivo de política do projeto. Casa um padrão de
 comando (estruturado, não substring) e devolve `allow`, `deny` ou
@@ -200,12 +200,12 @@ comando (estruturado, não substring) e devolve `allow`, `deny` ou
 
 **`deny` vence `allow`** — a regra que atravessa o sistema inteiro. A decisão
 avalia IAM → `agent_autonomy` → `permissions.json`, e `deny` em qualquer etapa
-devolve na hora ([RN-004](business-rules.md#rn-004)).
+devolve na hora ([RN-004](business-rules/api.md#rn-004)).
 
 **Teto** — um rebaixamento aplicado **depois** da política inteira, que
 nenhuma configuração consegue promover. São dois: merge em branch protegida
-([RN-006](business-rules.md#rn-006)) e instruction patch
-([RN-007](business-rules.md#rn-007)). Teto é a diferença entre "não por
+([RN-006](business-rules/api.md#rn-006)) e instruction patch
+([RN-007](business-rules/api.md#rn-007)). Teto é a diferença entre "não por
 padrão" e "não".
 
 **`agent_autonomy`** — o modo de operação de um agente no projeto: `manual`
@@ -225,7 +225,7 @@ domínio
 **Gate** — uma passagem obrigatória entre a PR do dev e o merge. Dois: **QA**
 (semântico, roda LLM) e **SecOps** (determinístico, roda scanner). A ordem é
 imutável: `awaiting_qa → awaiting_secops → awaiting_user`
-([RN-014](business-rules.md#rn-014)).
+([RN-014](business-rules/api.md#rn-014)).
 
 **`awaiting_user`** — o estado terminal da máquina de gates. Terminal de
 propósito: o sistema nunca mergeia.
@@ -235,7 +235,7 @@ branch**. Não abre PR nova.
 
 **Ciclo K** — o teto de correções por tarefa. Cada devolução consome uma
 rodada; esgotado, a tarefa é bloqueada com motivo em vez de girar para sempre.
-O subagente herda o teto do agente base ([RN-015](business-rules.md#rn-015)).
+O subagente herda o teto do agente base ([RN-015](business-rules/api.md#rn-015)).
 
 **`task_blocked`** — o artefato emitido quando uma tarefa trava: leva `reason`
 e `diagnosis`. É registro legível de falha, não silêncio.
@@ -246,12 +246,12 @@ sem atividade por mais de 2 horas. O `GateRescuer` não o retoma mais sozinho
 um gesto humano o retoma — hoje `GateRescuer.retomar_estacionado/3` pelo
 `bin/engine rpc` do operador
 ([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md),
-[RN-722](business-rules.md#rn-722)). Ciclo cuja sessão tem aprovação pendente
+[RN-722](business-rules/engine.md#rn-722)). Ciclo cuja sessão tem aprovação pendente
 de um ator do gate também não é reiniciado: ele está esperando você. Ciclo
 `in_progress` RECENTE que o próprio reinício do engine matou não é estacionado
 nem fica esperando o limiar de 15 minutos: no boot, quando nenhum nó do
 cluster o tem em voo, o resgatador grava `gate.interrupted` e o reinicia na
-hora ([RN-823](business-rules.md#rn-823)).
+hora ([RN-823](business-rules/engine.md#rn-823)).
 
 **Gate `implementavel`** — uma passagem PRÉ-DEV, antes de existir dev agent ou
 worktree: o Dev Lead avalia se uma história é implementável a partir da
@@ -265,7 +265,7 @@ de teste do QA-estratégia). `dono: dev-lead`, `aprovacao_humana: true`,
 separada do veredito da PR): produz o **plano de teste** (síntese, critérios
 executáveis, estratégia de automação) para a ENTREGA de UMA tarefa, DEPOIS de o
 dev agent entregar — o primeiro passo da revisão `qa-verificada`, como entrada
-dela, nunca um veredito próprio ([RN-674](business-rules.md#rn-674),
+dela, nunca um veredito próprio ([RN-674](business-rules/engine.md#rn-674),
 [ADR 0192](adr/0192-plano-de-teste-depois-da-entrega.md)). Nunca suspende —
 nenhuma das ferramentas dele passa pelo pipeline de ações.
 
@@ -276,7 +276,7 @@ worktree, sem `task_id`, antes de existir código ou PR. Nunca aprova nem
 reprova nada; termina emitindo `artifact.threat_model` e o passando ao
 arquiteto, ao Dev Lead e à Infra. Disparado pelo `assess_implementability` do
 Dev Lead, em paralelo, uma vez por história
-([RN-360](business-rules.md#rn-360), [RN-539](business-rules.md#rn-539),
+([RN-360](business-rules/engine.md#rn-360), [RN-539](business-rules/engine.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ---
@@ -285,26 +285,26 @@ Dev Lead, em paralelo, uma vez por história
 
 **Regra de negócio (RN)** — uma unidade emitida pelo Criativo e ligada a
 histórias. Regra sem história é **lacuna de cobertura**, não erro
-([RN-011](business-rules.md#rn-011)).
+([RN-011](business-rules/api.md#rn-011)).
 
 **História** — quatro estados; sair de `draft` exige DoD, DoR, pelo menos um
 requisito funcional e pelo menos uma regra ligada
-([RN-010](business-rules.md#rn-010)).
+([RN-010](business-rules/api.md#rn-010)).
 
 **DoD / DoR** — Definition of Done e Definition of Ready. Aqui não são
 cerimônia: sem as duas, a história não muda de estado.
 
 **`module_map`** — o mapa de módulos do sistema, do Arquiteto. Define quantos
 dev agents existem (um por módulo) e a que módulo cada história pertence. Não
-pode ter ciclo ([RN-013](business-rules.md#rn-013)); módulo removido rebaixa
-as histórias que dependiam dele ([RN-012](business-rules.md#rn-012)).
+pode ter ciclo ([RN-013](business-rules/api.md#rn-013)); módulo removido rebaixa
+as histórias que dependiam dele ([RN-012](business-rules/produto.md#rn-012)).
 
 **Imagem do projeto (`artifact.project_image`)** — a decisão do Arquiteto sobre
 qual container roda o código do projeto: uma imagem OCI (tag explícita
 obrigatória, `latest` recusada), uma postura de rede (`none` por padrão,
 `egress` autorizada) e um teto de recursos. Versionada no event log, como o
 `module_map`. Enquanto ela não existe, o estado `sem_decisao` mantém a aba
-Código fechada ([RN-105](business-rules/autenticacao.md#rn-105)).
+Código fechada ([RN-105](business-rules/api.md#rn-105)).
 
 ---
 
@@ -314,29 +314,29 @@ Código fechada ([RN-105](business-rules/autenticacao.md#rn-105)).
 custo em micros, latência, modelo, agente. É **registro, não reembolso**.
 
 **Orçamento** — um teto de gasto com escopo exclusivo: projeto **ou** sessão,
-nunca os dois ([RN-017](business-rules/custo.md#rn-017)). Avisa em 70/90/100%
+nunca os dois ([RN-017](business-rules/api.md#rn-017)). Avisa em 70/90/100%
 sem repetir.
 
 **`policy`** — o comportamento do orçamento no teto: `block` recusa a chamada,
 `allow` só registra. Projeto em `allow` **não para sozinho** — é a causa mais
-comum de "o orçamento não segurou" ([RN-019](business-rules/custo.md#rn-019)).
+comum de "o orçamento não segurou" ([RN-019](business-rules/api.md#rn-019)).
 
 **Binding** — o vínculo entre um escopo e um modelo de LLM. Resolve em
 cascata: **sessão > agente > área > projeto > workspace**, o primeiro que
-existir ([RN-020](business-rules/custo.md#rn-020)). É por isso que dá para pôr
+existir ([RN-020](business-rules/api.md#rn-020)). É por isso que dá para pôr
 um modelo caro só no QA. `area` é o PADRÃO que um lead e seus subagentes
 compartilham, e o agente pode divergir dele
-([RN-102](business-rules/custo.md#rn-102)).
+([RN-102](business-rules/api.md#rn-102)).
 
 **Faceta de capability** — o que o **provider declara** sobre um modelo: lê
 imagem, gera imagem, faz thinking, aceita `tools`. Vem do catálogo remoto na
 hora do sync; `false` quer dizer "não declarou", nunca "não faz"
-([RN-056](business-rules/custo.md#rn-056)).
+([RN-056](business-rules/api.md#rn-056)).
 
 **Uso do modelo** — para que **este workspace** usa aquele modelo (`codigo`,
 `documentacao`, `analise`, `imagem`, `conversa`). É opinião do operador, não
 capability: nenhum catálogo publica "bom para código". Marcar um uso **não
-habilita** o modelo no seletor ([RN-057](business-rules/custo.md#rn-057)).
+habilita** o modelo no seletor ([RN-057](business-rules/api.md#rn-057)).
 
 ---
 
@@ -344,33 +344,33 @@ habilita** o modelo no seletor ([RN-057](business-rules/custo.md#rn-057)).
 
 **Hipótese** — a saída do Psicólogo: uma afirmação sobre o time com
 `evidenceEventIds` apontando para eventos reais da sessão analisada. Sem
-evidência válida ela não é gravada ([RN-021](business-rules.md#rn-021)).
+evidência válida ela não é gravada ([RN-021](business-rules/api.md#rn-021)).
 
 **Causa de término** — classificação determinística de por que algo falhou:
 `infra`, `modelo`, `código` ou `política`. Vem do motivo gravado, nunca do
-julgamento do LLM e nunca por eliminação ([RN-023](business-rules.md#rn-023)).
+julgamento do LLM e nunca por eliminação ([RN-023](business-rules/engine.md#rn-023)).
 
 **`proficiency_profile`** — o perfil de proficiência do usuário mantido pela
 Anamnese, por competência. Seis competências de processo, **fechadas** (`git`,
 `agile`, `arquitetura`, `testes`, `seguranca`, `infra`), mais as stacks
 técnicas derivadas do `module_map`. Nada fora do catálogo tem caminho de
-escrita ([RN-024](business-rules.md#rn-024)) — a Anamnese traça competência
+escrita ([RN-024](business-rules/api.md#rn-024)) — a Anamnese traça competência
 técnica, não a pessoa.
 
 **Sujeito elegível** — quem uma rodada da Anamnese pode perfilar: membro
 EFETIVO do projeto (a linha do projeto, senão a do workspace), fora do
 opt-out, com interação PRÓPRIA na janela. Sem ninguém, a rodada não faz
-chamada de LLM ([RN-680](business-rules.md#rn-680)).
+chamada de LLM ([RN-680](business-rules/engine.md#rn-680)).
 
 **Fato do perfil** (`FatoDoPerfil`) — uma hipótese do Psicólogo que a pessoa
 dona da sessão ACEITOU, projetada no grafo a partir de
 `psychologist.hypothesis_accepted` e entregue aos agentes que conversam com
-ela como mensagem de sistema efêmera ([RN-680](business-rules.md#rn-680)).
+ela como mensagem de sistema efêmera ([RN-680](business-rules/engine.md#rn-680)).
 
 **`instruction_patch`** — uma proposta versionada de mudar a instrução de um
-agente. Nunca auto-aprovável ([RN-007](business-rules.md#rn-007)); a negada
-não é reproposta ([RN-026](business-rules.md#rn-026)); o rollback cria versão
-nova em vez de apagar ([RN-027](business-rules.md#rn-027)).
+agente. Nunca auto-aprovável ([RN-007](business-rules/api.md#rn-007)); a negada
+não é reproposta ([RN-026](business-rules/api.md#rn-026)); o rollback cria versão
+nova em vez de apagar ([RN-027](business-rules/api.md#rn-027)).
 
 ---
 
@@ -381,11 +381,11 @@ GitLab implementam. Uma suíte de contrato só roda contra os três.
 
 **Capability** — declaração do que aquele provider suporta. Operação não
 suportada é recusada com erro explícito, nunca com falha silenciosa
-([RN-028](business-rules.md#rn-028)).
+([RN-028](business-rules/contracts.md#rn-028)).
 
 **Bootstrap de Gitflow** — os seis passos que preparam o repositório (branches
 permanentes, proteções, arquivos base). Idempotente e retomável: `skip` é
-sucesso ([RN-029](business-rules.md#rn-029)).
+sucesso ([RN-029](business-rules/api.md#rn-029)).
 
 **Envelope encryption** — todo segredo de usuário é cifrado com sua própria
 **DEK** (data encryption key), e a DEK é "embrulhada" pela

@@ -149,4 +149,4 @@ temptation to conflate the two real enough to warrant writing it down.
   pure predicate
 - `apps/api/src/domain/agents/agent-areas.ts` — `areaDo`, the pure
   membership resolver reused here
-- [RN-443](../business-rules.md#rn-443)
+- [RN-443](../business-rules/api.md#rn-443)

@@ -6,7 +6,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ## 状态 {#status}
 
-已接受——已在 backlog 的 Fase B 中实现并由测试证明（[RN-076](../business-rules/custo.md#rn-076)）。
+已接受——已在 backlog 的 Fase B 中实现并由测试证明（[RN-076](../business-rules/engine.md#rn-076)）。
 
 实现中的一个发现，记录下来因为它改变了问题的规模：**四个使用者中有两个从来不需要凭据**。`Engine.Gates.Diff` 和 `Engine.Harness.ProjectContext` 只使用默认分支的**名称**——它们在远程 provider 上停下，是一个返回超出它们所需内容的函数造成的附带损害。把 `default_branch/1` 与 `remoto_de_trabalho/1` 分开，就在没有任何 token 的情况下解锁了这两者。
 
@@ -44,7 +44,7 @@ token 以信封加密的方式加密存放在 `user_credentials` 中，主密钥
 
 这是最重要的决定，它是 [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) 的直接后果。
 
-显而易见的路径——`remote add origin https://x-access-token:TOKEN@github.com/…`——把凭据以**明文**写进**项目文件夹内部**。而 [RN-075](../business-rules/custo.md#rn-075) 刚刚给了 dev agent 在这个文件夹内**自动批准**的读取：一个 `cat .git/config` 就会在不经任何审批的情况下返回 token，而它会在下一个回合中，在循环的历史里，传到 LLM 的 provider。
+显而易见的路径——`remote add origin https://x-access-token:TOKEN@github.com/…`——把凭据以**明文**写进**项目文件夹内部**。而 [RN-075](../business-rules/api.md#rn-075) 刚刚给了 dev agent 在这个文件夹内**自动批准**的读取：一个 `cat .git/config` 就会在不经任何审批的情况下返回 token，而它会在下一个回合中，在循环的历史里，传到 LLM 的 provider。
 
 路径范围防止 agent 读取项目**之外**的东西。它不防止——也无法防止——产品自己放在**里面**的密钥。
 
@@ -52,7 +52,7 @@ token 以信封加密的方式加密存放在 `user_credentials` 中，主密钥
 
 ### 3. 凭据是 workspace **OWNER** 的 {#3-a-credencial-é-a-do-owner-do-workspace}
 
-与 [RN-058](../business-rules/custo.md#rn-058) 对 LLM 密钥已经确立的规则相同，理由也相同：付费和授权的是 workspace 的所有者，而不是 agent，也不是打开会话的人。
+与 [RN-058](../business-rules/api.md#rn-058) 对 LLM 密钥已经确立的规则相同，理由也相同：付费和授权的是 workspace 的所有者，而不是 agent，也不是打开会话的人。
 
 ### 4. `provider: local` 保持不变 {#4-provider-local-continua-igual}
 
@@ -84,5 +84,5 @@ token 以信封加密的方式加密存放在 `user_credentials` 中，主密钥
 
 - [achados-execucao-real.md](../explanation/achados-execucao-real.md) 的发现 N，[backlog](../explanation/backlog.md) 的 Fase B。
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)——使决定 2 成为必需的范围。
-- [RN-058](../business-rules/custo.md#rn-058)——agent 花费的凭据属于谁。
+- [RN-058](../business-rules/api.md#rn-058)——agent 花费的凭据属于谁。
 - `apps/engine/lib/engine/projects/project_repository.ex`、`apps/engine/lib/engine/actions/workspace.ex`、`apps/engine/lib/engine/actions/git_executor.ex`。

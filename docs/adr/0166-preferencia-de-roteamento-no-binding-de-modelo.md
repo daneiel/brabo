@@ -9,13 +9,13 @@ de roteamento é CONFIGURÁVEL POR BINDING"*. Estende o
 [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 (o que produziu o número vai congelado na linha de `token_usage`). Não edita
 nenhum dos dois. A regra que nasce daqui é a
-[RN-583](../business-rules/custo.md#rn-583).
+[RN-583](../business-rules/api.md#rn-583).
 
 ## Context
 
 Medido no `token_usage` da instalação v6.1.0 (2026-09-14): 24 chamadas de
 `~deepseek/deepseek-v4-flash-latest` via `openrouter`. O `upstream_provider`
-([RN-042](../business-rules/custo.md#rn-042)) já dizia quem serviu cada uma:
+([RN-042](../business-rules/api.md#rn-042)) já dizia quem serviu cada uma:
 **Relace em 23**, com latência média de 69,5 s (entre 32 e 47 tok/s), e
 **Baidu em 1**, com 37,8 s (~190 tok/s). O OpenRouter escolhe o upstream por
 um balanceamento que privilegia PREÇO quando o pedido não diz nada — e o
@@ -50,7 +50,7 @@ preferência" de outro. Três motivos:
   `throughput` do projeto, ou o `latency` do workspace aplicado a um modelo que
   o dono do workspace nunca viu.
 - **Uma cascata independente exigiria uma segunda cadeia na tela.** A
-  [RN-470](../business-rules/custo.md#rn-470) fez a cadeia do MODELO visível
+  [RN-470](../business-rules/web.md#rn-470) fez a cadeia do MODELO visível
   nó a nó; duas cadeias que pousam em níveis diferentes na mesma linha seriam
   exatamente o estado que a tela não sabe explicar.
 - **O nível que a cascata PULA leva a preferência junto.** Um binding pulado
@@ -121,7 +121,7 @@ entidade) e o binding é decisão de um escopo. Sem papel (só autenticação), 
 
 O controle mora onde o binding é editado — a tabela de agentes e a seção de
 áreas em Configurações —, com o mínimo de papel do ENDPOINT
-([RN-102](../business-rules/custo.md#rn-102)): `developer` no agente,
+([RN-102](../business-rules/api.md#rn-102)): `developer` no agente,
 `maintainer` na área. Só é editável na linha que TEM binding próprio; na linha
 que herda, diz de qual nível veio o critério vigente. Modelo cujo provider não
 tem a capability não ganha opção — ganha a frase do porquê.

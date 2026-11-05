@@ -57,7 +57,7 @@ ou apaga evidência custa mais tarde do que hoje; um cosmético custa igual.
 [validacao-real.md](validacao-real.md).
 
 Destes, **cinco fecharam**: W, Y, AA, AB e AC na própria 13b, e X pela FASE 14d
-([RN-085](../business-rules/custo.md#rn-085)) — o teto de iterações virou por TIPO de
+([RN-085](../business-rules/engine.md#rn-085)) — o teto de iterações virou por TIPO de
 agente, que era a forma que a triagem tinha proposto e a decisão de produto que
 faltava.
 
@@ -76,8 +76,8 @@ As letras de fase (A–H) e as de achado (B–V) colidem por herança das duas
 listas; onde houver ambiguidade o texto diz "achado".
 
 Dois itens saíram da lista de abertos desde a primeira triagem: **A**
-([RN-067](../business-rules/custo.md#rn-067)) e **M**
-([RN-066](../business-rules/custo.md#rn-066)), ambos fechados e confirmados em
+([RN-067](../business-rules/api.md#rn-067)) e **M**
+([RN-066](../business-rules/api.md#rn-066)), ambos fechados e confirmados em
 produção. E o **ADR 0052**, que era metade da Fase A, foi implementado e provado
 por teste — a entrega do wake foi corrigida e coberta de ponta a ponta depois
 disso.
@@ -96,8 +96,8 @@ existiu PR para gate nenhum julgar.
 
 | item | o que era | como fechou |
 |---|---|---|
-| **ADR 0052** | aprovação pendente devolvia `status pending` como resultado da ferramenta e queimava uma iteração; o agente morria no teto sem escrever nada | o laço SUSPENDE e retoma ([RN-073](../business-rules/custo.md#rn-073)); a entrega do desfecho foi corrigida depois — o evento nascia num agregado que o dreno do engine não lia — e o caminho agora está coberto de ponta a ponta |
-| **O / B** | sessão e dev agents nasciam no `llama3.2:1b` local, que o ADR 0020 proíbe no passo semântico | quando a cascata pousa no default do workspace, o modelo herdado é o do **Criativo** ([RN-072](../business-rules/custo.md#rn-072)) |
+| **ADR 0052** | aprovação pendente devolvia `status pending` como resultado da ferramenta e queimava uma iteração; o agente morria no teto sem escrever nada | o laço SUSPENDE e retoma ([RN-073](../business-rules/engine.md#rn-073)); a entrega do desfecho foi corrigida depois — o evento nascia num agregado que o dreno do engine não lia — e o caminho agora está coberto de ponta a ponta |
+| **O / B** | sessão e dev agents nasciam no `llama3.2:1b` local, que o ADR 0020 proíbe no passo semântico | quando a cascata pousa no default do workspace, o modelo herdado é o do **Criativo** ([RN-072](../business-rules/api.md#rn-072)) |
 
 A herança ocupa o **vazio** e nunca sobrepõe: binding de sessão, de agente ou de
 projeto são escolhas explícitas e continuam vencendo. E o modelo herdado passa
@@ -121,7 +121,7 @@ local, então projeto remoto rodava a metade conversacional e parava na de
 construção.
 
 Fechou pelo [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md) e
-pela [RN-076](../business-rules/custo.md#rn-076): o engine pede o remoto de trabalho à
+pela [RN-076](../business-rules/engine.md#rn-076): o engine pede o remoto de trabalho à
 api, que é quem tem a chave mestra, e a credencial entra **por invocação** — a
 origem gravada no `.git/config` é limpa.
 
@@ -148,8 +148,8 @@ de **quanto** ele devolve.
 
 | item | o que era | como fechou |
 |---|---|---|
-| **S** | o contexto acumulado estourava o limite de bytes do provider e a chamada voltava `413`. Cada saída de terminal ficava no histórico e viajava em todo turno seguinte | teto de bytes no executor, com marca endereçada ao modelo ([RN-074](../business-rules/custo.md#rn-074)) |
-| **U** | `/workspace` dentro do executor é o monorepo do **próprio Brabo**, e `/data/project-workspaces/*/` dá acesso ao worktree de outros projetos | escopo de caminho na decisão ([RN-075](../business-rules/custo.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) aceito) |
+| **S** | o contexto acumulado estourava o limite de bytes do provider e a chamada voltava `413`. Cada saída de terminal ficava no histórico e viajava em todo turno seguinte | teto de bytes no executor, com marca endereçada ao modelo ([RN-074](../business-rules/engine.md#rn-074)) |
+| **U** | `/workspace` dentro do executor é o monorepo do **próprio Brabo**, e `/data/project-workspaces/*/` dá acesso ao worktree de outros projetos | escopo de caminho na decisão ([RN-075](../business-rules/api.md#rn-075), [ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) aceito) |
 
 O escopo fechou os dois lados de uma vez: **apertou** (verbo liberado apontando
 para fora deixou de auto-aprovar) e **afrouxou** (o `cd` para dentro deixou de
@@ -204,7 +204,7 @@ a ignorar o vermelho. `create_rc_branch` continua traduzido mesmo aposentado
 
 | item | o que era | como fechou |
 |---|---|---|
-| **D** | `Protect branches` falha em repo privado no plano gratuito, e o wizard **avisa isso antes**. A única ação oferecida depois era "Tentar novamente", que falha sempre | [RN-078](../business-rules/custo.md#rn-078) |
+| **D** | `Protect branches` falha em repo privado no plano gratuito, e o wizard **avisa isso antes**. A única ação oferecida depois era "Tentar novamente", que falha sempre | [RN-078](../business-rules/api.md#rn-078) |
 | **E** | o preview do repositório mentia: `repo: brabo/{slug}` hardcoded, com o owner real vindo do PAT | já estava feito (commit `4dd7a073`) — o rótulo passou a mostrar só o slug, que é o que se sabe de fato |
 | **F** | o passo "Política de branches" listava `rc` entre as permanentes | já estava feito (commit `4dd7a073`) |
 
@@ -230,7 +230,7 @@ A mesma regra do CLAUDE.md violada três vezes: **P** (`dev.blocked` com
 (recorrência: `dev.blocked` com `"undetermined"` numa falha cujo campo
 `diagnosis` nomeava a causa na MESMA linha).
 
-Fechou pela [RN-077](../business-rules/custo.md#rn-077), e o diagnóstico da causa foi
+Fechou pela [RN-077](../business-rules/engine.md#rn-077), e o diagnóstico da causa foi
 o que mudou a forma do conserto: **o classificador já existia e já acertaria**
 — `FalhaDeTurno.origem/1` mapeia status ≥ 400 para `codigo`, o que classifica o
 `413` do achado T corretamente. O defeito nunca foi falta de regra; era
@@ -253,14 +253,14 @@ até 00:56.
 
 A causa não era a máquina de estados: era **o heartbeat**. A sessão nasceu
 23:34:12 e fechou 23:34:42 — exatamente os 30s de `SESSION_HEARTBEAT_TIMEOUT_MS`.
-A [RN-064](../business-rules/custo.md#rn-064) já mandava verificar se havia trabalho
+A [RN-064](../business-rules/web.md#rn-064) já mandava verificar se havia trabalho
 pendente antes de encerrar, mas "trabalho pendente" era só **handoff `offered`**
 — e havia uma ação `pending` desde 23:34:13, criada um segundo depois de a
 sessão nascer.
 
 Ação aguardando decisão passou a contar. É o mesmo defeito do handoff um nível
 abaixo: alguém está esperando **você**, e um agente pode estar suspenso
-esperando o desfecho ([RN-073](../business-rules/custo.md#rn-073)).
+esperando o desfecho ([RN-073](../business-rules/engine.md#rn-073)).
 
 **A versão anterior da regra dizia, por escrito, que incluir trabalho de agente
 "sem um teste que prove a interação seria adivinhar".** A execução produziu a
@@ -292,14 +292,14 @@ condição verificável, e o defeito estava na contagem que decidia se valia a
 pena rodar: ela somava os passos de máquina do bootstrap e — pior — o rastro que
 o próprio Psicólogo deixa na sessão enquanto a analisa, o que fazia uma sessão
 vazia parecer povoada a partir da primeira análise, e mais povoada a cada
-retentativa. Fechado pela [RN-079](../business-rules/custo.md#rn-079), com a sessão do
+retentativa. Fechado pela [RN-079](../business-rules/engine.md#rn-079), com a sessão do
 achado reproduzida como teste.
 
 **K e R eram o mesmo prompt, e por isso fecharam só até onde código alcança.**
 Duplicata EXATA de regra é recusada na emissão
-([RN-080](../business-rules/custo.md#rn-080)); história com título idêntico é recusada
+([RN-080](../business-rules/engine.md#rn-080)); história com título idêntico é recusada
 e história que não acrescenta cobertura vira aviso
-([RN-081](../business-rules/custo.md#rn-081)) — aviso, e não bloqueio, porque um
+([RN-081](../business-rules/api.md#rn-081)) — aviso, e não bloqueio, porque um
 segundo recorte da mesma regra pode ser legítimo e quem julga é o usuário.
 
 O que **não** foi resolvido, e está escrito nas três RNs em vez de subentendido:
@@ -322,7 +322,7 @@ e tag que não resolveu sha não vira carimbo por omissão. É esse conjunto que
 impede `qa` de receber código que nunca passou por `dev`.
 
 ~~**Os quatro segredos irmãos do compose de produção**~~ — **FEITO**
-([RN-114](../business-rules/custo.md#rn-114)). `AUTH_JWT_SECRET`,
+([RN-114](../business-rules/api.md#rn-114)). `AUTH_JWT_SECRET`,
 `BRABO_SERVICE_TOKEN`, `CREDENTIALS_MASTER_KEY` e `SECRET_KEY_BASE` tinham
 default de desenvolvimento em `docker/docker-compose.prod.yml`, que roda com
 `NODE_ENV=production` — o mesmo padrão que o
@@ -392,16 +392,16 @@ produto adiadas — por isso sem prioridade aqui.
 
 | item | onde foi decidido |
 |---|---|
-| ~~Budget por área~~ | **CORRIGIDO E FECHADO.** `agent_areas` ganhou `budget_micros`/`spent_micros` — um TERCEIRO teto independente ao lado de projeto/sessão, aditivo (não a cascata do ADR 0064), espelhando o padrão de `max_parallel` na mesma linha ([RN-443](../business-rules.md#rn-443), [ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)) |
+| ~~Budget por área~~ | **CORRIGIDO E FECHADO.** `agent_areas` ganhou `budget_micros`/`spent_micros` — um TERCEIRO teto independente ao lado de projeto/sessão, aditivo (não a cascata do ADR 0064), espelhando o padrão de `max_parallel` na mesma linha ([RN-443](../business-rules/api.md#rn-443), [ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)) |
 | Dev Lead e áreas via `module_map` | **saiu do backlog**: ADR 0053, implementado pela FASE 14d |
-| ~~Handoff manual a agente à escolha~~ | **FECHADO** — [ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules.md#rn-440)/[RN-441](../business-rules.md#rn-441). `SessionPage.tsx` ganhou um seletor sobre `addressableAgents()` (leads ∪ agentes solo) que faz POST em `POST .../sessions/:sessionId/handoffs` — o MESMO `CreateHandoffUseCase` que o `offer_handoff` do próprio agente usa, com `actor: {kind:'user'}` registrando quem decidiu. O Staff (ADR 0088) e o `ux-designer` (ADR 0087), ambos encontrados alcançáveis só pela rota interna, entraram em `AGENTES_DE_CHAT` na mesma mudança |
+| ~~Handoff manual a agente à escolha~~ | **FECHADO** — [ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules/api.md#rn-440)/[RN-441](../business-rules/api.md#rn-441). `SessionPage.tsx` ganhou um seletor sobre `addressableAgents()` (leads ∪ agentes solo) que faz POST em `POST .../sessions/:sessionId/handoffs` — o MESMO `CreateHandoffUseCase` que o `offer_handoff` do próprio agente usa, com `actor: {kind:'user'}` registrando quem decidiu. O Staff (ADR 0088) e o `ux-designer` (ADR 0087), ambos encontrados alcançáveis só pela rota interna, entraram em `AGENTES_DE_CHAT` na mesma mudança |
 | MFA, login social, OIDC, federação | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) — o login social (GitHub/GitLab) SAIU da proibição e está implementado (ADR 0084); o resto segue fora de escopo |
 | Deploy (`DEPLOY_ENABLED` + Environments) | o gate `operavel` já está declarado como `planned` |
 | Volta da `rc`/`rcfix` | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~Modo community do approval-ladder~~ | **CORRIGIDO E FECHADO.** A referência "vira mudança de `aprovacao_humana` no registro de gates" era imprecisa — vinha de uma frase especulativa do ADR 0054, não de algo que faltava. O modo `community` já está implementado e testado desde a FASE 6 (`scripts/ci/approval-ladder.ts`), só desligado por `APPROVAL_MODE=solo` (default); `aprovacao_humana` do gate `aprovacoes-da-escada` já é `true` nos dois modos, sem awareness de `APPROVAL_MODE` no schema. O que faltava de verdade era o `TODO(humano)` de `branching-policy.md` — o critério de quem entra em cada lista de aprovadores —, fechado por `GOVERNANCE.md` (raiz do repositório). Ativar o modo de fato continua sendo decisão operacional (recrutar gente real para os três papéis), não pendência de engenharia |
 | ~~Preferência de moeda com taxa manual~~ | **NÃO SERÁ FEITO** — decisão registrada. Converter exigiria uma taxa de câmbio mantida à mão, que envelhece; um número errado é pior que um número honesto em USD (o mesmo princípio já aplicado em `formatarCustoMicros`, `ProjectSettingsTab.tsx`) |
-| Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules/autenticacao.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência e patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
-| Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules/autenticacao.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
+| Reativar a Anamnese (`ANAMNESE_ENABLED=true`) | pausada por decisão do usuário em 2026-08-10 — "hoje ele não está trazendo dados de muito valor" ([RN-115](../business-rules/engine.md#rn-115)). Nenhum dado apagado (hipóteses, perfis de proficiência e patches de instrução seguem intactos e visíveis); a pausa é só do CAMINHO de rodada nova, aguardando um refinamento futuro do que a Anamnese deriva antes de religar |
+| Reativar o Psicólogo (`PSYCHOLOGIST_ENABLED=true`) | pausado por decisão do usuário em 2026-08-10, mesmo motivo e mesmo padrão da Anamnese acima ([RN-117](../business-rules/engine.md#rn-117)). Nenhum dado apagado (análises e hipóteses já emitidas seguem intactas e visíveis); a pausa é só do CAMINHO de rodada nova (automática e sob demanda) |
 | Instalação de uma linha, e assinar o que publicamos | assumido pela **FASE 29** ([fase-29-instalacao-de-uma-linha.md](fase-29-instalacao-de-uma-linha.md)), que até agora é só planejamento — nada aqui está fechado. A FASE 28 recusou por escrito o instalador de uma linha enquanto os artefatos seguirem sem assinatura (**BRB-005**), então a fase assina primeiro e instala depois. O planejamento mediu três coisas que este arquivo não registrava: `docker-compose.prod.yml` não tem referência nenhuma a `ghcr.io` e se diz o compose de validação, então é preciso um compose de instalação novo; `make test-restore` é um caminho de Kubernetes e `backup.sh` cobre só o Postgres, então migrar uma instalação por compose não tinha rota provada; e **`git_local_repos` — os bare repos dos projetos de provider `local` — não está em backup nenhum**, o que é perda de código na perda do volume, em todo ambiente. Os ids BRB agora têm casa canônica no [registro BRB](../reference/brb.md), onde três dos seis itens que esta fase herdou se revelaram já corrigidos — descobrível só medindo, que é o argumento para o registro existir |
 | Painel de Problemas/lint/testes na aba Código | pendência declarada na FASE 26 (`CLAUDE.md`) junto com blame, lista de PRs e detalhe de branch — esses três fecharam na FASE 26b, este não e nunca foi retomado. Ainda não existe fonte de dados (nenhuma integração de lint/test-runner no produto); registrado aqui para não sair do acompanhamento em silêncio |
 

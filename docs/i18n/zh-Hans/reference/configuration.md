@@ -13,15 +13,15 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 有两个受版本控制的文件会在运行时被读取，它们不是配置，但很容易与配置混淆：上面的 `permissions.json`，以及 `docs/gates.yml`（[ADR 0054](../adr/0054-gates-como-registro-declarativo.md)），即 gate 的声明式注册表。两者都没有指向某个路径的环境变量——注册表是从 `__dirname` 向上查找得到的——并且在生产环境中编辑它们都不会改变行为：注册表**描述** gate，而不执行 gate。它随 api 镜像一起发布；参见 [runbook](../runbook.md#registro-de-gates)。
 
-随镜像发布的是注册表，**而不是它所指向的任何东西**。`teste`/`ci` 类 gate 的 `evidencia` 指向 `apps/api/test/`、`scripts/ci/` 和 `.github/` 下的文件，而这些都不在镜像里。因此，核对这些目标是否存在是关于仓库的断言，由 CI 负责，而绝不由提供 `GET /gates` 的进程负责——所以 api 读取注册表时不会去找它们。它曾经去找过，结果在每个安装中都返回 `500`（[RN-070](../business-rules/custo.md#rn-070)）。
+随镜像发布的是注册表，**而不是它所指向的任何东西**。`teste`/`ci` 类 gate 的 `evidencia` 指向 `apps/api/test/`、`scripts/ci/` 和 `.github/` 下的文件，而这些都不在镜像里。因此，核对这些目标是否存在是关于仓库的断言，由 CI 负责，而绝不由提供 `GET /gates` 的进程负责——所以 api 读取注册表时不会去找它们。它曾经去找过，结果在每个安装中都返回 `500`（[RN-070](../business-rules/api.md#rn-070)）。
 
 > **`up --wait` 只能证明有 healthcheck 的服务。** 在开发用的 compose 中，`api`、`engine` 和 `web` 原本都没有 healthcheck，所以 `docker compose up --wait` 在容器启动的那一刻就认为它们已就绪——早于进程开始监听。正因如此，容器可能在几秒后死掉，而命令仍在宣告成功。现在这三者都带有与生产镜像在 Dockerfile 中早已声明的相同检查（api 和 engine 上是会访问数据库的 `/health`；Vite 服务器上是 `/`）。容器 broker 在另一次变更中获得了自己的 healthcheck；`postgres` 和 `neo4j` 一直都有。这里没有任何环境变量——之所以写出来，是因为脚本依赖的正是 `--wait`，而没有 healthcheck 的服务会让它撒谎。
 
 下面的默认值是从代码中提取的，而不是来自以前的文档。**出错时**一列是最省时间的部分：几乎每个变量都有一个在开发环境可用的默认值，以及一种在生产环境中特有的失败方式。
 
-> **变量只有在 compose 映射了它时才会进入进程。** `docker compose` 不会把宿主机的环境传进容器：变量当且仅当写在该服务的 `environment:`（或某个 `env_file`）中时才会到达。这不是细节；正是这样，`ANAMNESE_ENABLED` 和 `PSYCHOLOGIST_ENABLED` 悄无声息地变得无法设置，而代码中有三处承诺 2026-08-10 的暂停可以通过 `X=true` 加一次重启来撤销。在运行中的 engine 容器内测量，它们的值为空，`runtime.exs` 落到了 `"false"`——没有任何地方报错。现在 engine 读取的每个布尔开关都映射在全部三个 compose 文件中（开发、生产和安装——安装用的那个自 AT-202 起），使用代码自身的默认值，只有生产和安装有意关闭的两个后台 agent 启动开关除外；`scripts/ci/flags-do-engine-no-compose.spec.ts` 会让下一个缺失的开关构建失败（[RN-540](../business-rules.md#rn-540)）。Kubernetes 有意不受此规则约束：Deployment/ConfigMap 不拦截任何东西，所以那里没有需要修复的断开的键。
+> **变量只有在 compose 映射了它时才会进入进程。** `docker compose` 不会把宿主机的环境传进容器：变量当且仅当写在该服务的 `environment:`（或某个 `env_file`）中时才会到达。这不是细节；正是这样，`ANAMNESE_ENABLED` 和 `PSYCHOLOGIST_ENABLED` 悄无声息地变得无法设置，而代码中有三处承诺 2026-08-10 的暂停可以通过 `X=true` 加一次重启来撤销。在运行中的 engine 容器内测量，它们的值为空，`runtime.exs` 落到了 `"false"`——没有任何地方报错。现在 engine 读取的每个布尔开关都映射在全部三个 compose 文件中（开发、生产和安装——安装用的那个自 AT-202 起），使用代码自身的默认值，只有生产和安装有意关闭的两个后台 agent 启动开关除外；`scripts/ci/flags-do-engine-no-compose.spec.ts` 会让下一个缺失的开关构建失败（[RN-540](../business-rules/engine.md#rn-540)）。Kubernetes 有意不受此规则约束：Deployment/ConfigMap 不拦截任何东西，所以那里没有需要修复的断开的键。
 
-> **开发环境的默认值是故意不安全的。** 像 `dev-master-key-change-me` 这样的值存在，是为了让 `pnpm dev` 不费周折地启动。在生产环境中必须替换它们——其中六个如果不替换，进程会**拒绝**启动（api 或 engine，标记为 🔒）。其中五个遵循 [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/custo.md#rn-093) 的模式：缺失、等于公开的示例字面值或过短都会让启动失败。参见 [RN-114](../business-rules/custo.md#rn-114)，了解加入最初的 `GIT_OAUTH_STATE_SECRET` 的那四个。
+> **开发环境的默认值是故意不安全的。** 像 `dev-master-key-change-me` 这样的值存在，是为了让 `pnpm dev` 不费周折地启动。在生产环境中必须替换它们——其中六个如果不替换，进程会**拒绝**启动（api 或 engine，标记为 🔒）。其中五个遵循 [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/api.md#rn-093) 的模式：缺失、等于公开的示例字面值或过短都会让启动失败。参见 [RN-114](../business-rules/api.md#rn-114)，了解加入最初的 `GIT_OAUTH_STATE_SECRET` 的那四个。
 
 ## 安装用 compose（`docker-compose.install.yml`）
 
@@ -37,9 +37,9 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 它们故意写成 `${VAR:?…}`。如果有默认值，缺失的变量会让一半的栈运行在没人选择过的镜像上，错误会表现为奇怪的行为，而不是拒绝。
 
-它们**不在**下面生成的清单中：生成器扫描 `apps/`，而这些变量由 Compose 读取，不是由产品代码读取（[RN-527](../business-rules.md#rn-527)）。
+它们**不在**下面生成的清单中：生成器扫描 `apps/`，而这些变量由 Compose 读取，不是由产品代码读取（[RN-527](../business-rules/infra.md#rn-527)）。
 
-自 [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) 起，**broker** 在这个 compose 中，处于**关闭**状态，位于 profile `container-broker` 下，`install.sh` 只有在询问且回答为 "s" 时才开启它（[RN-575](../business-rules.md#rn-575)）。届时它会写入四行，要么全写，要么都不写：
+自 [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md) 起，**broker** 在这个 compose 中，处于**关闭**状态，位于 profile `container-broker` 下，`install.sh` 只有在询问且回答为 "s" 时才开启它（[RN-575](../business-rules/produto.md#rn-575)）。届时它会写入四行，要么全写，要么都不写：
 
 | 变量 | `install.sh` 写入的内容 |
 |---|---|
@@ -50,7 +50,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 `BRABO_PROJECTS_HOST_BASE` 不会被写入：compose 从 `BRABO_PROJECTS_BASE` 推导它，与验证用 compose 相同。之后开启或关闭的方法见 [runbook](../runbook.md#broker-na-instalacao)。
 
-**本地模型**（Ollama，profile `llm`）紧接在 broker 之后询问（[RN-691](../business-rules.md#rn-691)）。回答 "s" 会先测量宿主机上的一个空闲端口，然后写入：
+**本地模型**（Ollama，profile `llm`）紧接在 broker 之后询问（[RN-691](../business-rules/produto.md#rn-691)）。回答 "s" 会先测量宿主机上的一个空闲端口，然后写入：
 
 | 变量 | `install.sh` 写入的内容 |
 |---|---|
@@ -82,7 +82,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 |---|---|---|
 | `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me`，**仅限非生产环境** | 包裹 DEK。**在生产环境中，如果它缺失、等于上面的默认值（公开的——在 `.env.example` 里）或少于 16 个字符，api 拒绝启动**（RN-114）。这只是**启动**时的检查：把它换成一个**有效但不同**的密钥而不重新包裹，仍会让所有凭据无法读取，且没有任何报错——失败出现在第一次使用时。参见[轮换](../runbook.md#rotacao-da-chave-mestra) |
 | `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | 仅在轮换期间使用。存在 = 当前密钥失败时 api 会尝试上一个密钥 |
-| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me`，**仅限非生产环境** | 为 OAuth 的 `state` 签名；弱 = git 连接流程中的 CSRF。**在生产环境中，缺失、使用上面的默认值（公开的——在 `.env.example` 里）或少于 16 个字符时，api 拒绝启动。** 用 `openssl rand -base64 32` 生成。参见 [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) 和 [RN-093](../business-rules/custo.md#rn-093) |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me`，**仅限非生产环境** | 为 OAuth 的 `state` 签名；弱 = git 连接流程中的 CSRF。**在生产环境中，缺失、使用上面的默认值（公开的——在 `.env.example` 里）或少于 16 个字符时，api 拒绝启动。** 用 `openssl rand -base64 32` 生成。参见 [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) 和 [RN-093](../business-rules/api.md#rn-093) |
 | `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **在生产环境中，缺失或为 `*` 时 api 拒绝启动。** CORS 按环境严格限制。**端口是值的一部分**：`:5174` 上的 web 是另一个源，会被拦截——参见 [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)。在各 compose 中，默认值**从 `WEB_PORT` 推导**，所以修改端口会连带修改 CORS；手动定义 `WEB_ORIGIN` 会覆盖推导，保持一致就成了你的责任 |
 | `WEB_PORT` | `5173`（dev）· `8088`（prod） | web 在宿主机上发布的端口。没有服务读取它——它在各 compose 中**为 `WEB_ORIGIN` 的默认值提供输入**，这正是防止端口与 CORS 出现分歧的机制 |
 
@@ -94,7 +94,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 |---|---|---|
 | `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me`，**仅限非生产环境** | 一个短语，access token 的 Ed25519 密钥对通过 scrypt 从它**派生**——没有任何私钥被提交。**在生产环境中，如果它缺失、等于上面的默认值（公开的——在 `.env.example` 里）或少于 16 个字符，api 拒绝启动**（RN-114） |
 | `AUTH_JWT_SECRET_PREVIOUS` | — | 轮换期间**仅用于验证**；进入 JWKS，永远不签名 |
-| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me`，**仅限非生产环境** | 不透明 token（refresh、账户关联、PAT）哈希以及锁定桶键所用的 HMAC 密钥。**独立的密钥——不再回退到 `AUTH_JWT_SECRET`**（[RN-613](../business-rules/autenticacao.md#rn-613)）。**在生产环境中，如果它缺失、等于本仓库中任何示例值或少于 16 个字符，api 拒绝启动。** 曾在没有它的情况下运行的安装，需要用**当前的** `AUTH_JWT_SECRET` 来定义它，否则所有人都会被登出——参见 [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
+| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me`，**仅限非生产环境** | 不透明 token（refresh、账户关联、PAT）哈希以及锁定桶键所用的 HMAC 密钥。**独立的密钥——不再回退到 `AUTH_JWT_SECRET`**（[RN-613](../business-rules/api.md#rn-613)）。**在生产环境中，如果它缺失、等于本仓库中任何示例值或少于 16 个字符，api 拒绝启动。** 曾在没有它的情况下运行的安装，需要用**当前的** `AUTH_JWT_SECRET` 来定义它，否则所有人都会被登出——参见 [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 分钟 |
 | `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 天 |
 | `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | token 家族的绝对上限，从登录时算起——没有它，轮换会授予永久会话 |
@@ -113,7 +113,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 > **轮换 `AUTH_TOKEN_PEPPER` 会让所有人登出**，并使待处理的验证和重置 token 失效。与密钥不同，pepper **没有** `_PREVIOUS`。参见 [runbook](../runbook.md)。
 
-> **`_PREVIOUS` 变量能到达哪里。** `AUTH_JWT_SECRET_PREVIOUS`、`CREDENTIALS_MASTER_KEY_PREVIOUS` 和 `BRABO_SERVICE_TOKEN_PREVIOUS` 以 `${X:-}` 的形式映射在全部三个 compose（开发、生产和安装）的 `environment:` 中——api 接收这三个，engine 和 broker 接收 `BRABO_SERVICE_TOKEN_PREVIOUS`（[RN-595](../business-rules/autenticacao.md#rn-595)）。在每个读取方中，空值都等同于缺失，所以在轮换之外什么都不会变；轮换期间，只需在 `.env` 中定义它们并重建服务。在 RN-595 之前，它们哪里都没有映射，而 `docker compose` 不会传递宿主机的环境，于是一次轮换会悄无声息地变成直接替换。
+> **`_PREVIOUS` 变量能到达哪里。** `AUTH_JWT_SECRET_PREVIOUS`、`CREDENTIALS_MASTER_KEY_PREVIOUS` 和 `BRABO_SERVICE_TOKEN_PREVIOUS` 以 `${X:-}` 的形式映射在全部三个 compose（开发、生产和安装）的 `environment:` 中——api 接收这三个，engine 和 broker 接收 `BRABO_SERVICE_TOKEN_PREVIOUS`（[RN-595](../business-rules/api.md#rn-595)）。在每个读取方中，空值都等同于缺失，所以在轮换之外什么都不会变；轮换期间，只需在 `.env` 中定义它们并重建服务。在 RN-595 之前，它们哪里都没有映射，而 `docker compose` 不会传递宿主机的环境，于是一次轮换会悄无声息地变成直接替换。
 > **在 Kubernetes 中，它们通过密钥保险库到达 Pod**（AT-220）：`ExternalSecret` 用 `dataFrom.extract` 拉取整个 `brabo` 对象，所以其中存在的 `_PREVIOUS` 会进入 `brabo-secrets`，不存在的就根本不在那里。代价是这个对象中的每个键都会成为 api、engine、migrations 和 backup 的环境变量——保险库中的这个对象不能存放其他任何东西。操作步骤见 [runbook](../runbook.md#rotacao-no-kubernetes)。
 
 ### 真实 SMTP（MailSender）
@@ -158,12 +158,12 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 ### 内部流量 🔒
 
-认证 api ↔ engine 的共享密钥。**两边是同一个变量**——每一方发送当前值并接受两个值，正是这一点使轮换无需停机成为可能（[RN-035](../business-rules/autenticacao.md#rn-035)）。
+认证 api ↔ engine 的共享密钥。**两边是同一个变量**——每一方发送当前值并接受两个值，正是这一点使轮换无需停机成为可能（[RN-035](../business-rules/api.md#rn-035)）。
 
 | 变量 | 默认值 | 作用 |
 |---|---|---|
 | `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me`，**仅限非生产环境** | 放在 `X-Brabo-Service-Token` 头中，`EngineServiceGuard` 以常数时间比较它。**在生产环境中，如果它缺失、等于上面的默认值（公开的——在 `.env.example` 里）或少于 16 个字符，api 拒绝启动**（RN-114） |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | 轮换期间**仅用于验证**。定义后，它与当前 token 遵循**同样**的规则：去掉首尾空白，在生产环境中如果它是公开默认值或少于 16 个字符，api 拒绝启动。与当前 token 不同，它从不是必填的（[RN-598](../business-rules/autenticacao.md#rn-598)） |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | 轮换期间**仅用于验证**。定义后，它与当前 token 遵循**同样**的规则：去掉首尾空白，在生产环境中如果它是公开默认值或少于 16 个字符，api 拒绝启动。与当前 token 不同，它从不是必填的（[RN-598](../business-rules/api.md#rn-598)） |
 
 > 只在一边定义**新**值（不走 `_PREVIOUS` 的流程）不会让任何一方启动失败：症状是 `/internal/*` 上的 `403` 和 api 调用 engine 时的 `401`。操作步骤见 [runbook](../runbook.md#rotacao-das-chaves-do-auth)。上面的**启动**检查（RN-114）是另一回事：它只在公开默认值或变量缺失/过短时失败，而不是在两边不一致时。
 
@@ -181,7 +181,7 @@ traducao_de: e34fb776731c09e64de832912893157dace42817
 
 自 [ADR 0072](../adr/0072-projeto-local-ou-container.md) 起，项目可以以 **Mounted** 模式创建（即以前的 `local`，由 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md) 改名）——代码位于用户的文件夹中，`PROJECT_WORKSPACES_ROOT` **不参与**其根目录。
 
-项目的路径是项目的数据（`projects.workspace_path`），在创建时选定，从来不是环境变量。**环境**提供的是这些文件夹所在的**基础目录**——`BRABO_PROJECTS_BASE`，每个安装一个（[ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)，[RN-500](../business-rules.md#rn-500)）：
+项目的路径是项目的数据（`projects.workspace_path`），在创建时选定，从来不是环境变量。**环境**提供的是这些文件夹所在的**基础目录**——`BRABO_PROJECTS_BASE`，每个安装一个（[ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)，[RN-500](../business-rules/api.md#rn-500)）：
 
 ```bash
 # .env — ABSOLUTO. `~` não é expandido pelo Compose.
@@ -229,7 +229,7 @@ BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 | `NEO4J_USER` | `neo4j`（dev） | 以 `neo4j` 服务用于 `NEO4J_AUTH` 的同一默认值到达容器，所以只在需要**更换**用户时才定义它——在那里更换会一次性更换两边。两个独立的默认值会让 api 用服务器已不存在的凭据去认证 |
 | `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me`（仅 dev） | 与 `NEO4J_USER` 相同的配对规则。**生产环境中故意没有公开默认值**——数据库密码不存在合理的"示例值"，`docker-compose.prod.yml` 让 `NEO4J_AUTH` 保持为空，使官方镜像的 entrypoint 自己拒绝启动，而不是以一个可猜测的密码启动 |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | 轮询器的周期，它清空 outbox 的 `graph_projection` 队列，并把 handoff/假设/画像/交互写入图谱（RN-416） |
-| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | 轮询器的周期，它清空 outbox 的 `artifact_projection` 队列，并把每个 agent 的产物以 Markdown 形式写入项目的 `docs/` 文件夹（[RN-523](../business-rules.md#rn-523)）。**派生**投影：event log 仍是来源，该文件夹可以删除并重建 |
+| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | 轮询器的周期，它清空 outbox 的 `artifact_projection` 队列，并把每个 agent 的产物以 Markdown 形式写入项目的 `docs/` 文件夹（[RN-523](../business-rules/engine.md#rn-523)）。**派生**投影：event log 仍是来源，该文件夹可以删除并重建 |
 
 ### 可观测性
 
@@ -266,7 +266,7 @@ BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 | `DNS_CLUSTER_QUERY` | — | 组成 Erlang 集群的 headless Service。**没有它，每个副本都是孤岛**，每次 rollout 都会排空一切 |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | `preStop` 的窗口。与 `terminationGracePeriodSeconds` **一起**调高，绝不单独调 |
 | `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | 会话在询问 api 是否有待处理工作之前，等待标签页心跳的时长 |
-| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000`（8 小时） | **空闲对话**的上限：等待用户的对话 agent 会在心跳之外保持会话这么长时间，从它的回合结束时算起；超过之后，会话以 `closed` 关闭，原因是 `conversation_idle_timeout`（[RN-581](../business-rules.md#rn-581)）。在三个 compose（开发、生产、安装）中都以同一默认值映射到 engine；**故意没有**写在 `deploy/k8s/` 中——那里没有任何东西拦截环境，所以缺失即默认，修改它是在 overlay 的 engine 补丁里加一个 `env:` 项 |
+| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000`（8 小时） | **空闲对话**的上限：等待用户的对话 agent 会在心跳之外保持会话这么长时间，从它的回合结束时算起；超过之后，会话以 `closed` 关闭，原因是 `conversation_idle_timeout`（[RN-581](../business-rules/api.md#rn-581)）。在三个 compose（开发、生产、安装）中都以同一默认值映射到 engine；**故意没有**写在 `deploy/k8s/` 中——那里没有任何东西拦截环境，所以缺失即默认，修改它是在 overlay 的 engine 补丁里加一个 `env:` 项 |
 | `RELEASE_NAME` / `RELEASE_NODE` | — | 节点在分布式中的身份 |
 
 ### Harness
@@ -279,34 +279,34 @@ BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 | `DEFAULT_CONTEXT_WINDOW` | `128000` | 模型未声明窗口时使用（对话类 agent 从不声明）；在 RN-702 之前是 `8192` |
 | `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | 触发压缩的窗口比例 |
 | `LLM_TURN_TIMEOUT_MS` | `300000` | 每个回合 5 分钟 |
-| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | 对 Jev 工具路由器**一次**调用的上限，单位毫秒（[ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)，[RN-625](../business-rules.md#rn-625)）。由 **api** 读取，而不是 engine。超过上限后，该步骤回退到完整的工具目录，`motivoDaQueda: timeout`；回合永远不会因为 Jev 而失败。测得的 328 次请求中 0 次超过 2 000 ms。开关按 workspace 设置（`PUT workspaces/:id/tool-router`），不是环境变量 |
-| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | 终端命令的上限（自 [RN-757](../business-rules.md#rn-757) 起为 2 分钟：一个简单的 `npm install` 在旧的 15 秒里放不下）。engine 在 `container-exec` 中等待该值 + 90 秒，在 `terminal` 动作的 `propose_action` 中等待 + 120 秒；超过约 180 秒，外层等待会超过 api 调用 `/internal/actions/execute` 时所用 Node `fetch` 的 300 秒响应头限制 |
-| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | 命令输出的**字节**上限（[RN-074](../business-rules/custo.md#rn-074)）。输出留在循环历史中，并随之后的每个回合传输；没有上限的话，在大目录树上执行一次 `find` 就会因 provider 的 `413` 让整个执行失败 |
-| `READ_FILE_MAX_BYTES` | `32768` | `read_file` 读取内容的**字节**上限（[RN-141](../business-rules/autenticacao.md#rn-141)）——与 RN-074 同类的溢出，只是从 `read_file` 而不是终端进入；独立变量，数值相同只是上下文巧合 |
-| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | `search_workspace` 最终文本的**字节**上限（[RN-150](../business-rules/autenticacao.md#rn-150)）——与 RN-074/RN-141 同类的溢出，从搜索入口进入；独立变量 |
-| `SEARCH_WORKSPACE_MAX_HITS` | `500` | `search_workspace` 在组装响应前收集的命中**数量**上限（[RN-150](../business-rules/autenticacao.md#rn-150)）——一旦达到上限就停止扫描/读取内容，避免在命中过多的目录树上付出 I/O 代价、之后又按字节截断 |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | 对 Jev 工具路由器**一次**调用的上限，单位毫秒（[ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)，[RN-625](../business-rules/engine.md#rn-625)）。由 **api** 读取，而不是 engine。超过上限后，该步骤回退到完整的工具目录，`motivoDaQueda: timeout`；回合永远不会因为 Jev 而失败。测得的 328 次请求中 0 次超过 2 000 ms。开关按 workspace 设置（`PUT workspaces/:id/tool-router`），不是环境变量 |
+| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | 终端命令的上限（自 [RN-757](../business-rules/engine.md#rn-757) 起为 2 分钟：一个简单的 `npm install` 在旧的 15 秒里放不下）。engine 在 `container-exec` 中等待该值 + 90 秒，在 `terminal` 动作的 `propose_action` 中等待 + 120 秒；超过约 180 秒，外层等待会超过 api 调用 `/internal/actions/execute` 时所用 Node `fetch` 的 300 秒响应头限制 |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | 命令输出的**字节**上限（[RN-074](../business-rules/engine.md#rn-074)）。输出留在循环历史中，并随之后的每个回合传输；没有上限的话，在大目录树上执行一次 `find` 就会因 provider 的 `413` 让整个执行失败 |
+| `READ_FILE_MAX_BYTES` | `32768` | `read_file` 读取内容的**字节**上限（[RN-141](../business-rules/engine.md#rn-141)）——与 RN-074 同类的溢出，只是从 `read_file` 而不是终端进入；独立变量，数值相同只是上下文巧合 |
+| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | `search_workspace` 最终文本的**字节**上限（[RN-150](../business-rules/engine.md#rn-150)）——与 RN-074/RN-141 同类的溢出，从搜索入口进入；独立变量 |
+| `SEARCH_WORKSPACE_MAX_HITS` | `500` | `search_workspace` 在组装响应前收集的命中**数量**上限（[RN-150](../business-rules/engine.md#rn-150)）——一旦达到上限就停止扫描/读取内容，避免在命中过多的目录树上付出 I/O 代价、之后又按字节截断 |
 | `SECOPS_SCAN_TIMEOUT_MS` | `180000` | SecOps 扫描器 3 分钟 |
-| `TRANSPORT_MAX_BODY_BYTES` | `8388608`（8 MiB） | 上下文压缩在模型窗口之上还要遵守的**传输**上限（[RN-412](../business-rules.md#rn-412)）——有效窗口是 `min(context_window, 该上限换算成的 token 数)`，所以压缩会在请求体超过 api 的 HTTP 限制**之前**触发，而不只是在模型会"遗忘"时 |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608`（8 MiB） | 上下文压缩在模型窗口之上还要遵守的**传输**上限（[RN-412](../business-rules/api.md#rn-412)）——有效窗口是 `min(context_window, 该上限换算成的 token 数)`，所以压缩会在请求体超过 api 的 HTTP 限制**之前**触发，而不只是在模型会"遗忘"时 |
 | `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | 开启 `InstructionFiles` 的 `:graph` 来源——目前只有 ux-designer 的身份会在内联文本之前解析图谱中的模板（RN-413）。是**独立**的名字，不是下面的 `GRAPH_TEMPLATES_ENABLED`——如果共用一个开关，两者会因相反的默认值而冲突 |
 
 ### 心理学家
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | **全局**暂停**新的**轮次（自动和按需）——这是用户在 2026-08-10 做出的产品决策，不是 bug，开关形式与下面的 `ANAMNESE_ENABLED` 相同（后者已在 [RN-680](../business-rules.md#rn-680) 中重新开启；这个没有）。不会删除已有的任何东西。开启它需要重启 engine（[RN-117](../business-rules/autenticacao.md#rn-117)）。没有与之配对的启动开关：心理学家的自动触发是会话关闭，而不是定时 tick |
+| `PSYCHOLOGIST_ENABLED` | `false` | **全局**暂停**新的**轮次（自动和按需）——这是用户在 2026-08-10 做出的产品决策，不是 bug，开关形式与下面的 `ANAMNESE_ENABLED` 相同（后者已在 [RN-680](../business-rules/engine.md#rn-680) 中重新开启；这个没有）。不会删除已有的任何东西。开启它需要重启 engine（[RN-117](../business-rules/engine.md#rn-117)）。没有与之配对的启动开关：心理学家的自动触发是会话关闭，而不是定时 tick |
 | `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | 区分**轻量**与**重量**分析的会话事件数 |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
 | `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | 每次分析 USD 0.05 和 USD 0.30 |
 | `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | 进入 prompt 的事件数 |
 | `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | 每个事件 payload 的截断长度 |
-| `PSYCHOLOGIST_RAG_TOP_K` | `3` | 进入上下文的 `rag_search` 相关片段数，从上面的近期事件上限中扣除（[RN-417](../business-rules.md#rn-417)） |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | 开启把 `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` 解析为图谱模板——这是心理学家、Anamnese 和 `ContextManager` 摘要 prompt **共享**的开关（[RN-417](../business-rules.md#rn-417)），不要与上面的 `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` 混淆。关闭（默认）意味着根本不调用图谱 API；开启时，任何失败都会回退到内联文本且不报错 |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | 进入上下文的 `rag_search` 相关片段数，从上面的近期事件上限中扣除（[RN-417](../business-rules/engine.md#rn-417)） |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | 开启把 `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` 解析为图谱模板——这是心理学家、Anamnese 和 `ContextManager` 摘要 prompt **共享**的开关（[RN-417](../business-rules/engine.md#rn-417)），不要与上面的 `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` 混淆。关闭（默认）意味着根本不调用图谱 API；开启时，任何失败都会回退到内联文本且不报错 |
 
 ### Anamnese
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `true` | 产品开关：是否可以发生**新的**轮次（周期性的和按需的）。`false` 是不删除任何东西的**全局**暂停（[RN-115](../business-rules/autenticacao.md#rn-115)）；修改它需要重启 engine。它从 2026-08-10（用户的暂停）到负责人在 2026-10-01 带着修正重新开启 Anamnese 期间一直是 `false`（[RN-680](../business-rules.md#rn-680)）：没有合格对象——在窗口内有自己交互的项目有效成员——的轮次不会调用 LLM。**单靠它不足以运行周期性轮次**：`START_ANAMNESE`（启动开关，见下）也必须为 `true`，两者回答的是不同的问题 |
+| `ANAMNESE_ENABLED` | `true` | 产品开关：是否可以发生**新的**轮次（周期性的和按需的）。`false` 是不删除任何东西的**全局**暂停（[RN-115](../business-rules/engine.md#rn-115)）；修改它需要重启 engine。它从 2026-08-10（用户的暂停）到负责人在 2026-10-01 带着修正重新开启 Anamnese 期间一直是 `false`（[RN-680](../business-rules/engine.md#rn-680)）：没有合格对象——在窗口内有自己交互的项目有效成员——的轮次不会调用 LLM。**单靠它不足以运行周期性轮次**：`START_ANAMNESE`（启动开关，见下）也必须为 `true`，两者回答的是不同的问题 |
 | `ANAMNESE_INTERVAL_SECONDS` | `900` | 轮次之间间隔 15 分钟 |
 | `ANAMNESE_MIN_EVENTS` | `10` | 低于此数不运行——避免基于噪声描绘画像 |
 | `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | 第一轮的窗口 |
@@ -319,11 +319,11 @@ BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `START_OUTBOX_DRAIN` | `true` | outbox 排空（`Engine.Workers.OutboxDrainWorker`，每 2 秒一次）的启动开关——它是 api 写入 outbox 的 `session`/`task`/`container` 事件的**唯一**消费者——另外还负责清理孤立 worktree 和接管孤立会话。关闭后没有人投递这些事件：api 已关闭的会话仍保留着进程和运行中的对话 agent（[RN-581](../business-rules.md#rn-581)），等待动作决策、gate、自己的 PR 或容器进入 `running` 的 dev agent 永远不会被唤醒。它**不会**开启心理学家：只有在 `PSYCHOLOGIST_ENABLED=true` 时排空才会把它加入队列。**只**在生产 compose（`docker-compose.prod.yml`）中故意设为 `false`；安装用 compose 自 AT-219 起使用代码中的 `true` |
+| `START_OUTBOX_DRAIN` | `true` | outbox 排空（`Engine.Workers.OutboxDrainWorker`，每 2 秒一次）的启动开关——它是 api 写入 outbox 的 `session`/`task`/`container` 事件的**唯一**消费者——另外还负责清理孤立 worktree 和接管孤立会话。关闭后没有人投递这些事件：api 已关闭的会话仍保留着进程和运行中的对话 agent（[RN-581](../business-rules/api.md#rn-581)），等待动作决策、gate、自己的 PR 或容器进入 `running` 的 dev agent 永远不会被唤醒。它**不会**开启心理学家：只有在 `PSYCHOLOGIST_ENABLED=true` 时排空才会把它加入队列。**只**在生产 compose（`docker-compose.prod.yml`）中故意设为 `false`；安装用 compose 自 AT-219 起使用代码中的 `true` |
 | `START_ANAMNESE` | `true` | 测试/开发的**负载**保护：阻止启动时调用 `kickoff/0`，但不决定任何产品行为——不要与 `ANAMNESE_ENABLED`（产品：**全局**暂停，无论本变量取何值都有效）混淆。关闭它会阻止**新的**入队，**不会清空队列**。积累的 job 会在下次启动时运行——队列需要被清除。参见[推理环境](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | 模型目录同步的周期性 tick。关闭它不会冻结任何东西：设置页面上的"更新目录"按钮调用同一个用例（[RN-043](../business-rules/custo.md#rn-043)） |
+| `START_MODEL_SYNC` | `true` | 模型目录同步的周期性 tick。关闭它不会冻结任何东西：设置页面上的"更新目录"按钮调用同一个用例（[RN-043](../business-rules/api.md#rn-043)） |
 | `MODEL_SYNC_INTERVAL_SECONDS` | `21600`（6 小时） | provider 的目录以天为尺度变化，每一轮每个 provider 要花一次 API 调用——所以默认值很宽松 |
-| `START_GATE_RESCUE` | `true` | gate 周期救援（`Engine.Gates.GateRescuer`，[RN-140](../business-rules.md#rn-140)）的周期性 tick。关闭它不改变启动：救援在启动时无论如何都会运行一次 |
+| `START_GATE_RESCUE` | `true` | gate 周期救援（`Engine.Gates.GateRescuer`，[RN-140](../business-rules/engine.md#rn-140)）的周期性 tick。关闭它不改变启动：救援在启动时无论如何都会运行一次 |
 | `GATE_RESCUE_INTERVAL_SECONDS` | `300`（5 分钟） | 卡住的 gate 会阻塞用户的整个 PR——间隔比 Anamnese/模型同步短得多，每次 tick 只花一次几乎总是空的查询 |
 | `GATE_RESCUE_STALE_AFTER_SECONDS` | `900`（15 分钟） | 故意宽松：QA 子 agent 的 ToolLoop 可以合法地运行到 `TOOL_LOOP_MAX_ITERATIONS_GATE`（60）次迭代，过短的阈值会救援——并重复——一个只是慢的周期 |
 
@@ -331,8 +331,8 @@ BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 
 | 变量 | 默认值 |
 |---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me`，**仅限非生产环境**——**与 api 的值相同**。首尾空白会被去掉，只含空白的值视为缺失。在 `:prod` release 中，如果它缺失、是上面的公开默认值或少于 16 个字符，engine 拒绝启动并指出变量名——与 api 的规则相同（[RN-601](../business-rules/autenticacao.md#rn-601)） |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | ——轮换期间仅用于验证。去除空白；在 `:prod` release 中，如果它是公开默认值或少于 16 个字符，engine 拒绝启动。从不是必填的，与当前值相同意味着没有在轮换（[RN-601](../business-rules/autenticacao.md#rn-601)） |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me`，**仅限非生产环境**——**与 api 的值相同**。首尾空白会被去掉，只含空白的值视为缺失。在 `:prod` release 中，如果它缺失、是上面的公开默认值或少于 16 个字符，engine 拒绝启动并指出变量名——与 api 的规则相同（[RN-601](../business-rules/engine.md#rn-601)） |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | ——轮换期间仅用于验证。去除空白；在 `:prod` release 中，如果它是公开默认值或少于 16 个字符，engine 拒绝启动。从不是必填的，与当前值相同意味着没有在轮换（[RN-601](../business-rules/engine.md#rn-601)） |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | ——Elixir 导出器使用 **4318 端口上的 HTTP/protobuf**，而不是 4317 端口上的 gRPC。缺失只关闭导出（`traces_exporter: :none`），不关闭插桩——参见 ADR 0035 |
 | `WEB_ORIGIN` | ——**与 api 是同一个变量**，在这里它为**两样**东西提供输入：Phoenix socket 的 `check_origin`（实时团队面板）以及健康检查路由的 HTTP CORS，浏览器读取 `/health` 需要后者（[ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)）。生产环境中缺失会关闭 CORS，并让 `check_origin` 保持 Phoenix 严格的默认值——与 api 不同，engine **照样启动** |
 | `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces`——**与 api 相同，在同一个卷上** |
@@ -441,18 +441,18 @@ docker compose -f docker/docker-compose.prod.yml \
 
 | 变量 | 默认值 | 出错时 |
 |---|---|---|
-| `BROKER_URL` | **开发** compose 中为 `http://broker:8090`；生产和安装中为空（由 **api** 读取） | 为空是**正常**状态：读取容器观测状态的地方会说"未观测"，而不是沿用登记的状态（[RN-486](../business-rules.md#rn-486)），api 返回 `brokerConfigurado: false`，于是创建项目时只提供 `runner`（[RN-573](../business-rules.md#rn-573)）。在本地 broker 默认启动，所以开发 compose 默认把它指向自己启动的服务（[RN-599](../business-rules.md#rn-599)）——`.env` 中的值仍然优先。生产和安装用的 compose 故意没有默认值：在那里 broker 位于 profile 之下，开启它的人写入 URL |
+| `BROKER_URL` | **开发** compose 中为 `http://broker:8090`；生产和安装中为空（由 **api** 读取） | 为空是**正常**状态：读取容器观测状态的地方会说"未观测"，而不是沿用登记的状态（[RN-486](../business-rules/api.md#rn-486)），api 返回 `brokerConfigurado: false`，于是创建项目时只提供 `runner`（[RN-573](../business-rules/api.md#rn-573)）。在本地 broker 默认启动，所以开发 compose 默认把它指向自己启动的服务（[RN-599](../business-rules/infra.md#rn-599)）——`.env` 中的值仍然优先。生产和安装用的 compose 故意没有默认值：在那里 broker 位于 profile 之下，开启它的人写入 URL |
 | `BROKER_PORT` | `8090` | broker 监听的端口。它**不**在宿主机上发布任何东西——只有 api 能通过 compose 的 `internal: true` 网络访问它 |
-| `BRABO_SERVICE_TOKEN` 🔒 | 开发中为 `dev-service-token-change-me` | 与 api ↔ engine **相同**的密钥，放在同一个头里。当 `NODE_ENV=production` 时，如果它为空、是仓库中的公开字面值或少于 16 个字符，broker 拒绝启动——这是 RN-114 的规则，在这里守护的是一个与宿主机 Docker 通信的进程。`BRABO_SERVICE_TOKEN_PREVIOUS` 定义后遵循同样的规则，只是不是必填：去除空白，在生产环境中如果它是公开字面值或少于 16 个字符，broker 拒绝启动（[RN-601](../business-rules/autenticacao.md#rn-601)） |
-| `API_URL` | `http://api:3000` | broker 从这里**读取**架构师的决定。它不接收容器规格；而是主动来取（[RN-485](../business-rules.md#rn-485)） |
+| `BRABO_SERVICE_TOKEN` 🔒 | 开发中为 `dev-service-token-change-me` | 与 api ↔ engine **相同**的密钥，放在同一个头里。当 `NODE_ENV=production` 时，如果它为空、是仓库中的公开字面值或少于 16 个字符，broker 拒绝启动——这是 RN-114 的规则，在这里守护的是一个与宿主机 Docker 通信的进程。`BRABO_SERVICE_TOKEN_PREVIOUS` 定义后遵循同样的规则，只是不是必填：去除空白，在生产环境中如果它是公开字面值或少于 16 个字符，broker 拒绝启动（[RN-601](../business-rules/engine.md#rn-601)） |
+| `API_URL` | `http://api:3000` | broker 从这里**读取**架构师的决定。它不接收容器规格；而是主动来取（[RN-485](../business-rules/produto.md#rn-485)） |
 | `PROJECT_WORKSPACES_HOST_ROOT` | — | 项目文件夹在**宿主机上**的根目录，而不是任何容器内部的。没有它，`start` 会拒绝并指出这个变量，其他四种操作照常工作。不要把它与 `PROJECT_WORKSPACES_ROOT` 混淆，后者是容器内的路径：`-v` 由 **daemon** 针对宿主机文件系统解析，使用 api 内部的路径会让它创建并挂载一个**空**文件夹 |
-| `DOCKER_GID` | `999`（compose） | 宿主机 `docker` 组的 gid（`getent group docker \| cut -d: -f3`）。socket 是 `root:docker`，而 broker 以非 root 运行，所以 compose 使用 `group_add`。默认值是最常见的，但在多个发行版上是错的。自 [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) 起，这在**每台**开发机上都很重要，而不仅是有人开启了 profile 的地方——设错不会让启动失败，而是让使用失败：每个操作都会因 socket 上的 "permission denied" 而失败，而这只有在有人提议 `container_start` 时才会出现。`pnpm dev` 每次运行都会报告这个变量的状态（[RN-512](../business-rules.md#rn-512)），在没有 `docker` 组的机器上会说"不适用"，而不是指责它 |
+| `DOCKER_GID` | `999`（compose） | 宿主机 `docker` 组的 gid（`getent group docker \| cut -d: -f3`）。socket 是 `root:docker`，而 broker 以非 root 运行，所以 compose 使用 `group_add`。默认值是最常见的，但在多个发行版上是错的。自 [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) 起，这在**每台**开发机上都很重要，而不仅是有人开启了 profile 的地方——设错不会让启动失败，而是让使用失败：每个操作都会因 socket 上的 "permission denied" 而失败，而这只有在有人提议 `container_start` 时才会出现。`pnpm dev` 每次运行都会报告这个变量的状态（[RN-512](../business-rules/infra.md#rn-512)），在没有 `docker` 组的机器上会说"不适用"，而不是指责它 |
 
-`PROJECT_WORKSPACES_HOST_ROOT` 无法从托管的 Docker 卷推导出来。在**开发** compose 中，它从 `PROJECT_WORKSPACES_HOST_DIR`（见上文）推导——所以不定义后者（刚复制的 `.env.example` 的状态）会让 broker 没有根目录，让 `container` 模式没有容器：栈健康地启动，而 `container_start` 以拒绝告终。`pnpm dev` 每次运行都会报告这一点，方式与 `DOCKER_GID` 相同，并且从不拒绝启动（[RN-599](../business-rules.md#rn-599)）。它也会报告 `~` 的情况：Compose 会在 `api`/`engine` 使用的 bind-mount 来源中展开 `~`，但**不会**在 broker 接收的变量中展开（用 `docker compose config` 测得），所以请写入**已展开**的路径。显式设置且与 `api`/`engine` 所挂载文件夹不同的 `PROJECT_WORKSPACES_HOST_ROOT` 会被报告为不一致——容器会收到一个 agent 从未写入过的文件夹。把托管卷换成宿主机文件夹不会迁移 `project_workspaces` 卷中已有的内容：数据留在那里，只是不再是 `api` 和 `engine` 看到的东西。
+`PROJECT_WORKSPACES_HOST_ROOT` 无法从托管的 Docker 卷推导出来。在**开发** compose 中，它从 `PROJECT_WORKSPACES_HOST_DIR`（见上文）推导——所以不定义后者（刚复制的 `.env.example` 的状态）会让 broker 没有根目录，让 `container` 模式没有容器：栈健康地启动，而 `container_start` 以拒绝告终。`pnpm dev` 每次运行都会报告这一点，方式与 `DOCKER_GID` 相同，并且从不拒绝启动（[RN-599](../business-rules/infra.md#rn-599)）。它也会报告 `~` 的情况：Compose 会在 `api`/`engine` 使用的 bind-mount 来源中展开 `~`，但**不会**在 broker 接收的变量中展开（用 `docker compose config` 测得），所以请写入**已展开**的路径。显式设置且与 `api`/`engine` 所挂载文件夹不同的 `PROJECT_WORKSPACES_HOST_ROOT` 会被报告为不一致——容器会收到一个 agent 从未写入过的文件夹。把托管卷换成宿主机文件夹不会迁移 `project_workspaces` 卷中已有的内容：数据留在那里，只是不再是 `api` 和 `engine` 看到的东西。
 
 `BRABO_PROJECTS_HOST_BASE` 是 broker 的**第二个**根目录——**Mounted** 项目的基础目录，同样位于宿主机上（[ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)，[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)）。与上面那个不同，它不需要填写：compose 从 `BRABO_PROJECTS_BASE` 推导它，后者按定义就是宿主机路径（是 `api` 和 `engine` 按同一路径挂载的东西）。只有当 Docker daemon 通过另一条路径访问该文件夹时，才显式定义它。
 
-正是它让 **Mounted** 项目可以拥有容器（[RN-503](../business-rules.md#rn-503)）：api 发送一个带判别字段的定位符（`localizacao.tipo`——`gerenciada` 或 `montada`）以及相对路径段，broker 针对相应的根目录解析它。两个根目录永远不会互相替代。缺少它会让 `mounted` 项目的 `start` 以 **503** 拒绝，并**指出**变量名，不触碰任何容器——回退到 `PROJECT_WORKSPACES_HOST_ROOT` 会挂载另一个项目的文件夹，因为托管根目录以 `workspace_dir_name` 命名，而基础目录由用户命名。
+正是它让 **Mounted** 项目可以拥有容器（[RN-503](../business-rules/api.md#rn-503)）：api 发送一个带判别字段的定位符（`localizacao.tipo`——`gerenciada` 或 `montada`）以及相对路径段，broker 针对相应的根目录解析它。两个根目录永远不会互相替代。缺少它会让 `mounted` 项目的 `start` 以 **503** 拒绝，并**指出**变量名，不触碰任何容器——回退到 `PROJECT_WORKSPACES_HOST_ROOT` 会挂载另一个项目的文件夹，因为托管根目录以 `workspace_dir_name` 命名，而基础目录由用户命名。
 
 
 ---
@@ -468,7 +468,7 @@ docker compose -f docker/docker-compose.prod.yml \
 
 `1000`/`1000` 与单个开发者最常见的 Linux 配置一致，也与 `node:26-alpine`（`api`/`web` 的基础镜像）自带的 `node` 用户一致——当你的组合匹配时，Dockerfile 会复用这个用户而不是新建一个。已经有在此变更之前以 root 运行的容器的环境，需要对命名卷 `node_modules`/`_build`/`deps`/`.mix`/`.hex` 做一次 `chown`（或执行 `docker compose down -v` 让它们被重建）——参见[快速开始](../getting-started.md)中的说明。
 
-生产和安装用的 compose 不同：engine 从生产镜像以固定用户 `engine`（uid/gid `1000`，没有 `DEV_UID`）运行，带有 `read_only: true` 和挂载在 `/home/engine` 的 tmpfs。这个 tmpfs 声明为 `uid=1000,gid=1000,mode=0700`——不是变量——因为 semgrep（SecOps 的 gate）会在那里写 `~/.semgrep`；如果以 root 创建，扫描不返回任何结果，gate 会在没有静态分析的情况下通过（[RN-707](../business-rules.md#rn-707)，runbook [O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)）。
+生产和安装用的 compose 不同：engine 从生产镜像以固定用户 `engine`（uid/gid `1000`，没有 `DEV_UID`）运行，带有 `read_only: true` 和挂载在 `/home/engine` 的 tmpfs。这个 tmpfs 声明为 `uid=1000,gid=1000,mode=0700`——不是变量——因为 semgrep（SecOps 的 gate）会在那里写 `~/.semgrep`；如果以 root 创建，扫描不返回任何结果，gate 会在没有静态分析的情况下通过（[RN-707](../business-rules/engine.md#rn-707)，runbook [O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)）。
 
 两个 engine 镜像都用构建参数 `SEMGREP_VERSION` 固定 semgrep（`1.183.0`，在 `docker/engine/Dockerfile` 和 `Dockerfile.prod` 中相同，由 `scripts/ci/semgrep-do-engine.spec.ts` 保持一致）。它是构建参数，不是运行时变量——`.env` 中什么都不用写。没有固定时，pip 取到了 1.179.0，而它不发布 `musllinux` wheel：在 Alpine 镜像中，包来自不含 `semgrep-core` 的 sdist，所有扫描都失败了。升级版本就是选择一个在 PyPI 上有 `musllinux` wheel 的 release，并在同一个 PR 中修改两个 Dockerfile。
 
