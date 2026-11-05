@@ -376,6 +376,19 @@ export function main(argv = process.argv.slice(2)) {
     }
   }
 
+  // toda tradução que estava em dia (movida ou não) volta a ser carimbada: o commit da migração
+  // reescreve links da fonte e a deixaria defasada sem que o texto tenha mudado de sentido
+  for (const l of Object.keys(emDiaRel)) {
+    for (const rel of emDiaRel[l]) {
+      const velho = `docs/i18n/${l}/${rel}`;
+      const c = MAPA[velho] ?? velho;
+      if (rel.endsWith('.md') && !rel.startsWith('business-rules') && existsSync(c)) emDia.push(c);
+    }
+  }
+  const unicos = [...new Set(emDia)];
+  emDia.length = 0;
+  emDia.push(...unicos);
+
   // 3. docmap
   if (existsSync('docs/.docmap.yml')) {
     const d = partirDocmap(ler('docs/.docmap.yml'));
