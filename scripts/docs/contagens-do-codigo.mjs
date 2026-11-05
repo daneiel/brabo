@@ -214,6 +214,20 @@ export const FONTES = {
 // quebra linha. Uma entrada por LUGAR: a mesma contagem dita em dois
 // arquivos são duas frases que envelhecem separadas.
 
+/**
+ * A frase mora na RN, e a RN mora na raiz da área: o arquivo hospedeiro é o
+ * primeiro arquivo de RN (fonte pt-BR, de qualquer raiz) onde o padrão casa
+ * (AT-693). Antes era `docs/business-rules.md`, que segue como o padrão.
+ */
+export const HOSPEDEIRO_RN = 'docs/business-rules.md';
+
+function hospedeiroDe(ctx, padrao) {
+  const achado = (ctx.arquivosDeRn?.() ?? [])
+    .filter((a) => !a.includes('/i18n/'))
+    .find((a) => padrao.test(ctx.ler(a)));
+  return achado ?? HOSPEDEIRO_RN;
+}
+
 export const AFERICOES = [
   // overrides — "já são catorze na raiz e treze no website"
   { arquivo: '.claude/contexto/stack.md', padrao: /já são (\S+(?: e \S+)?) na raiz e \S+(?: e \S+)? no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
@@ -232,8 +246,8 @@ export const AFERICOES = [
   // imagens que o produto publica / que o smoke confere
   { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   // RN-524 e RN-527 (AT-192): ficaram em "quatro" depois do ADR 0162
-  { arquivo: 'docs/business-rules.md', padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
-  { arquivo: 'docs/business-rules.md', padrao: /- as (\S+) imagens vêm de \*\*variável obrigatória\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  { arquivo: HOSPEDEIRO_RN, padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  { arquivo: HOSPEDEIRO_RN, padrao: /- as (\S+) imagens vêm de \*\*variável obrigatória\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
 
   // contrato de git
   { arquivo: 'README.md', padrao: /o contrato de (\S+) operações e as capabilities/, fonte: 'operacoesDoGit', forma: 'pt_f' },
@@ -281,7 +295,8 @@ export function aferirContagens(ctx, afericoes = AFERICOES, fontes = FONTES) {
     return cache.get(nome);
   };
 
-  return afericoes.map(({ arquivo, padrao, fonte, forma }) => {
+  return afericoes.map(({ arquivo: arquivoDeclarado, padrao, fonte, forma }) => {
+    let arquivo = arquivoDeclarado;
     const descricao = fontes[fonte]?.descricao ?? fonte;
     const valor = contar(fonte);
     if (valor === null || valor === undefined) {
@@ -289,6 +304,7 @@ export function aferirContagens(ctx, afericoes = AFERICOES, fontes = FONTES) {
     }
     let texto;
     try {
+      if (arquivo === HOSPEDEIRO_RN) arquivo = hospedeiroDe(ctx, padrao);
       texto = ctx.ler(arquivo);
     } catch {
       return { arquivo, estado: 'CEGO', motivo: 'o arquivo não existe' };

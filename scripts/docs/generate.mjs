@@ -29,7 +29,8 @@ import {
   veredito as vereditoDasRefs,
 } from './refs-com-simbolo.mjs';
 import { deduplicarProximoAdr, PROXIMO_ADR, substituirGrupo } from './reescrita.mjs';
-import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
+import { aferirAncoras } from './ancoras-de-rn.mjs';
+import { arquivosDeRn, contarRegras, numerosDuplicados } from './regras-de-negocio.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
 import { conferirTemas, corrigirRecuo, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
@@ -638,11 +639,7 @@ function contarSchemasDeArtefato() {
  * exatamente o modo de falha que esta aferição existe para pegar.
  */
 function contarRegrasDeNegocio() {
-  const fontes = ['docs/business-rules.md', ...arquivos('docs/business-rules/*.md')];
-  return fontes.reduce(
-    (soma, f) => soma + (ler(f).match(/^### RN-\d+ /gm) ?? []).length,
-    0,
-  );
+  return contarRegras(arquivosDeRn(arquivos), ler);
 }
 
 /**
@@ -938,6 +935,7 @@ function verificarContagensDerivadasDoCodigo() {
   const resultados = aferirContagens({
     ler,
     listar: arquivos,
+    arquivosDeRn: () => arquivosDeRn(arquivos),
     rodarNode: (rel) => {
       try {
         return execFileSync(process.execPath, [rel], { cwd: RAIZ, encoding: 'utf8' });
@@ -981,9 +979,14 @@ function verificarContagensDerivadasDoCodigo() {
  * pelo SÍMBOLO (a saída diz onde ele aparece mais perto, que é pista e não
  * conserto — pode ser uma chamada e não a definição).
  */
+const NOME_DA_RAIZ = (() => {
+  const i = process.argv.indexOf('--raiz');
+  return i >= 0 ? (process.argv[i + 1] ?? null) : null;
+})();
+
 function verificarRefsComSimbolo() {
   const versionados = versionadosDasFontes();
-  let resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
+  let resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal, NOME_DA_RAIZ);
   // Ref cujo símbolo tem uma ocorrência mais próxima ÚNICA é reancorada no
   // modo escrita (AT-399); a que sumiu ou empata continua pedindo humano.
   if (!CHECAR) {
@@ -992,7 +995,7 @@ function verificarRefsComSimbolo() {
       const refs = resultado.naoBatem.filter((r) => r.doc === doc);
       mudou = reescreverSeDerivavel(doc, (t) => reancorar(t, refs), 'refs `caminho:N` reancoradas pelo símbolo') || mudou;
     }
-    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
+    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal, NOME_DA_RAIZ);
   }
   const { total, batem, naoBatem, naoResolvidas } = resultado;
   const estado = vereditoDasRefs(resultado);
@@ -1006,9 +1009,12 @@ function verificarRefsComSimbolo() {
     return;
   }
 
-  const resumo = `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})`;
+  const resumo =
+    `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})` +
+    (NOME_DA_RAIZ ? `; ${resultado.externas.length} externas à raiz ${NOME_DA_RAIZ}, não conferidas` : '');
   if (estado === 'ok') {
     console.log(`  ok        refs com símbolo (${resumo})`);
+    if (NOME_DA_RAIZ) for (const r of resultado.externas) console.log(`            externa ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}`);
     return;
   }
 
@@ -1026,6 +1032,7 @@ function verificarRefsComSimbolo() {
   for (const r of naoResolvidas) {
     console.log(`            ${r.doc}:${r.linhaNoDoc} → \`${r.caminho}\` não resolve a um arquivo só`);
   }
+  if (NOME_DA_RAIZ) for (const r of resultado.externas) console.log(`            externa ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}`);
 }
 
 /**
@@ -1038,6 +1045,10 @@ function verificarRefsComSimbolo() {
  * cabeçalhos também reprova — é o check cego.
  */
 function verificarAncorasDeRn() {
+  for (const d of numerosDuplicados(arquivosDeRn(arquivos), ler)) {
+    pendencias.push('RN duplicada');
+    console.log(`  DUPLICADA RN-${d.numero} em ${d.arquivos.join(' e ')}`);
+  }
   const { cabecalhos, problemas } = aferirAncoras(arquivosDeRn(arquivos), ler);
 
   if (cabecalhos === 0) {

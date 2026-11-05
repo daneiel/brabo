@@ -40,15 +40,18 @@
  * anda dezenas ou centenas de linhas.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { arquivos as arquivosVersionados, fonteDe } from './fontes.mjs';
+import { arquivosDeRn } from './regras-de-negocio.mjs';
 import { join } from 'node:path';
 
 export const JANELA = 3;
 
-export const ARQUIVOS_DE_RN = [
-  'docs/business-rules.md',
-  'docs/business-rules/custo.md',
-  'docs/business-rules/autenticacao.md',
-];
+/** Os arquivos de RN fonte pt-BR de todas as raízes (a lista era fixa em três). */
+export const arquivosDeRnDaFonte = (arquivos) => arquivosDeRn(arquivos).filter((a) => !a.includes('/i18n/'));
+
+// Raiz de doc → fontes do `fontes.yml` que ela cobre (produto agrega docs e infra).
+const FONTES_DA_RAIZ = { produto: ['docs', 'infra'], ci: ['infra'], infra: ['infra'] };
+const daRaiz = (nome, caminho) => (FONTES_DA_RAIZ[nome] ?? [nome]).includes(fonteDe(caminho).nome);
 
 const SIMBOLO = /^[A-Za-z_$][\w$]*[?!]?(?:\.[A-Za-z_$][\w$]*[?!]?)*(?:\(\)|\/\d+)?$/;
 
@@ -191,22 +194,35 @@ export function veredito({ total, naoBatem, naoResolvidas }) {
 
 /**
  * Afere todas as refs com símbolo dos arquivos de RN.
- * @returns {{total: number, batem: number, naoBatem: object[], naoResolvidas: object[]}}
+ * @param {string|null} nomeDaRaiz modo `--raiz <nome>`; `null` confere todas
+ * @returns {{total: number, batem: number, naoBatem: object[], naoResolvidas: object[], externas: object[]}}
  */
-export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN, real = (c) => join(raiz, c)) {
+export function aferir(
+  raiz,
+  versionados,
+  arquivos = arquivosDeRnDaFonte(arquivosVersionados),
+  real = (c) => join(raiz, c),
+  nomeDaRaiz = null,
+) {
   const cache = new Map();
   const linhasDe = (caminho) => {
     if (!cache.has(caminho)) cache.set(caminho, readFileSync(real(caminho), 'utf8').split('\n'));
     return cache.get(caminho);
   };
 
-  const resultado = { total: 0, batem: 0, naoBatem: [], naoResolvidas: [] };
+  const resultado = { total: 0, batem: 0, naoBatem: [], naoResolvidas: [], externas: [] };
   for (const doc of arquivos) {
     for (const ref of extrairRefs(readFileSync(join(raiz, doc), 'utf8'))) {
       const onde = { doc, ...ref };
       const resolvido = resolverCaminho(ref.caminho, raiz, versionados, real);
       if (resolvido === null) {
         resultado.naoResolvidas.push(onde);
+        continue;
+      }
+      // Com `--raiz`, ref fora da fonte daquela raiz é EXTERNA: listada, não conferida
+      // (quem confere é o agregador).
+      if (nomeDaRaiz !== null && !daRaiz(nomeDaRaiz, resolvido)) {
+        resultado.externas.push({ ...onde, resolvido });
         continue;
       }
       resultado.total++;
