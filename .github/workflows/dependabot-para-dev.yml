@@ -2,7 +2,7 @@ name: dependabot-para-dev
 
 # Dependência entra pela `dev`, como todo o resto, e chega à `main` pela
 # promoção `dev → main`. Fonte da política:
-# docs/explanation/branching-policy.md, "Dependabot enters through dev".
+# scripts/ci/docs/explanation/branching-policy.md, "Dependabot enters through dev".
 #
 # O `target-branch: dev` do `.github/dependabot.yml` resolve as atualizações de
 # VERSÃO. Os SECURITY UPDATES são chave da interface e o GitHub os abre SEMPRE

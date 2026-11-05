@@ -168,7 +168,7 @@ jobs:
       # por padrão, SEM checar ordem semver. O `workflow_dispatch` existe
       # (mesmo motivo do `release.yml`) pra republicar tag ÓRFÃ — e este
       # repo JÁ TEM seis tags finais órfãs (`v0.2.0`…`v1.1.0`, ver
-      # docs/reference/rulesets.md). Republicar uma delas depois de uma
+      # scripts/ci/docs/reference/rulesets.md). Republicar uma delas depois de uma
       # versão mais nova já estar publicada moveria `latest` pra TRÁS em
       # silêncio. Publica normal só quando a versão é >= o `latest` atual;
       # do contrário, marca com uma dist-tag própria.

@@ -131,7 +131,7 @@ jobs:
       # npm), `tag-release.yml` e `docs-deploy.yml`. Ou seja: sobrou justamente
       # onde há credencial. Disciplina humana não segurou o pin uma vez, e
       # workflow novo nasce copiando o vizinho — que estava com tag. Ver
-      # docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      # scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md.
       #
       # Antes do `pnpm install` de propósito: o script só usa `node:fs`.
       - name: Actions presas a commit SHA
@@ -144,7 +144,7 @@ jobs:
       # de `test-api`/`test-engine`, que é literalmente o runner que o passo de
       # cima existe para proteger. Desde o ADR 0197 elas nem são mais literais
       # aqui (vêm do job `imagens`), e o check reprova o literal que voltar.
-      # Ver docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      # Ver scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md.
       #
       # Antes do `pnpm install`, como o vizinho: o script só usa `node:fs`.
       - name: Imagens de terceiro presas por digest
@@ -342,7 +342,7 @@ jobs:
 
   # O NOME do check que a proteção de branch conhece (`Testes TS (api)`) fica
   # neste job, e não nos shards: renomear um check exigido trava todo PR para
-  # sempre (docs/reference/rulesets.md). Ele depende dos shards e é o único que
+  # sempre (scripts/ci/docs/reference/rulesets.md). Ele depende dos shards e é o único que
   # decide o veredito.
   #
   # `if: always()` é obrigatório, não enfeite: sem ele, um shard vermelho
@@ -461,7 +461,7 @@ jobs:
 
   # O NOME do check que a proteção de branch conhece (`Testes TS (web)`) fica
   # neste job, e não nos shards: renomear um check exigido trava todo PR para
-  # sempre (docs/reference/rulesets.md). Ele depende dos shards e é o único que
+  # sempre (scripts/ci/docs/reference/rulesets.md). Ele depende dos shards e é o único que
   # decide o veredito.
   #
   # `if: always()` é obrigatório, não enfeite: sem ele, um shard vermelho
@@ -1211,7 +1211,7 @@ jobs:
       # compara o `NextUpdate` do metadata e baixa de novo quando passou). O
       # veredito não fica mais frouxo por causa do cache: a régua de frescor é
       # a do Trivy, igual à de uma máquina local. Ver
-      # docs/explanation/cadeia-de-suprimentos-do-ci.md.
+      # scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md.
       - name: Dia UTC (chave do cache da base do trivy)
         id: dia
         if: steps.diff.outputs.rodar == 'true'
@@ -1394,7 +1394,7 @@ jobs:
       # provar de novo a mesma coisa. A VERSÃO do navegador vem presa à versão
       # exata do `@playwright/test` no lockfile — é assim que este download se
       # encaixa na disciplina de pin do repositório (ver
-      # docs/explanation/cadeia-de-suprimentos-do-ci.md).
+      # scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md).
       - name: Navegador do Playwright
         if: steps.diff.outputs.rodar == 'true' && steps.cache-playwright.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium

@@ -148,7 +148,7 @@ pnpm bootstrap
 - **`Docker › Destroy` 保留数据卷**（`down`，从不 `down -v`）：销毁容器不等于销毁数据。
 - **在 K8s 中只有 `All` 可用。** 集群的 bootstrap 会一起安装 api、engine 和 web；Api/Engine/Web 在菜单中显示为**禁用**并附上原因。隐藏它们会掩盖限制；执行它们则是虚构一条不存在的路径。
 - **`Database › Delete` 是唯一需要回车的界面**，并要求输入数据库名。它会清空 schema 并**重新创建 pgvector 扩展**——`init.sql` 只在数据卷首次初始化时运行，因此单纯的 `DROP SCHEMA` 会让下一次迁移失败。由于 engine 共用同一个数据库，脚本会提示恢复需要 `pnpm db:migrate` **和** `pnpm engine:migrate`。
-- **`Docker › Reset total` 在删除前先停止 api 和 engine**——只停这两个，不多不少：它们与数据库保持着活动连接，在它们底下执行 `DROP SCHEMA` 会杀死进程，而且没有东西会把它们重新拉起（engine 会在 drop 过程中死掉，因为 `Rehydrator` 查询了一张刚消失的表）。迁移后它会重新启动所有服务、等待其健康并执行 seed；最后在给出任何结论之前，它会**询问** api 和 engine 的 `/health` 以及 web 的 `/`——若有一个没有响应，它会点名并以退出码 1 结束，而不是宣布成功。这是第二个需要确认的界面（输入 `RESET`），它不删除数据卷——并在运行时说明这一点，因为另一面是 reset 永远无法复现首次克隆（只在新数据卷上出现的缺陷会被忽略）。详见 [`docs/runbook.md`](docs/runbook.md#reset-total)。
+- **`Docker › Reset total` 在删除前先停止 api 和 engine**——只停这两个，不多不少：它们与数据库保持着活动连接，在它们底下执行 `DROP SCHEMA` 会杀死进程，而且没有东西会把它们重新拉起（engine 会在 drop 过程中死掉，因为 `Rehydrator` 查询了一张刚消失的表）。迁移后它会重新启动所有服务、等待其健康并执行 seed；最后在给出任何结论之前，它会**询问** api 和 engine 的 `/health` 以及 web 的 `/`——若有一个没有响应，它会点名并以退出码 1 结束，而不是宣布成功。这是第二个需要确认的界面（输入 `RESET`），它不删除数据卷——并在运行时说明这一点，因为另一面是 reset 永远无法复现首次克隆（只在新数据卷上出现的缺陷会被忽略）。详见 [`deploy/docs/runbook.md`](deploy/docs/runbook.md#reset-total)。
 
 **命令行选项：**
 
@@ -177,15 +177,15 @@ pnpm bootstrap --help                         # 用法说明
 | [入门指南](docs/getting-started.md) | 从克隆到第一个智能体回合 |
 | [架构](docs/architecture.md) | 代码地图、边界、不变量、技术债 |
 | [业务规则](docs/business-rules.md) | 各条 RN，每条都附 `文件:行号` 和覆盖它的测试（数量见[葡萄牙语 README](README.md)） |
-| [Runbook](docs/runbook.md) | 部署、rollout、恢复、密钥轮换、成本事故 |
+| [Runbook](deploy/docs/runbook.md) | 部署、rollout、恢复、密钥轮换、成本事故 |
 | [术语表](docs/glossary.md) | harness、gate、handoff、DEK、outbox、K 周期 |
-| [可观测性](docs/explanation/observability.md) | 如何跨三个进程追踪一个动作：trace、日志和跨层路径 |
+| [可观测性](deploy/docs/explanation/observability.md) | 如何跨三个进程追踪一个动作：trace、日志和跨层路径 |
 | [配置](docs/reference/configuration.md) | 所有环境变量 |
 | [脚本](docs/reference/scripts.md) | 每个 `pnpm` 命令和 `Makefile` 目标，从源码提取 |
 | [事件](docs/reference/events.md) | 事件日志的类型、广播和 span |
-| [权限](docs/reference/permissions.md) | `permissions.json` 的格式和决策顺序 |
-| [工件](docs/reference/artifacts.md) | 各个 schema 以及谁可以产生它们 |
-| [Git 提供方](docs/reference/git-providers.md) | 操作契约和能力声明 |
+| [权限](apps/api/docs/reference/permissions.md) | `permissions.json` 的格式和决策顺序 |
+| [工件](apps/api/docs/reference/artifacts.md) | 各个 schema 以及谁可以产生它们 |
+| [Git 提供方](apps/api/docs/reference/git-providers.md) | 操作契约和能力声明 |
 | [内部 API](docs/reference/internal-api.md) | api ↔ engine 契约 |
 | [安全](SECURITY.md) | 如何报告漏洞 |
 | [参与贡献](CONTRIBUTING.md) | 流程、Definition of Done、接受什么 |

@@ -16,7 +16,7 @@ const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 describe('classificar', () => {
   it('pula quando o diff é só documentação, site, manifestos e workflows vizinhos', () => {
     const r = classificar([
-      'docs/reference/rulesets.md',
+      'scripts/ci/docs/reference/rulesets.md',
       'website/docusaurus.config.ts',
       'deploy/k8s/base/api/deployment.yaml',
       'scripts/docs/generate.mjs',

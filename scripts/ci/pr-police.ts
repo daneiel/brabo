@@ -1,6 +1,6 @@
 /**
  * pr-police — aplica a política de branches em todo PR.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * A lógica que DECIDE é pura e testável; git e GitHub ficam no adaptador CLI no
  * fim do arquivo — mesmo desenho de `scripts/docs/docmap.mjs`.
@@ -552,7 +552,7 @@ export function formatarVeredito(entrada: EntradaPr, veredito: Veredito): string
   }
 
   l.push('');
-  l.push('  A política inteira: docs/explanation/branching-policy.md');
+  l.push('  A política inteira: scripts/ci/docs/explanation/branching-policy.md');
   return l.join('\n');
 }
 

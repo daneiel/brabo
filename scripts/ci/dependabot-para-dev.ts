@@ -1,6 +1,6 @@
 /**
  * dependabot-para-dev — decide o que fazer com um PR do Dependabot aberto
- * contra `main`. Fonte da política: docs/explanation/branching-policy.md,
+ * contra `main`. Fonte da política: scripts/ci/docs/explanation/branching-policy.md,
  * seção "Dependabot enters through dev".
  *
  * Por que isto existe: dependência entra pela `dev`, como todo o resto, e

@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     # AT-306: sem teto, um passo pendurado (build do site, render da
     # referência da API) segurava o runner pelas 6h do default do GitHub.
-    # Medido: 53s frio, 51s quente (docs/reference/rulesets.md) — 15min é
+    # Medido: 53s frio, 51s quente (scripts/ci/docs/reference/rulesets.md) — 15min é
     # folga de sobra sem deixar um travamento custar horas.
     timeout-minutes: 15
     steps:
@@ -98,7 +98,7 @@ jobs:
           }
 
       # `apps/web/src/lib/api-types.generated.ts` é o segundo andar da mesma
-      # cadeia: `docs/reference/openapi.json` (checado acima) → tipos do web.
+      # cadeia: `apps/api/docs/reference/openapi.json` (checado acima) → tipos do web.
       # PRECISA rodar DEPOIS do passo anterior — é ele que garante que o
       # `openapi.json` no disco é o de verdade antes de gerar os tipos a
       # partir dele. `--check` é o mecanismo nativo do openapi-typescript

@@ -1,6 +1,6 @@
 /**
  * gate — o backmerge gate: trava os degraus de baixo até a correção descer.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * POR QUE ELE EXISTE. `hotfix/` entra direto em `main` porque incidente não
  * espera a escada. Isso deixa `dev` sem a correção — e o próximo release
@@ -272,7 +272,7 @@ export function formatarGate(entrada: EntradaDoGate, veredito: VereditoDoGate): 
   l.push(`  ${veredito.ok ? '✓' : '✗'} ${veredito.motivo}`);
   l.push(`      ${veredito.detalhe}`);
   l.push('');
-  l.push('  O gate inteiro: docs/explanation/branching-policy.md');
+  l.push('  O gate inteiro: scripts/ci/docs/explanation/branching-policy.md');
   return l.join('\n');
 }
 

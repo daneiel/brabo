@@ -31,6 +31,11 @@ coverage
 # Não entra em imagem de produção
 spike
 docs
+# AT-693: a doc de cada área mora na raiz dela; nenhuma imagem a lê.
+apps/*/docs
+packages/docs
+deploy/docs
+scripts/ci/docs
 # website/: a árvore do Redoc do site de documentação. Nenhum Dockerfile o lê, e o
 # `website/build` sozinho passa de 2 MB com o índice de busca. Mandar isso ao
 # daemon a cada build das quatro imagens é transferência pura.

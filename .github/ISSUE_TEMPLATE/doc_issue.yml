@@ -7,7 +7,7 @@ body:
     attributes:
       label: Qual página
       description: O caminho no repositório, a URL do site, ou os dois.
-      placeholder: docs/runbook.md — seção "Restore"
+      placeholder: deploy/docs/runbook.md — seção "Restore"
     validations:
       required: true
 

@@ -46,9 +46,9 @@ Para calibrar o relato, o que existe hoje:
 
 - **Segredos do usuário** (chaves de LLM, tokens de git) sob envelope
   encryption; nunca em texto plano no banco ou em log. Rotação da chave mestra
-  documentada no [runbook](docs/runbook.md).
+  documentada no [runbook](deploy/docs/runbook.md).
 - **Superfície HTTP auditada**: as 118 rotas da api estão classificadas em
-  [`docs/security-surface.md`](docs/security-surface.md), e um teste de tabela
+  [`apps/api/docs/security-surface.md`](apps/api/docs/security-surface.md), e um teste de tabela
   reprova rota nova sem classificação.
 - **Toda ação com efeito externo** passa por aprovação
   (`proposed_action` + `permissions.json`, `deny` vence `allow`).

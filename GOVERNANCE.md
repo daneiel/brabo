@@ -1,7 +1,7 @@
 # Governança
 
 Este documento resolve um `TODO(humano)` que
-[branching-policy.md](docs/explanation/branching-policy.md#migração-para-modo-community)
+[branching-policy.md](scripts/ci/docs/explanation/branching-policy.md#migração-para-modo-community)
 deixava em aberto desde o ADR 0030: o critério de quem entra em cada lista de
 aprovadores do modo `community` do `approval-ladder` — quem entra, quem sai, e
 com base em quê. Até esse critério existir em algum lugar, migrar de `solo`
@@ -15,7 +15,7 @@ isso mudar, não uma estrutura já em funcionamento.
 
 O projeto é mantido por [@daneiel](https://github.com/daneiel) sozinho.
 Decisão técnica, de produto e de release é dele — é o que
-[branching-policy.md](docs/explanation/branching-policy.md#modo-solo--o-que-vale-hoje)
+[branching-policy.md](scripts/ci/docs/explanation/branching-policy.md#modo-solo--o-que-vale-hoje)
 chama de modo `solo`: uma aprovação do owner para PR de terceiro, e o merge
 manual do próprio owner faz as vezes de aprovação no PR dele mesmo (a
 plataforma não permite aprovar o próprio PR pela interface).
@@ -28,7 +28,7 @@ regra que ninguém consegue cumprir.
 ## Os três papéis do modo `community`
 
 Quando `APPROVAL_MODE=community`, a exigência de aprovação por destino
-(`docs/explanation/branching-policy.md#modo-community--quando-houver-gente`) é:
+(`scripts/ci/docs/explanation/branching-policy.md#modo-community--quando-houver-gente`) é:
 
 | destino | exige |
 |---|---|
@@ -115,5 +115,5 @@ Mudança de critério aqui é, ela mesma, uma decisão do mantenedor atual — n
 precisa de aprovação de ninguém que este documento ainda não descreve como
 apto a aprovar. `docs/.docmap.yml` cobra revisão (`aviso`, não bloqueio) deste
 arquivo quando `scripts/ci/approval-ladder.ts` ou
-`docs/explanation/branching-policy.md` mudam, para o critério não envelhecer
+`scripts/ci/docs/explanation/branching-policy.md` mudam, para o critério não envelhecer
 em silêncio enquanto o mecanismo evolui.

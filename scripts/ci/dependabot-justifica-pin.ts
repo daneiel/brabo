@@ -1,7 +1,7 @@
 /**
  * dependabot-justifica-pin — decide se o corpo de um PR do Dependabot ganha a
  * linha `docs-not-needed: <motivo>`, e escreve essa linha. Fonte da política:
- * docs/explanation/branching-policy.md, seção "Dependabot enters through dev".
+ * scripts/ci/docs/explanation/branching-policy.md, seção "Dependabot enters through dev".
  *
  * Por que isto existe: o drift check (`scripts/docs/drift.mjs`) dispara por
  * ARQUIVO tocado, e o docmap vigia `release.yml` na regra

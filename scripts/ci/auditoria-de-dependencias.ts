@@ -1,7 +1,7 @@
 /**
  * auditoria-de-dependencias — roda `pnpm audit` e separa "não consegui
  * perguntar" de "encontrei vulnerabilidade".
- * Fonte da política: docs/explanation/cadeia-de-suprimentos-do-ci.md
+ * Fonte da política: scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md
  *
  * ## Por que existe
  *

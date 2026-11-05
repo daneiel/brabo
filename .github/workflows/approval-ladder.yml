@@ -1,7 +1,7 @@
 name: approval-ladder
 
 # Exige as aprovações certas para cada degrau da escada.
-# Fonte da política: docs/explanation/branching-policy.md
+# Fonte da política: scripts/ci/docs/explanation/branching-policy.md
 # A lógica vive em scripts/ci/approval-ladder.ts, testada por vitest.
 #
 # O pr-police diz se o PR está no LUGAR certo; este diz se ele tem as

@@ -101,7 +101,7 @@ coisas saíram do import sem perder uma palavra:
   AT-558 e não tem mais detalhe técnico), derivada de
   `apps/api/src/db/schema.ts` ser ou não barrel; e, desde a AT-123, as três
   frases de QUANTAS imagens o produto publica (`THIRD_PARTY_NOTICES.md`,
-  `docs/runbook.md`, `docs/reference/brb.md`), derivadas de `ALVOS` em
+  `deploy/docs/runbook.md`, `docs/reference/brb.md`), derivadas de `ALVOS` em
   `scripts/ci/images-manifest.ts`. Consequência prática: mudar a
   escada ou desfazer o barrel reprova o `docs:check` até a prosa acompanhar.
   Padrão que para de casar reprova como `CEGO`, e a FONTE sumir também.

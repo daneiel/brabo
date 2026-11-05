@@ -1,7 +1,7 @@
 name: backmerge-gate
 
 # Check required em TODO PR: o destino está travado aguardando retropropagação?
-# Fonte da política: docs/explanation/branching-policy.md
+# Fonte da política: scripts/ci/docs/explanation/branching-policy.md
 #
 # `hotfix/` entra direto em `main` porque incidente não espera a escada. Isso
 # deixa `dev` sem a correção — e o próximo release a DESFAZ, em silêncio.

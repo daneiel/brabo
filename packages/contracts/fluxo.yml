@@ -306,7 +306,7 @@ camada_plataforma:
       - { artefato: parecer-de-migracao, status: real,
           mecanismo: "pnpm --filter api lint:migracao" }
       - { artefato: backup-restore-testado, status: real,
-          mecanismo: "pnpm --filter api relatorio:backup + docs/runbook.md#restore" }
+          mecanismo: "pnpm --filter api relatorio:backup + deploy/docs/runbook.md#restore" }
       - { artefato: plano-de-capacidade, status: lacuna,
           motivo: exige volume real de dados }
       - { artefato: tuning, status: lacuna, motivo: exige volume real de dados }

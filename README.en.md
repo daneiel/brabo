@@ -210,7 +210,7 @@ Four things the menu does that are worth knowing:
   confirmation (typing `RESET`), and it doesn't remove volumes — and says so
   when it runs, because the flip side is that a reset never reproduces a first
   clone (a defect that only shows with a new volume goes unnoticed). Details in
-  [`docs/runbook.md`](docs/runbook.md#reset-total).
+  [`deploy/docs/runbook.md`](deploy/docs/runbook.md#reset-total).
 
 **Command-line options:**
 
@@ -265,15 +265,15 @@ in `dev`: for the latest state, read the files here.
 | [Getting started](docs/getting-started.md) | from the clone to the first agent turn |
 | [Architecture](docs/architecture.md) | code map, boundaries, invariants, technical debt |
 | [Business rules](docs/business-rules.md) | the RNs, each with `file:line` and the test that covers it (count in the [Portuguese README](README.md)) |
-| [Runbook](docs/runbook.md) | deploy, rollout, restore, key rotation, cost incident |
+| [Runbook](deploy/docs/runbook.md) | deploy, rollout, restore, key rotation, cost incident |
 | [Glossary](docs/glossary.md) | harness, gate, handoff, DEK, outbox, cycle K |
-| [Observability](docs/explanation/observability.md) | how to follow an action across the three processes: trace, log and the path across layers |
+| [Observability](deploy/docs/explanation/observability.md) | how to follow an action across the three processes: trace, log and the path across layers |
 | [Configuration](docs/reference/configuration.md) | every environment variable |
 | [Scripts](docs/reference/scripts.md) | every `pnpm` command and `Makefile` target, extracted from the source |
 | [Events](docs/reference/events.md) | the event log types, broadcasts and spans |
-| [Permissions](docs/reference/permissions.md) | the `permissions.json` format and the decision order |
-| [Artifacts](docs/reference/artifacts.md) | the schemas and who may emit each one |
-| [Git providers](docs/reference/git-providers.md) | the operation contract and the capabilities |
+| [Permissions](apps/api/docs/reference/permissions.md) | the `permissions.json` format and the decision order |
+| [Artifacts](apps/api/docs/reference/artifacts.md) | the schemas and who may emit each one |
+| [Git providers](apps/api/docs/reference/git-providers.md) | the operation contract and the capabilities |
 | [Internal API](docs/reference/internal-api.md) | the api ↔ engine contract |
 | [Security](SECURITY.md) | how to report a vulnerability |
 | [Contributing](CONTRIBUTING.md) | flow, Definition of Done, what is accepted |

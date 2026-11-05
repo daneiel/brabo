@@ -27,11 +27,11 @@ Três coisas que resolvem boa parte dos casos:
 1. **Procure nas issues existentes**, inclusive nas fechadas.
 2. **Veja a documentação** — em especial
    [Primeiros passos](docs/getting-started.md) para problemas de setup e o
-   [Runbook](docs/runbook.md) para operação. Os dois têm tabela de sintoma →
+   [Runbook](deploy/docs/runbook.md) para operação. Os dois têm tabela de sintoma →
    causa.
 3. **Agente com comportamento estranho** (resposta vazia, truncada, lentíssima)
    quase nunca é bug de código: é
-   [ambiente de inferência](docs/runbook.md#ambiente-de-inferencia). Confira
+   [ambiente de inferência](deploy/docs/runbook.md#ambiente-de-inferencia). Confira
    essa seção antes de relatar.
 
 ## O que ajuda no relato
