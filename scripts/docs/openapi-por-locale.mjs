@@ -193,7 +193,13 @@ export const rotulosFaltando = (rotulos) => {
   ]);
 };
 
-export const caminhoDoCatalogo = (raiz, locale) => join(raiz, 'docs/i18n', locale, 'openapi-textos.json');
+/** Spec e catálogos moram em `apps/api/docs/` (AT-693); enquanto o arquivo não mudou de lugar, cai em `docs/`. */
+export const caminhoDaApi = (raiz, rel) => {
+  const nova = join(raiz, 'apps/api/docs', rel);
+  return existsSync(nova) ? nova : join(raiz, 'docs', rel);
+};
+
+export const caminhoDoCatalogo = (raiz, locale) => caminhoDaApi(raiz, join('i18n', locale, 'openapi-textos.json'));
 
 export const lerCatalogo = (raiz, locale) => {
   const p = caminhoDoCatalogo(raiz, locale);

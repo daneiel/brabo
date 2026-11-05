@@ -17,7 +17,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { CAMINHO_DAS_TRADUCOES } from './paginas.mjs';
+import { CAMINHO_DAS_TRADUCOES, raizesExistentes } from './paginas.mjs';
 
 export function adrsPorTema(raiz) {
   const dir = path.join(raiz, 'docs/adr');
@@ -48,7 +48,20 @@ export function lerRotulosDaBarra(raiz, locale) {
   return mapa;
 }
 
-export function construirNavegacao({ raiz, repo, rotulos = {} }) {
+/** Índice `business-rules` + uma página por `business-rules/<x>.md` de cada raiz; custo e autenticação primeiro (ordem histórica), o resto alfabético. */
+export function slugsDeRegras(raiz, raizesDeDoc) {
+  const nomes = new Set();
+  for (const rd of raizesExistentes(raiz, raizesDeDoc)) {
+    try {
+      for (const f of readdirSync(path.join(raiz, rd, 'business-rules'))) if (f.endsWith('.md')) nomes.add(f.slice(0, -3));
+    } catch { /* raiz sem regras */ }
+  }
+  const fixos = ['custo', 'autenticacao'];
+  const resto = [...nomes].filter((n) => !fixos.includes(n)).sort();
+  return ['business-rules', ...[...fixos.filter((n) => nomes.has(n)), ...resto].map((n) => `business-rules/${n}`)];
+}
+
+export function construirNavegacao({ raiz, repo, rotulos = {}, raizesDeDoc }) {
   const t = (r) => rotulos[r] ?? r;
   const cat = (rotulo, itens, extra = {}) => ({ tipo: 'categoria', rotulo: t(rotulo), colapsada: false, itens, ...extra });
   const pg = (slug, rotulo) => (rotulo ? { tipo: 'pagina', slug, rotulo: t(rotulo) } : { tipo: 'pagina', slug });
@@ -60,7 +73,7 @@ export function construirNavegacao({ raiz, repo, rotulos = {} }) {
       pg('architecture'),
       cat('Decisões (ADR)', adrsPorTema(raiz).map((c) => ({ tipo: 'categoria', rotulo: c.rotulo, colapsada: true, itens: c.itens.map((s) => pg(s)) })), { slug: 'adr' }),
     ]),
-    cat('📐 Regras', pgs('business-rules', 'business-rules/custo', 'business-rules/autenticacao')),
+    cat('📐 Regras', pgs(...slugsDeRegras(raiz, raizesDeDoc))),
     cat('📖 Referência', [
       pg('reference/configuration', 'Configuração'), pg('reference/events', 'Eventos'), pg('reference/permissions', 'Permissões'),
       pg('reference/artifacts', 'Artefatos'), pg('reference/git-providers', 'Provedores de git'), pg('reference/internal-api', 'API interna'),
