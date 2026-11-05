@@ -4,6 +4,8 @@ import {
   blocosDeRn,
   gerarStubs,
   hospedeiroDaRn,
+  montarCorpo,
+  preambulo,
   partirDocmap,
   particionarRns,
   reescreverLink,
@@ -99,5 +101,21 @@ describe('stubs, mapa, literais, docmap', () => {
     expect(r.porRaiz.api).toContain('# c');
     expect(r.cruzadas).toContain('id: b');
     expect(r.cruzadas).not.toContain('id: a');
+  });
+});
+
+describe('prosa preservada', () => {
+  const T = '---\nid: x\n---\n\n# Titulo\n\nabertura\n\n## Sec A\n\nintro A\n\n### RN-001 — a {#rn-001}\n\ncorpo\n\n### RN-002 — b {#rn-002}\n\ncorpo2\n\n## Sec B\n\n### RN-003 — c {#rn-003}\n\nx\n';
+  it('o preâmbulo fica e a seção só se repete quando muda', () => {
+    expect(preambulo(T)).toBe('# Titulo\n\nabertura');
+    const { porRaiz } = particionarRns([{ caminho: 'docs/business-rules.md', texto: T }], new Map([[1, 'api'], [2, 'api'], [3, 'api']]));
+    const { texto } = montarCorpo(porRaiz.api, 'api', () => 'api');
+    expect(texto.match(/## Sec A/g)).toHaveLength(1);
+    expect(texto).toContain('intro A');
+    expect(texto.indexOf('## Sec B')).toBeLessThan(texto.indexOf('RN-003'));
+  });
+  it('prefixos novos: scripts/dev e design', () => {
+    expect(hospedeiroDaRn('`scripts/dev/x.sh:1`')).toBe('infra');
+    expect(hospedeiroDaRn('`design/a.css:1`')).toBe('web');
   });
 });

@@ -30,7 +30,7 @@ import {
 } from './refs-com-simbolo.mjs';
 import { deduplicarProximoAdr, PROXIMO_ADR, substituirGrupo } from './reescrita.mjs';
 import { aferirAncoras } from './ancoras-de-rn.mjs';
-import { arquivosDeRn, contarRegras, numerosDuplicados } from './regras-de-negocio.mjs';
+import { arquivosDeRn, contarRegras, gerarIndiceDeRn, numerosDuplicados, rnsDoTexto } from './regras-de-negocio.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
 import { conferirTemas, corrigirRecuo, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
@@ -1211,7 +1211,27 @@ function verificarCatalogosDaApi() {
 // ------------------------------------------------------------------- main
 
 console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando…');
+/**
+ * Índice de RN (AT-693): `docs/business-rules.md` tem uma linha por RN ligando
+ * à página hospedeira, no bloco `indice-de-rn`. Só existe depois da migração
+ * para as raízes: sem o marcador no arquivo, não há o que escrever.
+ */
+function gerarIndiceDeRnNoBloco() {
+  const todos = arquivosDeRn(arquivos);
+  for (const locale of [null, ...LOCALES_GERADOS]) {
+    const rel = locale ? copiaDoLocale(locale, 'docs/business-rules.md') : 'docs/business-rules.md';
+    if (!existsSync(join(RAIZ, rel)) || !ler(rel).includes('<!-- BEGIN:GENERATED:indice-de-rn -->')) continue;
+    const meus = todos.filter((a) => (locale ? a.includes(`/i18n/${locale}/`) : !a.includes('/i18n/')));
+    const rns = meus.flatMap((a) =>
+      rnsDoTexto(ler(a)).map((r) => ({ ...r, pagina: a.slice(a.indexOf('business-rules/')) })),
+    );
+    const bloco = gerarIndiceDeRn(rns).split('\n').slice(1, -1).join('\n');
+    escreverBloco(rel, 'indice-de-rn', bloco);
+  }
+}
+
 gerarScripts();
+gerarIndiceDeRnNoBloco();
 gerarEnv();
 gerarEventos();
 gerarOpenapi();

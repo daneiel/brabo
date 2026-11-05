@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
+import { medirDoRepositorio } from './paridade-de-traducao.mjs';
 import { RAIZES_DE_DOC } from './raizes-de-doc.mjs';
 
 const LOCALES = ['pt-BR', 'en', 'ru', 'zh-Hans'];
@@ -56,12 +57,12 @@ export const MAPA = (() => {
 const PREFIXOS = [
   [/^apps\/api\//, 'api'],
   [/^apps\/engine\//, 'engine'],
-  [/^apps\/web\//, 'web'],
+  [/^(apps\/web|design|\.design-sync)\//, 'web'],
   [/^apps\/runner\//, 'runner'],
   [/^apps\/broker\//, 'broker'],
   [/^packages\//, 'contracts'],
-  [/^(deploy|docker|k8s)\//, 'infra'],
-  [/^Makefile$/, 'infra'],
+  [/^(deploy|docker|k8s|scripts\/dev|\.release)\//, 'infra'],
+  [/^(Makefile|docker-bake\.hcl|\.env\.example)$/, 'infra'],
   [/^(scripts\/ci|\.github)\//, 'ci'],
 ];
 
@@ -83,21 +84,47 @@ export function hospedeiroDaRn(corpo) {
 // ---------------------------------------------------------------- partição
 const CAB_RN = /^###\s+RN-(\d+)\b/;
 const CAB_ALTO = /^#{1,3}\s/;
+const CAB_SECAO = /^##\s/;
 
-/** Quebra um arquivo de RN em blocos `{n, texto}` (do `### RN-` ao próximo `##`/`###`). */
+/** Texto antes da primeira seção `##` ou RN (o que o índice/stub conserva), sem o frontmatter. */
+export function preambulo(texto) {
+  const corpo = texto.replace(/^---\n[\s\S]*?\n---\n/, '');
+  const linhas = corpo.split('\n');
+  const i = linhas.findIndex((l) => CAB_SECAO.test(l) || CAB_RN.test(l));
+  return linhas.slice(0, i < 0 ? linhas.length : i).join('\n').trim();
+}
+
+/**
+ * Quebra um arquivo de RN em blocos `{n, texto, secao, prefixo}`: `texto` vai do
+ * `### RN-` ao próximo `##`/`###`; `secao` é o último `## ` visto; `prefixo` é a
+ * prosa solta entre o bloco anterior e este (sem a linha de `secao`).
+ */
 export function blocosDeRn(texto) {
-  const linhas = texto.split('\n');
+  const linhas = texto.replace(/^---\n[\s\S]*?\n---\n/, '').split('\n');
+  const iniPre = linhas.findIndex((l) => CAB_SECAO.test(l) || CAB_RN.test(l));
   const blocos = [];
   let atual = null;
-  for (const l of linhas) {
+  let secao = null;
+  let usada = false;
+  let solto = [];
+  for (const l of iniPre < 0 ? [] : linhas.slice(iniPre)) {
     const m = CAB_RN.exec(l);
     if (m) {
-      atual = { n: Number(m[1]), linhas: [l] };
+      atual = { n: Number(m[1]), linhas: [l], secao, prefixo: solto.join('\n').trim() };
       blocos.push(atual);
-    } else if (CAB_ALTO.test(l)) atual = null;
-    else if (atual) atual.linhas.push(l);
+      usada = true;
+      solto = [];
+    } else if (CAB_ALTO.test(l)) {
+      atual = null;
+      if (CAB_SECAO.test(l)) {
+        if (secao && !usada) solto.push(secao); // seção sem RN: o título fica na prosa
+        secao = l;
+        usada = false;
+      } else solto.push(l);
+    } else if (atual) atual.linhas.push(l);
+    else solto.push(l);
   }
-  return blocos.map((b) => ({ n: b.n, texto: b.linhas.join('\n').replace(/\s+$/, '') }));
+  return blocos.map((b) => ({ n: b.n, texto: b.linhas.join('\n').replace(/\s+$/, ''), secao: b.secao, prefixo: b.prefixo }));
 }
 
 /**
@@ -111,7 +138,7 @@ export function particionarRns(arquivos, mapa = new Map()) {
   for (const a of arquivos) {
     for (const b of blocosDeRn(a.texto)) {
       if (!decidido.has(b.n)) decidido.set(b.n, hospedeiroDaRn(b.texto));
-      (porRaiz[decidido.get(b.n)] ??= []).push({ n: b.n, texto: b.texto, de: a.caminho });
+      (porRaiz[decidido.get(b.n)] ??= []).push({ ...b, de: a.caminho });
     }
   }
   for (const l of Object.values(porRaiz)) l.sort((x, y) => x.n - y.n);
@@ -170,6 +197,27 @@ export function reescreverLiteral(texto, mapa = MAPA) {
     }
   });
   return achados;
+}
+
+/**
+ * Corpo de uma página hospedeira: as RNs em ordem, com o `## seção` de origem
+ * repetido só quando muda e a prosa solta que as precedia; links reescritos.
+ */
+export function montarCorpo(rns, raiz, hospedeiroDe) {
+  let trocados = 0;
+  let anterior = null;
+  const partes = rns.map((r) => {
+    const pedacos = [];
+    if (r.secao && r.secao !== anterior) pedacos.push(r.secao);
+    if (r.prefixo) pedacos.push(r.prefixo);
+    pedacos.push(r.texto);
+    anterior = r.secao ?? anterior;
+    const de = r.de.replace(/^(docs\/)(i18n\/[^/]+\/)?/, '');
+    const x = reescreverLinks(pedacos.join('\n\n'), de, `business-rules/${raiz}.md`, hospedeiroDe);
+    trocados += x.trocados;
+    return x.texto;
+  });
+  return { texto: partes.join('\n\n'), trocados };
 }
 
 // ------------------------------------------------------------------ stubs
@@ -275,27 +323,24 @@ export function main(argv = process.argv.slice(2)) {
 
   const relatorio = { movidos: 0, rnPorRaiz: {}, links: 0, literais: [], semBlocos: false };
   const emDia = [];
-  const defasada = (c) => {
-    const m = /^traducao_de:\s*(\S+)/m.exec(ler(c));
-    const fonte = c.replace(/(^|\/)i18n\/[^/]+\//, '$1');
-    return !m || git('log', '--format=%H', `${m[1]}..HEAD`, '--', fonte).trim() !== '';
-  };
 
-  // 1. RNs: partição (antes dos git mv, os arquivos de RN não mudam de lugar)
-  const decidido = new Map();
+  // 1. RNs: partição e "em dia" (classificação do relatório de paridade, ANTES dos mv)
+  const medido = medirDoRepositorio('.').docs;
+  const emDiaRel = Object.fromEntries(LOCALES.filter((l) => l !== 'pt-BR').map((l) => [l, new Set(medido[l].emDia)]));
   const porLocale = {};
   for (const l of LOCALES) {
-    const arqs = ARQUIVOS_DE_RN.filter((r) => existsSync(arqRn(l, r))).map((r) => ({ caminho: arqRn(l, r), texto: ler(arqRn(l, r)) }));
-    porLocale[l] = arqs;
+    porLocale[l] = ARQUIVOS_DE_RN.filter((r) => existsSync(arqRn(l, r))).map((r) => ({ caminho: arqRn(l, r), texto: ler(arqRn(l, r)) }));
   }
   const fonte = particionarRns(porLocale['pt-BR']);
   if (!Object.keys(fonte.porRaiz).length) relatorio.semBlocos = true;
-  const jaEmDia = Object.fromEntries(LOCALES.map((l) => [l, l !== 'pt-BR' && porLocale[l].length && porLocale[l].every((a) => !defasada(a.caminho))]));
+  const rnEmDia = (l) => l !== 'pt-BR' && ARQUIVOS_DE_RN.filter((r) => existsSync(arqRn(l, r))).every((r) => emDiaRel[l].has(r));
+  const jaEmDia = Object.fromEntries(LOCALES.map((l) => [l, rnEmDia(l)]));
 
-  // 2. git mv dos arquivos de não-RN
+  // 2. mv dos arquivos de não-RN
   for (const [velho, novo] of Object.entries(MAPA)) {
     if (!existsSync(velho) || existsSync(novo)) continue;
-    if (/\/i18n\/[^/]+\/[^/]+\.md$/.test(velho) && !defasada(velho)) emDia.push(novo);
+    const m = /^docs\/i18n\/([^/]+)\/(.+\.md)$/.exec(velho);
+    if (m && emDiaRel[m[1]]?.has(m[2])) emDia.push(novo);
     mkdirSync(posix.dirname(novo), { recursive: true });
     git('mv', velho, novo);
     relatorio.movidos++;
@@ -308,30 +353,26 @@ export function main(argv = process.argv.slice(2)) {
       const fm = frontmatter(ler(arqRn(l, 'business-rules/custo.md'))) || frontmatter(ler(arqRn(l, 'business-rules.md')));
       const traducao = (/^traducao_de:.*\n/m.exec(fm) ?? [''])[0];
       for (const [raiz, rns] of Object.entries(porRaiz)) {
-        const corpo = rns
-          .map((r) => {
-            const de = r.de.replace(/^(docs\/)(i18n\/[^/]+\/)?/, '');
-            return reescreverLinks(r.texto, de, `business-rules/${raiz}.md`, hospedeiroDe);
-          })
-          .map((x) => {
-            relatorio.links += x.trocados;
-            return x.texto;
-          });
+        const { texto, trocados } = montarCorpo(rns, raiz, hospedeiroDe);
+        relatorio.links += trocados;
         const cab = `---\n${traducao}id: rn-${raiz}\ntitle: 'Regras de negócio — ${NOME[raiz]}'\nsidebar_label: ${NOME[raiz]}\ndescription: 'As RNs hospedadas na raiz ${raiz}.'\nkeywords: [regras de negócio, ${raiz}]\n---\n\n# ${NOME[raiz]}\n\n`;
         const dest = caminhoLocale(raiz, l, `business-rules/${raiz}.md`);
-        gravar(dest, `${cab}${corpo.join('\n\n')}\n`);
+        gravar(dest, `${cab}${texto}\n`);
         if (jaEmDia[l]) emDia.push(dest);
         if (l === 'pt-BR') relatorio.rnPorRaiz[raiz] = rns.length;
       }
-      // stubs + índice
+      // stubs + índice: a prosa de abertura fica, antes do que é gerado/congelado
+      const reescrito = (c, rel) => reescreverLinks(preambulo(ler(c)), rel, rel, hospedeiroDe).texto;
       for (const s of STUBS) {
         const c = arqRn(l, s);
         if (!existsSync(c)) continue;
         const rns = blocosDeRn(ler(c)).map((b) => b.n);
-        gravar(c, `${frontmatter(ler(c))}\n# ${s.endsWith('custo.md') ? 'Custo' : 'Autenticação'}\n\n${gerarStubs(rns, fonte.mapa)}`);
+        gravar(c, `${frontmatter(ler(c))}\n${reescrito(c, s)}\n\n${gerarStubs(rns, fonte.mapa)}`);
+        if (jaEmDia[l]) emDia.push(c);
       }
       const idx = arqRn(l, 'business-rules.md');
-      gravar(idx, `${frontmatter(ler(idx))}\n# Regras de negócio\n\nAs RNs moram por área em \`business-rules/<raiz>.md\`; esta página é o índice.\n\n<!-- BEGIN:GENERATED:indice-de-rn -->\n<!-- END:GENERATED:indice-de-rn -->\n`);
+      gravar(idx, `${frontmatter(ler(idx))}\n${reescrito(idx, 'business-rules.md')}\n\n<!-- BEGIN:GENERATED:indice-de-rn -->\n<!-- END:GENERATED:indice-de-rn -->\n`);
+      if (jaEmDia[l]) emDia.push(idx);
     }
   }
 
