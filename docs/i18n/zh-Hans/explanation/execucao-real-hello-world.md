@@ -4,7 +4,7 @@ title: 真实执行——hello world
 sidebar_label: 真实执行（hello world）
 description: Brabo 第一次用 API 模型端到端执行、它产生的十六个发现，以及仍未被证明的内容。
 keywords: [dogfooding, 真实执行, 发现, fase 13]
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # 真实执行——hello world
@@ -41,7 +41,7 @@ bootstrap 的第 5 步（保护分支）因 GitHub **套餐**的限制而失败�
 | criativo | 6 | 6.406 | 3.343 | 1.180 |
 | psicologo-leve | 1 | 1.947 | 2.039 | 542 |
 
-Anamnese 花费的是 **Criativo 与 PO 之和的 8 倍**，却什么都没产出——它无法说出“没有可发出的东西”（[RN-063](../business-rules/custo.md#rn-063)）。这是这张表中最重要的数字：工作花了几美分，浪费花了其余部分。
+Anamnese 花费的是 **Criativo 与 PO 之和的 8 倍**，却什么都没产出——它无法说出“没有可发出的东西”（[RN-063](../business-rules/engine.md#rn-063)）。这是这张表中最重要的数字：工作花了几美分，浪费花了其余部分。
 
 ## 十六个发现 {#os-dezesseis-achados}
 

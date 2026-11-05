@@ -4,7 +4,7 @@
 
 **Accepted.** 2026-10-03 (AT-406; decisão do dono em 03/10: "PO e usuário" —
 o PO e a aba Backlog editam e arquivam história `draft` sem tarefa em
-execução). Regra em [RN-727](../business-rules.md#rn-727).
+execução). Regra em [RN-727](../business-rules/api.md#rn-727).
 
 ## Context
 

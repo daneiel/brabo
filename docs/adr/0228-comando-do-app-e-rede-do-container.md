@@ -66,4 +66,4 @@ dono pediu para configurar portas, DNS e `extra_hosts` por container
 
 - [0130](0130-broker-de-container.md), [0213](0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md),
   [0189](0189-o-piloto-automatico.md).
-- [RN-928](../business-rules.md#rn-928), [RN-929](../business-rules.md#rn-929).
+- [RN-928](../business-rules/contracts.md#rn-928), [RN-929](../business-rules/contracts.md#rn-929).

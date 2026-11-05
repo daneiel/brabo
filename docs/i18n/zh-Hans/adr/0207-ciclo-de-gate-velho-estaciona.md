@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0207 — 停滞超过 2 小时的 gate 周期会被搁置，只有人工操作才能恢复
@@ -23,4 +23,4 @@ ADR 0067 让 `GateRescuer` 在启动时和每个 tick 自动恢复所有停滞�
 
 - 原先没有恢复 gate 周期的人工路径；交付的最小实现是 engine 的函数，由运维人员调用。内部路由和事件上的按钮保留为提议，尚未实现。
 - 待处理项按**会话**读取，而不是按 task：`proposed_actions` 没有 `task_id`。同一会话中两个 task 都有待 QA 处理的动作时会互相阻止——代价已接受，最坏情况是不救援，绝不会付两次钱。
-- 规则：[RN-722](../business-rules.md#rn-722)，它修订了 RN-140。
+- 规则：[RN-722](../business-rules/engine.md#rn-722)，它修订了 RN-140。

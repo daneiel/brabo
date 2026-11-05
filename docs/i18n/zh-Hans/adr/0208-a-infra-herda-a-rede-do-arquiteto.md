@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0208 — Infra 继承 Arquiteto 声明的网络
@@ -22,4 +22,4 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 - 代价是**声明的**，而非付出的：`egress` 网络可以到达机器上已发布的端口（ADR 0189，边界情况 5），而 `external-effect.ts` 中“没有网络，`curl | sh` 什么也到不了”的推理，对每个 Arquiteto 声明了 `egress` 的项目不再成立。ADR 0065 §4 要求的用户同意，按所有者的决定退出了这条路径。
 - Infra 写入的版本改为重复 Arquiteto 的网络，而不是降级它；构件的历史保持一致。
-- 规则：[RN-723](../business-rules.md#rn-723)。
+- 规则：[RN-723](../business-rules/engine.md#rn-723)。

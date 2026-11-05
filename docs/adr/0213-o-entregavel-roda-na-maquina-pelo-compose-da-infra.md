@@ -22,8 +22,8 @@ declarada de vê-lo rodando. O que foi medido:
 - O container do projeto não tem Docker (contenção do ADR 0130), então nada
   dentro do Brabo pode rodar `docker compose up` para provar o compose.
 - As rotas do entregável já são documentadas no README pelo dev
-  ([RN-850](../business-rules.md#rn-850)), e o QA já sobe processos em
-  background e encerra o grupo ([RN-817](../business-rules.md#rn-817)), mas
+  ([RN-850](../business-rules/engine.md#rn-850)), e o QA já sobe processos em
+  background e encerra o grupo ([RN-817](../business-rules/engine.md#rn-817)), mas
   nada amarrava uma URL ao que o usuário abre.
 
 ## Decision
@@ -65,7 +65,7 @@ declarada de vê-lo rodando. O que foi medido:
    usuário"), nunca item do plano.
 8. **A Visão geral ganha o cartão "Rodar na sua máquina"** (RN-855): o comando
    com botão de copiar e as URLs clicáveis, com o texto "declarado pela Infra,
-   não verificado na sua máquina" ([RN-468](../business-rules.md#rn-468)) —
+   não verificado na sua máquina" ([RN-468](../business-rules/web.md#rn-468)) —
    nunca verde.
 
 ## Consequences
@@ -81,8 +81,8 @@ declarada de vê-lo rodando. O que foi medido:
   [ADR 0190](0190-a-infra-sobe-o-container-no-aceite.md) e os recursos
   derivados do `module_map` do
   [ADR 0199](0199-recurso-minimo-derivado-do-module-map.md). A evidência de
-  que o ponto de entrada sobe ([RN-813](../business-rules.md#rn-813)) e a rota
-  HTTP no README ([RN-846](../business-rules.md#rn-846)) seguem valendo; este
+  que o ponto de entrada sobe ([RN-813](../business-rules/engine.md#rn-813)) e a rota
+  HTTP no README ([RN-846](../business-rules/engine.md#rn-846)) seguem valendo; este
   ADR acrescenta a URL que se abre, não troca a prova.
 
 ## Alternatives considered

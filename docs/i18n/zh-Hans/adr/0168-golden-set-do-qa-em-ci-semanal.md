@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行
@@ -12,7 +12,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ADR 0123 把 QA 的 golden-set 在 CI 方面留作 `TODO(humano)`，说接入它需要“segredo de LLM de API ou infra nova (GPU)”。ADR 0138 在把 RAG（embedding，确定性）与 QA（聊天，判断）分开时重复了这句话。两次测量改变了局面，两者都在 [`docs/explanation/gates.md`](../explanation/gates.md) 中：
 
-- **AT-067（2026-09-13）：** 在没有 GPU 的 `ubuntu-latest` 上，在作业自己的 Ollama 中拉取 `qwen2.5-coder`，时间是够的（`mix golden_set.qa` 用 19–23 分钟）。“新基础设施”那一半不成立了。但比分在构造上就是 0/6：自 [RN-502](../business-rules.md#rn-502) 起，一个没有 `running` 容器的 `container` 项目的 `npm test` 会被拒绝，而种子从不启动容器。
+- **AT-067（2026-09-13）：** 在没有 GPU 的 `ubuntu-latest` 上，在作业自己的 Ollama 中拉取 `qwen2.5-coder`，时间是够的（`mix golden_set.qa` 用 19–23 分钟）。“新基础设施”那一半不成立了。但比分在构造上就是 0/6：自 [RN-502](../business-rules/engine.md#rn-502) 起，一个没有 `running` 容器的 `container` 项目的 `npm test` 会被拒绝，而种子从不启动容器。
 - **AT-076（2026-09-27）：** 种子开始通过生产路径启动容器（提议并批准 `container_start`、broker、状态机），不触碰 RN-502。在 CI 中两轮：3/6 和 3/6，下限是 1/6，作业用时 52 和 86 分钟。
 
 工具在测量了，缺的只是节奏。
@@ -29,7 +29,7 @@ ADR 0123 把 QA 的 golden-set 在 CI 方面留作 `TODO(humano)`，说接入它
 
 **裁决就是测试的裁决。** 当命中数低于 `floor.json` 中该模型的 `passRate` 时，或者 api 有响应但种子失败时，ExUnit 失败。工作流增加两个工具层面的守卫，没有一个关乎判断：比分行必须存在（api 不响应时测试会**跳过**，而在定时运行中跳过就是没有测量的绿色），事件日志中不能有 RN-502 的拒绝（AT-067 的已知签名）。失败时，它做 RAG 那个做的事：打印日志。不开 issue。
 
-**api、engine 和 broker 在 runner 上原生运行，Docker 的 socket 只给 broker。** 这是 AT-076 中测得的设计。三方使用同一个受管文件夹，因为 api 和 engine 在主机上运行（`PROJECT_WORKSPACES_ROOT` = `PROJECT_WORKSPACES_HOST_ROOT`）。用例的镜像在种子之前拉取，引用来自种子本身（`IMAGEM_DO_GOLDEN_SET_QA`，按索引的 digest 固定），而不是工作流中的第二个字面量：broker 的 `docker run` 在 Docker 端口 30 秒的控制上限下运行（[RN-604](../business-rules.md#rn-604)），作业拉取的东西与种子请求的东西之间的分歧会把拉取放进这个上限之内。
+**api、engine 和 broker 在 runner 上原生运行，Docker 的 socket 只给 broker。** 这是 AT-076 中测得的设计。三方使用同一个受管文件夹，因为 api 和 engine 在主机上运行（`PROJECT_WORKSPACES_ROOT` = `PROJECT_WORKSPACES_HOST_ROOT`）。用例的镜像在种子之前拉取，引用来自种子本身（`IMAGEM_DO_GOLDEN_SET_QA`，按索引的 digest 固定），而不是工作流中的第二个字面量：broker 的 `docker run` 在 Docker 端口 30 秒的控制上限下运行（[RN-604](../business-rules/api.md#rn-604)），作业拉取的东西与种子请求的东西之间的分歧会把拉取放进这个上限之内。
 
 ## 后果 {#consequences}
 

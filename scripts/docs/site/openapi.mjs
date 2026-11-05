@@ -31,7 +31,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ROTULOS_DO_REDOC, aplicar, lerCatalogo } from '../openapi-por-locale.mjs';
+import { ROTULOS_DO_REDOC, aplicar, caminhoDaApi, lerCatalogo } from '../openapi-por-locale.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const METODOS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
@@ -60,6 +60,7 @@ export const operacoesDoSpec = (spec) =>
 export function relativizar(html, base) {
   const b = base.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
   return html
+    .replace(/<div hidden="">\s*<script>try\{var m=localStorage\.getItem\("redoc\.colorMode"\)[\s\S]*?<\/script><\/div>/, '') // o tema do Redoc é o do site (classe `dark` posta por tema.js)
     .replace(new RegExp(`href="${b}(?:/([^/"#?]+))?(?:/([^/"#?]+))?[^"]*"`, 'g'), (_m, tag, op) =>
       !tag || tag === 'section' ? 'href="../api.html"' : `href="${tag}.html${op ? `#${op}` : ''}"`)
     .replace(new RegExp(`data-section-id="${b}/[^/"]+/([^"]+)"`, 'g'), (m, op) => `${m} id="${op}"`);
@@ -76,12 +77,15 @@ export function regrasDeTopo(css) {
   return out;
 }
 
+// Sem hidratação nada se expande nem busca: layout empilhado (exemplos abaixo da operação), tudo aberto, sem "Loading" (AT-725).
+export const OPCOES = (labels) => ({ disableTelemetry: true, labels, layout: 'stacked', hideLoading: true, jsonSamplesExpandLevel: 99, schemasExpansionLevel: 99, hideDownloadButtons: true, maxDisplayedEnumValues: 1000 });
+
 const pagina = (lang, titulo, estilos, corpo) =>
   `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title>${estilos}</head><body>${corpo}</body></html>`;
 
 export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en', 'ru', 'zh-Hans'], raiz = RAIZ, moldura = null }) {
   const R = await carregarRedoc();
-  const fonte = JSON.parse(readFileSync(path.join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+  const fonte = JSON.parse(readFileSync(caminhoDaApi(raiz, 'reference/openapi.json'), 'utf8'));
   const resultado = {};
   for (const locale of locales) {
     const { spec } = aplicar(fonte, lerCatalogo(raiz, locale));
@@ -92,7 +96,7 @@ export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en'
 
     const base = `/reference/api`;
     const labels = ROTULOS_DO_REDOC[locale] ?? ROTULOS_DO_REDOC['pt-BR'];
-    const preparado = await R.prepareApiDocs({ spec, basePath: base, options: { disableTelemetry: true, labels } });
+    const preparado = await R.prepareApiDocs({ spec, basePath: base, options: OPCOES(labels) });
     const tags = preparado.items.filter((i) => i.type === 'group');
     const secoes = new Set();
     const regras = new Set();
@@ -102,7 +106,7 @@ export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en'
       const router = R.React.createElement(
         R.StaticRouter,
         { location: t.link },
-        R.React.createElement(R.RedoclyApiDocsStandalone, { items: preparado.items, store: preparado.store, basePath: base, options: preparado.options }),
+        R.React.createElement(R.RedoclyApiDocsStandalone, { items: preparado.items, store: preparado.store, basePath: base, options: OPCOES(labels) }),
       );
       const corpo = relativizar(R.renderToString(sheet.collectStyles(router)), base);
       for (const m of corpo.matchAll(/data-section-id="[^"]*" id="([^"]+)"/g)) secoes.add(m[1]);

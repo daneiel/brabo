@@ -79,14 +79,14 @@ seria recusado, e `owner` voltaria a ser absorvente.
 
 **5. A cascata, numa transação.** Remover a linha de `workspace_members` sozinha
 seria cosmético: a sobreposição `projectRole ?? workspaceRole`
-([RN-471](../business-rules.md#rn-471)) manteria o removido dentro de todo
+([RN-471](../business-rules/web.md#rn-471)) manteria o removido dentro de todo
 projeto em que tivesse linha própria. Então, juntas:
 
 - a linha de `workspace_members`;
 - as linhas de `project_members` do removido **nos projetos deste workspace**
   (as de outros workspaces não são tocadas);
 - as credenciais dele presas a esses projetos: as chaves de dispositivo de
-  **PROJETO** (pela mesma coluna que a [RN-519](../business-rules.md#rn-519)
+  **PROJETO** (pela mesma coluna que a [RN-519](../business-rules/api.md#rn-519)
   lista) e os **PATs** — todo PAT é de um projeto (`project_id NOT NULL`) —,
   revogados com o motivo `workspace_member_removed`. Sem isso, ser reassociado
   um dia reativaria em silêncio um pareamento que a remoção devia ter
@@ -95,18 +95,18 @@ projeto em que tivesse linha própria. Então, juntas:
 **6. Depois do commit, a conexão viva cai pelo caminho da RN-520.** Um
 `disconnectRunnerOfUser(projectId, userId)` por projeto do workspace — TODOS,
 não só os de modo `runner`, porque o runner conecta também em
-`container`/`mounted` (o espelho, [RN-516](../business-rules.md#rn-516)); sobrar
+`container`/`mounted` (o espelho, [RN-516](../business-rules/runner.md#rn-516)); sobrar
 um projeto custa um `sem_runner`, faltar um deixa de pé o que a remoção existe
 para derrubar. Em `try/catch` que só loga: efeito colateral nunca derruba o
-efeito principal, a régua da [RN-520](../business-rules.md#rn-520).
+efeito principal, a régua da [RN-520](../business-rules/api.md#rn-520).
 
 **7. O TITULAR não sai; a titularidade se transfere** (decisão do
-mantenedor, 2026-09-27, [RN-616](../business-rules.md#rn-616)).
+mantenedor, 2026-09-27, [RN-616](../business-rules/api.md#rn-616)).
 `workspaces.created_by` não decide autorização (quem decide é o papel, ADR 0127),
 mas é por ele que se resolve a credencial de LLM que os agentes gastam e a de
-git das ações de agente ([RN-058](../business-rules/custo.md#rn-058),
+git das ações de agente ([RN-058](../business-rules/api.md#rn-058),
 `ResolveCredentialOwnerUseCase`) e o dono do relatório de gasto
-([RN-060](../business-rules/custo.md#rn-060)). Remover o criador pelo ponto 4
+([RN-060](../business-rules/api.md#rn-060)). Remover o criador pelo ponto 4
 deixaria os agentes gastando a credencial de quem já não está no workspace.
 Então, com o nome de **titular**:
 

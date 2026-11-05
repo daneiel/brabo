@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent
@@ -43,5 +43,5 @@ planned }` 也不变。输出 `telemetria-consolidada` 获得一个 `nota` 字�
 
 - [ADR 0085](0085-fluxo-como-registro-declarativo.md)——把 `platform` 角色声明为 `planned`；本文档不提升它。
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)、[ADR 0077](0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)——同样的纪律：没有真实数据绝不编造数字/评分。
-- [RN-385](../business-rules.md#rn-385)、[RN-386](../business-rules.md#rn-386)。
+- [RN-385](../business-rules/contracts.md#rn-385)、[RN-386](../business-rules/contracts.md#rn-386)。
 - `apps/api/scripts/relatorio-telemetria.ts`、`apps/api/src/infrastructure/observability/domain-gauges.collector.ts`、`docs/fluxo.yml`（`camada_plataforma › platform`）。

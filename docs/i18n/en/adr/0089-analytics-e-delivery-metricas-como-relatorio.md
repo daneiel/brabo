@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0089 — `analytics` and `delivery-metricas` become a report script
@@ -74,7 +74,7 @@ and the decision to keep them that way is permanent while the
 preconditions below don't change — it's not a gap to close next round:
 
 1. **Complete product funnel (ideation → commit).** `sessions` has no
-   `storyId` — [RN-230](../business-rules/autenticacao.md#rn-230) already declares
+   `storyId` — [RN-230](../business-rules/web.md#rn-230) already declares
    this gap in the Criativo tab (`apps/web/src/routes/ProjectSessionsTab.tsx`).
    Closing it would require new schema (a new column, possibly a
    migration on `sessions` or a link table), out of scope for this piece
@@ -134,7 +134,7 @@ better a "—" with the reason written than a number that teaches wrong.
   (form precedent, Phase 13b)
 - `apps/api/src/domain/git/git-action-execution-result.ts`
 - `docs/gates.yml` (`backmerge` gate)
-- [RN-230](../business-rules/autenticacao.md#rn-230) — the ideation → commit gap,
+- [RN-230](../business-rules/web.md#rn-230) — the ideation → commit gap,
   already declared in the Criativo tab
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) —
   the principle of never faking data that doesn't exist

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行
@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **Accepted.** 2026-10-01（AT-116，故事 HS-037，史诗 EP-010，第 36 轮；
 负责人 10月1日的决定：*"operações de git credenciadas no HOST, código no
-container"*）。关闭 [RN-558](../business-rules.md#rn-558) 声明为开放的那一半，并在不编辑的前提下引用
+container"*）。关闭 [RN-558](../business-rules/runner.md#rn-558) 声明为开放的那一半，并在不编辑的前提下引用
 [ADR 0130](0130-broker-de-container.md)（没有自由 `-e` 的 Docker port）、
 [ADR 0145](0145-docker-pre-requisito-do-runner.md)（`RunnerReadiness` 以及 `runner` 模式的三个前置条件）和
 [ADR 0056](0056-o-engine-trabalha-em-repositorio-remoto.md)（git 凭据只在子进程的**环境**中）。证明是 AT-111。

@@ -85,7 +85,7 @@ The outbox drains three `aggregate_type`s: `session` (since Phase 5),
 `task` (Phase 12b — `task.gate_resolved`/`task.became_claimable`, the dev
 agent's rescheduling after a gate resolves or a new task becomes claimable)
 and `container` ([ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502) — `container.running`, appended in the
+/[RN-502](business-rules/engine.md#rn-502) — `container.running`, appended in the
 same transaction that records the project's container reaching `running`, so
 the dev agents its absence had parked in `:idle` wake up on their own; its
 own aggregate rather than a borrowed `task`, because the event is about no
@@ -98,15 +98,15 @@ A dev agent that CRASHES (any exit other than `:normal`/`:shutdown`) is not
 treated as finished: `Engine.Dev.Monitor` records a durable `agent.error`
 (origin `infra`) and restarts it from its own `dev_agent_states` row, up to
 three times; the interrupted task is blocked with diagnosis by the existing
-restart recovery ([RN-742](business-rules.md#rn-742)).
+restart recovery ([RN-742](business-rules/engine.md#rn-742)).
 `dev_agent_states` gained `consecutive_blocked`/`max_consecutive_blocked`
-(the circuit breaker, [RN-047](business-rules/custo.md#rn-047)); full decision in
+(the circuit breaker, [RN-047](business-rules/engine.md#rn-047)); full decision in
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
 A task blocked by a transient network/provider failure (DNS, reset
 connection, 5xx/429) is unblocked again by an Oban job after 1, 3 and 10 min
 (up to three times, through the same unblock use case as the human), and the
 dev agent pauses for a minute instead of claiming the next task
-([RN-864](business-rules.md#rn-864)).
+([RN-864](business-rules/engine.md#rn-864)).
 
 The gate agents (`QaLeadServer`/`SecOpsAgentServer`) don't go through the
 outbox on intermediate transitions (`correct`/`run_secops` remain a direct
@@ -117,7 +117,7 @@ had: `gate_states`, plus a `GateRescuer` that scans stuck cycles and resumes
 them on its own — no new table for the outbox path, because the problem
 wasn't a missing outbox, it was missing durable state for what happens
 BETWEEN two in-process calls. See
-[RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
+[RN-140](business-rules/engine.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
 The QA gate has a THIRD verdict besides `approved`/`changes_requested`:
 `needs_user_decision`, for a requirement the user never confirmed (or that a
@@ -127,7 +127,7 @@ consolidates it above `approved`, and the cycle is PARKED by the mechanism of
 question, which resumes it. The conversational side of the same rule is the
 `declare_open_question` tool (Creative, PO, Architect, Dev Lead), which records
 `artifact.open_question`; the user's answers come back to the dev and to QA as
-"user decisions" in the dev-context ([RN-862](business-rules.md#rn-862),
+"user decisions" in the dev-context ([RN-862](business-rules/engine.md#rn-862),
 [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 
 Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
@@ -142,7 +142,7 @@ was ASKED FOR would tie the Dev Lead's test to the database. The newest of the
 five, `run_appsec_design/2`, closed the last gate that was actionable with no
 production caller: `assess_implementability` now asks for the story's design
 threat model IN PARALLEL — the verdict never waits for it, and the ask happens
-only once per story ([RN-539](business-rules.md#rn-539),
+only once per story ([RN-539](business-rules/engine.md#rn-539),
 [ADR 0090](adr/0090-qa-estrategia-e-appsec-segundo-momento.md)).
 
 ## Code map
@@ -174,7 +174,7 @@ top, so a call written between imports would run too late).
 | `harness/` (33) | context assembly, ToolLoop, compaction. **No LLM call happens outside here** | `harness/tool_loop/` |
 | `dev/` (15) | dev agents, worktrees, monitor | `dev/dev_agent_server.ex` |
 | `gates/` (20) | the QA area (Lead + Automation, Performance/Security and QA-strategy sub-specialties — the Lead's second moment, ADR 0090 — all with an LLM) and SecOps (deterministic) | `gates/qa_lead_server.ex` |
-| `infra/` (9) | the Infra area (conversational, session-scoped Lead — since [RN-617](business-rules.md#rn-617) the seventh conversational agent, reachable from the composer and running its turns on `TurnoAssincrono` — + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
+| `infra/` (9) | the Infra area (conversational, session-scoped Lead — since [RN-617](business-rules/engine.md#rn-617) the seventh conversational agent, reachable from the composer and running its turns on `TurnoAssincrono` — + Workflows sub-specialty via ToolLoop — two architectural families in the same area, see RN-037) | `infra/infra_lead_server.ex` |
 | `sessions/` (9) | session lifecycle, `:global` registry | `sessions/session_server.ex` |
 | `actions/` (9) | terminal and git executors, lint/scanner detectors | `actions/git_executor.ex` |
 | `agents/` (16) | Creative, PO, Architect, Dev Lead, Staff (ADR 0088, dormant for automatic trigger) — each turn runs on a supervised Task (`TurnoAssincrono`, RN-122), no longer inside `handle_call`, so a `:cancel` can actually interrupt it | `agents/turno_assincrono.ex` |
@@ -218,7 +218,7 @@ Three derivations of the same event log, answering different questions:
 event log: "what happens if I approve". Each `proposed_action` type's verb
 and sentence live there, and the three decision screens consume them — the
 Approvals queue, the card inside the chat, and the Insights tab
-([RN-096](business-rules.md#rn-096)).
+([RN-096](business-rules/produto.md#rn-096)).
 
 **The `ActionType` union WAS a copy, and a copy aged — twice, in
 production** (the three Gitflow bootstrap types; later
@@ -250,7 +250,7 @@ limit of 300, and the screen was knocking itself over with 429s. Both read
 from `GET /workspaces/:id/projects-summary` — a read model that cuts across
 aggregates (git, budget, session, backlog, architecture) and whose number of
 database round trips doesn't grow with project count
-([RN-090](business-rules.md#rn-090)).
+([RN-090](business-rules/api.md#rn-090)).
 
 The bell's drawer follows the same cut, with one difference worth
 recording: it needs each project's read cutoff, and that cutoff is a `seq`
@@ -258,7 +258,7 @@ kept in the browser of whoever is looking (`lib/read-state.ts`) — the
 server doesn't have, and won't have, a "mark as read". So the client
 **sends** the `project → afterSeq` map in the body of
 `POST /workspaces/:id/unread-events`, which is a read despite the verb and
-returns `200` ([RN-091](business-rules.md#rn-091)). The verb follows from
+returns `200` ([RN-091](business-rules/api.md#rn-091)). The verb follows from
 the body, not from a mutation: it's dozens of pairs, and a query string that
 size breaks in a proxy on top of putting project ids in access logs.
 
@@ -277,12 +277,12 @@ the browser). Explained in `design/README.md`.
 (`lib/api-client.ts`) reads `GET /workspaces/:workspaceId/projects-base` — the
 single mounted-projects base of this installation ([ADR
 0141](adr/0141-base-unica-dos-projetos-montados.md)) — and the New Project
-wizard is its only caller ([RN-513](business-rules.md#rn-513)). `projectsBase:
+wizard is its only caller ([RN-513](business-rules/web.md#rn-513)). `projectsBase:
 null` is a normal state, not a failure: the installation has no
 `BRABO_PROJECTS_BASE`, so the Mounted folder card is not offered at all and
 `container` stays the default. The same holds while the answer is in flight and
 when the query FAILS — unknown never becomes an offer, the same rule as
-[RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468). With a
+[RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468). With a
 base, the card is PRE-SELECTED and the path field opens on `<base>/<slug>`,
 composed by `caminhoSugeridoNaBase` (`lib/wizard.ts`) — a pure function, next
 to `caminhoDentroDaBase`, which answers "is this path under the base?" by
@@ -291,7 +291,7 @@ the suggestion overwrites a human choice.
 
 **The folder picker is the web's one TWO-TRANSPORT read**, and the interface
 that makes it one lives in `lib/fs-browser.ts`
-([RN-504](business-rules.md#rn-504)). `FsBrowser` — `listarDiretorio` /
+([RN-504](business-rules/web.md#rn-504)). `FsBrowser` — `listarDiretorio` /
 `diretorioInicial` / `fechar` — has two implementations, and they don't talk
 to the same machine: `criarFsBrowserViaApi(workspaceId)` calls
 `GET /workspaces/:workspaceId/project-folders` on the api, scoped hard to
@@ -319,19 +319,19 @@ assert "nothing was left out", which is different from not knowing.
 RN-504 pointed BOTH modes at the api and declared the price: for `runner`, the
 list stopped being the user's machine and became the base. That was accepted
 because the `runner` mode would leave the creation wizard — it didn't, and
-[RN-533](business-rules.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
+[RN-533](business-rules/web.md#rn-533) ([ADR 0151](adr/0151-base-consentida-no-runner.md)
 point 7) reverses it. The MODE now picks the transport, because they answer
 different questions: `mounted` asks the api (its folder lives under the base, on
 the SERVER), `runner` asks the local agent (its folder lives on a machine the
 server cannot see). The `runner` branch is anchored on the project the wizard
-already created ahead of time ([RN-437](business-rules.md#rn-437)); when that
+already created ahead of time ([RN-437](business-rules/web.md#rn-437)); when that
 creation fails, no modal opens at all, because falling back to the api would
 show the SERVER's base under the label "your machine".
 
 Failure carries a DISCRIMINATED reason (`MotivoDeFalhaDoAgente`): `sem-agente`
 is the server ASSERTING there is no runner, `sem-resposta` is a timeout, a
 dropped socket or a refused ticket — ignorance, stated as ignorance
-([RN-088](business-rules.md#rn-088)/[RN-468](business-rules.md#rn-468)). The
+([RN-088](business-rules/web.md#rn-088)/[RN-468](business-rules/web.md#rn-468)). The
 component used to decide by `includes('Nenhum runner conectado')`, matching a
 pt-BR sentence that lives in the engine's `.ex`; the substring match now lives
 in exactly one place, the module that owns the channel protocol, and a reworded
@@ -344,10 +344,10 @@ STATES whose disk it is listing, in both origins — the only hint before that w
 a shortcut's label, which names a place, not a machine.
 
 **The panel also RECOGNISES a machine that is already paired**
-([RN-548](business-rules.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
+([RN-548](business-rules/web.md#rn-548), [ADR 0154](adr/0154-chave-de-dispositivo-de-maquina.md)).
 `listRunnerDeviceKeys` in `lib/api-client.ts` reads
 `GET /projects/:projectId/runner-device-keys`, which since
-[RN-543](business-rules.md#rn-543) marks each key's SPECIES — and the whole
+[RN-543](business-rules/produto.md#rn-543) marks each key's SPECIES — and the whole
 derivation lives outside the component, in `lib/agente-de-maquina.ts`, because
 the rule is about the DATA and the component is about the design. Seven states,
 none collapsing into another, and failure is derived from `isError` rather than
@@ -359,7 +359,7 @@ account has a paired machine". Both limits are stated on screen. The
 [ADR 0118](adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)
 browser flow (generate the key, download the binary, write the folder) was
 retired in [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-([RN-687](business-rules.md#rn-687)): the panel now shows the `install.sh`
+([RN-687](business-rules/web.md#rn-687)): the panel now shows the `install.sh`
 command, which leaves once a key serving the project is recognised, and the
 manual PAT command stays in a `<details>` named for the case it answers
 (another machine). The read's minimum comes from `roleAtLeast`
@@ -420,7 +420,7 @@ directly — and each row's pending action (if any) rides along in the same
 batched read, rendered as an inline `ApprovalCard`, the same pattern
 `ProjectPrsTab.tsx` already uses for merge proposals.
 
-Since [RN-521](business-rules.md#rn-521) the join is a LEFT one and the page
+Since [RN-521](business-rules/api.md#rn-521) the join is a LEFT one and the page
 lists EVERY project of the workspace, because it became the human path to start
 the FIRST container: a start that fails before registering leaves no row, and
 the old INNER JOIN hid exactly the project that needed the page.
@@ -435,7 +435,7 @@ image decided, `runner` whose folder no agent ever confirmed, role below
 never proposes an action it already knows will fail, and never hides why.
 
 The OTHER proposer — the Infra Lead agent — branches the same way since
-[RN-566](business-rules.md#rn-566). Both of its tools go through one
+[RN-566](business-rules/engine.md#rn-566). Both of its tools go through one
 `recusa_local_de_subida/2` in `infra_lead_server.ex`, which reads the project
 ONCE (`Project.get/1`, same BEAM process, never HTTP: a network call inside the
 agent loop is the cost this fix could not pay) and returns `nil` or a NAMED
@@ -443,7 +443,7 @@ reason, one clause per tool — `container`/`mounted` propose `container_start`,
 `runner` is refused pointing at `container_start_via_runner`, and the
 `container_start` clause is an ALLOWLIST like the broker's, so a new enum mode
 is born refused. The refusal is tool-RESULT text the model reads (loop input,
-[RN-163](business-rules/autenticacao.md#rn-163)), never an `agent.error`, and the `tool.call`
+[RN-163](business-rules/engine.md#rn-163)), never an `agent.error`, and the `tool.call`
 is still emitted so a local refusal never disappears from the timeline. What the
 agent does NOT check, and the screen does, is the decided image and the
 confirmed folder.
@@ -553,12 +553,12 @@ the model for an infrastructure problem.
 **8. A project's container is decided, never implicit.** The Code tab only
 unlocks after the Architect emits `artifact.project_image` — while the
 state is `sem_decisao` (no decision), reading code returns `409`
-([RN-105](business-rules/autenticacao.md#rn-105)). And `git push`, opening a PR, and
+([RN-105](business-rules/api.md#rn-105)). And `git push`, opening a PR, and
 deploy don't go through the terminal, even inside the project's scope:
 `decide()` recognizes them by command prefix and returns `deny` BEFORE any
 permissive stage — not `require_approval`, because "always allow" would
 write the pattern into `allow` and reopen the door
-([RN-106](business-rules/autenticacao.md#rn-106),
+([RN-106](business-rules/api.md#rn-106),
 [ADR 0065](adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)).
 The container's lifecycle (provision, recycle, clean up) doesn't exist yet
 — a declared cut from PHASE 25, recorded in CLAUDE.md — so this invariant
@@ -566,7 +566,7 @@ coexists, for now, with the path-scope policy from
 [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md).
 
 And since [ADR 0143](adr/0143-agentes-de-dev-so-depois-do-container.md)
-/[RN-502](business-rules.md#rn-502), a decided image is no longer the only
+/[RN-502](business-rules/engine.md#rn-502), a decided image is no longer the only
 precondition: **a dev agent does not claim a task at all until the project's
 container is REGISTERED `running`**. The guard lives in
 `Engine.Dev.AgentIo.try_claim/2` — the single claim point — and not only in
@@ -583,15 +583,15 @@ the engine process when there is no container: it refuses, named, the way the
 Both halves are the same lesson, and came from an agent that only had
 write tools: the PO built context once, at kickoff, and acted from then on
 over a stale snapshot — facing a gap, it chose between inventing and
-stopping ([RN-164](business-rules/autenticacao.md#rn-164),
-[RN-165](business-rules/autenticacao.md#rn-165)). Reading does **not** become a
+stopping ([RN-164](business-rules/engine.md#rn-164),
+[RN-165](business-rules/engine.md#rn-165)). Reading does **not** become a
 `proposed_action` (invariant 4 is about EXTERNAL effect, and reading isn't
 one), but it is contained in the sense of
 [ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md): scope closed by the
 route's path, constant cost per call, and a line ceiling in the text
 delivered to the model. And an agent's loop doesn't end silently — an
 iteration ceiling emits `toolloop.limit_reached`, an unmet obligation emits
-a durable outcome with an origin ([RN-166](business-rules/autenticacao.md#rn-166)).
+a durable outcome with an origin ([RN-166](business-rules/engine.md#rn-166)).
 
 ## Cross-cutting concerns
 
@@ -689,7 +689,7 @@ second shows the model doesn't require the same internal implementation:
 (mirroring `ArquitetoServer`, external contact unchanged by explicit
 request of CLAUDE.md 8c), and delegates to `WorkflowsAgent` — which, with
 no user on the other side, runs as a bounded `ToolLoop`, just like the QA
-subagents. Since [RN-617](business-rules.md#rn-617)
+subagents. Since [RN-617](business-rules/engine.md#rn-617)
 ([ADR 0175](adr/0175-infra-lead-conversa-pelo-composer.md)) the Infra Lead
 also takes composer messages, and all three of its turns (kickoff, gate
 correction, message) run on the same `TurnoAssincrono` Task as the other six
@@ -738,7 +738,7 @@ erDiagram
 ```
 
 56 tables in total. The most recent is `detected_language_declines`
-([RN-624](business-rules.md#rn-624)): one row per person and language the
+([RN-624](business-rules/api.md#rn-624)): one row per person and language the
 person DECLINED when asked "we noticed you write in X — use X for the
 answers?", with the date. Its presence is what keeps the same question from
 coming back; confirming that language later deletes the row. The detection
@@ -747,7 +747,7 @@ partial index `session_events_evidencia_de_idioma_idx` (user actor, the two
 evidence types) and the hysteresis is recomputed —, so this table and the
 confirmed pair in `users` are all it writes, and only when the person answers.
 Before it, the most recent was `session_language_overrides`
-([RN-618](business-rules.md#rn-618),
+([RN-618](business-rules/api.md#rn-618),
 [ADR 0177](adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md)): the
 response language one person pinned in one session, keyed by the
 `{session_id, user_id}` PAIR so two participants never touch each other. It is
@@ -756,18 +756,18 @@ configuration, not an event — pinning again is an upsert, releasing is a
 and the confirmed-detection pair `users.detected_language` /
 `detected_language_confirmed_at`, bound by a CHECK; `users.locale` stays the
 interface language, closed to `pt-BR`/`en`. And `projects.language`
-([RN-619](business-rules.md#rn-619)) is the language of what has no human
+([RN-619](business-rules/api.md#rn-619)) is the language of what has no human
 author — shared artifacts and turns nobody typed —, always a concrete
 BCP-47 code. Before it, the most recent was
 `project_mirror_states`
-([RN-517](business-rules.md#rn-517),
+([RN-517](business-rules/api.md#rn-517),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 7): one row per
 project, `project_id` unique, holding what the LAST mirror round did — the last
 successful sync with its three counts and its frozen destination, plus the last
 error. A TABLE and not an event for the same reason as `rag_searches` right
 above: a mirror round has no session, and `session_events.session_id` is
 `NOT NULL`, so the event log would silently drop the whole thing. Three states
-that never collapse ([RN-088](business-rules.md#rn-088)): "never synced" is the
+that never collapse ([RN-088](business-rules/web.md#rn-088)): "never synced" is the
 ABSENT row, "synced and copied nothing" is a present row with `files_copied = 0`,
 and "failed" is `last_error_at` newer than `last_synced_at`. Success and failure
 columns are DISJOINT and neither write touches the other's — which is why the
@@ -792,7 +792,7 @@ calibration does not silently change what every earlier measurement meant.
 `session_socket_tickets` is kept off the diagram for the same reason as
 `refresh_tokens`/`account_tokens`: an auth mechanism, not a domain relation.
 
-`projects.mirror_path` (FASE 28, [RN-515](business-rules.md#rn-515),
+`projects.mirror_path` (FASE 28, [RN-515](business-rules/api.md#rn-515),
 [ADR 0147](adr/0147-agente-local-com-capacidades.md) point 4) is a column and
 not a table because it is ONE optional value per project: the absolute path,
 on the USER's machine, that the local agent's `espelho` capability copies the
@@ -802,17 +802,17 @@ It deliberately carries **no** CHECK pairing it with `execution_mode`, unlike
 `workspace_path` right next to it: `container` cannot have a destination (its
 source is a managed volume on the SERVER, and the process that would copy runs
 on the user's machine), but `execution_mode` is CONVERTIBLE
-([RN-447](business-rules.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
+([RN-447](business-rules/api.md#rn-447), [ADR 0111](adr/0111-conversao-de-execution-mode-de-projeto-existente.md)),
 so a CHECK would make converting to `container` blow up in Postgres instead of
 refusing with a reason. The refusal lives in the use case, and the conversion
 zeroes the column — the same shape as `workspace_verified_at`, and for an
 additional reason: the two directions of the origin↔destination loop were
 validated against the OLD `workspace_path`.
-Since [RN-516](business-rules.md#rn-516) the engine READS this column — it is
+Since [RN-516](business-rules/runner.md#rn-516) the engine READS this column — it is
 what decides whether the runner's `join` requires the `espelho` capability, and
 it is what travels back in that join's grant (`Engine.Runners.Espelho`,
 `EngineWeb.TerminalChannel`). The engine never writes it. Since
-[RN-517](business-rules.md#rn-517) there IS an internal route in the
+[RN-517](business-rules/api.md#rn-517) there IS an internal route in the
 neighbourhood — `POST /internal/projects/:projectId/mirror-sync-result` — but it
 writes `project_mirror_states`, never this column: the destination is
 CONFIGURATION (the user declares it) and the round outcome is TELEMETRY (the
@@ -823,10 +823,10 @@ partial indexes that guarantee analysis idempotency — and, since Phase 8b,
 `delegations`'s three `check`s that lock which field is required per
 `status` (`completed` → `parecerArtifactId`, `failed` → `failureOrigin`,
 `dispensed` → `justification`; see
-[RN-036](business-rules.md#rn-036)). `delegations.task_id` was born
+[RN-036](business-rules/engine.md#rn-036)). `delegations.task_id` was born
 `NOT NULL` and became nullable in Phase 8c — the Infra area delegates over
 the session, with no backlog task behind an infra PR (see
-[RN-037](business-rules.md#rn-037)).
+[RN-037](business-rules/ci.md#rn-037)).
 
 `agent_areas` (PHASE 14d,
 [ADR 0053](adr/0053-dev-lead-e-paralelismo-autorizado.md)) is what Phase 8
@@ -836,12 +836,12 @@ had cut. It came back because the **dev** area isn't enumerable in code:
 project. The unique `(project_id, key)` is what makes seeding idempotent,
 and `max_parallel` (starts at 5 for dev, 4 for qa and 2 for infra) is the ceiling the lead uses without asking
 — above it, `proposed_action`
-(see [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
+(see [RN-083](business-rules/api.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) mirror `max_parallel` on the same row — a spend ceiling that is
 ADDITIVE to `budgets` (project/session), never a cascade: it is checked
 and incremented independently, by the same `CheckBudgetGateUseCase`/
 `RecordLlmUsageUseCase` that already own project and session spend (see
-[RN-443](business-rules.md#rn-443)). Do not confuse this with the model-
+[RN-443](business-rules/api.md#rn-443)). Do not confuse this with the model-
 binding cascade of [ADR 0064](adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)
 (`session > agent > area > project > workspace`) — that one picks a single
 winner; area budget never does.

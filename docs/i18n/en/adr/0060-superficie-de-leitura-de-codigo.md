@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0060 — The code-reading surface, contained and budgeted
@@ -37,7 +37,7 @@ repetition. The tree and the diff already have a ceiling in the contract
 (26a), but they limit ONE response; composite search makes N calls, and N
 grows with repository size, not with request size. Who pays is the
 workspace owner's credential
-([RN-058](../business-rules/custo.md#rn-058)/[RN-082](../business-rules/custo.md#rn-082)),
+([RN-058](../business-rules/api.md#rn-058)/[RN-082](../business-rules/api.md#rn-082)),
 and the rate limit is the provider's. The product has already seen this
 family of defect up close: the dashboard was making 3,824 requests per
 minute because every project requested its own (RN-090), and the resulting

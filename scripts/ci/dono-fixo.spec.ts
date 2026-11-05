@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  */
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const EXCECOES: ReadonlyArray<[RegExp, string]> = [
-  [/\.md$|^docs\/|^website\/i18n\//, 'prosa, CHANGELOG, ADRs e histórico'],
+  [/\.md$|^(docs|apps\/[^/]+\/docs|packages\/docs|deploy\/docs|scripts\/ci\/docs)\/|^website\/i18n\//, 'prosa, CHANGELOG, ADRs e histórico'],
   [/^\.github\/(FUNDING\.yml|ISSUE_TEMPLATE\/)|^CODEOWNERS$/, 'identidade e templates de comunidade'],
   [/^apps\/runner\/package\.json$/, 'metadado do npm'],
   [/^\.release\/images\.json$|^deploy\/k8s\/overlays\//, 'gerados por aplicar-imagens'],

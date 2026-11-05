@@ -1,6 +1,6 @@
 /**
  * promotion-check — confere o ESTADO do repositório num PR de promoção.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * Três perguntas, e nenhuma delas é sobre a forma do PR (isso é o pr-police):
  *
@@ -290,7 +290,7 @@ async function principal(): Promise<void> {
       : `  ✗ REPROVADO — ${falhas.length} de ${conferencias.length} conferências falharam.`,
   );
   l.push('');
-  l.push('  A esteira inteira: docs/explanation/branching-policy.md');
+  l.push('  A esteira inteira: scripts/ci/docs/explanation/branching-policy.md');
 
   const saida = l.join('\n');
   console.log(saida);

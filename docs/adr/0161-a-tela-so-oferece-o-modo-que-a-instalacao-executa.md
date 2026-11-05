@@ -5,9 +5,9 @@
 **Accepted.** Decidido pelo mantenedor em 2026-09-18 (AT-085), com a resposta
 "os dois" à pergunta "o instalador liga o broker, ou a tela para de oferecer o
 que não roda?". Revisa a pré-seleção da
-[RN-513](../business-rules.md#rn-513) ([ADR 0146](0146-base-consentida-no-bootstrap.md),
+[RN-513](../business-rules/web.md#rn-513) ([ADR 0146](0146-base-consentida-no-bootstrap.md),
 ponto 4) e acrescenta um motivo de recusa local à
-[RN-521](../business-rules.md#rn-521). Nenhum dos dois é editado; este
+[RN-521](../business-rules/api.md#rn-521). Nenhum dos dois é editado; este
 documento os referencia. **Só a metade de TELA foi entregue** — a metade do
 instalador foi medida e parou, pelo motivo da seção "A metade que parou".
 
@@ -15,8 +15,8 @@ instalador foi medida e parou, pelo motivo da seção "A metade que parou".
 
 Uma instalação real da v6.1.0, feita pelo one-liner em 2026-09-14, criou pela
 web um projeto em `mounted`. Ele foi o modo **pré-selecionado**: o `install.sh`
-sempre grava `BRABO_PROJECTS_BASE` (a base consentida, [RN-531](../business-rules.md#rn-531)),
-e com base conhecida a [RN-513](../business-rules.md#rn-513) pré-seleciona
+sempre grava `BRABO_PROJECTS_BASE` (a base consentida, [RN-531](../business-rules/produto.md#rn-531)),
+e com base conhecida a [RN-513](../business-rules/web.md#rn-513) pré-seleciona
 `mounted`. O que se seguiu no event log:
 
 - 6× `dev.started` → 6× `dev.blocked_by_container`;
@@ -84,7 +84,7 @@ A fonte é `ContainerBrokerPort.configurado()`, a MESMA que decide se a leitura
 do estado observado pergunta ao broker ou declara ausência — ler `BROKER_URL`
 uma segunda vez seria a segunda fonte que um dia diverge. O campo diz que a
 variável EXISTE, nunca que o broker RESPONDE: quem sabe disso continua sendo
-`naoObservado` ([RN-486](../business-rules.md#rn-486)).
+`naoObservado` ([RN-486](../business-rules/api.md#rn-486)).
 
 ### 2. O assistente não pré-seleciona `mounted` sem broker, e oferece `runner`
 
@@ -94,7 +94,7 @@ Três estados, que não colapsam:
   `mounted` pré-selecionado;
 - **ausência confirmada** (`false`): `container` e `mounted` continuam NA TELA
   (tirar o card esconderia a informação — a régua "tira-se o controle, nunca
-  a informação" da [RN-102](../business-rules/custo.md#rn-102))
+  a informação" da [RN-102](../business-rules/api.md#rn-102))
   mas **inertes**, o motivo é dito UMA vez em texto abaixo deles, e `runner` é
   o pré-selecionado. Uma escolha humana feita antes de a resposta chegar, num
   modo que ela torna inexecutável, cai para `runner` — a mesma regra que já
@@ -121,7 +121,7 @@ lida do outro lado por `usaBroker`, e não uma segunda régua.
   escolhê-lo. O preço: `runner` exige o agente local de pé e o Docker da
   máquina do usuário — o que a instalação por one-liner já entrega
   ([ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)).
-- No compose de DESENVOLVIMENTO o broker sobe por padrão ([RN-512](../business-rules.md#rn-512)),
+- No compose de DESENVOLVIMENTO o broker sobe por padrão ([RN-512](../business-rules/infra.md#rn-512)),
   mas `BROKER_URL` continua vazia até alguém a pôr no `.env`
   (`docker/docker-compose.yml`, `.env.example`). Sem ela, o assistente de quem
   desenvolve passa a mostrar o aviso — e está CERTO: sem `BROKER_URL`, a api
@@ -137,12 +137,12 @@ lida do outro lado por `usaBroker`, e não uma segunda régua.
 - a conversão de modo (`ExecutionModeSection`, [ADR 0111](0111-conversao-de-execution-mode-de-projeto-existente.md))
   continua podendo converter para `container`/`mounted` numa instalação sem
   broker; ela lê a mesma rota e o campo está à mão, mas é outra tela, com
-  outra régua de oferta ([RN-559](../business-rules.md#rn-559));
+  outra régua de oferta ([RN-559](../business-rules/web.md#rn-559));
 - parar e remover (`container_stop`/`container_remove`) não ganharam a recusa:
   sem broker não há container de `container`/`mounted` registrado como de pé
   para parar, e o caso não foi medido;
 - o Infra Lead não sabe de broker ausente — ele recusa por MODO
-  ([RN-566](../business-rules.md#rn-566)), e enriquecer o contexto dele com a
+  ([RN-566](../business-rules/engine.md#rn-566)), e enriquecer o contexto dele com a
   instalação é a frente mais cara que a RN-566 já declara;
 - a sugestão de paralelização que ignora agente bloqueado por container;
 - a frase de fechamento do `install.sh` diz que sem broker "projeto em modo

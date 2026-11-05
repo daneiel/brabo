@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0169 — 本地 overlay 的 S3 目标不再是 MinIO，改为 SeaweedFS

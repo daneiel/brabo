@@ -2,13 +2,13 @@
 id: medicao-do-idioma
 title: 语言启发式的测量
 description: 针对一个带标签的语料库测量 AT-080 语言检测启发式的工具、它在合成语料库上产生的数字，以及语言引导及其成本的付费验证（AT-167，2026-09-29）。
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 ---
 
 # 语言启发式的测量 {#measuring-the-language-heuristic}
 
 > AT-160（EP-028，HS-053）。被测量的启发式是 AT-080 的规范所提出的（"A — heurística própria, sem
-> dependência"）。自 AT-163（[RN-624](../business-rules.md#rn-624)）起产品运行它：api 用它检测作者的语言，
+> dependência"）。自 AT-163（[RN-624](../business-rules/api.md#rn-624)）起产品运行它：api 用它检测作者的语言，
 > 并在任何东西改变之前**询问**。产品的阈值是**临时的**——见[产品的临时阈值](#the-products-provisional-thresholds)。
 
 ## 现有内容 {#what-exists}
@@ -125,7 +125,7 @@ compose 的 `brabo`/`brabo`）；`--database-url <url>` 改用宿主的 `psql`�
 ## 产品的临时阈值 {#the-products-provisional-thresholds}
 
 AT-163 必须在真实语料库存在之前带着*某个*数字发布，因此 api 读取 `PARAMETROS_PROVISORIOS`——**临时的，未经
-校准**，并在 [RN-624](../business-rules.md#rn-624) 中如此声明：
+校准**，并在 [RN-624](../business-rules/api.md#rn-624) 中如此声明：
 
 | 参数 | 临时值 | AT-080 的候选值 | 原因 |
 |---|---|---|---|
@@ -339,7 +339,7 @@ Wilson 区间。两个独立的解读：**C11**（负责人的，未决）和**�
 - 因此 C11 的决定只在表单被接受时才重要。表单计为失败时，无论 C11 如何 DeepSeek 都失败，而需要采取行动的发现不是
   C11 而是表单：在处理组中，DeepSeek 的 15 个 C06+C12 回答中有 8 个在英语回答中带有葡萄牙语文本（6 个只在表单中，
   2 个交错），而 7 个是干净的英语，包括表单。模型能用英语写表单——它大约一半的时候这样做。
-  **它从哪里来（AT-282，[RN-667](../business-rules.md#rn-667)）：** 工具本身的描述告诉模型 `label` 是
+  **它从哪里来（AT-282，[RN-667](../business-rules/engine.md#rn-667)）：** 工具本身的描述告诉模型 `label` 是
   "o texto da pergunta, **em pt-BR**"——第二条固定的语言指令，在门面之外，在每次调用中与末尾的引导竞争。现在它说
   "no idioma da sua resposta"，不点名任何语言；引导本身没有改变。改动之后的测量**没有运行**（做改动的机器上没有
   OpenRouter 的密钥），由负责人待办——C06 和 C12，处理组，5 轮，在 RN 的预算上限内。

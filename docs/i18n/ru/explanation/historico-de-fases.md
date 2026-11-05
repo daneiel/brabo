@@ -5,7 +5,7 @@ sidebar_label: История фаз
 sidebar_position: 14
 description: Неизменяемая запись завершённых фаз Brabo — что каждая сдала, отрезала и нашла, и почему.
 keywords: [histórico, fases, ADR, RN, changelog]
-traducao_de: a65c25acf8e673b8ee0d104512a284ee5f8606c5
+traducao_de: 9ecc443e59
 ---
 
 # История фаз

@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0118 — Настройка runner через браузер: ключ устройства Ed25519 как вторая учётная запись `runner-ticket`, прокси GitHub Releases для бинарника и File System Access API для папки, настраиваемой одним кликом

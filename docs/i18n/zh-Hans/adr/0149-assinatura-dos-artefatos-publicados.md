@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0149 — 已发布工件的签名
@@ -53,7 +53,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 | api 镜像内的 `cosign` | **155 MB**（`cosign-linux-amd64` v2.6.1） | 让一个 Alpine + Node、按 digest 发布在 GHCR 上的运行时镜像（[ADR 0119](0119-imagens-publicadas-no-ghcr-por-digest.md)）几乎翻倍，只为验证一个可选的下载 |
 | `@sigstore/verify` + `@sigstore/tuf` | **2.5 MB，12 个包**，无安全公告 | 体积不是代价。`getTrustedRoot()` 会针对 `tuf-repo-cdn.sigstore.dev` 刷新 TUF 元数据（包中的 `seeds.json` 只播种 `root.json`），所以一条今天依赖**一个**第三方主机的 `@Public()` 路由会变成依赖两个——而它是 [ADR 0118](0118-configuracao-automatica-do-runner-pelo-navegador.md) 引导流程的入口。更糟的是：按照 ADR [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)/[0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) 的尺子——capability 只有在**被证明**时才声明——今天无法证明这条路径，因为**没有任何 Release 带有 `checksums.txt.bundle`**：`checksums` job 只在正式 tag 时运行，而签名一方的 RN-524 早已声明了这一缺口。在引导流程之前加一个无法证明的验证，会把一个已知的弱点换成在每个平台、每个安装上的 502，而且只在生产中才被发现 |
 
-因此代理核对哈希，并**说明这只是哈希**——在 docblock、OpenAPI 描述、拒绝消息以及 [RN-525](../business-rules.md#rn-525) 中。验证签名的是 `install.sh`，它通过决策 4 的路径拥有真正的 `cosign`。后果被记录而不是隐藏：**BRB-005 对签名的产出关闭，而对这条路由的来源那一半保持开放**——重新打开它是之后某次会话的决定，要有一个真实的已签名 Release 来作证明。
+因此代理核对哈希，并**说明这只是哈希**——在 docblock、OpenAPI 描述、拒绝消息以及 [RN-525](../business-rules/produto.md#rn-525) 中。验证签名的是 `install.sh`，它通过决策 4 的路径拥有真正的 `cosign`。后果被记录而不是隐藏：**BRB-005 对签名的产出关闭，而对这条路由的来源那一半保持开放**——重新打开它是之后某次会话的决定，要有一个真实的已签名 Release 来作证明。
 
 ### 4. 用于验证的 `cosign` 也需要来源证明 {#4-o-cosign-que-verifica-também-precisa-de-procedência}
 

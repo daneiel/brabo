@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0185 — "Estou pronto — a necessidade está validada"：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受
@@ -15,7 +15,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 > "O aceite do PO pode ser implícito no 'Estou pronto'?"
 
 修订 [ADR 0095](0095-gate-necessidade-validada.md)（gate `necessidade-validada` 由一次**单独**的点击关闭）的设计以及
-[RN-406](../business-rules.md#rn-406)。不编辑 0095：记录改变了什么，以及其中什么继续有效。
+[RN-406](../business-rules/contracts.md#rn-406)。不编辑 0095：记录改变了什么，以及其中什么继续有效。
 
 ## Context {#context}
 
@@ -96,9 +96,9 @@ necessidade validada”按钮被移除，连同客户端的 `handleValidateNeces
 - [ADR 0095](0095-gate-necessidade-validada.md)——本 ADR 修订的设计
 - [ADR 0163](0163-o-clique-responde-ao-aceitar.md)——点击在接受时响应
 - [ADR 0182](0182-ciclo-de-vida-do-handoff.md)——`superseded`，被保留
-- [RN-406](../business-rules.md#rn-406)、[RN-657](../business-rules.md#rn-657)、
-  [RN-658](../business-rules.md#rn-658)、[RN-633](../business-rules.md#rn-633)、
-  [RN-635](../business-rules.md#rn-635)
+- [RN-406](../business-rules/contracts.md#rn-406)、[RN-657](../business-rules/api.md#rn-657)、
+  [RN-658](../business-rules/api.md#rn-658)、[RN-633](../business-rules/web.md#rn-633)、
+  [RN-635](../business-rules/api.md#rn-635)
 - `apps/api/src/domain/sessions/estou-pronto.ts`
 - `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts`
 - `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts`

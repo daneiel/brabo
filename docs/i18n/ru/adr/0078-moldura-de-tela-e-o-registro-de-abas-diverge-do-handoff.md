@@ -1,14 +1,14 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0078 — Рамка экрана, и реестр вкладок намеренно расходится с handoff
 
 - **Статус:** принят
 - **Дата:** 2026-08-15
-- **Предшествующий контекст:** [RN-048](../business-rules/custo.md#rn-048)
-  (ожидающее продвижение истории), [RN-104](../business-rules.md#rn-104) (Chat и
-  Criativo как места, с ключом `sessions`), [RN-121](../business-rules.md#rn-121)
+- **Предшествующий контекст:** [RN-048](../business-rules/api.md#rn-048)
+  (ожидающее продвижение истории), [RN-104](../business-rules/web.md#rn-104) (Chat и
+  Criativo как места, с ключом `sessions`), [RN-121](../business-rules/web.md#rn-121)
   (вкладка Исполнители, dev agent и QA вне смешанной «Команды агентов»),
   [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) (embeddings в
   контракте `LLMProvider` — фундамент без потребления)

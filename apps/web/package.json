@@ -11,8 +11,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "openapi:types": "openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts",
-    "openapi:types:check": "openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check"
+    "openapi:types": "openapi-typescript ../api/docs/reference/openapi.json -o src/lib/api-types.generated.ts",
+    "openapi:types:check": "openapi-typescript ../api/docs/reference/openapi.json -o src/lib/api-types.generated.ts --check"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

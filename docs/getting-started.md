@@ -171,7 +171,7 @@ Abra <http://localhost:5173> e entre com essas credenciais.
 **Se o login devolver 401 com a senha certa:** confira que o seed rodou contra
 o **mesmo** banco que a api está usando — `DATABASE_URL` do `.env`. A resposta
 é a mesma para senha errada, e-mail inexistente e conta bloqueada, de propósito
-([RN-032](business-rules/autenticacao.md#rn-032)), então ela não distingue os casos para
+([RN-032](business-rules/api.md#rn-032)), então ela não distingue os casos para
 você.
 
 ## 3. Configurar um modelo
@@ -192,7 +192,7 @@ docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
 chave é cifrada com envelope encryption antes de tocar o banco.
 
 O modelo é resolvido em cascata — **sessão > agente > projeto > workspace**, o
-primeiro que existir ([RN-020](business-rules/custo.md#rn-020)). Dá para deixar o
+primeiro que existir ([RN-020](business-rules/api.md#rn-020)). Dá para deixar o
 local no geral e pôr um modelo de API só no QA, que é o papel que menos cabe
 num modelo pequeno.
 
@@ -223,7 +223,7 @@ para aplicá-la, e isso não enfraquece nada: quem impede merge indevido é o
 
 Se um passo falhar, corrija a causa e mande retomar: o bootstrap continua de
 onde parou, não recomeça
-([RN-029](business-rules.md#rn-029)).
+([RN-029](business-rules/api.md#rn-029)).
 
 ## 5. O primeiro turno
 

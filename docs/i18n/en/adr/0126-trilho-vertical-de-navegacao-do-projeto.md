@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0126 — The project page navigates by a vertical rail, and the Code tab stops auto-collapsing the sidebar
@@ -14,7 +14,7 @@ traducao_de: 2f301391630d5be632e27036026760d416d43da1
   debt that keeps the counter badge solid instead of tinted),
   [ADR 0125](0125-projectsettingstab-dividido-por-secao.md) (PR 0 of the same
   accepted 8-PR effort this is PR 1 of).
-- **Revises:** [RN-201](../business-rules/autenticacao.md#rn-201) — the
+- **Revises:** [RN-201](../business-rules/web.md#rn-201) — the
   auto-collapse half is removed; the `brabo.project`/`brabo.tab` persistence
   half is untouched.
 

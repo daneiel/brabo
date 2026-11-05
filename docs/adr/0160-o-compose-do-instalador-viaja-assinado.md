@@ -12,7 +12,7 @@ Nenhum dos dois é editado; este documento os referencia.
 ## Context
 
 O E2E do instalador numa máquina limpa rodou pela primeira vez na sessão 8 da
-FASE 30 ([RN-549](../business-rules.md#rn-549)) e respondeu **não** à pergunta
+FASE 30 ([RN-549](../business-rules/ci.md#rn-549)) e respondeu **não** à pergunta
 que existia para responder. O `install.sh` subia a pilha com
 `docker compose -f docker/docker-compose.install.yml` — um caminho **relativo
 ao diretório de onde rodava** — usado em sete pontos, incluindo o
@@ -36,7 +36,7 @@ base e **gravado o `.env` com os cinco segredos**. Metade de uma instalação, e
 uma mensagem que não dizia o que fazer.
 
 **Medido ao implementar: são quatro, não três.** O caminho de MIGRAÇÃO
-(`migrar_instalacao_anterior`, [RN-530](../business-rules.md#rn-530)) roda
+(`migrar_instalacao_anterior`, [RN-530](../business-rules/infra.md#rn-530)) roda
 `bash docker/backup/test-restore-compose.sh` — outro caminho relativo, e um
 script **executado** no host. O E2E nunca o alcançou porque numa máquina limpa
 não há o que migrar, e por isso o contorno não o trazia. Numa pasta sem checkout
@@ -79,7 +79,7 @@ ninguém perguntou como ele viajaria.
 que já publica o `install.sh`: os arquivos vêm do **checkout da tag** (o mesmo
 commit que produziu tudo o mais que se assina ali), são copiados sob o nome do
 asset pelo script, entram no `sha256sum` que gera o manifesto e são anexados
-junto. Nada muda na espera por assets da [RN-565](../business-rules.md#rn-565):
+junto. Nada muda na espera por assets da [RN-565](../business-rules/ci.md#rn-565):
 estes não vêm da matriz, então não há o que esperar por eles. O job passa a
 conferir também **cada linha do manifesto contra o arquivo** (`sha256sum -c
 --strict`) depois de verificar a assinatura e antes de anexar — a assinatura
@@ -151,7 +151,7 @@ contorno e passa a cobrar que ele **não** volte.
   no meio, e aí o instalador recusa cedo, com *"a Release não publica …"*, em vez
   de morrer depois do `.env`. Rodar o `install.sh` novo de um checkout contra uma
   Release antiga já era recusado antes, pela verificação de origem
-  ([RN-526](../business-rules.md#rn-526)): o hash dele não está no manifesto
+  ([RN-526](../business-rules/produto.md#rn-526)): o hash dele não está no manifesto
   antigo. As Releases já publicadas continuam com o instalador antigo e o
   contorno de rodá-lo de dentro de um checkout na tag.
 - **A Release cresce** em quatro assets (~29 KB) e o manifesto em quatro linhas,
@@ -163,7 +163,7 @@ contorno e passa a cobrar que ele **não** volte.
   `git status` fica sujo, e o script DIZ quais substituiu. É o preço de o layout
   não mudar, e só existe para quem instala de dentro de um checkout.
 - **O proxy `GET /runner-releases/binary` não muda**: ele lê o manifesto como um
-  mapa nome → hash ([RN-525](../business-rules.md#rn-525)), e linhas a mais não o
+  mapa nome → hash ([RN-525](../business-rules/produto.md#rn-525)), e linhas a mais não o
   afetam.
 - **Adjacência medida e NÃO corrigida.** A prova de restauração da migração
   (`test-restore-compose.sh`) chama `docker compose -f <compose>` sem

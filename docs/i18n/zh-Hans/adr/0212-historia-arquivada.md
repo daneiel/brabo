@@ -1,12 +1,12 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0212 — 已归档的故事：一列，而不是状态机中的一个状态
 
 ## 状态 {#status}
 
-**已接受。** 2026-10-03（AT-406；所有者于 10月3日的决定：“PO e usuário”——PO 和 Backlog 标签页可以编辑和归档没有执行中任务的 `draft` 故事）。规则见 [RN-727](../business-rules.md#rn-727)。
+**已接受。** 2026-10-03（AT-406；所有者于 10月3日的决定：“PO e usuário”——PO 和 Backlog 标签页可以编辑和归档没有执行中任务的 `draft` 故事）。规则见 [RN-727](../business-rules/api.md#rn-727)。
 
 ## 背景 {#context}
 

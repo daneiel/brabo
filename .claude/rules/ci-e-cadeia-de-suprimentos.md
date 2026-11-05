@@ -83,7 +83,7 @@ paths:
   a regra para eles passarem. O `imageName` do CNPG e a
   `IMAGEM_DO_GOLDEN_SET_QA` ficam no procedimento manual em qualquer caso. Subir um digest é procedimento de runbook, e a regra NÃO tem RN,
   pelo mesmo motivo que a irmã não tem: as duas moram aqui e em
-  docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
+  scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md, e pôr uma delas em
   business-rules.md daria dois endereços à mesma política. E desde a RN-524 (ADR
   0149) a esteira também ASSINA o que publica: `cosign` keyless (OIDC do
   Actions) nas imagens publicadas (cinco desde o ADR 0162) por DIGEST — nunca por tag, que é ponteiro
@@ -146,7 +146,7 @@ paths:
   plataforma, inclusive as que anexaram). O teto dos binários é 1200s porque
   é o `timeout-minutes: 20` do próprio job `build` — o máximo que um alvo COM
   runner demora depois de começar; não cobrir tempo de FILA é o ponto. Ver
-  docs/explanation/cadeia-de-suprimentos-do-ci.md, que também DECLARA o que
+  scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md, que também DECLARA o que
   segue confiado na fé (sem proveniência de dependência npm; o Dependabot e a
   imagem de terceiro por tag saíram dessa lista, e o que ficou no lugar do
   segundo é o preço do pin — digest não recebe correção sozinho).

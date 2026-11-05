@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0174 — The runner's standalone binary stops promising Intel Mac
@@ -44,7 +44,7 @@ decision.
 Meanwhile, the five-target promise cost in four places: the matrix queued a
 job that never ran; `ALVOS_ESPERADOS` made every `checksums.txt` announce,
 forever, the absence of a target already known not to come
-([RN-565](../business-rules.md#rn-565)); the `GET /runner-releases/binary`
+([RN-565](../business-rules/ci.md#rn-565)); the `GET /runner-releases/binary`
 proxy accepted `darwin-x64` only to answer 502 `plataforma_nao_publicada`; and
 `install.sh` asked GitHub for an asset that returns 404 — with the same
 "the Release does not publish" output, indistinguishable from an incomplete
@@ -65,14 +65,14 @@ Node, where the `node-pty` proof passes.
 - `install.sh`, on `darwin-amd64`, **does not try to download**: it says in
   text that Intel Mac has no binary, that the rest of the installation is up
   and what the npm command is, and leaves `RUNNER_BIN` empty — the same signal
-  by which the wrap-up ([RN-547](../business-rules.md#rn-547)) already reported
+  by which the wrap-up ([RN-547](../business-rules/produto.md#rn-547)) already reported
   the pending key and service. The installation itself remains supported on
   Intel Mac (the `cosign` pinned for `darwin-amd64` stays), only the local
   agent binary goes.
 - The browser keeps **detecting** `darwin-x64` — detecting Intel Mac is true,
   and it is what allows stating the right path —, but the binary step does not
   request the download: it fails upfront, and falls into the same best-effort
-  (`falhaDoBinario` → npm command) of [RN-473](../business-rules.md#rn-473).
+  (`falhaDoBinario` → npm command) of [RN-473](../business-rules/web.md#rn-473).
 - `scripts/ci/alvos-do-runner.spec.ts` ties together the four places that
   enumerate targets, in three languages: the matrix, the api list, the
   installer's `case` and the browser's. Removing (or restoring) a target in one

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0189 — 自动驾驶：自动模式批准一切（上限除外），作用域与真实执行目录比较，"始终允许"记录动词 + 子命令
@@ -12,9 +12,9 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 2026-09-29 的真实使用测得同一策略的三个缺陷（`analise-uso-real.md`，第 9 和第 11 项）：
 
-1. **"始终允许"会关闭自动模式。** 七个 dev agent 在 06:48:28–34 收到通配规则 `*: auto_approve`，几秒钟后又得到由 dev agent 的"始终允许"写入的 `terminal: auto_approve` 一行（[RN-509](../business-rules.md#rn-509)）。仓储先于通配规则返回**具体**规则，来源为 `especifica`，而 `decide()` 只在来源为 `curinga` 时才识别自动模式（[RN-603](../business-rules/autenticacao.md#rn-603)）。结果：界面上自动模式亮着，却有 97 次"comando composto com ao menos um segmento não coberto por allow"请求和 37 次"escopo"请求。
+1. **"始终允许"会关闭自动模式。** 七个 dev agent 在 06:48:28–34 收到通配规则 `*: auto_approve`，几秒钟后又得到由 dev agent 的"始终允许"写入的 `terminal: auto_approve` 一行（[RN-509](../business-rules/api.md#rn-509)）。仓储先于通配规则返回**具体**规则，来源为 `especifica`，而 `decide()` 只在来源为 `curinga` 时才识别自动模式（[RN-603](../business-rules/api.md#rn-603)）。结果：界面上自动模式亮着，却有 97 次"comando composto com ao menos um segmento não coberto por allow"请求和 37 次"escopo"请求。
 2. **作用域与命令**不**运行的目录比较。** 那 37 次"escopo"全是 `/work/...` 或 `/tmp`，被拿去与**主机**根目录（`/home/<usuario>/projetos-brabo/<projeto>`）比较。有 `running` 容器时，engine 在容器**内部**执行命令（RN-492/RN-502），位于 `/work`，并且只是在之后、在 `terminal_executor.ex` 中才把主机 `cwd` 转换为 `/work`。
-3. **自动模式没有在界面上说明它放行什么。** [RN-661](../business-rules.md#rn-661) 的批量卡片说了它**不**放行什么；agent 卡片的开关和 `ApprovalCard` 的措辞不同，而且没有一个说 `git commit` 和本地分支会通过。
+3. **自动模式没有在界面上说明它放行什么。** [RN-661](../business-rules/web.md#rn-661) 的批量卡片说了它**不**放行什么；agent 卡片的开关和 `ApprovalCard` 的措辞不同，而且没有一个说 `git commit` 和本地分支会通过。
 
 活动 AT-259 提议撤销 RN-603 中解除作用域的那部分。所有者在 10月1日作出相反决定：*"RN-603 不撤销——由于命令在容器中运行，自动模式继续放行任何命令，包括目录之外的，只要加以保持，使 Brabo 正在运行的代码不出任何问题"*。
 
@@ -24,7 +24,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ### 1. 自动模式就是**自动驾驶** {#1-o-modo-automático-é-o-piloto-automático}
 
-通配规则 `*: auto_approve` 批准**一切**，包括从 `permissions.json` 合成的复合命令和目录之外的路径（RN-603，保留），以及 `git commit` 和**本地**分支的创建。以下仍在外面，永远不可自动批准：通过终端的 git push/PR/merge/deploy（[RN-418](../business-rules.md#rn-418)）、`sudo`/`doas`、受保护分支上的合并、`container_remove`、`instruction_patch` 以及 `parallelize`/`raise_max_parallel`。显式的 `deny` 仍然胜出，而写在文件中的 `ask` 仍然会请求——那是用户的规则，与 RN-603 中一样。
+通配规则 `*: auto_approve` 批准**一切**，包括从 `permissions.json` 合成的复合命令和目录之外的路径（RN-603，保留），以及 `git commit` 和**本地**分支的创建。以下仍在外面，永远不可自动批准：通过终端的 git push/PR/merge/deploy（[RN-418](../business-rules/api.md#rn-418)）、`sudo`/`doas`、受保护分支上的合并、`container_remove`、`instruction_patch` 以及 `parallelize`/`raise_max_parallel`。显式的 `deny` 仍然胜出，而写在文件中的 `ask` 仍然会请求——那是用户的规则，与 RN-603 中一样。
 
 ### 2. "始终允许"不会关闭自动驾驶（最简单的形式） {#2-sempre-permitir-não-desliga-o-piloto-a-forma-mais-simples}
 
@@ -50,7 +50,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ### 6. "始终允许"的单位：动词 + 子命令，按段 {#6-a-unidade-do-sempre-permitir-verbo--subcomando-por-segmento}
 
-所有者 10月1日的决定（AT-257，关闭 AT-170——ADR 0055 中留下未决的第 6 点）：点击不再逐字节写入整条命令，而是为命令的每个**段**写入**一个**模式，单位是**动词 + 子命令**（`npm test`、`git status`）；不是单词的参数泛化为动词（`cat src/x.ts` → `cat`）；动词 + 标志保持**精确**（那是形式，Z/AD 发现正说明动词与调用方式在此分歧）；而作为 RN-418 某个上限前缀的单位（`git remote`、`gh pr`）保持精确，若连精确形式都是上限则直接消失。AT-170 的四个子问题都得到了回答：单位就是这个；它**不**继承动词白名单（不会产生任何动词列表，参数与子命令之间的疑问落在窄的一边）；写入者是与今天相同的角色；与通配规则的优先级见第 2 点。详情见 [RN-675](../business-rules.md#rn-675)。
+所有者 10月1日的决定（AT-257，关闭 AT-170——ADR 0055 中留下未决的第 6 点）：点击不再逐字节写入整条命令，而是为命令的每个**段**写入**一个**模式，单位是**动词 + 子命令**（`npm test`、`git status`）；不是单词的参数泛化为动词（`cat src/x.ts` → `cat`）；动词 + 标志保持**精确**（那是形式，Z/AD 发现正说明动词与调用方式在此分歧）；而作为 RN-418 某个上限前缀的单位（`git remote`、`gh pr`）保持精确，若连精确形式都是上限则直接消失。AT-170 的四个子问题都得到了回答：单位就是这个；它**不**继承动词白名单（不会产生任何动词列表，参数与子命令之间的疑问落在窄的一边）；写入者是与今天相同的角色；与通配规则的优先级见第 2 点。详情见 [RN-675](../business-rules/api.md#rn-675)。
 
 ## 后果 {#consequences}
 

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0066 — Readable workspace folder name
@@ -167,11 +167,11 @@ protect.
 
 ## References
 
-- [RN-109](../business-rules/autenticacao.md#rn-109) — the folder name is frozen at
+- [RN-109](../business-rules/api.md#rn-109) — the folder name is frozen at
   creation, and an old project keeps its UUID.
-- [RN-075](../business-rules/custo.md#rn-075) — path scope in terminal policy
+- [RN-075](../business-rules/api.md#rn-075) — path scope in terminal policy
   (what this ADR preserves).
-- [RN-092](../business-rules/custo.md#rn-092) — path containment in code reading
+- [RN-092](../business-rules/api.md#rn-092) — path containment in code reading
   (ditto).
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md) — the
   document revised here.

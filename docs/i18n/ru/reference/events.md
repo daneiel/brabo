@@ -23,7 +23,7 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 ## Доменное событие
 
 Строка в `session_events`, append-only, с плотным `seq` по сессии
-([RN-002](../business-rules.md#rn-002)). Колонки:
+([RN-002](../business-rules/api.md#rn-002)). Колонки:
 
 | колонка | что |
 |---|---|
@@ -51,7 +51,7 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 | `session.closed_abnormally` | завершение с причиной — `node_shutdown` самая частая |
 | `session.reopened` | сессия `closed`/`closed_abnormally` вернулась в `active` (ADR 0183) |
 
-**Терминальная сессия больше не принимает разговор ([RN-581](../business-rules.md#rn-581)).**
+**Терминальная сессия больше не принимает разговор ([RN-581](../business-rules/api.md#rn-581)).**
 Когда сессия `closed` или `closed_abnormally`, запись события разговора
 отклоняется с **409** и `reason: "sessao_encerrada"`. Разговор — это тип,
 существующий только как разговор (`chat.message`,
@@ -67,7 +67,7 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 дольше потолка, несёт `termination_reason: "conversation_idle_timeout"` и
 заканчивается `closed`, как `heartbeat_timeout`.
 
-**Закрытую сессию можно открыть заново ([RN-649](../business-rules.md#rn-649), ADR 0183).**
+**Закрытую сессию можно открыть заново ([RN-649](../business-rules/api.md#rn-649), ADR 0183).**
 `POST /projects/:projectId/sessions/:sessionId/reopen` (`developer`, ADR 0184)
 возвращает сессию `closed`/`closed_abnormally` в `active` и записывает
 `session.reopened` с `{from, to, closedAt, terminationReason}` — единственную
@@ -81,23 +81,23 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 | тип | когда |
 |---|---|
 | `chat.message` | сообщение в ленте сессии, от пользователя или агента |
-| `chat.message_queued` | сообщение пришло, когда агент был посреди хода, и попало в его ОЧЕРЕДЬ, а не было отклонено ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). Актор: агент. Payload: `mensagemId` (id `chat.message`), `texto`, `idioma` и `posicao`. Текст передаётся здесь, потому что именно его очередь перечитывает после перезапуска engine. Поставленное в очередь сообщение остаётся ОЖИДАЮЩИМ, пока `chat.message_delivered` или `chat.message_cancelled` его не назовёт; не более 10 на агента и сессию |
+| `chat.message_queued` | сообщение пришло, когда агент был посреди хода, и попало в его ОЧЕРЕДЬ, а не было отклонено ([RN-673](../business-rules/engine.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). Актор: агент. Payload: `mensagemId` (id `chat.message`), `texto`, `idioma` и `posicao`. Текст передаётся здесь, потому что именно его очередь перечитывает после перезапуска engine. Поставленное в очередь сообщение остаётся ОЖИДАЮЩИМ, пока `chat.message_delivered` или `chat.message_cancelled` его не назовёт; не более 10 на агента и сессию |
 | `chat.message_delivered` | начался ход, читающий очередь: ожидающие сообщения читаются ВМЕСТЕ, по порядку, в одном ходе. Актор: агент. Payload: `mensagemIds` |
-| `chat.message_cancelled` | тот, кто ОТПРАВИЛ ожидающее сообщение, отменил его — ни один агент его не прочитал. Актор: этот пользователь. Payload: `mensagemId`, `agente`. Записывается engine; отклоняется в закрытой сессии ([RN-581](../business-rules.md#rn-581)) |
-| `chat.structured_question` | Креатив запросил НЕСКОЛЬКО ответов сразу, через форму — инструмент `ask_structured_questions` (RN-162). Каждый вопрос несёт `id`, `label`, `type`, `options` и `allowOther` — это выход свободного текста для `select`, и он равен `true`, когда модель ничего не объявляет ([RN-171](../business-rules/autenticacao.md#rn-171)) |
+| `chat.message_cancelled` | тот, кто ОТПРАВИЛ ожидающее сообщение, отменил его — ни один агент его не прочитал. Актор: этот пользователь. Payload: `mensagemId`, `agente`. Записывается engine; отклоняется в закрытой сессии ([RN-581](../business-rules/api.md#rn-581)) |
+| `chat.structured_question` | Креатив запросил НЕСКОЛЬКО ответов сразу, через форму — инструмент `ask_structured_questions` (RN-162). Каждый вопрос несёт `id`, `label`, `type`, `options` и `allowOther` — это выход свободного текста для `select`, и он равен `true`, когда модель ничего не объявляет ([RN-171](../business-rules/engine.md#rn-171)) |
 | `chat.structured_question_answered` | пользователь ответил на форму; ответы также возвращаются как `chat.message`, чтобы агент их прочитал |
 | `agent.activated` | агент взял работу в сессии |
-| `agent.response` | полный консолидированный ответ агента. `modelName` говорит, КАКАЯ модель его сгенерировала, у трёх производителей (пять разговорных агентов, `ToolLoop` каждого исполнительного агента/агента gate и чат api без активного агента) — `null`, когда ход упал до разрешения binding, и отсутствует в событиях, записанных до появления правила ([RN-175](../business-rules/autenticacao.md#rn-175)). От разговорного агента `content` — это только ЗАКЛЮЧИТЕЛЬНЫЙ текст хода, а `passos` (отсутствует, когда их нет) перечисляет по порядку текст предыдущих раундов, который лента сворачивает под «Шаги хода» ([RN-698](../business-rules.md#rn-698), AT-395) |
-| `agent.error` | сбой агента, с `origem` (`infra`/`modelo`/`codigo`/`politica`) и `mensagem`, которое он говорит в ленте ([RN-059](../business-rules/custo.md#rn-059)). Также выдаётся с `reason: turno_interrompido_por_reinicio` (источник `infra`), когда engine перезапустился посреди хода и осиротевший статус `working` закрывается при загрузке или подъёме агента, после чего идёт `agent.status: idle` ([RN-586](../business-rules.md#rn-586)). Покрывает весь ход, а также сбой ОДНОГО инструмента посреди цикла, с `tool` и `retentativa` в payload ([RN-163](../business-rules/autenticacao.md#rn-163)) |
-| `tool_router.decided` | шаг, на котором Jev выбрал инструмент ([RN-625](../business-rules.md#rn-625), [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)): `menuAntes`/`menuDepois`, `escolha`, `confianca`, `segunda`, `anterior`, `aplicado` (меню вышло меньше каталога), `motivoDaQueda` + `origemDaQueda` (`infra`/`modelo`/`codigo`), когда Jev упал, `latenciaMs`, `custoMicros` (РЕАЛЬНЫЙ `usage.cost`) и `foraDoCardapio` (инструменты, которые модель вызвала, хотя их не предлагали). Записывается фасадом engine для каждого агента; отсутствует, когда маршрутизатор не запрашивался (provider не OpenRouter, меньше двух инструментов, ключ workspace выключен). Измерение выигрыша (AT-239) читается из этого события и из `token_usage`, никогда не записывается вручную |
-| `tool.result` | результат выполнения инструмента, записываемый hook `Engine.Harness.Hooks.EventLog` и, для семи разговорных агентов (Infra Lead с [RN-617](../business-rules.md#rn-617)), их серверами с `tool`, `ok` и `resultado` (или `erro`), обрезанным до 2 000 символов с `resultadoTotal`, когда обрезается ([RN-589](../business-rules.md#rn-589)). Тот же payload приходит от Infra Lead для каждого инструмента, который он выполняет напрямую, и от Dev Lead, когда приостановленный вызов разрешается — никогда пока он ждёт одобрения ([RN-593](../business-rules.md#rn-593)) |
+| `agent.response` | полный консолидированный ответ агента. `modelName` говорит, КАКАЯ модель его сгенерировала, у трёх производителей (пять разговорных агентов, `ToolLoop` каждого исполнительного агента/агента gate и чат api без активного агента) — `null`, когда ход упал до разрешения binding, и отсутствует в событиях, записанных до появления правила ([RN-175](../business-rules/engine.md#rn-175)). От разговорного агента `content` — это только ЗАКЛЮЧИТЕЛЬНЫЙ текст хода, а `passos` (отсутствует, когда их нет) перечисляет по порядку текст предыдущих раундов, который лента сворачивает под «Шаги хода» ([RN-698](../business-rules/engine.md#rn-698), AT-395) |
+| `agent.error` | сбой агента, с `origem` (`infra`/`modelo`/`codigo`/`politica`) и `mensagem`, которое он говорит в ленте ([RN-059](../business-rules/engine.md#rn-059)). Также выдаётся с `reason: turno_interrompido_por_reinicio` (источник `infra`), когда engine перезапустился посреди хода и осиротевший статус `working` закрывается при загрузке или подъёме агента, после чего идёт `agent.status: idle` ([RN-586](../business-rules/engine.md#rn-586)). Покрывает весь ход, а также сбой ОДНОГО инструмента посреди цикла, с `tool` и `retentativa` в payload ([RN-163](../business-rules/engine.md#rn-163)) |
+| `tool_router.decided` | шаг, на котором Jev выбрал инструмент ([RN-625](../business-rules/engine.md#rn-625), [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md)): `menuAntes`/`menuDepois`, `escolha`, `confianca`, `segunda`, `anterior`, `aplicado` (меню вышло меньше каталога), `motivoDaQueda` + `origemDaQueda` (`infra`/`modelo`/`codigo`), когда Jev упал, `latenciaMs`, `custoMicros` (РЕАЛЬНЫЙ `usage.cost`) и `foraDoCardapio` (инструменты, которые модель вызвала, хотя их не предлагали). Записывается фасадом engine для каждого агента; отсутствует, когда маршрутизатор не запрашивался (provider не OpenRouter, меньше двух инструментов, ключ workspace выключен). Измерение выигрыша (AT-239) читается из этого события и из `token_usage`, никогда не записывается вручную |
+| `tool.result` | результат выполнения инструмента, записываемый hook `Engine.Harness.Hooks.EventLog` и, для семи разговорных агентов (Infra Lead с [RN-617](../business-rules/engine.md#rn-617)), их серверами с `tool`, `ok` и `resultado` (или `erro`), обрезанным до 2 000 символов с `resultadoTotal`, когда обрезается ([RN-589](../business-rules/engine.md#rn-589)). Тот же payload приходит от Infra Lead для каждого инструмента, который он выполняет напрямую, и от Dev Lead, когда приостановленный вызов разрешается — никогда пока он ждёт одобрения ([RN-593](../business-rules/engine.md#rn-593)) |
 | `handoff.offered` | агент предложил работу другому |
-| `handoff.accepted` | получатель принял. Обычно человеком (актор `user`). Когда принятие подразумевалось в клике «Я готов» ([RN-658](../business-rules.md#rn-658)), актор остаётся этим человеком, а payload — и payload следующего `agent.activated` — несёт также `implicito: { via: "readiness.confirmed", readinessEventId }`. С [RN-660](../business-rules.md#rn-660) ([ADR 0186](../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)) предложение PO Архитектору может быть принято актором `system` `handoff-auto-accept`, и тогда payload несёт также `automatico: true`, `emNomeDe` (кто открыл сессию — репозиторий создаётся от имени этого человека) и `criterio` (`regras`, `cobertas`, `repositorio`) |
-| `handoff.auto_accept_failed` | система решила принять предложение PO Архитектору ([RN-660](../business-rules.md#rn-660)), и принятие упало. Payload: `handoffId`, `toAgent`, `origem` (`infra`) и `error`. Актор `system` `handoff-auto-accept`. Предложение сохраняет кнопку, если не было помечено `accepted` |
-| `handoff.superseded` | handoff `offered` перестал быть действующим и больше не может быть принят ([RN-635](../business-rules.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — получатель был активирован любым путём; `nova_oferta` — более новое предложение тому же получателю в проекте его заменило) и `substitutaId` (заменившее предложение, `null` для `agente_ativado`). Записывается актором `system` `handoff-lifecycle` в сессии СТАРОГО предложения, которая может быть закрыта — это запись, а не разговор, поэтому RN-581 её пропускает. `status` строки становится `superseded`; событие — это история |
-| `context.compacted` | менеджер контекста резюмировал самые старые ходы истории агента, чтобы уместиться в окно. С [RN-580](../business-rules.md#rn-580) payload несёт, помимо `tokensBefore`/`tokensAfter`, `summary`, заменивший эти ходы, `agent` — владельца истории, и `messagesSummarized`. События, записанные раньше, несут только два счётчика — резюме потеряно, и регидратация говорит об этом, а не выдумывает его |
+| `handoff.accepted` | получатель принял. Обычно человеком (актор `user`). Когда принятие подразумевалось в клике «Я готов» ([RN-658](../business-rules/api.md#rn-658)), актор остаётся этим человеком, а payload — и payload следующего `agent.activated` — несёт также `implicito: { via: "readiness.confirmed", readinessEventId }`. С [RN-660](../business-rules/api.md#rn-660) ([ADR 0186](../adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md)) предложение PO Архитектору может быть принято актором `system` `handoff-auto-accept`, и тогда payload несёт также `automatico: true`, `emNomeDe` (кто открыл сессию — репозиторий создаётся от имени этого человека) и `criterio` (`regras`, `cobertas`, `repositorio`) |
+| `handoff.auto_accept_failed` | система решила принять предложение PO Архитектору ([RN-660](../business-rules/api.md#rn-660)), и принятие упало. Payload: `handoffId`, `toAgent`, `origem` (`infra`) и `error`. Актор `system` `handoff-auto-accept`. Предложение сохраняет кнопку, если не было помечено `accepted` |
+| `handoff.superseded` | handoff `offered` перестал быть действующим и больше не может быть принят ([RN-635](../business-rules/api.md#rn-635), [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). Payload: `handoffId`, `toAgent`, `motivo` (`agente_ativado` — получатель был активирован любым путём; `nova_oferta` — более новое предложение тому же получателю в проекте его заменило) и `substitutaId` (заменившее предложение, `null` для `agente_ativado`). Записывается актором `system` `handoff-lifecycle` в сессии СТАРОГО предложения, которая может быть закрыта — это запись, а не разговор, поэтому RN-581 её пропускает. `status` строки становится `superseded`; событие — это история |
+| `context.compacted` | менеджер контекста резюмировал самые старые ходы истории агента, чтобы уместиться в окно. С [RN-580](../business-rules/engine.md#rn-580) payload несёт, помимо `tokensBefore`/`tokensAfter`, `summary`, заменивший эти ходы, `agent` — владельца истории, и `messagesSummarized`. События, записанные раньше, несут только два счётчика — резюме потеряно, и регидратация говорит об этом, а не выдумывает его |
 
-**Что перечитывает разговорный агент ([RN-580](../business-rules.md#rn-580)).**
+**Что перечитывает разговорный агент ([RN-580](../business-rules/engine.md#rn-580)).**
 Когда один из семи разговорных агентов поднимается над сессией, в которой уже
 есть разговор, `Engine.Agents.Reidratacao` восстанавливает его историю из
 **хвоста** этого журнала (последние 200 событий): `chat.message`, `agent.response`,
@@ -107,9 +107,9 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 `chat.structured_question_answered` намеренно пропускается: api записывает те
 же ответы как `chat.message` сразу после, и именно это агент прочитал вживую.
 `chat.message`, отменённое в очереди или ещё ожидающее для этого агента, тоже
-пропускается ([RN-673](../business-rules.md#rn-673)): первое так и не было
+пропускается ([RN-673](../business-rules/engine.md#rn-673)): первое так и не было
 сказано, второе придёт ходом, читающим очередь. С
-[RN-589](../business-rules.md#rn-589) все семь записывают `tool.result` с текстом,
+[RN-589](../business-rules/engine.md#rn-589) все семь записывают `tool.result` с текстом,
 который вернул инструмент (`resultado`, обрезанный до 2 000 символов, с
 `resultadoTotal`, дающим реальный размер при обрезке); вызов сессии, записанный
 до этого, не имеет `tool.result`, и заметка говорит, что в журнале нет исхода.
@@ -121,7 +121,7 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 
 | тип | когда |
 |---|---|
-| `proposed_action.created` | действие родилось — до любого выполнения. `payload.status` говорит, как оно родилось (`pending`, `auto_approved` или `denied`), и именно это отличает человеческое решение от политики ([RN-049](../business-rules/custo.md#rn-049)). `payload.reason` говорит, КАКОЕ правило политики решило — строка, которую возвращает `decide()`, во всех трёх исходах; отсутствует в событиях, записанных до появления правила, что означает «не записано», а не «без причины». Одноимённая строка outbox его НЕ несёт ([RN-567](../business-rules.md#rn-567)). В действиях `terminal` — единственном типе, чьё решение учитывает область пути, — `payload.scopeRoot` говорит, с КАКИМ корнем сравнивала область, как `{ executionMode, ancora, segmento }`: `container` → `ancora: raiz_gerenciada` и `workspace_dir_name`; `mounted` → `ancora: base_de_projetos` и сегмент под `BRABO_PROJECTS_BASE` (`ancora: indisponivel`, `segmento: null`, когда папка вне базы или базы нет); `runner` → `ancora: nome_da_pasta` и `workspace_dir_name`. НИКОГДА абсолютный путь, который раскрыл бы `$HOME` пользователя каждому участнику. Отсутствует в старых событиях и в других типах действий; в outbox тоже нет ([RN-609](../business-rules.md#rn-609)) |
+| `proposed_action.created` | действие родилось — до любого выполнения. `payload.status` говорит, как оно родилось (`pending`, `auto_approved` или `denied`), и именно это отличает человеческое решение от политики ([RN-049](../business-rules/api.md#rn-049)). `payload.reason` говорит, КАКОЕ правило политики решило — строка, которую возвращает `decide()`, во всех трёх исходах; отсутствует в событиях, записанных до появления правила, что означает «не записано», а не «без причины». Одноимённая строка outbox его НЕ несёт ([RN-567](../business-rules/api.md#rn-567)). В действиях `terminal` — единственном типе, чьё решение учитывает область пути, — `payload.scopeRoot` говорит, с КАКИМ корнем сравнивала область, как `{ executionMode, ancora, segmento }`: `container` → `ancora: raiz_gerenciada` и `workspace_dir_name`; `mounted` → `ancora: base_de_projetos` и сегмент под `BRABO_PROJECTS_BASE` (`ancora: indisponivel`, `segmento: null`, когда папка вне базы или базы нет); `runner` → `ancora: nome_da_pasta` и `workspace_dir_name`. НИКОГДА абсолютный путь, который раскрыл бы `$HOME` пользователя каждому участнику. Отсутствует в старых событиях и в других типах действий; в outbox тоже нет ([RN-609](../business-rules/api.md#rn-609)) |
 | `proposed_action.approved` | решено пользователем — `actor` — это **тот, кто кликнул**. Автоодобрение здесь НЕ проходит: оно появляется в `created` со `status: auto_approved` и актором-агентом |
 | `proposed_action.denied` | отклонено — терминальное состояние. `actor` — кто отказал, а `payload.reason` — причина |
 | `proposed_action.executed` | выполнено успешно |
@@ -134,50 +134,50 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 |---|---|
 | `backlog.epic_created` | — |
 | `backlog.story_created` | — |
-| `backlog.story_transitioned` | смена состояния истории. `actor` говорит, кто её продвинул: `agent/po` в режиме `auto`, `user` в режиме `manual` ([RN-048](../business-rules/custo.md#rn-048)) |
-| `backlog.story_completed` | PO дополнил существующую историю `draft` через `complete_story` — связанные правила, заполненные RF/DoD/DoR — вместо того чтобы создавать её заново ([RN-720](../business-rules.md#rn-720)) |
-| `backlog.story_promotion_proposed` | PO завершил ПОЛНУЮ историю в проекте в режиме `manual`: она остаётся `draft` в ожидании решения пользователя, и ни одна её задача до тех пор не может быть взята ([RN-048](../business-rules/custo.md#rn-048)) |
-| `backlog.story_promotion_returned` | пользователь ОТКЛОНИЛ продвижение и вернул историю PO с причиной — которая становится закреплённым сообщением в его сессии, как gate, возвращённый dev ([RN-048](../business-rules/custo.md#rn-048)) |
+| `backlog.story_transitioned` | смена состояния истории. `actor` говорит, кто её продвинул: `agent/po` в режиме `auto`, `user` в режиме `manual` ([RN-048](../business-rules/api.md#rn-048)) |
+| `backlog.story_completed` | PO дополнил существующую историю `draft` через `complete_story` — связанные правила, заполненные RF/DoD/DoR — вместо того чтобы создавать её заново ([RN-720](../business-rules/api.md#rn-720)) |
+| `backlog.story_promotion_proposed` | PO завершил ПОЛНУЮ историю в проекте в режиме `manual`: она остаётся `draft` в ожидании решения пользователя, и ни одна её задача до тех пор не может быть взята ([RN-048](../business-rules/api.md#rn-048)) |
+| `backlog.story_promotion_returned` | пользователь ОТКЛОНИЛ продвижение и вернул историю PO с причиной — которая становится закреплённым сообщением в его сессии, как gate, возвращённый dev ([RN-048](../business-rules/api.md#rn-048)) |
 | `backlog.story_updated` | заголовок и/или описание истории `draft` без задачи в работе исправлены пользователем (вкладка Backlog) или PO (`update_story`). Несёт `previousTitle`, `title` и `descriptionChanged` (RN-727) |
 | `backlog.story_archived` | история `draft` без задачи в работе АРХИВИРОВАНА пользователем или PO (`archive_story`): она и её задачи уходят из backlog, покрытия, плана и claim; строка остаётся. Несёт `reason` и `taskIds` (RN-727, ADR 0212) |
-| `backlog.story_demoted` | модуль исчез из `module_map`; история вернулась в `draft` ([RN-012](../business-rules.md#rn-012)) |
-| `backlog.story_overlap_warned` | история создана, но ВСЕ правила, которые она упоминает, уже покрыты другой — предупреждение, не блокировка: судит о наложении пользователь ([RN-081](../business-rules/custo.md#rn-081)) |
-| `backlog.semantic_duplicate_warned` | записана история или бизнес-правило, чей ЗАГОЛОВОК по embedding находится на пороге или выше относительно существующего того же типа в проекте — предупреждение, никогда отказ; payload называет похожий элемент и косинус. Актор `system`/`duplicata-semantica` ([RN-681](../business-rules/custo.md#rn-681)) |
-| `backlog.semantic_duplicate_check_skipped` | проверка семантического дубликата НЕ смогла выполниться — нет provider embedding, daemon недоступен, потолок 10 с — и `reason` говорит, что именно; элемент всё равно записан ([RN-681](../business-rules/custo.md#rn-681)) |
+| `backlog.story_demoted` | модуль исчез из `module_map`; история вернулась в `draft` ([RN-012](../business-rules/produto.md#rn-012)) |
+| `backlog.story_overlap_warned` | история создана, но ВСЕ правила, которые она упоминает, уже покрыты другой — предупреждение, не блокировка: судит о наложении пользователь ([RN-081](../business-rules/api.md#rn-081)) |
+| `backlog.semantic_duplicate_warned` | записана история или бизнес-правило, чей ЗАГОЛОВОК по embedding находится на пороге или выше относительно существующего того же типа в проекте — предупреждение, никогда отказ; payload называет похожий элемент и косинус. Актор `system`/`duplicata-semantica` ([RN-681](../business-rules/api.md#rn-681)) |
+| `backlog.semantic_duplicate_check_skipped` | проверка семантического дубликата НЕ смогла выполниться — нет provider embedding, daemon недоступен, потолок 10 с — и `reason` говорит, что именно; элемент всё равно записан ([RN-681](../business-rules/api.md#rn-681)) |
 | `backlog.story_modules_assigned` | связь история ↔ модуль |
 | `backlog.task_created` | — |
 | `backlog.task_claimed` | dev agent взял задачу |
 | `backlog.task_status_changed` | — |
-| `backlog.task_merge_conflict` | одобренный merge PR задачи отклонён из-за конфликта слияния: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. С [RN-715](../business-rules.md#rn-715) задача возвращается в `in_progress`, а dev agent-владелец пробуждается строкой `task.merge_conflict` в outbox ([RN-705](../business-rules.md#rn-705)) |
+| `backlog.task_merge_conflict` | одобренный merge PR задачи отклонён из-за конфликта слияния: `taskId`, `pullRequestId`, `conflictingFiles`, `actionId`. С [RN-715](../business-rules/api.md#rn-715) задача возвращается в `in_progress`, а dev agent-владелец пробуждается строкой `task.merge_conflict` в outbox ([RN-705](../business-rules/api.md#rn-705)) |
 | `backlog.task_blocked` | исчерпан потолок попыток исправления, или зарегистрировано препятствие |
 | `backlog.task_unblocked` | — |
-| `backlog.epic_without_story` | PO закончил ход, создав эпик и НИ ОДНОЙ истории для него. Эпик не порождает задачу — порождает история, — поэтому это состояние, которое блокирует выполнение без видимой ошибки. Явный исход по образцу [RN-059](../business-rules/custo.md#rn-059): долговечное событие с `origem`, `epicIds`/`epicTitles` и сообщением, плюс broadcast `agent.error`. Сообщается ОДИН раз за случай, никогда в цикле ([RN-165](../business-rules/autenticacao.md#rn-165)) |
-| `backlog.handoff_not_offered` | PO закончил ход, когда все бизнес-правила покрыты, но не смог предложить handoff Архитектору: у какой-то истории нет задачи (`origem: modelo`, с `storyIds`/`storyTitles`), или чтение backlog либо создание предложения упало (`origem: infra`). Когда у каждой истории есть задача, сервер PO сам предлагает handoff ([RN-700](../business-rules.md#rn-700)) |
+| `backlog.epic_without_story` | PO закончил ход, создав эпик и НИ ОДНОЙ истории для него. Эпик не порождает задачу — порождает история, — поэтому это состояние, которое блокирует выполнение без видимой ошибки. Явный исход по образцу [RN-059](../business-rules/engine.md#rn-059): долговечное событие с `origem`, `epicIds`/`epicTitles` и сообщением, плюс broadcast `agent.error`. Сообщается ОДИН раз за случай, никогда в цикле ([RN-165](../business-rules/engine.md#rn-165)) |
+| `backlog.handoff_not_offered` | PO закончил ход, когда все бизнес-правила покрыты, но не смог предложить handoff Архитектору: у какой-то истории нет задачи (`origem: modelo`, с `storyIds`/`storyTitles`), или чтение backlog либо создание предложения упало (`origem: infra`). Когда у каждой истории есть задача, сервер PO сам предлагает handoff ([RN-700](../business-rules/engine.md#rn-700)) |
 
 ### Выполнение и gates
 
 | тип | когда |
 |---|---|
-| `execution.plan_proposed` | **ВЫВЕДЕН ИЗ ОБИХОДА с ADR 0086** ([RN-284](../business-rules.md#rn-284)) — в старых сессиях этот тип ещё может быть в журнале; новые сессии используют `proposed_action` типа `propose_execution_plan` (см. `docs/reference/permissions.md`), потому что план Dev Lead стал настоящим решением, одобряемым или отклоняемым в Одобрениях, а не простым событием |
-| `execution.activated` | началась фаза выполнения. **Входит только в сессию `criativa`** — в `consultiva` запись отвечает 409 ([RN-097](../business-rules.md#rn-097)). Именно это событие, а не колонка `sessions.kind`, говорит, ВЫПОЛНЯЕТСЯ ли сессия |
+| `execution.plan_proposed` | **ВЫВЕДЕН ИЗ ОБИХОДА с ADR 0086** ([RN-284](../business-rules/engine.md#rn-284)) — в старых сессиях этот тип ещё может быть в журнале; новые сессии используют `proposed_action` типа `propose_execution_plan` (см. `docs/reference/permissions.md`), потому что план Dev Lead стал настоящим решением, одобряемым или отклоняемым в Одобрениях, а не простым событием |
+| `execution.activated` | началась фаза выполнения. **Входит только в сессию `criativa`** — в `consultiva` запись отвечает 409 ([RN-097](../business-rules/api.md#rn-097)). Именно это событие, а не колонка `sessions.kind`, говорит, ВЫПОЛНЯЕТСЯ ли сессия |
 | `execution.parallelization_suggested` | система предложила распараллелить — выдаётся при активации, только когда у проекта есть зарегистрированный контейнер `running` (иначе dev agents блокируются, `dev.blocked_by_container`, и больше агентов лишь умножили бы заблокированных; AT-104) |
-| `execution.plan_applied` | человек ОДОБРИЛ `propose_execution_plan` Dev Lead (или он был автоодобрен), и это одобрение АКТИВИРОВАЛО выполнение: каждая задача плана получила свой модуль, и `ActivateExecutionUseCase` отработал ([RN-677](../business-rules.md#rn-677), [RN-678](../business-rules.md#rn-678)). Payload: `actionId`, `sessaoDeExecucao`, `modulos`, `tarefasAtribuidas` и — когда план несёт `tarefas` — `tarefasPorModulo` и `modulosSemTarefa` (модули, оставшиеся без агента, RN-709). Записывается в сессии Dev Lead, актор `system`/`action-executor` |
+| `execution.plan_applied` | человек ОДОБРИЛ `propose_execution_plan` Dev Lead (или он был автоодобрен), и это одобрение АКТИВИРОВАЛО выполнение: каждая задача плана получила свой модуль, и `ActivateExecutionUseCase` отработал ([RN-677](../business-rules/api.md#rn-677), [RN-678](../business-rules/api.md#rn-678)). Payload: `actionId`, `sessaoDeExecucao`, `modulos`, `tarefasAtribuidas` и — когда план несёт `tarefas` — `tarefasPorModulo` и `modulosSemTarefa` (модули, оставшиеся без агента, RN-709). Записывается в сессии Dev Lead, актор `system`/`action-executor` |
 | `execution.plan_failed` | одобренный план НЕ активировал выполнение — план больше не совпадает с действующим `module_map`, или активация отказала (например, 409 без репозитория). Payload: те же поля плюс `motivo`, фраза самой api. Человеческое решение остаётся записанным; в задачи ничего не записано, когда отклонён сам план |
 | `execution.parallelization_accepted` | принято — субагент наследует потолок базового агента |
 | `dev.started` | dev agent начал цикл (активация, распараллеливание — НЕ регидратация, которая никогда не перезапускает) |
 | `dev.working` | взял задачу и собрал worktree |
 | `dev.idle` | очередь модуля пуста — сейчас нет задачи, которую можно взять |
-| `dev.blocked_by_container` | агент НЕ взял задачу, потому что у проекта нет ЗАРЕГИСТРИРОВАННОГО контейнера `running` ([RN-502](../business-rules.md#rn-502)). Он останавливается в `:idle`, как два выше — `idle` единственное состояние, которое wake ещё спасает, — и это событие единственное, что отличает «нет контейнера» от «очередь пуста» (`dev.idle`) и от «claim упал» (`dev.error`). Api никогда не вызывается: охрана выполняется ДО `claim_task/1`, так что ни одна задача не остаётся взятой без живого владельца. Разрешается само: `container.running` в outbox пробуждает каждого агента `:idle` проекта |
-| `dev.awaiting_approval` | действия git остались в ожидании одобрения (Фаза 12e): **gate НЕ открывается** — без PR нечего судить — и worktree удерживается до `task.pr_settled` ([RN-050](../business-rules/custo.md#rn-050)) |
+| `dev.blocked_by_container` | агент НЕ взял задачу, потому что у проекта нет ЗАРЕГИСТРИРОВАННОГО контейнера `running` ([RN-502](../business-rules/engine.md#rn-502)). Он останавливается в `:idle`, как два выше — `idle` единственное состояние, которое wake ещё спасает, — и это событие единственное, что отличает «нет контейнера» от «очередь пуста» (`dev.idle`) и от «claim упал» (`dev.error`). Api никогда не вызывается: охрана выполняется ДО `claim_task/1`, так что ни одна задача не остаётся взятой без живого владельца. Разрешается само: `container.running` в outbox пробуждает каждого агента `:idle` проекта |
+| `dev.awaiting_approval` | действия git остались в ожидании одобрения (Фаза 12e): **gate НЕ открывается** — без PR нечего судить — и worktree удерживается до `task.pr_settled` ([RN-050](../business-rules/engine.md#rn-050)) |
 | `dev.awaiting_gate` | PR открыт, ждёт gate (Фаза 12b) — `task_id`/`worktree` остаются удержанными |
-| `dev.blocked` | задача возвращена с диагнозом (лимит итераций, превышен бюджет, `report_blocked`, сбой worktree/контекста). С [RN-743](../business-rules.md#rn-743) несёт `trabalhoPreservado` (`{branch, commit}` или `null`): незакоммиченная работа закоммичена в ветку задачи как `<agente>[bot]`, и следующая задача агента стартует от этой ветки |
+| `dev.blocked` | задача возвращена с диагнозом (лимит итераций, превышен бюджет, `report_blocked`, сбой worktree/контекста). С [RN-743](../business-rules/engine.md#rn-743) несёт `trabalhoPreservado` (`{branch, commit}` или `null`): незакоммиченная работа закоммичена в ветку задачи как `<agente>[bot]`, и следующая задача агента стартует от этой ветки |
 | `dev.idle_tripped` | предохранитель сработал (RN-047) — N заблокированных задач подряд останавливают агента |
 | `dev.credit_exhausted` | provider модели отказал из-за нехватки кредита (RN-726) — агент встаёт на паузу в `idle_tripped`, не засчитываясь предохранителю и не беря следующую задачу; Перевзвести возобновляет |
 | `dev.rearmed` | пользователь перевзвёл застрявшего агента (Фаза 12b) — `actor` — это ПОЛЬЗОВАТЕЛЬ, который кликнул, а не агент |
 | `pr.gate_changed` | PR перешёл к новому gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
 | `infra.gate_changed` | gate Infra |
-| `gate.rescue_parked` | `GateRescuer` ПРИПАРКОВАЛ цикл QA/SecOps, простаивающий более 2 ч, вместо того чтобы перезапустить его ([RN-722](../business-rules.md#rn-722), ADR 0207); лента показывает кнопку «Возобновить gate» ([RN-724](../business-rules.md#rn-724)). Payload: `taskId`, `gate`, `idadeSegundos`, `motivo`. Актор `system`/`gate-rescuer` |
-| `gate.interrupted` | при ЗАГРУЗКЕ engine у недавнего цикла gate `in_progress` не было живого процесса ни на одном узле кластера: перезапуск его убил, и спасатель перезапускает его сразу, не дожидаясь порога в 15 минут ([RN-823](../business-rules.md#rn-823)). Payload: `taskId`, `gate`, `ultimaAtividadeEm`, `retomadoEm`. Актор `system`/`gate-rescuer`; лента показывает его как предупреждение. В граф не проецируется |
+| `gate.rescue_parked` | `GateRescuer` ПРИПАРКОВАЛ цикл QA/SecOps, простаивающий более 2 ч, вместо того чтобы перезапустить его ([RN-722](../business-rules/engine.md#rn-722), ADR 0207); лента показывает кнопку «Возобновить gate» ([RN-724](../business-rules/engine.md#rn-724)). Payload: `taskId`, `gate`, `idadeSegundos`, `motivo`. Актор `system`/`gate-rescuer` |
+| `gate.interrupted` | при ЗАГРУЗКЕ engine у недавнего цикла gate `in_progress` не было живого процесса ни на одном узле кластера: перезапуск его убил, и спасатель перезапускает его сразу, не дожидаясь порога в 15 минут ([RN-823](../business-rules/engine.md#rn-823)). Payload: `taskId`, `gate`, `ultimaAtividadeEm`, `retomadoEm`. Актор `system`/`gate-rescuer`; лента показывает его как предупреждение. В граф не проецируется |
 | `infra.artifact_blocked` | артефакт Infra отклонён |
 
 ### Делегирование (Фаза 8b, ADR 0038)
@@ -196,11 +196,11 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 
 | тип | когда |
 |---|---|
-| `toolloop.limit_reached` | цикл упёрся в потолок итераций. `payload` несёт `iteration` и `max_iterations` — потолок задаётся по ТИПУ агента ([RN-085](../business-rules/custo.md#rn-085)) |
+| `toolloop.limit_reached` | цикл упёрся в потолок итераций. `payload` несёт `iteration` и `max_iterations` — потолок задаётся по ТИПУ агента ([RN-085](../business-rules/engine.md#rn-085)) |
 | `toolloop.budget_exceeded` | бюджет токенов этого цикла закончился раньше работы; `payload` несёт `tokens_spent_micros` и `token_budget_micros` |
 
 Выдаются `Engine.Harness.ToolLoop` и — начиная с
-[RN-166](../business-rules/autenticacao.md#rn-166) — также `PoServer`, у
+[RN-166](../business-rules/engine.md#rn-166) — также `PoServer`, у
 которого СОБСТВЕННЫЙ цикл и который до тех пор исчерпывал потолок **молча**.
 Тот же тип и тот же payload намеренно: это тот же факт, и читающий журнал не
 должен учить второе имя только потому, что разговорный агент не использует
@@ -212,16 +212,16 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 |---|---|
 | `artifact.product_brief` | `title`, `summary`, `rules` |
 | `artifact.business_rule` | `title`, `description`, `origin` |
-| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — «сжатый ADR», который может выдать любой из шести разговорных агентов; переиспользует общий шаблон вместо выделенного и сосуществует с `open_adr_pr` (только Архитектор, документ, по-настоящему закоммиченный) ([RN-505](../business-rules.md#rn-505)) |
+| `artifact.decision_record` | `context`, `options`, `choice`, `consequences` — «сжатый ADR», который может выдать любой из шести разговорных агентов; переиспользует общий шаблон вместо выделенного и сосуществует с `open_adr_pr` (только Архитектор, документ, по-настоящему закоммиченный) ([RN-505](../business-rules/engine.md#rn-505)) |
 | `artifact.module_map` | карта модулей Архитектора |
-| `artifact.module_routing` | образ-кандидат Архитектора по модулю, по одному элементу на модуль действующего `module_map` — Архитектор ПРЕДЛАГАЕТ, Infra ВЫБИРАЕТ ([RN-487](../business-rules.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
-| `artifact.module_contracts` | контракт между модулями от Архитектора: по модулю — что он ВЫСТАВЛЯЕТ (`modulo`, `expoe: [{tipo, assinatura, descricao}]`), с `version` — каждый раз весь список, действующий заменяет предыдущий; что модуль потребляет — это `dependsOn` из `module_map` ([RN-684](../business-rules.md#rn-684), [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) |
-| `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (кто решил — актор: `arquiteto` или `infra-lead`) — образ контейнера проекта, выдаваемый api (`DecidirImagemDoProjetoUseCase`), когда его решает Архитектор или Infra Lead выбирает кандидата ([RN-491](../business-rules.md#rn-491)); версионируется, без таблицы. Engine только ЧИТАЕТ, существует ли он, чтобы локально отклонить `container_start_via_runner` без него ([RN-610](../business-rules.md#rn-610)) |
+| `artifact.module_routing` | образ-кандидат Архитектора по модулю, по одному элементу на модуль действующего `module_map` — Архитектор ПРЕДЛАГАЕТ, Infra ВЫБИРАЕТ ([RN-487](../business-rules/api.md#rn-487), [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)) |
+| `artifact.module_contracts` | контракт между модулями от Архитектора: по модулю — что он ВЫСТАВЛЯЕТ (`modulo`, `expoe: [{tipo, assinatura, descricao}]`), с `version` — каждый раз весь список, действующий заменяет предыдущий; что модуль потребляет — это `dependsOn` из `module_map` ([RN-684](../business-rules/api.md#rn-684), [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)) |
+| `artifact.project_image` | `image`, `rationale`, `network`, `resources`, `version` (кто решил — актор: `arquiteto` или `infra-lead`) — образ контейнера проекта, выдаваемый api (`DecidirImagemDoProjetoUseCase`), когда его решает Архитектор или Infra Lead выбирает кандидата ([RN-491](../business-rules/web.md#rn-491)); версионируется, без таблицы. Engine только ЧИТАЕТ, существует ли он, чтобы локально отклонить `container_start_via_runner` без него ([RN-610](../business-rules/engine.md#rn-610)) |
 | `artifact.insight` | — |
-| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — прототип UX Designer ([RN-286](../business-rules.md#rn-286), ADR 0087) |
+| `artifact.prototipo_navegavel` | `personas`, `jornadas`, `prototipo` (`telas`, `anotacoes`), `resumo` — прототип UX Designer ([RN-286](../business-rules/engine.md#rn-286), ADR 0087) |
 | `artifact.rfc_staff` | — (валидируется в `Engine.Agents.StaffTools`, а не `ArtifactSchemas` — тот же случай, что `artifact.insight`): `problema`, `opcoes` (список `descricao`/`tradeoffs`), `recomendacao`, `poc` (`escopo`, фиксированное `descartavel: true`). RFC от Staff (ADR 0088), возвращаемая Архитектору через handoff в том же вызове инструмента |
-| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — результат qa-стратегии (ADR 0090), написанный ПОСЛЕ сдачи dev и потребляемый циклом `qa-verificada` с [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules.md#rn-674)) |
-| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — «второй момент» SecOps над ДИЗАЙНОМ истории ([RN-360](../business-rules.md#rn-360), ADR 0090) |
+| `artifact.plano_de_teste` | `storyId`, `taskId`, `planoDeTeste`, `criteriosExecutaveis`, `estrategiaDeAutomacao` — результат qa-стратегии (ADR 0090), написанный ПОСЛЕ сдачи dev и потребляемый циклом `qa-verificada` с [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md) ([RN-674](../business-rules/engine.md#rn-674)) |
+| `artifact.threat_model` | `storyId`, `threatModel`, `requisitosDeSeguranca` — «второй момент» SecOps над ДИЗАЙНОМ истории ([RN-360](../business-rules/engine.md#rn-360), ADR 0090) |
 
 Схемы закрыты: отсутствующее поле отклоняет эмиссию
 (`Engine.Harness.ArtifactSchemas`).
@@ -231,8 +231,8 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 | тип | когда |
 |---|---|
 | `architecture.readiness_confirmed` | — |
-| `readiness.confirmed` | пользователь кликнул «Я готов — потребность подтверждена» с Креативом. С [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) payload несёт `necessidadeValidada: true` и `aceiteImplicitoDoPo: true` — метку, которую читает неявное принятие PO ([RN-658](../business-rules.md#rn-658)); более старые события несут `{}` |
-| `necessity.validated` | gate `necessidade-validada` (Креатив → PO): человек — никогда не вывод модели — заявляет, что бизнес-потребность, консолидированная Креативом, верна. С [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) записывается ТЕМ ЖЕ кликом, что и `readiness.confirmed`, как только engine принимает ход, с `productBriefId: null` (brief приходит из этого хода), `via: "readiness.confirmed"` и `readinessEventId` ([RN-657](../business-rules.md#rn-657)). События отдельного клика из ADR 0095 ([RN-406](../business-rules.md#rn-406)) несут `productBriefId`, указывающий на подтверждённый `artifact.product_brief` |
+| `readiness.confirmed` | пользователь кликнул «Я готов — потребность подтверждена» с Креативом. С [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) payload несёт `necessidadeValidada: true` и `aceiteImplicitoDoPo: true` — метку, которую читает неявное принятие PO ([RN-658](../business-rules/api.md#rn-658)); более старые события несут `{}` |
+| `necessity.validated` | gate `necessidade-validada` (Креатив → PO): человек — никогда не вывод модели — заявляет, что бизнес-потребность, консолидированная Креативом, верна. С [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md) записывается ТЕМ ЖЕ кликом, что и `readiness.confirmed`, как только engine принимает ход, с `productBriefId: null` (brief приходит из этого хода), `via: "readiness.confirmed"` и `readinessEventId` ([RN-657](../business-rules/api.md#rn-657)). События отдельного клика из ADR 0095 ([RN-406](../business-rules/contracts.md#rn-406)) несут `productBriefId`, указывающий на подтверждённый `artifact.product_brief` |
 
 ### Git и bootstrap
 
@@ -240,21 +240,21 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 |---|---|
 | `project.git_connected` | учётные данные git привязаны к проекту |
 | `project.repository_provisioned` | репозиторий **создан** Brabo |
-| `project.repository_adopted` | репозиторий, который **уже существовал**, стал принадлежать проекту ([RN-046](../business-rules/custo.md#rn-046)) |
+| `project.repository_adopted` | репозиторий, который **уже существовал**, стал принадлежать проекту ([RN-046](../business-rules/api.md#rn-046)) |
 | `bootstrap.repository_adopted` | тот же факт в выделенной сессии, с `defaultBranch`, наблюдаемой у provider |
 | `bootstrap.step_started` | начался один из шести шагов Gitflow |
 | `bootstrap.step_completed` | завершён |
-| `bootstrap.step_skipped` | уже было сделано — **это успех**, а не ошибка ([RN-029](../business-rules.md#rn-029)) |
+| `bootstrap.step_skipped` | уже было сделано — **это успех**, а не ошибка ([RN-029](../business-rules/api.md#rn-029)) |
 | `bootstrap.step_degraded` | завершён без одной из возможностей provider (например, защита ветки в Local) |
 | `bootstrap.step_failed` | упал; bootstrap можно возобновить с этой точки |
-| `bootstrap.plan_approved` | пользователь одобрил план принятия — **только начиная отсюда bootstrap выполняется в принятом репозитории** ([RN-045](../business-rules/custo.md#rn-045)) |
+| `bootstrap.plan_approved` | пользователь одобрил план принятия — **только начиная отсюда bootstrap выполняется в принятом репозитории** ([RN-045](../business-rules/api.md#rn-045)) |
 | `bootstrap.adopted_as_is` | пользователь отказался от bootstrap; ни один шаг не выполнялся, и план остаётся доказательством того, что не было применено |
 
 ### Стоимость
 
 | тип | когда |
 |---|---|
-| `budget.threshold_crossed` | 70%, 90% или 100% — **один раз на порог** ([RN-018](../business-rules/custo.md#rn-018)) |
+| `budget.threshold_crossed` | 70%, 90% или 100% — **один раз на порог** ([RN-018](../business-rules/api.md#rn-018)) |
 
 ### Телеметрия RAG (RN-479/480/481)
 
@@ -268,14 +268,14 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 
 | тип | когда |
 |---|---|
-| `rag.search` | агент выполнил гибридный поиск внутри сессии — payload несёт `searchId` строки телеметрии, запрос, `topK`, сколько результатов прошло порог, была ли поиск `degraded` и ids chunks ([RN-479](../business-rules.md#rn-479), [RN-481](../business-rules.md#rn-481)) |
-| `rag.feedback` | агент оценил извлечённый chunk как `util`/`irrelevante` — payload несёт `searchId`, `chunkId`, вердикт и **позицию**, которую этот chunk занимал в том поиске ([RN-480](../business-rules.md#rn-480)) |
+| `rag.search` | агент выполнил гибридный поиск внутри сессии — payload несёт `searchId` строки телеметрии, запрос, `topK`, сколько результатов прошло порог, была ли поиск `degraded` и ids chunks ([RN-479](../business-rules/api.md#rn-479), [RN-481](../business-rules/produto.md#rn-481)) |
+| `rag.feedback` | агент оценил извлечённый chunk как `util`/`irrelevante` — payload несёт `searchId`, `chunkId`, вердикт и **позицию**, которую этот chunk занимал в том поиске ([RN-480](../business-rules/api.md#rn-480)) |
 
 ### Локальный runner (ADR 0103/0104)
 
 | тип | когда |
 |---|---|
-| `project.workspace_verified` | `brabo-runner` подключился и подтвердил путь проекта с `execution_mode: runner` — runner является источником истины для пути, перезаписывая введённое при создании ([RN-423](../business-rules.md#rn-423)) |
+| `project.workspace_verified` | `brabo-runner` подключился и подтвердил путь проекта с `execution_mode: runner` — runner является источником истины для пути, перезаписывая введённое при создании ([RN-423](../business-rules/runner.md#rn-423)) |
 
 ### Психолог
 
@@ -283,8 +283,8 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 |---|---|
 | `psychologist.analysis_completed` | — |
 | `psychologist.analysis_failed` | с классифицированной причиной: `infra`, `modelo`, `código` или `política` |
-| `psychologist.analysis_skipped` | в сессии не было АНАЛИЗИРУЕМОГО события, и анализ не выполнялся — `payload.analisaveis` и `payload.eventCount` показывают разницу ([RN-079](../business-rules/custo.md#rn-079)) |
-| `psychologist.hypothesis_proposed` | гипотеза с действительными `evidenceEventIds` ([RN-021](../business-rules.md#rn-021)) |
+| `psychologist.analysis_skipped` | в сессии не было АНАЛИЗИРУЕМОГО события, и анализ не выполнялся — `payload.analisaveis` и `payload.eventCount` показывают разницу ([RN-079](../business-rules/engine.md#rn-079)) |
+| `psychologist.hypothesis_proposed` | гипотеза с действительными `evidenceEventIds` ([RN-021](../business-rules/api.md#rn-021)) |
 | `psychologist.hypothesis_accepted` | — |
 | `psychologist.hypothesis_dismissed` | — |
 | `psychologist.hypothesis_accepted_for_anamnese` | принята и передана — звено, замыкающее цикл с Анамнезом |
@@ -295,11 +295,11 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 |---|---|
 | `anamnese.run_completed` | — |
 | `anamnese.run_failed` | — |
-| `anamnese.run_skipped` | раунд завершился БЕЗ профиля, намеренно — `payload.motivo` говорит почему ([RN-063](../business-rules/custo.md#rn-063)) |
-| `anamnese.analysis` | текст, который модель Анамнеза написала во время раунда (`payload.content`); никогда не отрисовывается в ленте сессии ([RN-695](../business-rules.md#rn-695)) |
+| `anamnese.run_skipped` | раунд завершился БЕЗ профиля, намеренно — `payload.motivo` говорит почему ([RN-063](../business-rules/engine.md#rn-063)) |
+| `anamnese.analysis` | текст, который модель Анамнеза написала во время раунда (`payload.content`); никогда не отрисовывается в ленте сессии ([RN-695](../business-rules/engine.md#rn-695)) |
 | `anamnese.profile_updated` | `proficiency_profile` изменился |
-| `anamnese.agent_deviation` | отклонение АГЕНТА, замеченное Анамнезом (цикл, отменено пользователем, исправлено пользователем) — сигнал продукта, никогда не черта пользователя; `payload` — только `agente`, `tipo` и `evidenceEventIds`, без персональных данных, в граф не проецируется ([RN-717](../business-rules.md#rn-717), [ADR 0205](../adr/0205-desvio-do-agente-como-sinal-do-produto.md)) |
-| `instruction.rolled_back` | откат версии инструкции — создаёт новую версию, не удаляет ([RN-027](../business-rules.md#rn-027)) |
+| `anamnese.agent_deviation` | отклонение АГЕНТА, замеченное Анамнезом (цикл, отменено пользователем, исправлено пользователем) — сигнал продукта, никогда не черта пользователя; `payload` — только `agente`, `tipo` и `evidenceEventIds`, без персональных данных, в граф не проецируется ([RN-717](../business-rules/engine.md#rn-717), [ADR 0205](../adr/0205-desvio-do-agente-como-sinal-do-produto.md)) |
+| `instruction.rolled_back` | откат версии инструкции — создаёт новую версию, не удаляет ([RN-027](../business-rules/api.md#rn-027)) |
 
 ---
 
@@ -317,7 +317,7 @@ traducao_de: d3101ffe96915a5cd6862a885323d13108f1d1e2
 | `event.appended` | новое событие вошло в журнал — триггер обновления панели; несёт только `type` и `actorId` |
 
 Доменное событие почти всегда производит `event.appended`; обратное неверно.
-С [RN-579](../business-rules.md#rn-579) engine выдаёт его для **каждой** записи,
+С [RN-579](../business-rules/engine.md#rn-579) engine выдаёт его для **каждой** записи,
 которую api подтвердила через фасад `EngineApiClient` (записи, предлагаемые
 действия, handoffs, backlog PO), и никогда для отклонённой. Записи, которые api
 делает сама — человек, решающий действие, переход сессии, — доходят до того же
@@ -337,7 +337,7 @@ handoffs или backlog по префиксу), с минимальным окн
 `session_id`: кто узнал UUID, мог войти и слушать всё. Тикет не сохраняется и
 не читается в event log — он живёт в `session_socket_tickets`, проверяется и
 потребляется самим engine, — поэтому не появляется в инвентаре доменных событий
-ниже. См. [RN-108](../business-rules/autenticacao.md#rn-108).
+ниже. См. [RN-108](../business-rules/web.md#rn-108).
 
 ## Span
 

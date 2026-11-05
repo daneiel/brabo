@@ -1,6 +1,6 @@
 /**
  * alarme-de-tag — dá DESTINATÁRIO ao `tag-release` quando ele falha.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * ## Por que este arquivo existe
  *

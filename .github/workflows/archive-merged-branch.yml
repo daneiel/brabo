@@ -4,7 +4,7 @@ name: archive-merged-branch
 # do merge — exceto dev, main (permanentes), qa (aposentada) e gh-pages (deploy do site de docs). "Arquivar" é
 # mecânico: mover de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca
 # apagar — o objeto e o histórico continuam no repositório, recuperável por
-# quem souber o ref. Fonte da política: docs/explanation/branching-policy.md
+# quem souber o ref. Fonte da política: scripts/ci/docs/explanation/branching-policy.md
 #
 # A decisão (quem é apta e por quê) e a chamada à API moram em
 # scripts/ci/archive-branch.ts; o resumo do job lista arquivadas, mantidas com

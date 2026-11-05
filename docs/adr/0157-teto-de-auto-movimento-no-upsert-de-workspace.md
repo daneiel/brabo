@@ -41,7 +41,7 @@ não existem no projeto:
    o efetivo para o papel de workspace, que muitas vezes o segura. No workspace
    o papel é o papel: um `owner` que se grava `viewer` perde o workspace
    inteiro, e com ele todos os projetos, o gasto de LLM que é dele por
-   [RN-060](../business-rules/custo.md#rn-060), e a própria capacidade de
+   [RN-060](../business-rules/api.md#rn-060), e a própria capacidade de
    convidar quem o reponha;
 2. **não existe rota de remoção de membro para desfazer por outro caminho.**
    `WorkspacesController` não tem `@Delete` de membro — o 0156 já tinha medido
@@ -102,7 +102,7 @@ teto 1 ser uma regra sobre **inversão de hierarquia**, e a inversão não ser
 possível neste escopo:
 
 - no projeto, `projectRole ?? workspaceRole` faz a linha de projeto SOBREPOR a
-  de workspace ([RN-471](../business-rules.md#rn-471)), então um `maintainer`
+  de workspace ([RN-471](../business-rules/web.md#rn-471)), então um `maintainer`
   alcança quem está ACIMA dele. Foi assim que o 0127 descreveu o dano: *"o dono
   perde o próprio projeto (…) restaurar exige `maintainer`, que o dono acabou de
   perder naquele escopo"*. Quem agia estava ABAIXO de quem sofria;
@@ -150,7 +150,7 @@ que este ADR não abriu.
 nenhuma serve para duas coisas: quem tentou se promover não recebe a frase de
 rebaixamento (não foi o que fez), e quem esbarra no teto do workspace não é
 mandado falar com um `maintainer` — lá o papel que desfaz é `owner`. É a mesma
-disciplina do ponto 5 do ADR 0156 e da [RN-470](../business-rules/custo.md#rn-470):
+disciplina do ponto 5 do ADR 0156 e da [RN-470](../business-rules/web.md#rn-470):
 não colapsar dois estados por eles compartilharem um desfecho.
 
 **7. O papel do ator vem do repositório, não do
@@ -173,7 +173,7 @@ metade de cima do teto, no escopo de workspace, é mecanismo que hoje não
 dispara. Ela entra assim mesmo, e testada, pelo motivo que o teto 2 sempre teve
 para não ter limiar: o caso de uso não presume o guard, e é ele que fica certo
 no dia em que a rota mudar de mínimo. É o mesmo desenho da recusa por capacidade
-do [RN-514](../business-rules.md#rn-514), implementada e testada antes de ter
+do [RN-514](../business-rules/engine.md#rn-514), implementada e testada antes de ter
 disparo.
 
 ## O que este ADR recusa explicitamente

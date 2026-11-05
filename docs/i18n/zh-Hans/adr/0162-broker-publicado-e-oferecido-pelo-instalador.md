@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它
@@ -25,7 +25,7 @@ ADR 0150 的决策 7 声明了这一点，并称修正是**小**的。2026-09-18
 
 ### 1. broker 是**第五个**发布的镜像，与其他镜像使用相同的 gate {#1-o-broker-é-a-quinta-imagem-publicada-com-os-mesmos-gates-das-outras}
 
-在 `docker-bake.hcl` 中、`default` 组内加入 `broker` 目标：`ci.yml` 开始在每个 PR 中构建它，核对它不以 root 运行，以相同规则（`HIGH,CRITICAL`，`--ignore-unfixed`）用 Trivy 扫描它，并证明它在只读 rootfs 下能健康启动。`release.yml` 按 **DIGEST** 发布它，`images-manifest.ts` 要求它（缺少目标仍会失败——五个全有或全无），而 keyless 的 `cosign` 签名和同一次运行中的验证（[RN-524](../business-rules.md#rn-524)）无需新增一行就覆盖它，因为两个循环都读取清单。
+在 `docker-bake.hcl` 中、`default` 组内加入 `broker` 目标：`ci.yml` 开始在每个 PR 中构建它，核对它不以 root 运行，以相同规则（`HIGH,CRITICAL`，`--ignore-unfixed`）用 Trivy 扫描它，并证明它在只读 rootfs 下能健康启动。`release.yml` 按 **DIGEST** 发布它，`images-manifest.ts` 要求它（缺少目标仍会失败——五个全有或全无），而 keyless 的 `cosign` 签名和同一次运行中的验证（[RN-524](../business-rules/ci.md#rn-524)）无需新增一行就覆盖它，因为两个循环都读取清单。
 
 **Kubernetes 不认识它**，这是决定，不是遗忘：`deploy/k8s/` 中没有 broker 的 Deployment，在 pod 中挂载节点的 socket 是另一场关于权限的对话。`argumentosDeSetImage` 改为只输出 kustomize base 声明的镜像——`make imagens-do-release` 继续在 overlay 中写四行。
 

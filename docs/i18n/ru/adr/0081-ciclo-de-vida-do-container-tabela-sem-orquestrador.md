@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0081 — Жизненный цикл контейнера: таблица состояния, без оркестратора
@@ -194,8 +194,8 @@ UI потом фильтрует», это use case, отклоняющий у �
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — сохраняемая
   машина состояний (`dev_agent_states`), чей дизайн (одна строка на агента,
   `status`, проверяемый вне колонки) эта таблица отражает для контейнера.
-- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-169](../business-rules/autenticacao.md#rn-169),
-  [RN-243](../business-rules.md#rn-243)–[RN-248](../business-rules.md#rn-248).
+- [RN-105](../business-rules/api.md#rn-105), [RN-169](../business-rules/api.md#rn-169),
+  [RN-243](../business-rules/api.md#rn-243)–[RN-248](../business-rules/api.md#rn-248).
 - `docs/explanation/achados-execucao-real.md` — находки Z и AD, которые этот
   документ явно НЕ закрывает.
 - `apps/api/src/domain/containers/container-lifecycle.ts`,

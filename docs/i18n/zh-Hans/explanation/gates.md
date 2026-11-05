@@ -33,7 +33,7 @@ FASE 15a，它们都不以列表的形式存在：散落在纯规则、用例、
 让 `acao-aprovada` 能与 `status: auto_approved` 共存的原因：策略自行决定，就是用户事先已经决定了。
 `merge-protegida` 是连委派都不存在的情况，因为即使开启了自治，上限也会把 `auto_approve` 降级为 `require_approval`。
 
-在宪章声明为手动的四个 gate 中，这个字段是不变的，并由测试锁定（[RN-071](../business-rules/custo.md#rn-071)）。
+在宪章声明为手动的四个 gate 中，这个字段是不变的，并由测试锁定（[RN-071](../business-rules/api.md#rn-071)）。
 
 ## 三种证据形式，因为并非每个证明都住在日志中 {#three-forms-of-evidence-because-not-every-proof-lives-in-the-log}
 
@@ -143,7 +143,7 @@ QA 策略——直到那时还是 `docs/fluxo.yml` 中一个 `proposto` 的角�
 num segundo momento"）——需要存在，以便用一个真实的测试计划为评估提供输入。登记只是开始描述代码现在做的事。
 
 这个入口没有在真实使用中幸存。[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
-（[RN-674](../business-rules.md#rn-674)）把测试计划移到了 dev 交付**之后**——在 dev **之前**写的话，它没有代码可读并
+（[RN-674](../business-rules/engine.md#rn-674)）把测试计划移到了 dev 交付**之后**——在 dev **之前**写的话，它没有代码可读并
 耗尽了迭代——gate 的 `entrada` 从 `plano-de-teste` 改为 `module_map`：Dev Lead 评判用户故事和它已有的模块映射。计划
 现在为 `qa-verificada` 提供输入，作为该 gate 已经给出的唯一裁决的输入。同一个教训的反方向：登记的那一行改变，是因为
 **谁把什么交给谁**改变了，而不是为了让一个 gate 通过。
@@ -151,7 +151,7 @@ num segundo momento"）——需要存在，以便用一个真实的测试计划
 ## 登记可能朝错误的方向变老——过时，而不是未激活 {#a-registry-can-age-in-the-wrong-direction--stale-not-inactive}
 
 `implementavel` 是需要新代码才能离开 `planned` 的 gate 的例子。`paralelismo-autorizado` 正好相反：机制
-（`RequestParallelizationUseCase`，[RN-083](../business-rules/custo.md#rn-083)）自 FASE 14d 起就在生产中——落后的是
+（`RequestParallelizationUseCase`，[RN-083](../business-rules/api.md#rn-083)）自 FASE 14d 起就在生产中——落后的是
 登记，对在兄弟文件 `docs/fluxo.yml` 和代码中已经是 `active` 的东西声明 `planned`。fluxo.yml × 代码审计（发现 A1/B5，
 [auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)）发现了这个分歧；修正就是 `implementavel` 也获得的同样两行
 ——`status: active` 加上指向按 `actionType:
@@ -164,7 +164,7 @@ parallelize` 过滤的 `proposed_action.created` 的 `evidencia`。
 ## gate 可以直接以 `active` 诞生——当机制和登记一起到来时 {#a-gate-can-be-born-active-directly--when-the-mechanism-and-the-registry-arrive-together}
 
 `implementavel` 和 `paralelismo-autorizado` 是两个已经存在（声明为 `planned` 或过时）而**之后**才在登记中获得条目的
-gate 的例子。`necessidade-validada`（[RN-406](../business-rules.md#rn-406)，[ADR 0095](../adr/0095-gate-necessidade-validada.md)）
+gate 的例子。`necessidade-validada`（[RN-406](../business-rules/contracts.md#rn-406)，[ADR 0095](../adr/0095-gate-necessidade-validada.md)）
 是第三种模式：机制和登记在**同一次**改动中诞生，因为这个 gate 本身在任何地方都不存在——文件中没有 `planned`，背后也没有
 代码。
 
@@ -173,7 +173,7 @@ gate 的例子。`necessidade-validada`（[RN-406](../business-rules.md#rn-406)�
 之前核对它的通过——Criativo→PO 的 handoff 已经在 `confirm_readiness` 内部发生，甚至在这个 gate 存在之前。`block` 会
 承诺一道不存在的锁；`warn` 准确描述了这个 gate 是什么：一个人类验证了需求价值的测量，而不是一个阻止下一步的 gate。
 
-`workspace-verificado`（[RN-423](../business-rules.md#rn-423)，
+`workspace-verificado`（[RN-423](../business-rules/runner.md#rn-423)，
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md)）是第四个例子，也是四个中最清楚
 地说明 `warn` 不是"弱锁"的：在**这里**真正上锁的不是 gate，而是
 `Engine.Actions.TerminalExecutor.decisao_de_execucao/1` 中的显式拒绝——没有已验证的 workspace 或已连接的 runner，命令
@@ -181,7 +181,7 @@ gate 的例子。`necessidade-validada`（[RN-406](../business-rules.md#rn-406)�
 `project.workspace_verified`）；把它升级为 `block` 会描述一道已经存在于别处的锁，就像 `necessidade-validada` 会对一道
 在任何地方都不存在的锁撒谎一样。
 
-`rag-acertivo`（[RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498)，
+`rag-acertivo`（[RN-490](../business-rules/api.md#rn-490)/[RN-498](../business-rules/ci.md#rn-498)，
 [ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)）是第五个
 例子，它保持 `warn` 的理由改变过一次形式，值得完整讲述。它以五个中最简单的理由诞生为 `warn`：没有运行真实 LLM 的 CI——
 它测量的 golden-set（17 个由真实 RN/ADR 组成的问题，由真实的 `HybridSearchUseCase` 针对一个精选的真实语料库核对）只能
@@ -213,7 +213,7 @@ api **和 engine** 作为服务器运行——engine 是相对 RAG job 多出来
 
 **不够用的是工具。** 两次执行都是 0/6，低于记录的下限 1/6——而且不是因为模型的判断。第二次执行的 event log 显示了原因：
 QA 提出的每个 `npm test` 都被自动批准（`permissions.json allow:
-npm test`），然后**被 engine 拒绝**，因为自 [RN-502](../business-rules.md#rn-502)
+npm test`），然后**被 engine 拒绝**，因为自 [RN-502](../business-rules/engine.md#rn-502)
 （[ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md)，2026-09-04）起，没有 `running` 容器的 `container`
 项目在任何地方都不运行终端命令。种子脚本是 2026-08-30 的，从不登记容器。所以没有任何用例能看到 `exit 0`，而
 `emit_qa_verdict` 在没有它的情况下拒绝 `approved`——六个预期裁决中有三个变得不可能。拒绝消息说
@@ -237,7 +237,7 @@ RN-502 保持不变；改变的是种子现在满足了它的前提条件。对�
 `ExecuteContainerStartUseCase`，它通过 `DecidirImagemDoProjetoUseCase` 把选举记录为一个新的 `artifact.project_image`
 （于是由 `validarDecisaoDeImagem` 评判镜像），调用 `ContainerBrokerPort.start`，并通过状态机登记
 `provisioning → running`。种子提议并批准而不是直接调用执行用例，因为有两条规则住在提议一侧——命名的 409
-`sem_broker_na_instalacao`（[RN-591](../business-rules.md#rn-591)）以及 `decide()` 对 `container_start` 的策略——而一个
+`sem_broker_na_instalacao`（[RN-591](../business-rules/api.md#rn-591)）以及 `decide()` 对 `container_start` 的策略——而一个
 跳过它们的 harness 会在其中任何一条改变的那天不再跟随生产。
 
 镜像是 `node:24.11.1-bookworm-slim`，在种子中按多平台索引的 digest 固定（ADR 0159 的规则，尽管这个文件在
@@ -299,7 +299,7 @@ api→broker 的调用对每个操作（包括 `start`）都有 5 s 的上限，
 必须存在（api 不在时测试会跳过，而在无人监督的执行中 skip 是一个什么都没测的绿色）以及 event log 中不能有 RN-502 的拒绝
 （AT-067 的特征）——并在失败时打印日志，就像 RAG job 做的那样。要预先拉取的镜像从种子自己的常量
 （`IMAGEM_DO_GOLDEN_SET_QA`）读取，而不是第二个字面量：broker 的 `docker run` 在 Docker 端口 30 s 的控制上限下运行
-（[RN-604](../business-rules.md#rn-604)），一个在种子请求另一个镜像时拉取一个镜像的 job，会把拉取放进这个上限之内。
+（[RN-604](../business-rules/api.md#rn-604)），一个在种子请求另一个镜像时拉取一个镜像的 job，会把拉取放进这个上限之内。
 
 证明执行，在分支上用一个临时的 `push` 触发器，在 PR 之前删除：
 
@@ -320,8 +320,8 @@ event log 中 RN-502 的拒绝为零，六个容器在第一个用例之前都�
 没有任何东西对它们做交叉核对，因此一个 gate 可以在一处是交付物而在另一处不存在。这是这种形式的**第二个**发现；第一个是
 朝相反方向变老的 `paralelismo-autorizado`。
 
-它以 `planned`/`warn` 进入，没有 `evidencia` 块也没有验证脚本，因为 [RN-070](../business-rules/custo.md#rn-070)/
-[RN-071](../business-rules/custo.md#rn-071) 禁止没有它的 `block`——也因为阻塞它的不是代码。基础设施已经存在（overlays、按
+它以 `planned`/`warn` 进入，没有 `evidencia` 块也没有验证脚本，因为 [RN-070](../business-rules/api.md#rn-070)/
+[RN-071](../business-rules/api.md#rn-071) 禁止没有它的 `block`——也因为阻塞它的不是代码。基础设施已经存在（overlays、按
 digest 在 GHCR 中的镜像、smoke/rollout/restore 脚本）；缺少的是一个有真实流量的生产环境和维护它的人。见
 [ADR 0153](../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md)，它也让十个文档不再把 `DEPLOY_ENABLED` 当作代码中
 存在的变量来引用。
@@ -356,4 +356,4 @@ gates，而这正是 ADR 0054 故意保持开放的。
 
 - [ADR 0054](../adr/0054-gates-como-registro-declarativo.md)——决定
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md)——event log 中的决定，没有它就没有可测量的东西
-- [RN-070](../business-rules/custo.md#rn-070)、[RN-071](../business-rules/custo.md#rn-071)
+- [RN-070](../business-rules/api.md#rn-070)、[RN-071](../business-rules/api.md#rn-071)

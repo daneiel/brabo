@@ -170,7 +170,7 @@
   (aparecem como `head` de todo PR de promoção), `gh-pages` (deploy do
   site, não é branch de feature) e branch de fork. A política mora em
   `scripts/ci/archive-branch.ts` (testado), ver
-  docs/explanation/branching-policy.md, seção "Merged branches get
+  scripts/ci/docs/explanation/branching-policy.md, seção "Merged branches get
   archived".
 - Comunicação api ↔ engine: eventos via Postgres (transactional outbox
   na api, Oban no engine) + HTTP interno com service token para

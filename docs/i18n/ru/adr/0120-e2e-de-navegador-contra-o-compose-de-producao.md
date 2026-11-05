@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0120 — Браузерный E2E против продакшен-compose, в пакете вне workspace
@@ -28,7 +28,7 @@ traducao_de: 2f301391630d5be632e27036026760d416d43da1
 - web отдаётся на `:8088`, а api отвечает на `:3000`, поэтому каждый
   аутентифицированный вызов — **кросс-доменный**: preflight, `SameSite`,
   `credentials: 'include'`;
-- канал сессии требует одноразового тикета ([RN-108](../business-rules/autenticacao.md#rn-108))
+- канал сессии требует одноразового тикета ([RN-108](../business-rules/web.md#rn-108))
   и настоящего WebSocket-рукопожатия с engine на **третьем**
   origin.
 

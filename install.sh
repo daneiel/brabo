@@ -803,7 +803,7 @@ escrever_env_do_llm() {
   if [ "$LLM_LIGADO" != 'sim' ]; then
     cat >> "$env_arquivo" <<'ENV'
 # Modelos locais (profile llm): DESLIGADOS (a pergunta do instalador). Sem eles
-# a checagem semântica de duplicata é pulada. Ver docs/runbook.md.
+# a checagem semântica de duplicata é pulada. Ver deploy/docs/runbook.md.
 ENV
     return 0
   fi
@@ -853,7 +853,7 @@ escrever_env_do_broker() {
   if [ "$BROKER_LIGADO" != 'sim' ]; then
     cat >> "$env_arquivo" <<'ENV'
 # Broker de container: DESLIGADO (a pergunta do instalador). Para ligar depois,
-# ver docs/runbook.md, "Broker de container na instalação".
+# ver deploy/docs/runbook.md, "Broker de container na instalação".
 ENV
     return 0
   fi
@@ -1075,7 +1075,7 @@ consentir_broker() {
     s|S|sim|SIM) ;;
     *)
       BROKER_LIGADO='nao'
-      ok 'broker de container: desligado (dá para ligar depois — docs/runbook.md)'
+      ok 'broker de container: desligado (dá para ligar depois — deploy/docs/runbook.md)'
       return 0
       ;;
   esac
@@ -1091,7 +1091,7 @@ consentir_broker() {
   if [ -n "$RAIZ_GERENCIADA_NO_HOST" ]; then
     ok "raiz da pasta gerenciada no host: ${RAIZ_GERENCIADA_NO_HOST} (conferida depois da subida)"
   else
-    pendencia 'a raiz da pasta gerenciada: `docker info` não disse onde o Docker guarda os volumes. O broker está ligado para Pasta montada; para o modo Container, preencha PROJECT_WORKSPACES_HOST_ROOT no .env (ver docs/runbook.md).'
+    pendencia 'a raiz da pasta gerenciada: `docker info` não disse onde o Docker guarda os volumes. O broker está ligado para Pasta montada; para o modo Container, preencha PROJECT_WORKSPACES_HOST_ROOT no .env (ver deploy/docs/runbook.md).'
   fi
 
   BROKER_LIGADO='sim'
@@ -1149,7 +1149,7 @@ consentir_llm() {
     s|S|sim|SIM) ;;
     *)
       LLM_LIGADO='nao'
-      ok 'modelos locais: desligados (dá para ligar depois — docs/runbook.md)'
+      ok 'modelos locais: desligados (dá para ligar depois — deploy/docs/runbook.md)'
       return 0
       ;;
   esac
@@ -1731,7 +1731,7 @@ migrar_instalacao_anterior() {
   dizer 'Duas formas de seguir, as duas DEPOIS do backup provado:'
   dizer '  s — apagar, reinstalar e restaurar os dados antigos'
   dizer '  z — apagar e reinstalar DO ZERO: os dados antigos NÃO voltam; o backup'
-  dizer "      provado fica em ${destino}, e restaurá-lo depois é docs/runbook.md#restore"
+  dizer "      provado fica em ${destino}, e restaurá-lo depois é deploy/docs/runbook.md#restore"
   printf 'Apagar os volumes e reinstalar? [s = restaurar / z = do zero / N = parar] '
   local resposta; read -r resposta || resposta=''
   local restaurar='sim'
@@ -1766,7 +1766,7 @@ restaurar_apos_migrar() {
   dizer "O dump do Postgres está em ${destino}. Restaurá-lo sobre um banco JÁ"
   dizer 'populado é operação destrutiva, e por isso não acontece sozinha aqui:'
   dizer '`brabo-restore` valida contra uma database de teste, nunca sobrescreve'
-  dizer 'a origem (ADR 0152). Ver docs/runbook.md#restore.'
+  dizer 'a origem (ADR 0152). Ver deploy/docs/runbook.md#restore.'
 }
 
 # --------------------------------------------------------------------------
@@ -2037,13 +2037,13 @@ JSON
     dizer '  Broker de container: LIGADO — projetos Container e Pasta montada executam.'
   else
     dizer '  Broker de container: DESLIGADO — projetos Container e Pasta montada não'
-    dizer '  executam; o modo Runner não depende dele (docs/runbook.md explica como ligar).'
+    dizer '  executam; o modo Runner não depende dele (deploy/docs/runbook.md explica como ligar).'
   fi
   if [ "$LLM_LIGADO" = 'sim' ]; then
     dizer "  Modelos locais: LIGADOS — Ollama na porta ${OLLAMA_PORTA_ESCOLHIDA} do host."
   else
     dizer '  Modelos locais: DESLIGADOS — a checagem semântica de duplicata é pulada'
-    dizer '  (docs/runbook.md explica como ligar).'
+    dizer '  (deploy/docs/runbook.md explica como ligar).'
   fi
 
   # O que ficou pela metade sai NOMEADO, e no fim — onde quem instalou ainda

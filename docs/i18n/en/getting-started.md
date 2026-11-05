@@ -108,7 +108,7 @@ bind mount that `api` and `engine` use, but not in the variable the broker
 derives from it, and **Container** mode would then fail to bring its container
 up. Without this folder at all, **Container** mode has no container either —
 `pnpm dev` reports both cases on every run
-([RN-599](business-rules.md#rn-599)).
+([RN-599](business-rules/infra.md#rn-599)).
 
 Both together, always — `api` and `engine` read the same path, and
 different values would make the two see different trees of the same
@@ -183,7 +183,7 @@ Open <http://localhost:5173> and sign in with those credentials.
 against the **same** database the api is using — `DATABASE_URL` from
 `.env`. The response is the same for a wrong password, a nonexistent
 email, and a locked account, on purpose
-([RN-032](business-rules/autenticacao.md#rn-032)), so it doesn't distinguish the cases
+([RN-032](business-rules/api.md#rn-032)), so it doesn't distinguish the cases
 for you.
 
 ## 3. Configure a model
@@ -206,7 +206,7 @@ touches the database.
 
 The model is resolved in a cascade — **session > agent > project >
 workspace**, the first one that exists
-([RN-020](business-rules/custo.md#rn-020)). You can leave the local one as the
+([RN-020](business-rules/api.md#rn-020)). You can leave the local one as the
 default and put an API model just on QA, the role that fits worst in a
 small model.
 
@@ -239,7 +239,7 @@ not the platform.
 
 If a step fails, fix the cause and tell it to resume: the bootstrap picks
 up where it left off, it doesn't start over
-([RN-029](business-rules.md#rn-029)).
+([RN-029](business-rules/api.md#rn-029)).
 
 ## 5. The first turn
 

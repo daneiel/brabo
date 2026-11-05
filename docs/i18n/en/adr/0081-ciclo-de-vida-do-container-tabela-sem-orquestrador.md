@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0081 — Container lifecycle: state table, no orchestrator
@@ -192,8 +192,8 @@ deferred this table.
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the persisted
   state machine (`dev_agent_states`) whose design (one row per agent,
   `status` validated outside the column) this table mirrors for containers.
-- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-169](../business-rules/autenticacao.md#rn-169),
-  [RN-243](../business-rules.md#rn-243)–[RN-248](../business-rules.md#rn-248).
+- [RN-105](../business-rules/api.md#rn-105), [RN-169](../business-rules/api.md#rn-169),
+  [RN-243](../business-rules/api.md#rn-243)–[RN-248](../business-rules/api.md#rn-248).
 - `docs/explanation/achados-execucao-real.md` — findings Z and AD, which
   this document explicitly does NOT close.
 - `apps/api/src/domain/containers/container-lifecycle.ts`,

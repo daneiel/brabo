@@ -2,7 +2,7 @@
 id: auditoria-visual-rodada-29
 title: Визуальный аудит до и после Rodada 29
 description: Аудит экранов по AT-290 — основные маршруты, снятые в обеих темах при 1440 px и 390 px, проверка разметки на каждом экране, и что Rodada 29 исправила, что осталось и что появилось нового, по замерам 2026-09-30 на dev в 79e6b1209f.
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 ---
 
 # Визуальный аудит до и после Rodada 29 {#visual-audit-before-and-after-rodada-29}

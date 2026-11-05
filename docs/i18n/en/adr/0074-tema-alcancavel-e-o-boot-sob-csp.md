@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0074 — Reachable theme, and the boot under CSP
@@ -212,5 +212,5 @@ turn into a battery of `toBeGreaterThanOrEqual`, and the reason is here.
   outcome (intent yes, mechanism no).
 - [0058](0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md) — the CSP policy that makes the
   inline script unviable.
-- [RN-182](../business-rules/autenticacao.md#rn-182), [RN-183](../business-rules/autenticacao.md#rn-183),
-  [RN-184](../business-rules/autenticacao.md#rn-184), [RN-185](../business-rules/autenticacao.md#rn-185).
+- [RN-182](../business-rules/web.md#rn-182), [RN-183](../business-rules/web.md#rn-183),
+  [RN-184](../business-rules/web.md#rn-184), [RN-185](../business-rules/web.md#rn-185).

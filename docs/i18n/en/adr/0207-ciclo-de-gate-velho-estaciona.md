@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0207 — A gate cycle stalled for more than 2 h parks, and only a human gesture resumes it
@@ -46,4 +46,4 @@ that may have changed.
 - The pending item is read by SESSION, not by task: `proposed_actions` has no
   `task_id`. Two tasks in the same session with a pending QA action hold each
   other — an accepted price, the worst case is not rescuing, never paying twice.
-- Rule: [RN-722](../business-rules.md#rn-722), which revises RN-140.
+- Rule: [RN-722](../business-rules/engine.md#rn-722), which revises RN-140.

@@ -10,7 +10,7 @@
   contraste que mantém o selo do contador sólido em vez de tingido),
   [ADR 0125](0125-projectsettingstab-dividido-por-secao.md) (o PR 0 do mesmo
   esforço aceito de 8 PRs do qual este é o PR 1).
-- **Revisa:** [RN-201](../business-rules/autenticacao.md#rn-201) — a metade do
+- **Revisa:** [RN-201](../business-rules/web.md#rn-201) — a metade do
   recolhimento automático é removida; a metade de persistência de
   `brabo.project`/`brabo.tab` fica intacta.
 

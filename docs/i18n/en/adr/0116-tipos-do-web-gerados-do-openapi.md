@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0116 — `ActionType` (and future types) generated from the OpenAPI contract, not hand-copied
@@ -207,5 +207,5 @@ governing comment explaining WHY the sentence-per-type rule exists
   the `openapi.json` freshness step
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — every `ActionType` needs a
+- [RN-096](../business-rules/produto.md#rn-096) — every `ActionType` needs a
   Portuguese sentence

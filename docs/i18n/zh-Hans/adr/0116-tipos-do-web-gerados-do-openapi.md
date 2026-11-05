@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0116 — `ActionType`（以及将来的类型）由 OpenAPI 契约生成，而不是手工复制
@@ -91,4 +91,4 @@ export type ActionType =
 - `.github/workflows/docs-check.yml` — `openapi:types:check`，连接在 `openapi.json` 新鲜度步骤之后
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — 每个 `ActionType` 都需要一句葡萄牙语句子
+- [RN-096](../business-rules/produto.md#rn-096) — 每个 `ActionType` 都需要一句葡萄牙语句子

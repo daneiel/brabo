@@ -1,6 +1,6 @@
 ---
 sidebar_position: 8
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 ---
 
 # 已分类的 backlog {#triaged-backlog}
@@ -51,7 +51,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 （W, X, Y, Z, AA, AB, AC, AD, AE）——见 [validacao-real.md](validacao-real.md)。
 
 其中**五个已关闭**：W、Y、AA、AB 和 AC 在 13b 本身中关闭，X 由 FASE 14d 关闭
-（[RN-085](../business-rules/custo.md#rn-085)）——迭代上限改为按智能体**类型**设定，这正是
+（[RN-085](../business-rules/engine.md#rn-085)）——迭代上限改为按智能体**类型**设定，这正是
 分类提议的形式，也是缺失的产品决定。
 
 **三个仍未关闭**，没有一个是需要修复的 bug：
@@ -66,8 +66,8 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 阶段字母（A–H）和发现字母（B–V）因继承自两个列表而冲突；有歧义的地方，文本会写"发现"。
 
-自第一次分类以来，有两个条目离开了未关闭列表：**A**（[RN-067](../business-rules/custo.md#rn-067)）
-和 **M**（[RN-066](../business-rules/custo.md#rn-066)），两者都已关闭并在生产中确认。而作为
+自第一次分类以来，有两个条目离开了未关闭列表：**A**（[RN-067](../business-rules/api.md#rn-067)）
+和 **M**（[RN-066](../business-rules/api.md#rn-066)），两者都已关闭并在生产中确认。而作为
 阶段 A 一半的 **ADR 0052** 已实现并由测试证明——wake 的投递在那之后被修正并端到端覆盖。
 
 其余（旧条目）在[之前的 backlog](#older-backlog) 中，没有分配优先级：它们是产品决定，不是
@@ -83,8 +83,8 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 | 条目 | 曾经是什么 | 如何关闭 |
 |---|---|---|
-| **ADR 0052** | 待处理的审批把 `status pending` 作为工具结果返回并烧掉一次迭代；智能体在上限处死掉而什么也没写 | 循环**挂起**并恢复（[RN-073](../business-rules/custo.md#rn-073)）；结果的投递在之后被修正——事件诞生在一个 engine 排空器不读取的聚合中——这条路径现在已端到端覆盖 |
-| **O / B** | 会话和 dev agents 诞生在本地的 `llama3.2:1b` 上，而 ADR 0020 在语义步骤中禁止它 | 当级联落到 workspace 默认值时，继承的模型是 **Criativo** 的（[RN-072](../business-rules/custo.md#rn-072)） |
+| **ADR 0052** | 待处理的审批把 `status pending` 作为工具结果返回并烧掉一次迭代；智能体在上限处死掉而什么也没写 | 循环**挂起**并恢复（[RN-073](../business-rules/engine.md#rn-073)）；结果的投递在之后被修正——事件诞生在一个 engine 排空器不读取的聚合中——这条路径现在已端到端覆盖 |
+| **O / B** | 会话和 dev agents 诞生在本地的 `llama3.2:1b` 上，而 ADR 0020 在语义步骤中禁止它 | 当级联落到 workspace 默认值时，继承的模型是 **Criativo** 的（[RN-072](../business-rules/api.md#rn-072)） |
 
 继承填补**空位**而从不覆盖：会话、智能体或项目的 binding 是显式选择，仍然胜出。而继承的
 模型经过与级联相同的过滤——从目录中消失或不支持 tool calling 的不会被继承。
@@ -102,7 +102,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 bare repo，因此远程项目会运行会话那一半，而在构建那一半停下。
 
 由 [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md) 和
-[RN-076](../business-rules/custo.md#rn-076) 关闭：engine 向 api 请求工作用的远程，api 持有
+[RN-076](../business-rules/engine.md#rn-076) 关闭：engine 向 api 请求工作用的远程，api 持有
 主密钥，凭据**按调用**传入——写入 `.git/config` 的 origin 是干净的。
 
 **缩小问题的发现：** 四个消费者中有两个从来不需要凭据。`Diff` 和 `ProjectContext` 只使用
@@ -123,8 +123,8 @@ bare repo，因此远程项目会运行会话那一半，而在构建那一半�
 
 | 条目 | 曾经是什么 | 如何关闭 |
 |---|---|---|
-| **S** | 累积的上下文超出 provider 的字节限制，调用返回 `413`。每次终端输出都留在历史中，并随之后的每个轮次传递 | 执行器中的字节上限，带有写给模型的标记（[RN-074](../business-rules/custo.md#rn-074)） |
-| **U** | 执行器内的 `/workspace` 是 **Brabo 自己**的 monorepo，而 `/data/project-workspaces/*/` 能访问其他项目的 worktree | 决策中的路径范围（[RN-075](../business-rules/custo.md#rn-075)，[ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) 已接受） |
+| **S** | 累积的上下文超出 provider 的字节限制，调用返回 `413`。每次终端输出都留在历史中，并随之后的每个轮次传递 | 执行器中的字节上限，带有写给模型的标记（[RN-074](../business-rules/engine.md#rn-074)） |
+| **U** | 执行器内的 `/workspace` 是 **Brabo 自己**的 monorepo，而 `/data/project-workspaces/*/` 能访问其他项目的 worktree | 决策中的路径范围（[RN-075](../business-rules/api.md#rn-075)，[ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md) 已接受） |
 
 范围一次性关闭了两个方向：**收紧**（指向外部的放行动词不再自动批准）和**放宽**（向内的 `cd`
 不再让复合命令被拒，这是阶梯中代价最高的缺陷）。
@@ -170,7 +170,7 @@ prop 一起移除了，该 prop 没有其他任何消费者。
 
 | 条目 | 曾经是什么 | 如何关闭 |
 |---|---|---|
-| **D** | `Protect branches` 在免费计划的私有仓库上失败，而向导**事先就提醒了这一点**。之后提供的唯一操作是"重试"，它总是失败 | [RN-078](../business-rules/custo.md#rn-078) |
+| **D** | `Protect branches` 在免费计划的私有仓库上失败，而向导**事先就提醒了这一点**。之后提供的唯一操作是"重试"，它总是失败 | [RN-078](../business-rules/api.md#rn-078) |
 | **E** | 仓库预览在撒谎：硬编码的 `repo: brabo/{slug}`，而真正的 owner 来自 PAT | 之前已完成（提交 `4dd7a073`）——标签只显示 slug，即实际知道的东西 |
 | **F** | "Política de branches" 步骤把 `rc` 列为永久分支之一 | 之前已完成（提交 `4dd7a073`） |
 
@@ -190,7 +190,7 @@ CLAUDE.md 的同一条规则被违反了三次：**P**（`dev.blocked` 带 `orig
 （`agent.error` 带 `"undetermined"`）和 **T**（复发：`dev.blocked` 带 `"undetermined"`，而
 失败的 `diagnosis` 字段在**同一**行中就说出了原因）。
 
-由 [RN-077](../business-rules/custo.md#rn-077) 关闭，对原因的诊断改变了修复的形式：**分类器
+由 [RN-077](../business-rules/engine.md#rn-077) 关闭，对原因的诊断改变了修复的形式：**分类器
 早已存在并且本可以判对**——`FalhaDeTurno.origem/1` 把 ≥ 400 的状态映射为 `codigo`，这正确
 地分类了发现 T 的 `413`。缺陷从来不是缺少规则；而是 `block_task` 以 `"undetermined"` 作为
 **默认值**，而调用点什么都不传。
@@ -206,12 +206,12 @@ CLAUDE.md 的同一条规则被违反了三次：**P**（`dev.blocked` 带 `orig
 **V**——会话 `1f94de49` 自 23:34:42 起显示为 `closed`，而执行一直持续到 00:56。
 
 原因不在状态机：而在**心跳**。会话在 23:34:12 诞生，在 23:34:42 关闭——正好是
-`SESSION_HEARTBEAT_TIMEOUT_MS` 的 30 秒。[RN-064](../business-rules/custo.md#rn-064) 已经要求
+`SESSION_HEARTBEAT_TIMEOUT_MS` 的 30 秒。[RN-064](../business-rules/web.md#rn-064) 已经要求
 在结束前检查是否有待处理的工作，但"待处理的工作"只是 **`offered` 状态的 handoff**——而自
 23:34:13 起就有一个 `pending` 的动作，在会话诞生一秒后创建。
 
 等待决定的动作开始被计入。这是低一层的同一个 handoff 缺陷：有人在等**你**，而一个智能体可能
-正挂起等待结果（[RN-073](../business-rules/custo.md#rn-073)）。
+正挂起等待结果（[RN-073](../business-rules/engine.md#rn-073)）。
 
 **规则的前一个版本白纸黑字地写着，纳入智能体的工作"在没有证明这种交互的测试之前就是猜测"。**
 执行产生了证明，这就是这次修复与一次猜测的区别。
@@ -237,11 +237,11 @@ CLAUDE.md 的同一条规则被违反了三次：**P**（`dev.blocked` 带 `orig
 **与本节的假设相反，J 是机制问题。** 空日志是可验证的条件，缺陷在于决定是否值得运行的计数：
 它把 bootstrap 的机器步骤以及——更糟——Psicólogo 自己在分析会话时留在会话中的痕迹都加了
 进去，这使得一个空会话从第一次分析开始就显得有内容，并且每次重试都更"有内容"。由
-[RN-079](../business-rules/custo.md#rn-079) 关闭，发现中的会话被复现为测试。
+[RN-079](../business-rules/engine.md#rn-079) 关闭，发现中的会话被复现为测试。
 
 **K 和 R 是同一个提示词问题，因此只关闭到代码能触及的程度。** 规则的**完全**重复在发出时
-被拒绝（[RN-080](../business-rules/custo.md#rn-080)）；标题相同的用户故事被拒绝，不增加覆盖
-的用户故事变成提醒（[RN-081](../business-rules/custo.md#rn-081)）——是提醒而不是阻止，因为
+被拒绝（[RN-080](../business-rules/engine.md#rn-080)）；标题相同的用户故事被拒绝，不增加覆盖
+的用户故事变成提醒（[RN-081](../business-rules/api.md#rn-081)）——是提醒而不是阻止，因为
 同一规则的第二种切分可能是合理的，判断者是用户。
 
 **没有**解决的，并写在三条 RN 中而不是不言而喻：语义重复。发现 R 中确切的那一对——
@@ -260,7 +260,7 @@ PR #145）。
 特定提交的印章——另一个提交的 tag 不算，另一个阶段的 tag 不算，没有解析到 sha 的 tag 也不会
 因遗漏而成为印章。正是这一组规则阻止 `qa` 接收从未经过 `dev` 的代码。
 
-~~**生产 compose 的四个兄弟密钥**~~——**已完成**（[RN-114](../business-rules/custo.md#rn-114)）。
+~~**生产 compose 的四个兄弟密钥**~~——**已完成**（[RN-114](../business-rules/api.md#rn-114)）。
 `AUTH_JWT_SECRET`、`BRABO_SERVICE_TOKEN`、`CREDENTIALS_MASTER_KEY` 和 `SECRET_KEY_BASE` 在
 `docker/docker-compose.prod.yml` 中有开发用默认值，而它以 `NODE_ENV=production` 运行——与
 [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) 已为 `GIT_OAUTH_STATE_SECRET`
@@ -310,16 +310,16 @@ engine`）：三个容器启动时零 `EACCES`/权限错误，宿主上的 `apps
 
 | 条目 | 在哪里决定 |
 |---|---|
-| ~~按领域的预算~~ | **已修正并关闭。** `agent_areas` 增加了 `budget_micros`/`spent_micros`——与项目/会话并列的**第三个**独立上限，叠加式（不是 ADR 0064 的级联），在同一行中镜像 `max_parallel` 的模式（[RN-443](../business-rules.md#rn-443)、[ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)） |
+| ~~按领域的预算~~ | **已修正并关闭。** `agent_areas` 增加了 `budget_micros`/`spent_micros`——与项目/会话并列的**第三个**独立上限，叠加式（不是 ADR 0064 的级联），在同一行中镜像 `max_parallel` 的模式（[RN-443](../business-rules/api.md#rn-443)、[ADR 0110](../adr/0110-budget-por-area-aditivo-nao-cascata.md)） |
 | Dev Lead 和通过 `module_map` 的领域 | **已离开 backlog**：ADR 0053，由 FASE 14d 实现 |
-| ~~向任选智能体的手动 handoff~~ | **已关闭**——[ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules.md#rn-440)/[RN-441](../business-rules.md#rn-441)。`SessionPage.tsx` 增加了一个基于 `addressableAgents()`（leads ∪ 独立智能体）的选择器，它对 `POST .../sessions/:sessionId/handoffs` 发起 POST——与智能体自己的 `offer_handoff` 使用的**同一个** `CreateHandoffUseCase`，用 `actor: {kind:'user'}` 记录是谁决定的。Staff（ADR 0088）和 `ux-designer`（ADR 0087）都被发现只能通过内部路由访问，在同一次改动中加入了 `AGENTES_DE_CHAT` |
+| ~~向任选智能体的手动 handoff~~ | **已关闭**——[ADR 0109](../adr/0109-handoff-manual-a-agente-a-escolha.md)/[RN-440](../business-rules/api.md#rn-440)/[RN-441](../business-rules/api.md#rn-441)。`SessionPage.tsx` 增加了一个基于 `addressableAgents()`（leads ∪ 独立智能体）的选择器，它对 `POST .../sessions/:sessionId/handoffs` 发起 POST——与智能体自己的 `offer_handoff` 使用的**同一个** `CreateHandoffUseCase`，用 `actor: {kind:'user'}` 记录是谁决定的。Staff（ADR 0088）和 `ux-designer`（ADR 0087）都被发现只能通过内部路由访问，在同一次改动中加入了 `AGENTES_DE_CHAT` |
 | MFA、社交登录、OIDC、联邦 | [ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md)——社交登录（GitHub/GitLab）已**移出**禁令并已实现（ADR 0084）；其余仍不在范围内 |
 | 部署（`DEPLOY_ENABLED` + Environments） | gate `operavel` 已声明为 `planned` |
 | `rc`/`rcfix` 的回归 | [ADR 0030](../adr/0030-politica-de-branches-mecanizada.md) |
 | ~~approval-ladder 的 community 模式~~ | **已修正并关闭。** "变成 gate 登记中 `aprovacao_humana` 的改动"这一说法不准确——它来自 ADR 0054 的一句推测，而不是真正缺失的东西。`community` 模式自 FASE 6 起已实现并测试（`scripts/ci/approval-ladder.ts`），只是被 `APPROVAL_MODE=solo`（默认）关闭；gate `aprovacoes-da-escada` 的 `aprovacao_humana` 在两种模式下都已是 `true`，schema 中不感知 `APPROVAL_MODE`。真正缺失的是 `branching-policy.md` 中的 `TODO(humano)`——谁进入每个审批人列表的标准——由 `GOVERNANCE.md`（仓库根目录）关闭。真正启用该模式仍是运营决定（为三个角色招募真人），不是工程待办 |
 | ~~带手动汇率的货币偏好~~ | **不会做**——决定已记录。转换需要一个手工维护的汇率，而它会过时；一个错误的数字比一个诚实的 USD 数字更糟（与 `formatarCustoMicros`、`ProjectSettingsTab.tsx` 中已采用的原则相同） |
-| 重新启用 Anamnese（`ANAMNESE_ENABLED=true`） | 2026-08-10 由用户决定暂停——"hoje ele não está trazendo dados de muito valor"（[RN-115](../business-rules/autenticacao.md#rn-115)）。没有删除任何数据（假设、熟练度画像和指令补丁仍完整可见）；暂停的只是新一轮的**路径**，等待未来对 Anamnese 所推导内容的改进后再重新开启 |
-| 重新启用 Psicólogo（`PSYCHOLOGIST_ENABLED=true`） | 2026-08-10 由用户决定暂停，原因和模式与上面的 Anamnese 相同（[RN-117](../business-rules/autenticacao.md#rn-117)）。没有删除任何数据（已发出的分析和假设仍完整可见）；暂停的只是新一轮的**路径**（自动和按需） |
+| 重新启用 Anamnese（`ANAMNESE_ENABLED=true`） | 2026-08-10 由用户决定暂停——"hoje ele não está trazendo dados de muito valor"（[RN-115](../business-rules/engine.md#rn-115)）。没有删除任何数据（假设、熟练度画像和指令补丁仍完整可见）；暂停的只是新一轮的**路径**，等待未来对 Anamnese 所推导内容的改进后再重新开启 |
+| 重新启用 Psicólogo（`PSYCHOLOGIST_ENABLED=true`） | 2026-08-10 由用户决定暂停，原因和模式与上面的 Anamnese 相同（[RN-117](../business-rules/engine.md#rn-117)）。没有删除任何数据（已发出的分析和假设仍完整可见）；暂停的只是新一轮的**路径**（自动和按需） |
 | 一行安装，以及签名我们发布的东西 | 由 **FASE 29** 承接（[fase-29-instalacao-de-uma-linha.md](fase-29-instalacao-de-uma-linha.md)），目前只是规划——这里没有任何东西关闭。FASE 28 书面拒绝了在工件仍未签名时提供一行安装器（**BRB-005**），因此该阶段先签名后安装。规划测量了本文件没有记录的三件事：`docker-compose.prod.yml` 中没有任何对 `ghcr.io` 的引用并自称是验证用 compose，因此需要一个新的安装用 compose；`make test-restore` 是 Kubernetes 路径，`backup.sh` 只覆盖 Postgres，因此迁移一个 compose 安装没有经过证明的路线；以及 **`git_local_repos`——`local` provider 项目的 bare repos——不在任何备份中**，这在任何环境中丢失卷就会丢失代码。BRB id 现在在 [BRB 登记](../reference/brb.md) 中有规范的家，在那里该阶段继承的六个条目中有三个被发现已经修正——只能通过测量发现，这正是登记存在的理由 |
 | 代码标签页中的问题/lint/测试面板 | FASE 26 中声明的待办（`CLAUDE.md`），与 blame、PR 列表和分支详情一起——那三个在 FASE 26b 关闭，这一个没有且从未重新启动。目前还没有数据来源（产品中没有任何 lint/test-runner 集成）；记录在此，以免悄无声息地脱离跟踪 |
 

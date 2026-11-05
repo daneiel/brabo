@@ -26,23 +26,23 @@ resposta imediata, passa por HTTP.
 **Fora do escopo desta página**: rotas HTTP autenticadas pelo JWT normal do usuário
 (RBAC por papel, `@RequireRole`) — como
 `/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
-([RN-267](../business-rules.md#rn-267)),
+([RN-267](../business-rules/api.md#rn-267)),
 `.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
-[RN-406](../business-rules.md#rn-406), ADR 0095) ou o CRUD de
-`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+[RN-406](../business-rules/contracts.md#rn-406), ADR 0095) ou o CRUD de
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules/api.md#rn-426),
 ADR 0105) — incluindo as duas rotas de `maintainer`
 (`GET .../personal-access-tokens/all`,
 `DELETE .../personal-access-tokens/:tokenId/admin`,
-[RN-427](../business-rules.md#rn-427)) — não são "internas" no sentido deste documento, mesmo quando um
+[RN-427](../business-rules/api.md#rn-427)) — não são "internas" no sentido deste documento, mesmo quando um
 agente é quem efetivamente chama por elas. O mesmo vale para as quatro
 rotas do `HuggingFaceModelsController` sob
 `/workspaces/:workspaceId/huggingface/*`
-([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
+([RN-462](../business-rules/api.md#rn-462), [RN-463](../business-rules/api.md#rn-463),
 ADR 0115): `role:maintainer`, ação direta de um humano nas Configurações do
 Projeto/Workspace, nunca chamadas pelo engine. O mesmo vale para as duas rotas de
 associação, `POST`/`DELETE /projects/:projectId/members`
-([RN-471](../business-rules.md#rn-471),
-[RN-472](../business-rules.md#rn-472), ADR 0127) — e ali o fato é
+([RN-471](../business-rules/web.md#rn-471),
+[RN-472](../business-rules/api.md#rn-472), ADR 0127) — e ali o fato é
 estrutural, não só verdadeiro: os dois tetos de rebaixamento que a rota agora
 impõe (ninguém rebaixa um `owner` de workspace, ninguém rebaixa a si mesmo)
 moram DENTRO de `AddProjectMemberUseCase`, então seriam contornáveis por qualquer
@@ -51,20 +51,20 @@ escreve essa tabela, e o caso de uso tem exatamente um chamador, a própria rota
 RBAC. O
 service token compartilhado NUNCA serve de credencial nessas rotas, e o JWT do
 usuário nunca funciona em `/internal/*` — os dois mecanismos não se sobrepõem
-([RN-035](../business-rules/autenticacao.md#rn-035)).
+([RN-035](../business-rules/api.md#rn-035)).
 
 **Uma terceira credencial, nem service token nem JWT de usuário**:
 `POST /projects/:projectId/runner-ticket` é `role:developer` como qualquer
 rota RBAC, mas não aceita o JWT normal de sessão — só uma de DUAS
 credenciais de escopo de dispositivo, ambas tratadas pelo mesmo `PatAuthGuard`/
 `@RequirePatAuth()`, escopadas por construção a esta única rota: um
-Personal Access Token (`brb_…`, [RN-424](../business-rules.md#rn-424), ADR
+Personal Access Token (`brb_…`, [RN-424](../business-rules/api.md#rn-424), ADR
 0105), ou um JWT EdDSA autoassinado de vida curta (≤60s) que prova a posse de
 uma chave de dispositivo Ed25519 em `runner_device_keys` — uma chave de máquina criada no
 terminal e registrada pelo instalador
-([RN-552](../business-rules.md#rn-552)), ou uma chave de projeto que o navegador
+([RN-552](../business-rules/api.md#rn-552)), ou uma chave de projeto que o navegador
 registrou antes de o [ADR 0203](../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
-aposentar esse fluxo ([RN-465](../business-rules.md#rn-465), ADR 0118) — somada ao PAT,
+aposentar esse fluxo ([RN-465](../business-rules/api.md#rn-465), ADR 0118) — somada ao PAT,
 nunca substituta. Vale anotar aqui porque é a distinção que esta
 página existe para explicar: "não é `/internal/*`" não quer dizer "então é JWT
 de usuário" — as duas credenciais de dispositivo são um terceiro mecanismo, sem
@@ -106,7 +106,7 @@ documentada, não uma divergência.
 > `RateLimitGuard` (que roda antes do guard do controller, então a isenção
 > precisa vir do metadado). Um access token de usuário, mesmo de um `owner`,
 > não abre nenhuma delas; e o service token não abre nenhuma outra rota. Ver
-> [RN-035](../business-rules/autenticacao.md#rn-035).
+> [RN-035](../business-rules/api.md#rn-035).
 
 > **Rotação sem indisponibilidade.** `BRABO_SERVICE_TOKEN` é o valor enviado;
 > `BRABO_SERVICE_TOKEN_PREVIOUS` é aceito **só na verificação**. Como os dois
@@ -163,7 +163,7 @@ O engine nunca escreve direto na tabela de eventos — ele **pede** à api, que
 controla o `seq` e a atomicidade com a outbox.
 
 `POST /handoffs` mantém **no máximo um handoff `offered` por (projeto, alvo)**
-([RN-635](../business-rules.md#rn-635),
+([RN-635](../business-rules/api.md#rn-635),
 [ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). A resposta é a oferta
 VIGENTE mais `desfecho`: `criado`, `substituiu_oferta` (a pendente virou
 `superseded`, com um evento `handoff.superseded`) ou `ja_oferecido` (sem linha nova —
@@ -173,12 +173,12 @@ do projeto é recusado com **409** `reason: "agente_ja_ativo"`, e a
 (`Engine.Harness.Tools.OfferHandoff` a repassa literalmente;
 `FalhaDeTurno.origem/1` a classifica como `politica`). O campo opcional do corpo
 `seAusente: true` — enviado pelo AppSec por `create_handoff_if_absent/5`
-([RN-636](../business-rules.md#rn-636)) — devolve QUALQUER oferta pendente ao
+([RN-636](../business-rules/engine.md#rn-636)) — devolve QUALQUER oferta pendente ao
 alvo em vez de substituí-la.
 
 A oferta Criativo→PO que um clique em "Estou pronto — a necessidade está validada" pediu
 é ACEITA na mesma chamada, em nome de quem clicou
-([RN-658](../business-rules.md#rn-658),
+([RN-658](../business-rules/api.md#rn-658),
 [ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md)): a oferta é
 `criativo` → `po`, desta sessão, levando o `product_brief` nascido depois
 do último `readiness.confirmed` marcado. O aceite passa pelo mesmo
@@ -191,7 +191,7 @@ que falha nunca vira erro para o engine — vira um
 `GET /events` é o que os sete agentes conversacionais leem quando o processo deles
 sobe sobre uma sessão que já tem conversa, e o que os kickoffs
 leem para achar o brief, as regras, o mapa de módulos e as histórias
-([RN-580](../business-rules.md#rn-580)). Até ali a rota só entendia
+([RN-580](../business-rules/engine.md#rn-580)). Até ali a rota só entendia
 `afterSeq` e `limit`, e o engine só mandava `limit=200` — então recebia os
 **primeiros** 200 eventos, e um agente acordado numa conversa de 201 eventos subia
 sem a mensagem que estava respondendo. Entraram dois parâmetros de query, ambos
@@ -211,12 +211,12 @@ E é por isso que a guarda de tipo de sessão mora no caso de uso de append, e n
 em `ActivateExecutionUseCase`: o `POST /events` daqui e a rota do usuário caem no
 mesmo funil. Desde a FASE 20, `execution.activated` numa sessão `consultiva`
 responde **409** por este caminho também — o tipo é intenção de criação e o
-evento não o promove ([RN-097](../business-rules.md#rn-097)). Nenhuma outra
+evento não o promove ([RN-097](../business-rules/api.md#rn-097)). Nenhuma outra
 mudança de contrato: os outros tipos de evento continuam idênticos, e a recusa
 acontece **antes** de `incrementSeq`, então uma tentativa recusada não abre buraco
 no `seq`.
 
-Desde a [RN-581](../business-rules.md#rn-581) o mesmo funil também recusa
+Desde a [RN-581](../business-rules/api.md#rn-581) o mesmo funil também recusa
 **conversa** numa sessão já `closed`/`closed_abnormally`:
 **409** com corpo nomeado — `{ message, reason: "sessao_encerrada", status,
 type }`. "Conversa" é um tipo que só existe como conversa
@@ -231,7 +231,7 @@ recusa desfaz esse incremento: também sem buraco. O
 a maioria dos chamadores dele descarta o retorno.
 
 `ActivateExecutionUseCase` ganhou um segundo efeito colateral que **não** passa
-por nenhuma rota deste documento ([RN-135](../business-rules/custo.md#rn-135)): no
+por nenhuma rota deste documento ([RN-135](../business-rules/api.md#rn-135)): no
 fim da ativação, se a rota do usuário informa `originSessionId` (a sessão de
 CHAT de onde veio o clique), ele fecha essa sessão via
 `TransitionSessionUseCase` — o mesmo caminho que o `POST /termination` desta
@@ -239,14 +239,14 @@ página usa para o engine reportar encerramento, mas disparado pela api, sem ida
 nenhuma ao engine. Nenhuma rota nova, nenhuma mudança no contrato `engine → api`
 existente.
 
-`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/autenticacao.md#rn-139))
+`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/api.md#rn-139))
 é a mesma história ao contrário: expõe por HTTP externo uma leitura
 (`findActiveExecutionSession`) que antes só existia dentro de
 `ActivateExecutionUseCase`. Nenhum caminho `engine → api` novo, nenhum efeito
 colateral — é um `SELECT`, e o critério (uma sessão `active` com `execution.activated`
 gravado) não muda nada do que o engine já fazia.
 
-Desde a [RN-579](../business-rules.md#rn-579) (AT-093) a fachada `EngineApiClient`
+Desde a [RN-579](../business-rules/engine.md#rn-579) (AT-093) a fachada `EngineApiClient`
 tem um efeito colateral por cima destas rotas, e ele é no canal PRÓPRIO do
 engine, não na api: quando a api **confirma** uma escrita numa sessão —
 `POST /events` (tanto `append_event` quanto `append_event_returning`),
@@ -270,7 +270,7 @@ eventos que a api grava por CONTA PRÓPRIA como efeito de uma ação que ela aut
 e executou dentro daquela requisição interna (`infra.pr_opened`,
 `adr.pr_opened`, `action.*`): a fachada do engine só anuncia a escrita que ela
 pediu, então estes são anunciados uma vez pela api
-([RN-848](../business-rules.md#rn-848)). A chamada é
+([RN-848](../business-rules/api.md#rn-848)). A chamada é
 melhor esforço e nunca esperada; se ela se perde, o poll de fallback de 15s do navegador
 cobre, como antes. O `:id` só é enviado quando o id da sessão é um
 UUID (o tipo da coluna): a api o confere onde monta a URL, codifica o
@@ -303,7 +303,7 @@ agentes conversacionais — que usam só o com stream — falhavam aos 15s com
 `%Req.TransportError{reason: :timeout}`, classificado como origem `infra`. Com
 modelo local o turno cabia em 15s e o defeito não aparecia.
 
-#### Toda chamada sem stream roda em processo próprio ([RN-742](../business-rules.md#rn-742))
+#### Toda chamada sem stream roda em processo próprio ([RN-742](../business-rules/engine.md#rn-742))
 
 `post_returning/3` e todo GET do `EngineApiClient.Live` rodam a chamada do `Req`
 dentro de uma `Task` descartável (`isolado/1`); os cabeçalhos são montados antes, no
@@ -313,7 +313,7 @@ perdida derrubou o dev agent na chamada SEGUINTE. O caminho com stream fica no
 chamador (o `into:` dele escreve o dicionário de processo do chamador, e os
 agentes conversacionais já o chamam da `Task` do turno).
 
-#### A última mensagem pode ser a orientação de idioma ([RN-622](../business-rules.md#rn-622))
+#### A última mensagem pode ser a orientação de idioma ([RN-622](../business-rules/engine.md#rn-622))
 
 As `messages` que o engine manda aos dois caminhos podem terminar com UMA mensagem
 `role: "system"` a mais — a orientação de idioma da resposta, acrescentada pela
@@ -324,7 +324,7 @@ histórico do agente. A api não faz nada de especial com ela — é uma mensage
 qualquer outra, e os tokens de entrada dela são medidos como o resto (18–29 por chamada medidos
 com cl100k/o200k, sob um teto de 50 tokens).
 
-Desde a [RN-623](../business-rules.md#rn-623) a fachada também lê as `tools`
+Desde a [RN-623](../business-rules/engine.md#rn-623) a fachada também lê as `tools`
 da MESMA chamada: num turno com autor, quando essas ferramentas incluem uma que
 grava artefato compartilhado do projeto e o idioma do projeto difere do do
 autor, a mesma mensagem ganha uma segunda frase ("Write project artifacts
@@ -332,7 +332,7 @@ in X." / "Artefatos do projeto: em X."). Continua uma mensagem, continua efêmer
 até 42 tokens no pior par real medido. O corpo da requisição não
 muda.
 
-Desde a [RN-706](../business-rules.md#rn-706) as chamadas dos agentes `dev-*` e
+Desde a [RN-706](../business-rules/engine.md#rn-706) as chamadas dos agentes `dev-*` e
 dos subagentes de QA (o `ToolLoop`) podem levar MAIS UMA mensagem efêmera `role: "system"`
 ANTES do perfil do autor e da orientação de idioma (a de idioma
 continua por último): o ambiente do agente, montado por `Engine.Harness.AmbienteDoAgente`
@@ -343,27 +343,27 @@ Teto de 1 200 caracteres; leitura que falha a deixa de fora. A api a trata como
 qualquer outra mensagem de sistema e mede os tokens dela como o resto. O corpo da
 requisição não muda.
 
-Desde a [RN-711](../business-rules.md#rn-711) as chamadas dos sete
+Desde a [RN-711](../business-rules/engine.md#rn-711) as chamadas dos sete
 agentes conversacionais levam MAIS UMA mensagem efêmera `role: "system"`, depois
 da de ambiente e ANTES do perfil do autor e da orientação de idioma:
 o fluxo de entrega, montado por `Engine.Harness.FluxoDoTime` — as sete etapas em
 ordem, onde o agente está, o próximo passo real e quem o dispara (humano ou
 sistema). Mesmo texto em todo turno do mesmo agente; nunca guardado no
 histórico do agente. O corpo da requisição não muda. Desde a
-[RN-862](../business-rules.md#rn-862) a mesma mensagem termina, só para Criativo,
+[RN-862](../business-rules/engine.md#rn-862) a mesma mensagem termina, só para Criativo,
 PO, Arquiteto e Dev Lead (os agentes com `declare_open_question`), com
 uma frase central: toda dúvida deixada para o usuário vira
 `declare_open_question`, com a sugestão do agente e o que ela afeta — nunca
 uma pergunta só no texto do turno.
 
-Desde a [RN-874](../business-rules.md#rn-874) as chamadas do PO levam mais uma
+Desde a [RN-874](../business-rules/engine.md#rn-874) as chamadas do PO levam mais uma
 mensagem efêmera `role: "system"` logo depois da de fluxo, montada por
 `Engine.Harness.DecisoesDoProjeto`: as decisões do usuário (`decision_record`)
 e as perguntas ainda abertas no projeto, lidas localmente do event log,
 com teto de 10 + 10 itens e 3 000 caracteres. Omitida quando não há nada a
 dizer ou a leitura falha.
 
-#### O frame final leva o nome do modelo ([RN-146](../business-rules/autenticacao.md#rn-146))
+#### O frame final leva o nome do modelo ([RN-146](../business-rules/api.md#rn-146))
 
 `RunLlmTurnResult` e o frame `final` de `LlmTurnStreamEvent` ganham
 `modelName: string | null` — o nome do modelo que a api resolveu
@@ -376,7 +376,7 @@ extraem o campo do frame e o incluem no payload de `agent.response`
 (`modelName`), que é o que `SessionPage.tsx` lê para mostrar o modelo ao lado
 do nome do agente.
 
-#### O Jev pode estreitar o menu de ferramentas ([RN-625](../business-rules.md#rn-625))
+#### O Jev pode estreitar o menu de ferramentas ([RN-625](../business-rules/engine.md#rn-625))
 
 Desde o [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md) os dois
 caminhos podem perguntar ao roteador de ferramentas Jev qual ferramenta serve ao passo antes de chamar o
@@ -402,7 +402,7 @@ contrato são aditivas:
 O turno nunca falha por causa do roteador: todo erro cai no catálogo
 inteiro, com o motivo em `toolRouting`. Nenhuma rota entrou ou saiu.
 
-#### `usage.costMicros` é o custo real quando o provider o informa ([RN-665](../business-rules/custo.md#rn-665))
+#### `usage.costMicros` é o custo real quando o provider o informa ([RN-665](../business-rules/api.md#rn-665))
 
 Desde o [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) o `usage.costMicros`
 que os dois caminhos devolvem — e que o engine soma no orçamento da área — é
@@ -419,16 +419,16 @@ Ao lado de `error`, o corpo de `/llm-turn` e o frame `final` de
 erro do provider ([ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
 `null` quando não há erro ou quando o erro não é do provider (orçamento,
 binding de modelo ausente). Um 402 do provider é `insufficient_credit`
-([RN-730](../business-rules.md#rn-730)): o engine decide "crédito esgotado"
+([RN-730](../business-rules/api.md#rn-730)): o engine decide "crédito esgotado"
 por esse código primeiro (`FalhaDeTurno.credito_esgotado?/1`) e mantém a comparação de texto
-só como fallback para uma api mais velha que o campo ([RN-726](../business-rules.md#rn-726)).
+só como fallback para uma api mais velha que o campo ([RN-726](../business-rules/engine.md#rn-726)).
 
 #### Resposta cortada no teto de saída: `truncated`
 
 Quando o provider fechou a resposta no teto de saída (`finish_reason:
 "length"` no dialeto OpenAI-compatível, `stop_reason: "max_tokens"` na
 Anthropic), o corpo de `/llm-turn` e o frame `final` de `/llm-turn-stream`
-levam `truncated: true` ([RN-737](../business-rules.md#rn-737)). O campo é
+levam `truncated: true` ([RN-737](../business-rules/api.md#rn-737)). O campo é
 aditivo e ausente nos demais casos. O texto e os argumentos de `toolCalls` vêm cortados:
 o engine não executa tool call de resposta truncada (devolve um
 erro de ferramenta nomeado ao laço) e acrescenta uma linha curta de "cortado" a um
@@ -445,7 +445,7 @@ classificada em [security-surface.md](../security-surface.md).
 
 Isto não é detalhe organizacional: essas três rotas ramificam pelo **papel da
 pessoa** — `owner` para a fatura, `viewer` para o próprio consumo
-([RN-101](../business-rules/custo.md#rn-101)). O `X-Brabo-Service-Token` não carrega
+([RN-101](../business-rules/api.md#rn-101)). O `X-Brabo-Service-Token` não carrega
 pessoa nenhuma, então uma contraparte interna teria de escolher entre não
 distinguir os públicos ou receber o id do ator como parâmetro — o que é
 exatamente o que o [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
@@ -458,7 +458,7 @@ mas o que a rota do owner DEVOLVE mudou, e é por isso que vale dizer a fronteir
 aqui: `porProvider` só existe no relatório do workspace (`owner`), e o consumo do
 membro continua sem provider e sem credencial. O que mudou de verdade foi o
 mecanismo de garantia: a dimensão pedida com escopo de ator **não compila**
-([RN-187](../business-rules/custo.md#rn-187)), em vez de depender de a rota não
+([RN-187](../business-rules/api.md#rn-187)), em vez de depender de a rota não
 oferecer o parâmetro. O argumento do parágrafo acima continua de pé — é ele que
 explica por que esta leitura nunca desce para cá.
 
@@ -472,7 +472,7 @@ O `SessionServer` pergunta antes de fechar por heartbeat. O timeout mede
 inatividade da ABA — 30 segundos —, e fechar uma sessão é sobre o TRABALHO ter
 terminado, não sobre quem ainda está olhando. Numa execução real isso segurou
 um handoff `offered` para o Arquiteto dentro de uma sessão fechada
-([RN-064](../business-rules/custo.md#rn-064)).
+([RN-064](../business-rules/web.md#rn-064)).
 
 Resposta: `{ pending, motivo, aguardandoUsuarioDesde }`. `motivo` vai para o log do engine — uma sessão que
 se recusa a fechar sem dizer por quê é indiagnosticável. E a api fora do ar
@@ -480,7 +480,7 @@ se recusa a fechar sem dizer por quê é indiagnosticável. E a api fora do ar
 trocar um defeito por outro.
 
 `aguardandoUsuarioDesde` é o quinto sinal
-([RN-581](../business-rules.md#rn-581)), e o único com **teto**:
+([RN-581](../business-rules/api.md#rn-581)), e o único com **teto**:
 quando o evento de fim de turno mais recente da conversa (`agent.response`,
 `chat.structured_question`, `agent.error` do lado do agente; `chat.message`,
 `chat.structured_question_answered` do lado do usuário) veio de um
@@ -554,7 +554,7 @@ um provider: cada linha leva `descobertos`, `reencontrados`,
 (`sem_capability` | `sem_credencial` | `falha`) com `origemDaFalha`
 (`infra` | `modelo`) e `detalhe`. Provider pulado **não desativa nada**:
 "não sei o que há lá" não é "não há nada lá"
-([RN-043](../business-rules/custo.md#rn-043)). O corpo completo está no
+([RN-043](../business-rules/api.md#rn-043)). O corpo completo está no
 [OpenAPI gerado](api/internal.html) sob a tag `internal`.
 
 Duas coisas que esta rota **não** faz, e que já foram diferentes:
@@ -562,11 +562,11 @@ Duas coisas que esta rota **não** faz, e que já foram diferentes:
 - **Ela não liga nem desliga modelo em workspace nenhum.** `descobertos` conta
   linhas novas em `models`; nenhuma delas ganha curadoria. Um modelo descoberto
   não tem linha em `workspace_models`, e a ausência de linha é o estado desligado
-  ([RN-052](../business-rules/custo.md#rn-052)).
+  ([RN-052](../business-rules/api.md#rn-052)).
 - **Ela não muda preço em silêncio.** Preço marcado `manual_pricing` é preservado
   como está, e toda mudança que a sincronização faz grava uma linha em
   `model_price_changes` com origem `sync` — na mesma transação da escrita
-  ([RN-044](../business-rules/custo.md#rn-044), [RN-051](../business-rules/custo.md#rn-051)).
+  ([RN-044](../business-rules/api.md#rn-044), [RN-051](../business-rules/api.md#rn-051)).
 
 ### Remoto de trabalho do projeto {#project-working-remote}
 
@@ -590,16 +590,16 @@ remoto, `token` e `username` separados. A separação não é cosmética:
 
 > **A `origin` nunca leva credencial.** Este é o valor gravado no
 > `.git/config` do workspace, **dentro da pasta onde o dev agent tem
-> leitura auto-aprovada** ([RN-075](../business-rules/custo.md#rn-075)). Uma URL como
+> leitura auto-aprovada** ([RN-075](../business-rules/api.md#rn-075)). Uma URL como
 > `https://x-access-token:TOKEN@…` ali estaria a um `cat .git/config`
 > de virar contexto de LLM.
 
 Quem a consome tem a obrigação simétrica: injetar o token **por invocação**, no
 ambiente do processo filho de cada chamada de git, e nunca em argv nem em
-arquivo ([RN-076](../business-rules/custo.md#rn-076), `Engine.Actions.GitAuth`).
+arquivo ([RN-076](../business-rules/engine.md#rn-076), `Engine.Actions.GitAuth`).
 
 A credencial é a do **owner do workspace**, pelo mesmo resolvedor da
-[RN-058](../business-rules/custo.md#rn-058). O provider `local` **não chega aqui**: ele
+[RN-058](../business-rules/api.md#rn-058). O provider `local` **não chega aqui**: ele
 é resolvido direto do banco pelo engine, não tem token e não depende de a api
 estar de pé — é o caminho que o `pnpm dev` e a suíte de testes inteira exercitam.
 
@@ -629,7 +629,7 @@ nunca passa pelo resolvedor de credencial da RN-058: ele pede o provider
 FIXO `ollama` direto ao `LLMProviderRegistry`, o mesmo caminho que a
 RN-058 já descreve como "a busca é pulada" para esse provider — não há
 segredo de usuário a decifrar aqui, e é por isso que também não há
-rota interna a abrir ([RN-232](../business-rules.md#rn-232),
+rota interna a abrir ([RN-232](../business-rules/api.md#rn-232),
 [ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
 
 ### O que o PO relê: regras de negócio e backlog
@@ -643,13 +643,13 @@ As outras duas rotas fora de `/internal/sessions/:sessionId/`, e pelo
 mesmo critério das anteriores: o recurso pertence ao **projeto**, e um
 segmento de sessão aqui seria decorativo — pior, seria enganoso, porque é
 exatamente o escopo de sessão que causou o defeito que estas rotas corrigem
-([RN-164](../business-rules/autenticacao.md#rn-164)).
+([RN-164](../business-rules/engine.md#rn-164)).
 
 O PO tinha **quatro ferramentas e todas de escrita** (`create_epic`,
 `create_story`, `create_task`, `offer_handoff`). O contexto dele era montado
 uma vez, no kickoff, a partir dos **primeiros** 200 eventos da **sessão corrente** (esta
 página dizia "últimos"; eram os primeiros, que é o que a
-[RN-580](../business-rules.md#rn-580) mediu e corrigiu) —
+[RN-580](../business-rules/engine.md#rn-580) mediu e corrigiu) —
 e depois disso ele nunca mais relia nada. Numa sessão longa, ou numa
 retomada, ele não sabia quais regras existiam, quais já tinha coberto, nem o que
 já tinha criado ele mesmo. O sintoma que apareceu no uso real foi um backlog com
@@ -684,7 +684,7 @@ teto de linhas, sempre declarando o total real quando trunca.
 | GET | `/internal/projects/:projectId/product-metrics` (**não** escopada à sessão) |
 
 A TERCEIRA rota de leitura do PO, mesmo desenho das duas acima
-([RN-407](../business-rules.md#rn-407)) — fecha o último item pendente da
+([RN-407](../business-rules/contracts.md#rn-407)) — fecha o último item pendente da
 auditoria `fluxo.yml` × código
 ([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
 `packages/contracts/fluxo.yml` (papel `po`, entrada `metricas-de-produto`) declarava
@@ -716,7 +716,7 @@ omissão que não há lacuna.
 | GET | `/internal/projects/:projectId/module-contracts` (**não** escopada à sessão) |
 
 A leitura que o dev agent faz dos contratos do Arquiteto
-([RN-684](../business-rules.md#rn-684),
+([RN-684](../business-rules/api.md#rn-684),
 [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)), para
 que ele pare de ler o worktree de outro módulo para descobrir uma interface.
 Mesmo desenho das leituras do PO: nenhum parâmetro além do projeto, custo constante
@@ -734,7 +734,7 @@ renderiza por inteiro só o módulo do próprio dev e os que ele consome, com te
 
 O `execution_mode` do projeto ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
-[RN-169](../business-rules/autenticacao.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+[RN-169](../business-rules/api.md#rn-169)/[RN-421](../business-rules/api.md#rn-421))
 segue a mesma divisão. Por ele um projeto pode ser `container` (a
 pasta gerenciada em `PROJECT_WORKSPACES_ROOT`, o padrão), `mounted` (um
 caminho absoluto do usuário, montado por bind-mount) ou `runner` (um caminho
@@ -759,7 +759,7 @@ próxima seção).
 
 **A base de projetos muda onde moram as pastas `mounted`, e de propósito não
 muda nada aqui** ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[RN-500](../business-rules.md#rn-500)). Desde esse ADR, projetos `mounted` moram
+[RN-500](../business-rules/api.md#rn-500)). Desde esse ADR, projetos `mounted` moram
 sob uma base única configurada pelo operador — `BRABO_PROJECTS_BASE` — em vez de
 cada um precisar de uma linha de bind-mount escrita à mão nos dois serviços. A base é
 montada por **identidade** (`$X:$X`) em `api` e `engine`, e é exatamente
@@ -772,7 +772,7 @@ forçado uma tradução neste contrato; a identidade é o que compra a ausência
 
 **Adiar a checagem de disco também não muda nada aqui**
 ([ADR 0142](../adr/0142-validacao-de-workspace-montado-adiada.md),
-[RN-501](../business-rules.md#rn-501)). Criar um projeto `mounted` deixou de
+[RN-501](../business-rules/api.md#rn-501)). Criar um projeto `mounted` deixou de
 exigir que a pasta exista — a criação valida a forma léxica mais a
 base, e a pasta é criada quando a Infra sobe o container —, então entre
 esses dois momentos o engine pode ler um `workspace_path` apontando para uma pasta
@@ -788,7 +788,7 @@ interface tem de dizer que a pasta ainda não está lá em vez de mostrar um cam
 
 O seletor de pastas que ajuda um humano a escolher onde um projeto `mounted` vai
 morar é `GET /workspaces/:workspaceId/project-folders`
-([RN-504](../business-rules.md#rn-504)) — uma rota **pública** do
+([RN-504](../business-rules/web.md#rn-504)) — uma rota **pública** do
 controller `workspaces`, atrás de `@RequireRole('maintainer')` e documentada em
 [a superfície de segurança](../security-surface.md), não uma `internal/`.
 
@@ -810,7 +810,7 @@ navegador e nunca um caminho absoluto.
 Esta rota substituiu o primeiro para o modo `mounted`, e só para ele. A RN-504
 tinha apontado OS DOIS modos para cá na premissa de que o modo `runner` sairia da
 criação de projeto; não saiu, e a
-[RN-533](../business-rules.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
+[RN-533](../business-rules/web.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
 ponto 7) mandou o seletor do `runner` de volta para o canal. Os dois não são
 redundantes — leem discos diferentes, e nenhum responde pelo outro: esta
 rota responde sobre a ÚNICA pasta que a api enxerga, a base acima; o canal
@@ -819,7 +819,7 @@ desta rota mudou com isso.
 
 #### E declarar o destino do espelho também não
 
-`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules.md#rn-515),
+`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules/api.md#rn-515),
 [ADR 0147](../adr/0147-agente-local-com-capacidades.md) ponto 4) grava a
 pasta para onde a capacidade `espelho` copia o trabalho de um projeto — uma pasta FORA
 da base montada. É uma rota **pública** do controller `projects`,
@@ -831,7 +831,7 @@ lendo algo que não consegue tirar do banco.
 Esta rota só decide **onde o destino mora e o que conta como um
 válido**. O protocolo que o leva ao runner e a cópia em si
 são do engine e do runner, e existem desde a
-[RN-516](../business-rules.md#rn-516) — **sem rota interna nova**, que
+[RN-516](../business-rules/runner.md#rn-516) — **sem rota interna nova**, que
 é o ponto que vale escrever aqui. O engine lê a coluna direto —
 `mirror_path` em `projects`, `null` quando o projeto não tem espelho, que é
 o estado normal — pelas mesmas leituras de `Engine.Projects.Project` que ele já
@@ -849,7 +849,7 @@ aterrissaria o artefato do projeto B na pasta do projeto A e o usuário descobri
 pelo conteúdo, não por um erro. Duas consequências seguem, ambas deliberadas:
 um destino declarado faz de `espelho` uma capacidade **obrigatória**, então um
 `brabo-runner` mais velho que essa versão para de conectar a esse projeto (recusa
-nomeada, fatal, sem nova tentativa — ver [RN-514](../business-rules.md#rn-514)); e
+nomeada, fatal, sem nova tentativa — ver [RN-514](../business-rules/engine.md#rn-514)); e
 trocar o destino com um runner conectado exige reconectá-lo,
 porque a concessão pertence ao join.
 
@@ -860,7 +860,7 @@ máquina do usuário, exatamente como no modo `runner`. A metade `realpath` da g
 é do runner (`apps/runner/src/espelho-guard.ts`, RN-516), e nada
 neste contrato deve ser lido como se a api já a tivesse estabelecido.
 
-### O que a rodada do espelho FEZ — o relatório, que É rota nova ([RN-517](../business-rules.md#rn-517))
+### O que a rodada do espelho FEZ — o relatório, que É rota nova ([RN-517](../business-rules/api.md#rn-517))
 
 | método | caminho |
 |---|---|
@@ -885,7 +885,7 @@ indistinguível de uma rodada que nunca rodou.
 A api grava `project_mirror_states` — uma TABELA, nunca o event log, porque
 uma rodada de espelho não tem sessão e `session_events.session_id` é `NOT NULL`
 (o mesmo raciocínio que fez de `rag_searches` uma tabela,
-[RN-479](../business-rules.md#rn-479)) — e nunca uma `proposed_action`, porque
+[RN-479](../business-rules/api.md#rn-479)) — e nunca uma `proposed_action`, porque
 a escrita do espelho é configuração que o usuário declarou, não agente pedindo para
 agir.
 
@@ -897,11 +897,11 @@ aconteceu, e o erro dela costuma ser o que explica o que deu errado.
 
 O que a tela lê é uma rota **pública**, não esta:
 `GET /projects/:projectId/mirror-state` (`viewer`), que resolve os três
-estados da [RN-088](../business-rules.md#rn-088) — `never` (linha ausente), `synced`
+estados da [RN-088](../business-rules/web.md#rn-088) — `never` (linha ausente), `synced`
 (possivelmente com `filesCopied: 0`) e `failed` — do lado da api, para que a regra
 que decide qual dos dois carimbos é o vigente tenha fonte única.
 
-### Confirmação do workspace pelo runner — a ESCRITA, que é rota nova ([RN-423](../business-rules.md#rn-423))
+### Confirmação do workspace pelo runner — a ESCRITA, que é rota nova ([RN-423](../business-rules/runner.md#rn-423))
 
 | método | caminho |
 |---|---|
@@ -934,7 +934,7 @@ um runner conectado agora; faltando qualquer um dos dois, recusa
 explicitamente — nunca caindo no `System.cmd`/bind-mount do `mounted`, que não
 existe para um projeto `runner`.
 
-### Instância de QA efêmera — rotas novas ([RN-935](../business-rules.md#rn-935) a [RN-937](../business-rules.md#rn-937), [ADR 0229](../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md))
+### Instância de QA efêmera — rotas novas ([RN-935](../business-rules/api.md#rn-935) a [RN-937](../business-rules/api.md#rn-937), [ADR 0229](../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md))
 
 | método | caminho |
 |---|---|
@@ -951,11 +951,11 @@ forma normal de broker recusando); 404 para projeto ou tarefa de outro projeto;
 O `container-exec` aceita `alvo: { qa: true, taskId }` e a `container-spec`
 aceita `?papel=qa&task=<id ou chave>` (acrescenta `qa: { chave, services }`). Cada serviço é `{ name, image, env?,
 tmpfs?, user?, command?, shared? }`: `user` é `"<uid>:<gid>"` com inteiros
-diferentes de 0 ([RN-941](../business-rules.md#rn-941)), vira `--user` e dá o
+diferentes de 0 ([RN-941](../business-rules/contracts.md#rn-941)), vira `--user` e dá o
 dono (`uid=`, `gid=`, `mode=0700`) aos `tmpfs`; `command` são até 16
 argumentos passados depois da imagem; `null` equivale a ausente.
 
-### Execução de comando de terminal dentro do container real — rota nova ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+### Execução de comando de terminal dentro do container real — rota nova ([RN-492](../business-rules/engine.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
 
 | método | caminho |
 |---|---|
@@ -992,11 +992,11 @@ motivo }` é a forma NORMAL disso; o engine a transforma num
 crash, nunca uma queda silenciosa de volta para `System.cmd` fora do container.
 
 **Cada salto espera mais que o de baixo**
-([RN-604](../business-rules.md#rn-604)). O broker corta o comando em
+([RN-604](../business-rules/api.md#rn-604)). O broker corta o comando em
 `timeoutMs` e responde `timedOut: true`; a chamada da api ao broker espera
 `timeoutMs` mais a sobrecarga do próprio broker (`tetoDaOperacao` em
 `container-broker.client.ts` — no máximo `timeoutMs` + 45s, 5s para o
-`inspect` da tela, 195s para `start`/`stop`/`remove` — [RN-605](../business-rules.md#rn-605)); e a chamada do engine a esta
+`inspect` da tela, 195s para `start`/`stop`/`remove` — [RN-605](../business-rules/contracts.md#rn-605)); e a chamada do engine a esta
 rota passa `receive_timeout: timeoutMs + 90s`
 (`teto_do_container_exec_ms/1`). Antes da AT-233 o engine caía no padrão de
 15s do Req — o mesmo número de `TERMINAL_ACTION_TIMEOUT_MS` — e a api
@@ -1005,7 +1005,7 @@ respondeu". Um teto que se esgota agora diz isso: `motivo` nomeia a
 operação e o número (`teto-excedido`), distinto de broker
 inalcançável.
 
-O salto de FORA também tem teto ([RN-757](../business-rules.md#rn-757)): uma
+O salto de FORA também tem teto ([RN-757](../business-rules/engine.md#rn-757)): uma
 ação `terminal` que a api auto-aprova é executada dentro da mesma
 requisição `POST /internal/sessions/:sessionId/actions` (api →
 `/internal/actions/execute` → esta rota), então o engine a chama com
@@ -1029,7 +1029,7 @@ Um endpoint por agente, em vez de um genérico: cada um monta exatamente o que
 aquele papel precisa, e o Harness não acaba filtrando no engine o que
 a api poderia simplesmente não ter mandado.
 
-`/dev-context` ganhou `siblingTasks` na AT-448 ([RN-765](../business-rules.md#rn-765))
+`/dev-context` ganhou `siblingTasks` na AT-448 ([RN-765](../business-rules/engine.md#rn-765))
 — as OUTRAS tarefas da mesma história, `{id, title, status}` cada uma, sem a
 própria tarefa (`tarefasIrmas` em `get-dev-task-context.use-case.ts`), lista
 vazia quando a história tem uma tarefa. É o que `Engine.Gates.RecorteDaTarefa`
@@ -1039,7 +1039,7 @@ vire observação em vez de reprovação. Só leitura, mesma rota, mesmo
 guard `engine-service`: a superfície HTTP não muda.
 
 `/dev-context` também ganhou `task.primeiraDoModulo` na AT-433
-([RN-774](../business-rules/custo.md#rn-774)) — `true` quando o
+([RN-774](../business-rules/engine.md#rn-774)) — `true` quando o
 `backlog.task_claimed` mais antigo do projeto para aquele módulo é esta tarefa
 (`ehPrimeiraTarefaDoModulo` em `get-dev-task-context.use-case.ts`), `false`
 sem módulo ou sem claim nenhum. `Engine.Dev.TetoDaTarefa.efetivo/2`
@@ -1048,7 +1048,7 @@ Só leitura, mesma rota, mesmo guard `engine-service`: a superfície HTTP não
 muda.
 
 `/dev-context` também ganhou `moduleOpenTasks` e `moduleOpenTasksTotal` na
-AT-461 ([RN-785](../business-rules.md#rn-785)) — as tarefas ainda não concluídas das
+AT-461 ([RN-785](../business-rules/api.md#rn-785)) — as tarefas ainda não concluídas das
 OUTRAS histórias do mesmo módulo, cada uma com o título da história, no máximo 20, com
 o total real ao lado (`tarefasAbertasDoModulo` em
 `get-dev-task-context.use-case.ts`); histórias arquivadas ficam de fora.
@@ -1058,7 +1058,7 @@ reprovação. Só leitura, mesma rota, mesmo guard `engine-service`: a superfíc
 não muda.
 
 `/dev-context` também ganhou `moduleContract` na AT-462
-([RN-786](../business-rules.md#rn-786)) — o contrato vigente
+([RN-786](../business-rules/api.md#rn-786)) — o contrato vigente
 (`artifact.module_contracts`) do módulo da tarefa, `null` quando a história tem
 mais de um módulo e a tarefa não tem nenhum. O recorte do QA o apresenta como a
 fonte da interface: quando a história e o contrato divergem, o veredito
@@ -1067,12 +1067,12 @@ Só leitura, mesma rota, mesmo guard `engine-service`: a superfície HTTP não
 muda.
 
 `/dev-context` também ganhou `decisoes` na AT-521
-([RN-859](../business-rules.md#rn-859)) — os `decision_record`s do usuário cujo
+([RN-859](../business-rules/api.md#rn-859)) — os `decision_record`s do usuário cujo
 `afeta` toca a tarefa, a história dela ou uma das regras da história, mais novos primeiro,
 no máximo 10, cada texto cortado em 1.500 caracteres. Eles vencem RF/DoR em
 conflito. Só leitura, mesma rota: a superfície HTTP não muda.
 
-Desde a AT-526 ([RN-872](../business-rules.md#rn-872),
+Desde a AT-526 ([RN-872](../business-rules/api.md#rn-872),
 [ADR 0215](../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md)) ela também
 devolve `decisoesDoProjeto`: as outras decisões do projeto, aquelas cujo `afeta`
 não toca a tarefa, numa lista separada dentro do MESMO teto de 10 (as decisões
@@ -1083,11 +1083,11 @@ engine que não o conhece o ignora.
 `/infra-context` ganhou `gitProvider` na FASE 8c (`null` sem repositório
 provisionado) — é como o subagente de Workflows decide `.github/workflows/
 ci.yml` × `.gitlab-ci.yml`, sem rota nova (mesmo padrão "um GET por
-agente" — ver [RN-037](../business-rules.md#rn-037)). Ele **não** é
+agente" — ver [RN-037](../business-rules/ci.md#rn-037)). Ele **não** é
 `capabilities` do `GitProvider`: GitHub e GitLab têm as MESMAS capabilities
 (`{protectBranch: true, pullRequests: true}`) — só `provider.name` os distingue.
 
-`/infra-context` também ganhou `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules.md#rn-491))
+`/infra-context` também ganhou `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules/web.md#rn-491))
 — as candidatas roteadas do Arquiteto (`artifact.module_routing`, o
 primeiro consumidor HTTP do `GetModuleRoutingUseCase`), `{status, roteamento,
 version, eventId, createdAt}`, `SEM_ROTEAMENTO` quando o Arquiteto ainda não
@@ -1095,7 +1095,7 @@ rodou `route_modules_to_infra`. É o que `InfraLeadServer.build_kickoff/1`
 lista para que o modelo eleja uma candidata por `propose_container_start`
 em vez de inventar uma imagem fora dela.
 
-`/infra-context` também ganhou `projectImage` ([RN-852](../business-rules.md#rn-852),
+`/infra-context` também ganhou `projectImage` ([RN-852](../business-rules/api.md#rn-852),
 ADR 0213) — a decisão VIGENTE de `artifact.project_image` (`{image,
 rationale, network, resources}`), `null` quando nenhuma foi decidida. É o
 `FROM` do Dockerfile e a rede que o compose da Infra respeita.
@@ -1123,7 +1123,7 @@ rationale, network, resources}`), `null` quando nenhuma foi decidida. É o
 pegarem a mesma tarefa. Desde a RN-856 ele devolve a tarefa `in_progress` PRÓPRIA
 do agente (fora dos gates, não bloqueada) antes da fila `todo`.
 `tasks/:taskId/unblock` é a nova tentativa automática do engine depois de uma falha
-transitória de rede/provider ([RN-864](../business-rules.md#rn-864)): o mesmo caso
+transitória de rede/provider ([RN-864](../business-rules/engine.md#rn-864)): o mesmo caso
 de uso do desbloqueio humano, com ator `system`, e sem efeito quando a tarefa
 já não está bloqueada.
 `tasks/in-progress-by-dev` lista as tarefas `in_progress` do projeto seguradas por um
@@ -1132,7 +1132,7 @@ bloqueia as que nenhum dev agent vivo segura quando para uma execução.
 
 `/stories/:storyId/update` (título e/ou descrição) e
 `/stories/:storyId/archive` (`reason` opcional) são o `update_story` e o
-`archive_story` do PO ([RN-727](../business-rules.md#rn-727),
+`archive_story` do PO ([RN-727](../business-rules/api.md#rn-727),
 [ADR 0212](../adr/0212-historia-arquivada.md)). Os dois passam pela mesma régua
 das rotas do usuário — só história `draft` sem tarefa `in_progress` ou
 `in_review` — e recusam com 409 nomeado (`historia_arquivada`,
@@ -1145,7 +1145,7 @@ e `/tasks` a recusam. Corpo: `projectId` mais `title` (≤ 200) e/ou
 
 `/module-map` aceita, por módulo, um objeto `resources` opcional (`cpus`,
 `memoryMb`, `pidsLimit` — os três ou nenhum): o que AQUELE módulo precisa sozinho
-no container do projeto ([RN-683](../business-rules.md#rn-683),
+no container do projeto ([RN-683](../business-rules/api.md#rn-683),
 [ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)). Uma
 declaração parcial, um valor acima do teto do container, ou uma SOMA dos módulos acima
 dele devolve `400` com o motivo — os módulos compartilham UM container, então a soma é
@@ -1158,13 +1158,13 @@ artefato É o evento `artifact.project_image`, sem tabela própria, versionado
 (o vigente é o de maior `version`). Imagem sem tag explícita
 (`latest` recusado), `rationale` curto ou recurso acima do teto devolvem `400`, com
 o motivo completo no corpo — é o que deixa o modelo se corrigir pelo
-tool-result em vez de reemitir a mesma coisa ([RN-061](../business-rules/custo.md#rn-061)).
+tool-result em vez de reemitir a mesma coisa ([RN-061](../business-rules/engine.md#rn-061)).
 Enquanto nenhuma versão existe, `GET /projects/:projectId/container` (rota pública,
 `role:viewer`) devolve `status: "sem_decisao"`, e é o mesmo estado que
-faz a aba Código responder `409` ([RN-105](../business-rules/autenticacao.md#rn-105)).
+faz a aba Código responder `409` ([RN-105](../business-rules/api.md#rn-105)).
 
 `/c4-diagram` é a ferramenta `create_c4_diagram` do Arquiteto
-([RN-149](../business-rules/autenticacao.md#rn-149),
+([RN-149](../business-rules/api.md#rn-149),
 [ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): gera a sintaxe
 Mermaid dos níveis Context e Container do diagrama C4 (o modelo de Simon
 Brown). Mesmo calibre de `/module-map`/`/project-image` — o artefato É o
@@ -1179,7 +1179,7 @@ diagrama vigente em `c4Diagram`, no mesmo objeto que já leva `moduleMap`
 e `adrs`.
 
 `/module-routing` é a ferramenta `route_modules_to_infra` do Arquiteto
-([RN-487](../business-rules.md#rn-487),
+([RN-487](../business-rules/api.md#rn-487),
 [ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)): uma imagem
 candidata por módulo do `module_map` VIGENTE, cada uma com um `porque`. Mesmo
 calibre de `/module-map`/`/c4-diagram`/`/project-image` — o artefato É o
@@ -1193,7 +1193,7 @@ CANDIDATA: eleger entre as candidatas (ou recusar todas) é um
 passo posterior, da Infra.
 
 `/module-contracts` é a ferramenta `declare_module_contracts` do Arquiteto
-([RN-684](../business-rules.md#rn-684),
+([RN-684](../business-rules/api.md#rn-684),
 [ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)): por
 módulo do `module_map` VIGENTE, o que ele EXPÕE a quem depende dele.
 Mesmo calibre de `/module-routing` — o artefato É o evento
@@ -1231,10 +1231,10 @@ esvaziando (achado W, em
 
 A **máquina de estados do gate mora na api**, não no engine. O engine reporta o
 veredito; quem decide se a transição é legal — e recusa o QA tentando pular para
-`awaiting_user` — é o domínio ([RN-014](../business-rules.md#rn-014)).
+`awaiting_user` — é o domínio ([RN-014](../business-rules/api.md#rn-014)).
 
 Desde a AT-521 `/gates/verdict` também aceita `veredito: "needs_user_decision"`
-(só QA — [RN-860](../business-rules.md#rn-860), ADR 0214), com `pergunta`
+(só QA — [RN-860](../business-rules/api.md#rn-860), ADR 0214), com `pergunta`
 e `sugestao` ou um `openQuestionId` existente. Ele mantém o mesmo gate SEM
 contar correção, grava um `artifact.open_question` (autor `qa-agent`,
 afetando a tarefa) quando nenhum `openQuestionId` é dado, marca `pr.gate_changed`
@@ -1242,22 +1242,22 @@ com `esperandoUsuario: true`, e responde `nextAction: "await_user"` mais o
 `openQuestionId` — o engine estaciona o ciclo (ADR 0207) e responder a
 pergunta o retoma. O engine grava `artifact.open_question` por
 `POST /events` como qualquer outro artefato; a api valida o payload dele ali
-([RN-858](../business-rules.md#rn-858)). `stories/:storyId/update` e
+([RN-858](../business-rules/api.md#rn-858)). `stories/:storyId/update` e
 `stories/:storyId/complete` aceitam um `questionId` opcional: uma história `ready` só é
 corrigida quando cita uma pergunta que o usuário já respondeu
-([RN-859](../business-rules.md#rn-859)).
+([RN-859](../business-rules/api.md#rn-859)).
 
 Desde a AT-526 um `openQuestionId` no veredito precisa existir no projeto e
-estar ABERTO, conferido antes de qualquer escrita ([RN-870](../business-rules.md#rn-870)):
+estar ABERTO, conferido antes de qualquer escrita ([RN-870](../business-rules/api.md#rn-870)):
 desconhecido (ou de outro projeto) é **404** `reason: "pergunta_nao_encontrada"`;
 já respondido é **409** `reason: "pergunta_ja_respondida"` com a
 decisão do usuário em `decisao` — nada é gravado e nenhum `pr.gate_changed` é emitido.
 Em `POST /events`, um `artifact.open_question` cujo `afeta.regras` guarda o
 TÍTULO exato de um `artifact.business_rule` do projeto o tem convertido para o id;
 qualquer coisa que não seja nem id nem título exato é **400**
-([RN-871](../business-rules.md#rn-871)).
+([RN-871](../business-rules/api.md#rn-871)).
 
-Do lado do engine ([RN-862](../business-rules.md#rn-862),
+Do lado do engine ([RN-862](../business-rules/engine.md#rn-862),
 [ADR 0214](../adr/0214-pergunta-em-aberto-vira-pendencia.md)) o corpo de um
 veredito `needs_user_decision` leva `pergunta`, `sugestao` e/ou
 `openQuestionId` ao lado dos campos de sempre (chaves ausentes são omitidas; os outros
@@ -1266,7 +1266,7 @@ estaciona o ciclo ele mesmo — linha em `gate_states` com passo `awaiting_user_
 `parked_at` preenchido, `gate.rescue_parked` no log —, então o resgate periódico nunca
 o reinicia; isso não depende de ler `await_user` de volta. A api o retoma
 pelo `POST /internal/projects/:p/tasks/:t/gates/qa/resume` existente
-([RN-724](../business-rules.md#rn-724)).
+([RN-724](../business-rules/engine.md#rn-724)).
 
 `/delegations` é DIFERENTE das outras três: ela não move a máquina de
 estados do gate — só grava o desfecho de um delegado de área (QA, FASE 8b; Infra,
@@ -1274,7 +1274,7 @@ FASE 8c — [ADR 0038](../adr/0038-hierarquia-de-agentes.md)). O lead da área
 chama esta rota uma vez por delegado (`completed`/`failed`/`dispensed`),
 SEPARADA da chamada que a área usa para reportar o resultado consolidado para
 fora (`/gates/verdict` para QA, `open_infra_pr` para Infra) — ver
-[RN-036](../business-rules.md#rn-036)/[RN-037](../business-rules.md#rn-037).
+[RN-036](../business-rules/engine.md#rn-036)/[RN-037](../business-rules/ci.md#rn-037).
 Escopada à sessão, não à tarefa: `taskId` vai no CORPO, opcional — o QA sempre
 o manda, a Infra nunca (a delegação é sobre a sessão, sem tarefa de backlog
 por trás de uma PR de infra).
@@ -1289,12 +1289,12 @@ por trás de uma PR de infra).
 | POST | `/instruction-patches` |
 | POST | `/max-parallel-proposals` |
 
-A validação de evidência ([RN-021](../business-rules.md#rn-021)) e o catálogo
-fechado de competências ([RN-024](../business-rules.md#rn-024)) são impostos
+A validação de evidência ([RN-021](../business-rules/api.md#rn-021)) e o catálogo
+fechado de competências ([RN-024](../business-rules/api.md#rn-024)) são impostos
 **aqui**, na api. O engine não consegue gravar hipótese sem evidência
 válida nem perfilar competência fora do catálogo, mesmo que o modelo peça.
 
-`/anamnese-window` ([RN-722](../business-rules.md#rn-722)) fecha a janela
+`/anamnese-window` ([RN-722](../business-rules/engine.md#rn-722)) fecha a janela
 analisada quando uma rodada termina SEM perfil (`skip_proficiency`): grava uma
 linha em `anamnese_runs` com zero perfis, para que a próxima rodada comece no
 `window_to` dela em vez de reler — e pagar por — a mesma janela para sempre.
@@ -1306,14 +1306,14 @@ o `EngineApiClient` em `engine_api_client.ex`.
 subir o teto de paralelismo de uma área, e é a **api** que recusa uma proposta
 que não sobe nada — a Anamnese roda periodicamente, e sem essa
 recusa repropunha a mesma coisa a cada rodada. A ação que nasce disso
-**nunca é auto-aprovável** ([RN-086](../business-rules/custo.md#rn-086)): automatizar o ajuste
+**nunca é auto-aprovável** ([RN-086](../business-rules/api.md#rn-086)): automatizar o ajuste
 seria o produto subindo o próprio limite de gasto.
 
 Esta rota **respondia `400` em todo projeto** até a FASE 18, e nada no contrato
 denunciava isso: a validação `área "<key>" não existe neste projeto` é a
 primeira coisa que ela faz, e `agent_areas` nunca era escrita — o `upsert` do repositório
 não tinha chamador nenhum. Agora a área nasce com o projeto
-([RN-094](../business-rules/custo.md#rn-094)) e a recusa volta a significar o que
+([RN-094](../business-rules/api.md#rn-094)) e a recusa volta a significar o que
 diz: chave de área inexistente. Projetos anteriores à correção são cobertos
 pela migration de backfill.
 
@@ -1329,30 +1329,30 @@ pela migration de backfill.
 As duas rotas de template gravam/leem versões de prompt no Neo4j, idempotentes
 por hash — `Engine.Harness.InstructionFiles` (fonte `:graph`) e os
 workers do Psicólogo/Anamnese resolvem kickoff/identidade por aqui, sempre com fallback
-para o texto inline em qualquer falha ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+para o texto inline em qualquer falha ([RN-413](../business-rules/infra.md#rn-413)/[RN-417](../business-rules/engine.md#rn-417)).
 `scripts/dev/seed-prompts.ts` popula o grafo a partir de `prompts/*.md`.
 
 `/internal/rag/search` é uma PROJEÇÃO fina sobre `HybridSearchUseCase` (a
 mesma busca híbrida vetorial+léxica que a aba "Chat RAG" já usa) — service
 token em vez de JWT de usuário, mesmo formato de resposta com `degraded` explícito
 quando o embedding não estava disponível
-([RN-414](../business-rules.md#rn-414)). Desde a [RN-479](../business-rules.md#rn-479)
+([RN-414](../business-rules/engine.md#rn-414)). Desde a [RN-479](../business-rules/api.md#rn-479)
 o corpo dela também leva os OPCIONAIS `sessionId`/`agent`: a api não consegue deduzir
 nenhum dos dois, e são eles que a deixam gravar o ator da telemetria e — só quando
 há sessão — narrar `rag.search` na timeline. A resposta ganhou
 `searchId` mais um `chunkId` por resultado, que juntos formam a referência de que o
 voto do agente precisa.
 
-`/internal/rag/feedback` é esse voto ([RN-480](../business-rules.md#rn-480)),
+`/internal/rag/feedback` é esse voto ([RN-480](../business-rules/api.md#rn-480)),
 a ferramenta `rag_feedback` do lado do engine. Ela reusa o MESMO caso de uso da
 rota humana — não há segundo caminho de julgamento —, e um
 `searchId`/`chunkId` desconhecido volta como **400 que a ferramenta transforma em
-tool-result de erro** para o modelo corrigir ([RN-061](../business-rules/custo.md#rn-061)),
+tool-result de erro** para o modelo corrigir ([RN-061](../business-rules/engine.md#rn-061)),
 nunca um crash. **Nenhuma das quatro é o caminho de ESCRITA da memória
 relacional** — handoff, hipótese, perfil e fechamento de sessão
 chegam ao grafo pelo `GraphProjector`, do lado da api, drenando uma
 segunda linha da outbox transacional; o engine nunca escreve no grafo diretamente
-([RN-416](../business-rules.md#rn-416)).
+([RN-416](../business-rules/api.md#rn-416)).
 
 ## broker → api {#broker--api}
 
@@ -1373,28 +1373,28 @@ impressão de compartimentar sem compartimentar nada, ao
 custo de dobrar o que precisa ser rotacionado em conjunto — o raciocínio completo mora
 em `apps/api/src/infrastructure/security/service-token.ts`.
 
-**A direção desta chamada é o ponto inteiro** ([RN-485](../business-rules.md#rn-485)).
+**A direção desta chamada é o ponto inteiro** ([RN-485](../business-rules/produto.md#rn-485)).
 O broker não RECEBE uma spec de container — ele recebe um `projectId` mais uma
 de cinco operações e vem aqui ler:
 
 1. a identidade do projeto (`projectId`, `projectSlug`, `workspaceId`) e
-   `workspaceDirName`, o nome de pasta congelado na criação ([RN-109](../business-rules/autenticacao.md#rn-109));
+   `workspaceDirName`, o nome de pasta congelado na criação ([RN-109](../business-rules/api.md#rn-109));
 2. `executionMode`. O broker atende `container` **e** `mounted`, e recusa
    `runner` com `409` — a pasta de um projeto runner está na máquina do usuário e
-   este host não a enxerga ([RN-503](../business-rules.md#rn-503));
+   este host não a enxerga ([RN-503](../business-rules/api.md#rn-503));
 3. `localizacao`, o localizador discriminado da pasta do projeto — ver abaixo;
 4. a decisão de imagem vigente do Arquiteto, ou `null` enquanto não há nenhuma
-   ([RN-105](../business-rules/autenticacao.md#rn-105)), caso em que só `start` é recusado
+   ([RN-105](../business-rules/api.md#rn-105)), caso em que só `start` é recusado
    e as outras quatro operações continuam funcionando;
 5. desde o [ADR 0228](../adr/0228-comando-do-app-e-rede-do-container.md), quatro
    campos opcionais, cada um `null` quando não há declaração (e sempre `null`
    em projeto `runner`): `comandoDoApp`, o `run.app.command` vigente em
-   `artifact.run_instructions` ([RN-933](../business-rules.md#rn-933)); e
+   `artifact.run_instructions` ([RN-933](../business-rules/api.md#rn-933)); e
    `ports` (`[{host, container, protocol: 'tcp'}]`), `dns` (IPs) e `extraHosts`
    (`[{name, ip}]`), do `artifact.container_network` vigente
-   ([RN-932](../business-rules.md#rn-932)). O broker revalida os quatro com as
+   ([RN-932](../business-rules/api.md#rn-932)). O broker revalida os quatro com as
    regras do `docker-port` antes do daemon, e eles só valem num container
-   recriado (`container_recreate`, [RN-934](../business-rules.md#rn-934)).
+   recriado (`container_recreate`, [RN-934](../business-rules/api.md#rn-934)).
 
 A partir disso o broker COMPÕE imagem, rede, recursos e o único mount, e
 revalida tudo antes de entregar qualquer coisa ao daemon. Não há campo em
@@ -1408,14 +1408,14 @@ sistema de arquivos do HOST, então `/data/project-workspaces/<x>` (um caminho d
 da api) faria o daemon criar e montar uma pasta VAZIA.
 
 **`localizacao`: qual raiz, mais o pedaço que essa raiz não cobre**
-([RN-503](../business-rules.md#rn-503),
+([RN-503](../business-rules/api.md#rn-503),
 [ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). O broker tem DUAS raízes
 próprias, e a spec diz a qual delas um segmento pertence em vez de o
 broker adivinhar:
 
 | `localizacao.tipo` | `segmento` | raiz contra a qual resolve |
 |---|---|---|
-| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/autenticacao.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/api.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
 | `montada` | o caminho RELATIVO sob a base (pode conter `/`) | `BRABO_PROJECTS_HOST_BASE` |
 | `indisponivel` | ausente — há um `motivo` no lugar | nenhuma |
 
@@ -1438,7 +1438,7 @@ um projeto.
 
 `usuarioDaPasta` (`{ uid, gid }` ou `null`) é o DONO da pasta como a api
 o mediu ([ADR 0180](../adr/0180-container-com-o-dono-da-pasta.md),
-[RN-627](../business-rules.md#rn-627)): o broker sobe o container com
+[RN-627](../business-rules/contracts.md#rn-627)): o broker sobe o container com
 `--user uid:gid` para que o dev agent consiga escrever em `/work` sob `--cap-drop ALL`.
 `null` quando a pasta não pode ser medida, o dono é root ou o projeto é
 `runner`. Ele nunca viaja numa requisição ao broker.
@@ -1455,20 +1455,20 @@ broker, cinco operações mais `/health`, alcançável só pela api (uma rede
 Compose `internal: true`, sem porta publicada). A porta da api é
 `ContainerBrokerPort`, e hoje as **cinco** têm chamadores. `inspect` é a
 única leitura: `GET /projects/:projectId/container/lifecycle` a usa para devolver o
-estado OBSERVADO ao lado do REGISTRADO ([RN-486](../business-rules.md#rn-486)).
+estado OBSERVADO ao lado do REGISTRADO ([RN-486](../business-rules/api.md#rn-486)).
 As outras quatro são efeito externo e não acontecem sem uma
 `proposed_action` — `start`/`stop`/`remove` atrás dos três tipos de ação de
 ciclo de vida ([ADR 0133](../adr/0133-infra-elege-imagem-do-roteamento.md),
 [ADR 0136](../adr/0136-pagina-global-de-containers.md)) e `exec` atrás do
 comando de terminal de um dev agent dentro de um container rodando
 ([ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md)). Desde a
-[RN-503](../business-rules.md#rn-503) esses chamadores alcançam o broker para
+[RN-503](../business-rules/api.md#rn-503) esses chamadores alcançam o broker para
 projetos `container` **e** `mounted`; só `runner` vai para o runner
 no lugar.
 
 ## install.sh → api
 
-Desde a [RN-546](../business-rules.md#rn-546) /
+Desde a [RN-546](../business-rules/produto.md#rn-546) /
 [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) existe um QUARTO
 chamador, e ele não é um serviço de vida longa: o **instalador de uma linha**, uma vez,
 no fim de uma instalação.
@@ -1476,7 +1476,7 @@ no fim de uma instalação.
 | método | caminho |
 |---|---|
 | POST | `/internal/first-account` (**não** escopada à sessão, **não** escopada a projeto) |
-| POST | `/internal/machine-device-keys` (idem — [RN-552](../business-rules.md#rn-552)) |
+| POST | `/internal/machine-device-keys` (idem — [RN-552](../business-rules/api.md#rn-552)) |
 
 Mesma autenticação de tudo acima — e aqui a escolha do mecanismo está
 fazendo mais trabalho que o normal. `BRABO_SERVICE_TOKEN` é gerado pelo próprio `install.sh`
@@ -1501,7 +1501,7 @@ intocado.
 sobre a INSTALAÇÃO, não sobre o e-mail pedido — um e-mail que ninguém
 jamais usou é recusado do mesmo jeito. É isso que a separa de um criador de
 contas: não há como continuar chamando-a com endereços diferentes. Uma
-restauração de migração ([RN-530](../business-rules.md#rn-530)) silencia o passo pelo
+restauração de migração ([RN-530](../business-rules/infra.md#rn-530)) silencia o passo pelo
 mesmo teste.
 
 **Nenhuma rota pública nasceu.** Uma rota pública "criar o primeiro owner" é uma corrida
@@ -1514,7 +1514,7 @@ a resposta é `{ userId, email, workspaceId }`. A senha é usada e
 descartada — nunca no `.env`, nunca no marcador do instalador, nunca num
 log — e nunca é gerada por código nenhum, então nenhuma instalação nasce com uma
 senha que outra pessoa conhece. O workspace pessoal
-([RN-410](../business-rules.md#rn-410)) é criado na MESMA transação: uma
+([RN-410](../business-rules/api.md#rn-410)) é criado na MESMA transação: uma
 conta sem ele entraria num painel onde "Novo projeto" não tem onde
 criar.
 
@@ -1531,9 +1531,9 @@ parear o agente local, e parear precisa de uma credencial — a única que
 existia era presa a um PROJETO
 ([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)), numa
 instalação que ainda não tem projeto. Desde a
-[RN-543](../business-rules.md#rn-543) uma chave de máquina é só uma chave de dispositivo com
+[RN-543](../business-rules/produto.md#rn-543) uma chave de máquina é só uma chave de dispositivo com
 `project_id NULL`; o que faltava era uma rota que criasse uma, e a
-[RN-552](../business-rules.md#rn-552) é ela.
+[RN-552](../business-rules/api.md#rn-552) é ela.
 
 **A credencial é o mesmo service token, e a alternativa foi recusada por
 um motivo escrito.** Exigir a credencial do próprio usuário recém-criado
@@ -1547,7 +1547,7 @@ o service token prova exatamente isso.
 `{ id, userId, name, createdAt, replacedKeyIds }`. O par é gerado NA
 MÁQUINA e só a metade pública é enviada; uma JWK levando `d` é recusada com
 `400` que diz isso, nunca guardada. O `id` é o campo que importa: ele vai
-DENTRO da JWK privada como `kid` ([RN-475](../business-rules.md#rn-475)), o
+DENTRO da JWK privada como `kid` ([RN-475](../business-rules/web.md#rn-475)), o
 único vínculo entre o arquivo em disco e a metade pública no servidor — todo
 passo seguinte só o repassa.
 
@@ -1578,28 +1578,28 @@ Vinte e duas rotas de comando, mais as de saúde. Sob `/internal` com `VerifySer
 | método | caminho | o que dispara |
 |---|---|---|
 | POST | `/sessions` | sobe o `SessionServer` |
-| POST | `/sessions/:id/event-appended` | corpo `{type, actorId}` — a api gravou um evento por conta própria (AT-157, [RN-579](../business-rules.md#rn-579)); o engine transmite `event.appended` em `session:<id>` só com esses dois campos. `204`; `400` sem `type`. Não precisa de processo de sessão: sem assinante a transmissão não faz nada |
+| POST | `/sessions/:id/event-appended` | corpo `{type, actorId}` — a api gravou um evento por conta própria (AT-157, [RN-579](../business-rules/engine.md#rn-579)); o engine transmite `event.appended` em `session:<id>` só com esses dois campos. `204`; `400` sem `type`. Não precisa de processo de sessão: sem assinante a transmissão não faz nada |
 | POST | `/sessions/:id/agent/start` | inicia um turno de agente |
-| POST | `/sessions/:id/agent/message` | mensagem do usuário no fio — corpo `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` no ACEITE**, antes de o turno terminar: corpo vazio quando o turno começou (`lida`), `{entrega: "enfileirada", posicao}` quando o agente estava no meio de um turno e a mensagem entrou na FILA dele — lida com as outras num turno só quando o atual termina ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` quando o agente recusa antes de começar: `aguardando_aprovacao` (Dev Lead suspenso) ou `fila_de_mensagens_cheia` (10 já na fila) — mensagem não recebe mais `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` é o id do `chat.message` que a api gravou; é o que cancela a mensagem enfileirada. `idiomaDaResposta` é OPCIONAL: o idioma que a api resolveu para o AUTOR da mensagem naquela sessão; o engine o acrescenta como mensagem de sistema efêmera no fim de toda chamada de LLM daquele turno ([RN-622](../business-rules.md#rn-622)). Ausente (api mais velha, ou a resolução falhou) quer dizer sem orientação — nunca recusa |
-| POST | `/sessions/:id/agent/queued-message/cancel` | corpo `{projectId, agent, mensagemId, userId}` — cancela UMA mensagem esperando na fila do agente ([RN-673](../business-rules.md#rn-673)); a api já conferiu que foi `userId` quem a enviou. Com o agente de pé, o processo dele decide: `204`, ou **`409`** `mensagem_fora_da_fila` (já lida ou cancelada). Com o agente fora, `chat.message_cancelled` é gravado direto — a fila é o log. **`422`** para agente sem conversa ou corpo incompleto |
-| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-122](../business-rules.md#rn-122)) — mata a Task que segura a chamada de LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
-| POST | `/sessions/:id/agent/readiness` | confirmação de prontidão — corpo `{projectId}` obrigatório (`400` sem ele); sobe o Criativo se o fechamento anterior o parou ([RN-956](../business-rules.md#rn-956)); `202` no aceite; `409` turno em curso, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (FASE 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api; `202` no aceite, `409` turno em curso ([RN-578](../business-rules.md#rn-578)) |
-| POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff à Infra — corpo `{projectId}` obrigatório (`400` sem ele); sobe o Arquiteto se a sessão foi reaberta com ele parado ([RN-956](../business-rules.md#rn-956)); `202` no aceite, com o turno de fecho ainda rodando; `409` turno em curso ([RN-578](../business-rules.md#rn-578)). É a ÚNICA oferta que a confirmação de arquitetura faz: a rota `offer-dev-handoff` saiu, e o Dev Lead é oferecido pelo Infra Lead quando o container do projeto está `running` ([RN-672](../business-rules.md#rn-672)) |
+| POST | `/sessions/:id/agent/message` | mensagem do usuário no fio — corpo `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` no ACEITE**, antes de o turno terminar: corpo vazio quando o turno começou (`lida`), `{entrega: "enfileirada", posicao}` quando o agente estava no meio de um turno e a mensagem entrou na FILA dele — lida com as outras num turno só quando o atual termina ([RN-673](../business-rules/engine.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` quando o agente recusa antes de começar: `aguardando_aprovacao` (Dev Lead suspenso) ou `fila_de_mensagens_cheia` (10 já na fila) — mensagem não recebe mais `turno_em_andamento` ([RN-578](../business-rules/engine.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` é o id do `chat.message` que a api gravou; é o que cancela a mensagem enfileirada. `idiomaDaResposta` é OPCIONAL: o idioma que a api resolveu para o AUTOR da mensagem naquela sessão; o engine o acrescenta como mensagem de sistema efêmera no fim de toda chamada de LLM daquele turno ([RN-622](../business-rules/engine.md#rn-622)). Ausente (api mais velha, ou a resolução falhou) quer dizer sem orientação — nunca recusa |
+| POST | `/sessions/:id/agent/queued-message/cancel` | corpo `{projectId, agent, mensagemId, userId}` — cancela UMA mensagem esperando na fila do agente ([RN-673](../business-rules/engine.md#rn-673)); a api já conferiu que foi `userId` quem a enviou. Com o agente de pé, o processo dele decide: `204`, ou **`409`** `mensagem_fora_da_fila` (já lida ou cancelada). Com o agente fora, `chat.message_cancelled` é gravado direto — a fila é o log. **`422`** para agente sem conversa ou corpo incompleto |
+| POST | `/sessions/:id/agent/cancel` | cancela o turno em curso do agente ativo ([RN-122](../business-rules/engine.md#rn-122)) — mata a Task que segura a chamada de LLM (`Task.shutdown/2`, `:brutal_kill`); idempotente, NO-OP sem turno em curso |
+| POST | `/sessions/:id/agent/readiness` | confirmação de prontidão — corpo `{projectId}` obrigatório (`400` sem ele); sobe o Criativo se o fechamento anterior o parou ([RN-956](../business-rules/engine.md#rn-956)); `202` no aceite; `409` turno em curso, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules/engine.md#rn-578)) |
+| POST | `/sessions/:id/agent/revise` | devolve ao PO uma história que o usuário recusou promover (FASE 12c — RN-048); **404 se o PO não está de pé**, e isso não é erro para a api; `202` no aceite, `409` turno em curso ([RN-578](../business-rules/engine.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | oferta de handoff à Infra — corpo `{projectId}` obrigatório (`400` sem ele); sobe o Arquiteto se a sessão foi reaberta com ele parado ([RN-956](../business-rules/engine.md#rn-956)); `202` no aceite, com o turno de fecho ainda rodando; `409` turno em curso ([RN-578](../business-rules/engine.md#rn-578)). É a ÚNICA oferta que a confirmação de arquitetura faz: a rota `offer-dev-handoff` saiu, e o Dev Lead é oferecido pelo Infra Lead quando o container do projeto está `running` ([RN-672](../business-rules/api.md#rn-672)) |
 | POST | `/sessions/:id/execution/start` | ativa a fase de execução |
 | POST | `/sessions/:id/execution/parallelize` | cria subagentes — **executa, não decide** (ver abaixo) |
 | POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearma um dev agent travado (FASE 12b — RN-047); 404 se não existe, **409 se não está `idle_tripped`** |
 | POST | `/sessions/:id/psychologist/reanalyze` | reanálise sob demanda |
-| GET | `/psychologist/status` | lê a flag global `PSYCHOLOGIST_ENABLED` ([RN-454](../business-rules.md#rn-454)) — sem efeito colateral, global (não escopada a sessão) |
-| POST | `/projects/:id/anamnese/run` | rodada da Anamnese, enfileirada com `origem: "manual"`: rodada sem sujeito elegível não faz chamada de LLM e grava `anamnese.run_skipped` com `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules.md#rn-680)) |
+| GET | `/psychologist/status` | lê a flag global `PSYCHOLOGIST_ENABLED` ([RN-454](../business-rules/engine.md#rn-454)) — sem efeito colateral, global (não escopada a sessão) |
+| POST | `/projects/:id/anamnese/run` | rodada da Anamnese, enfileirada com `origem: "manual"`: rodada sem sujeito elegível não faz chamada de LLM e grava `anamnese.run_skipped` com `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules/engine.md#rn-680)) |
 | POST | `/sessions/:id/agent/resume` | o botão "Retomar" do turno que o reinício do engine interrompeu (AT-582, ADR 0226) — corpo `{projectId, agent}`; grava `agent.turn_resumed` com `automatica: false` e sobe o turno pela `TurnoAssincrono`; `202` ao aceitar, `409` `turno_nao_interrompido` (o último desfecho do agente não é o reinício, ou há turno/retomada em curso) ou `agente_sem_retomada` (agente que não conversa ou cujo servidor não sabe retomar) |
-| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | retoma, por gesto humano, um ciclo de gate ESTACIONADO ([RN-724](../business-rules.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202` e o gate é despachado de novo; `409` `gate_nao_estacionado` quando o ciclo não está estacionado (ou o gate não é `qa`/`secops`) |
+| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | retoma, por gesto humano, um ciclo de gate ESTACIONADO ([RN-724](../business-rules/engine.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202` e o gate é despachado de novo; `409` `gate_nao_estacionado` quando o ciclo não está estacionado (ou o gate não é `qa`/`secops`) |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalida o cache de instruções |
-| GET | `/agents/catalog` | catálogo só de leitura dos agentes: `{agentes: [{agente, identidade, ferramentas: [{nome, descricao}]}]}`, sem parâmetro e sem schema, descrição com teto de 1 000 caracteres; a api o junta à instrução vigente do projeto em `GET /projects/:projectId/agent-catalog` e, com o engine fora, responde `motivoSemCatalogo` em vez de "sem ferramentas" ([RN-995](../business-rules.md#rn-995)) |
-| POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada**; desde a AT-612 o corpo de `/actions/execute` pode trazer `alvo: {qa: true, taskId}`, que a api só repassa quando o ator é `qa-automacao` e a tarefa é do projeto ([RN-938](../business-rules.md#rn-938)), e o engine roda o comando na instância de QA da tarefa em vez do container de trabalho ([RN-940](../business-rules.md#rn-940)) |
-| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | pede ao RUNNER conectado ao projeto que suba/pare/remova o container dele ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — só para projetos `mounted`/`runner`; `container` continua passando pelo broker, nunca por aqui |
-| POST | `/projects/:id/runner/disconnect` | derruba a conexão VIVA do runner daquele usuário no projeto, qualquer que seja a credencial usada ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — desde o [ADR 0201](../adr/0201-revogacao-por-chave.md) chamada pela remoção de membro ([RN-615](../business-rules.md#rn-615)) e como fallback de uma revogação de chave; sempre `200`, com `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
-| POST | `/runner/disconnect-credential` | derruba toda conexão de runner aberta COM uma credencial, em qualquer projeto, e anula os tickets pendentes dela ([RN-685](../business-rules.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — chamada quando uma chave de dispositivo ou um PAT é revogado. Corpo: `credentialKind` (`device_key` \| `pat`), `credentialId` e, só para conexão LEGADA (ticket sem credencial), `userId` + `projectIds`. `200` com a contagem `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` só para credencial malformada |
+| GET | `/agents/catalog` | catálogo só de leitura dos agentes: `{agentes: [{agente, identidade, ferramentas: [{nome, descricao}]}]}`, sem parâmetro e sem schema, descrição com teto de 1 000 caracteres; a api o junta à instrução vigente do projeto em `GET /projects/:projectId/agent-catalog` e, com o engine fora, responde `motivoSemCatalogo` em vez de "sem ferramentas" ([RN-995](../business-rules/api.md#rn-995)) |
+| POST | `/actions/execute` · `/actions/execute-git` | executa uma ação **já aprovada**; desde a AT-612 o corpo de `/actions/execute` pode trazer `alvo: {qa: true, taskId}`, que a api só repassa quando o ator é `qa-automacao` e a tarefa é do projeto ([RN-938](../business-rules/api.md#rn-938)), e o engine roda o comando na instância de QA da tarefa em vez do container de trabalho ([RN-940](../business-rules/engine.md#rn-940)) |
+| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | pede ao RUNNER conectado ao projeto que suba/pare/remova o container dele ([RN-497](../business-rules/produto.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — só para projetos `mounted`/`runner`; `container` continua passando pelo broker, nunca por aqui |
+| POST | `/projects/:id/runner/disconnect` | derruba a conexão VIVA do runner daquele usuário no projeto, qualquer que seja a credencial usada ([RN-520](../business-rules/api.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — desde o [ADR 0201](../adr/0201-revogacao-por-chave.md) chamada pela remoção de membro ([RN-615](../business-rules/api.md#rn-615)) e como fallback de uma revogação de chave; sempre `200`, com `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+| POST | `/runner/disconnect-credential` | derruba toda conexão de runner aberta COM uma credencial, em qualquer projeto, e anula os tickets pendentes dela ([RN-685](../business-rules/api.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — chamada quando uma chave de dispositivo ou um PAT é revogado. Corpo: `credentialKind` (`device_key` \| `pat`), `credentialId` e, só para conexão LEGADA (ticket sem credencial), `userId` + `projectIds`. `200` com a contagem `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` só para credencial malformada |
 
 **`runner/disconnect` é a outra metade de uma revogação, e quem é dono da
 decisão é a api.** `RevokeRunnerDeviceKeyUseCase` grava a revogação
@@ -1641,7 +1641,7 @@ compõe os dez campos de `EspecificacaoDeContainerParaRunner`
 `imagemVersao`, `rede`, `cpus`, `memoriaMb`, `pidsLimit`) e o runner entrega
 esse mapa, mais a `raizDoProjeto` que só ele conhece, a `especificacaoValidada`
 (`packages/docker-port`), que recusa a especificação inteira se faltar qualquer um
-deles. Ela recusava toda vez até a [RN-508](../business-rules.md#rn-508)
+deles. Ela recusava toda vez até a [RN-508](../business-rules/api.md#rn-508)
 virar verdade no código: `projectId` nunca era copiado, então este caminho nunca
 subiu container. Como nada no meio valida o mapa, um campo
 faltando seria invisível às três suítes — a corrente é o que
@@ -1657,7 +1657,7 @@ campo enviado — foram conferidos contra o mesmo validador e estão corretos.
 
 #### Quem PEDE `containers/start` mudou, e continua não sendo rota interna
 
-Até a [RN-521](../business-rules.md#rn-521) havia exatamente UM jeito de chegar a
+Até a [RN-521](../business-rules/api.md#rn-521) havia exatamente UM jeito de chegar a
 estas três rotas: o Infra Lead, dentro de uma sessão, chamando a própria ferramenta. Quando
 esse caminho falhou numa execução real do `exp004` não havia como repetir uma
 operação de máquina exceto abrir uma sessão nova e conversar com um agente — cinco dev agents
@@ -1688,7 +1688,7 @@ uma porta dos fundos.
 
 **`execution/parallelize` é o mesmo caso, e desde a FASE 14d isso é visível.**
 A rota PÚBLICA de mesmo nome (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
-passa primeiro pelo teto da área ([RN-083](../business-rules/custo.md#rn-083)): dentro
+passa primeiro pelo teto da área ([RN-083](../business-rules/api.md#rn-083)): dentro
 dele o agente sobe na hora; acima dele a api cria uma `proposed_action` e **não
 chama o engine**. Quando o engine recebe este comando, a decisão já foi tomada
 — pelo teto ou por você.

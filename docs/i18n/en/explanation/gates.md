@@ -50,7 +50,7 @@ delegation exists, because the ceiling downgrades `auto_approve` to
 
 In the four gates the constitution declares manual, this field is
 invariant and locked by a test
-([RN-071](../business-rules/custo.md#rn-071)).
+([RN-071](../business-rules/api.md#rn-071)).
 
 ## Three forms of evidence, because not every proof lives in the log
 
@@ -212,7 +212,7 @@ describing what the code now does.
 
 That input did not survive real use.
 [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
-([RN-674](../business-rules.md#rn-674)) moved the test plan to AFTER the
+([RN-674](../business-rules/engine.md#rn-674)) moved the test plan to AFTER the
 dev's delivery — written PRE-DEV it had no code to read and ran out of
 iterations — and the gate's `entrada` changed from `plano-de-teste` to
 `module_map`: the Dev Lead judges the story and the module map it already
@@ -225,7 +225,7 @@ changed because WHO DELIVERS WHAT TO WHOM changed, not to make a gate pass.
 `implementavel` is the example of a gate that needed new code to leave
 `planned`. `paralelismo-autorizado` is the opposite: the mechanism
 (`RequestParallelizationUseCase`,
-[RN-083](../business-rules/custo.md#rn-083)) has been in production since
+[RN-083](../business-rules/api.md#rn-083)) has been in production since
 PHASE 14d — it was the registry that fell behind, declaring `planned`
 over something that was already `active` in the sibling `docs/fluxo.yml`
 and in the code. The fluxo.yml × code audit (finding A1/B5,
@@ -245,7 +245,7 @@ the UI, if its flow is a different one.
 `implementavel` and `paralelismo-autorizado` are the two examples of a
 gate that already existed (declared `planned` or stale) and gained its
 registry entry AFTERWARD. `necessidade-validada`
-([RN-406](../business-rules.md#rn-406),
+([RN-406](../business-rules/contracts.md#rn-406),
 [ADR 0095](../adr/0095-gate-necessidade-validada.md)) is the third
 pattern: mechanism and registry were born in the SAME change, because
 the gate itself didn't exist anywhere — not `planned` in the file, nor
@@ -262,7 +262,7 @@ exist; `warn` describes exactly what the gate is: a measurement that a
 human validated the need's merit, not a gate that blocks the next
 step.
 
-`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+`workspace-verificado` ([RN-423](../business-rules/runner.md#rn-423),
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
 is the fourth example, and the clearest of the four about why `warn` isn't
 a "weak lock": what really locks things down HERE isn't the gate, it's the
@@ -276,7 +276,7 @@ would describe a lock that already exists somewhere else, the same way
 `necessidade-validada` would have lied about one that doesn't exist
 anywhere.
 
-`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+`rag-acertivo` ([RN-490](../business-rules/api.md#rn-490)/[RN-498](../business-rules/ci.md#rn-498),
 [ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
 is the fifth example, and the reason it stays `warn` changed shape once,
 which is worth telling in full. It was born `warn` for the plainest
@@ -329,7 +329,7 @@ nightly or weekly job of under half an hour, no secret, no GPU. The
 recorded floor of 1/6 — and not because of the model's judgment. The
 event log of the second run shows why: every `npm test` the QA proposed was
 auto-approved (`permissions.json allow: npm test`) and then **refused by
-the engine**, because since [RN-502](../business-rules.md#rn-502)
+the engine**, because since [RN-502](../business-rules/engine.md#rn-502)
 ([ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md),
 2026-09-04) a `container` project with no `running` container does not run
 terminal commands anywhere. The seed script dates from 2026-08-30 and never
@@ -372,7 +372,7 @@ a new `artifact.project_image` through `DecidirImagemDoProjetoUseCase` (so
 and registers `provisioning → running` through the state machine. The seed
 proposes and approves instead of calling the execution use case directly
 because two rules live on the proposal side — the named 409
-`sem_broker_na_instalacao` ([RN-591](../business-rules.md#rn-591)) and
+`sem_broker_na_instalacao` ([RN-591](../business-rules/api.md#rn-591)) and
 `decide()`'s policy for `container_start` — and a harness that skipped them
 would stop following production the day either changed.
 
@@ -470,7 +470,7 @@ hold no RN-502 refusal (the AT-067 signature) — and on failure it prints the
 logs, as the RAG job does. The image to pre-pull is read from the seed's own
 constant (`IMAGEM_DO_GOLDEN_SET_QA`), not from a second literal: the
 broker's `docker run` runs under the Docker port's 30 s control ceiling
-([RN-604](../business-rules.md#rn-604)), and a job that pulled one image
+([RN-604](../business-rules/api.md#rn-604)), and a job that pulled one image
 while the seed asked for another would put the pull inside that ceiling.
 
 The proof run, with a temporary `push` trigger on the branch removed before
@@ -502,8 +502,8 @@ finding of that shape; the first was `paralelismo-autorizado` ageing in
 the opposite direction.
 
 It enters as `planned`/`warn`, with no `evidencia` block and no
-verification script, because [RN-070](../business-rules/custo.md#rn-070)/
-[RN-071](../business-rules/custo.md#rn-071) forbid `block` without one — and
+verification script, because [RN-070](../business-rules/api.md#rn-070)/
+[RN-071](../business-rules/api.md#rn-071) forbid `block` without one — and
 because what blocks it is not code. The infrastructure exists (overlays,
 GHCR images by digest, smoke/rollout/restore scripts); what is missing
 is a production environment with real traffic and someone maintaining
@@ -557,4 +557,4 @@ the middle of the track would be worse than its absence.
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the
   decision in the event log, without which there'd be nothing to
   measure
-- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)
+- [RN-070](../business-rules/api.md#rn-070), [RN-071](../business-rules/api.md#rn-071)

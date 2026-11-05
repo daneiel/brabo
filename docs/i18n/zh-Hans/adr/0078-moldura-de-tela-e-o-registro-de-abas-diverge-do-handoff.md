@@ -1,13 +1,13 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0078 — 界面框架，以及标签页注册表刻意偏离 handoff
 
 - **状态：** 已接受
 - **日期：** 2026-08-15
-- **先前背景：** [RN-048](../business-rules/custo.md#rn-048)
-  （待晋升的故事）、[RN-104](../business-rules.md#rn-104)（Chat 和 Criativo 作为位置，键为 `sessions`）、[RN-121](../business-rules.md#rn-121)
+- **先前背景：** [RN-048](../business-rules/api.md#rn-048)
+  （待晋升的故事）、[RN-104](../business-rules/web.md#rn-104)（Chat 和 Criativo 作为位置，键为 `sessions`）、[RN-121](../business-rules/web.md#rn-121)
   （Executores 标签页，dev agent 和 QA 不在混合的“Time de agentes”中）、
   [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md)（`LLMProvider` 合约中的 embedding——没有消费的基础）
 

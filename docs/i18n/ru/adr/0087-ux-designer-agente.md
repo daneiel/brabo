@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0087 — UX Designer входит как разговорный агент
@@ -192,7 +192,7 @@ Lead.
 - [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — почему
   `propose_prototype` НЕ приостанавливается (нет внешнего эффекта)
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md),
-  [RN-149](../business-rules/autenticacao.md#rn-149) — образец артефакта без
+  [RN-149](../business-rules/api.md#rn-149) — образец артефакта без
   таблицы, которому следует `artifact.prototipo_navegavel`, и почему ему НЕ
   нужен выделенный use case, который есть у двух других
 - `apps/engine/lib/engine/agents/ux_designer_server.ex`,

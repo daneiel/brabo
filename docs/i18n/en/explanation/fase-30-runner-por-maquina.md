@@ -5,7 +5,7 @@ sidebar_label: FASE 30 — machine's local agent
 sidebar_position: 17
 description: The scope of FASE 30 — the local agent's identity stops being per project and becomes the machine's, and the installer closes the installation by creating the first account and bringing up the paired agent. The decisions are in ADRs 0154 and 0155.
 keywords: [fase 30, runner, local agent, device key, installer, service]
-traducao_de: 11f3dbb485e7626c292e2f894b0d8ece64429d47
+traducao_de: 9ecc443e59
 ---
 
 # FASE 30 — the machine's local agent
@@ -76,13 +76,13 @@ One deliverable each. The "depends on" column is what orders.
 | # | deliverable | depends on | its own prohibitions |
 |---|---|---|---|
 | 1 | this document, ADRs 0154/0155 and the RN range | — | doesn't touch `apps/`, `docker/`, `scripts/`, `install.sh`; doesn't edit an accepted ADR |
-| 2 | **CLOSED** — api: nullable `project_id`, machine key accepted in `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules.md#rn-543)) | 1 | doesn't touch the engine; doesn't loosen any route's role |
-| 3 | **CLOSED** — runner: N connections, one per project, discovered through the route ([RN-544](../business-rules.md#rn-544)) | 2 | doesn't touch `RunnerReadiness`, the mirror or `workspace_create` |
-| 4 | **CLOSED** — runner: per-machine unit in `service install`, coexisting with the per-project ones ([RN-545](../business-rules.md#rn-545)) | 3 | doesn't remove the per-project unit; doesn't change `Restart=on-abnormal` |
-| 5 | **CLOSED** — api: `POST /internal/first-account`, verified account + personal workspace, `409` with any user ([RN-546](../business-rules.md#rn-546)) | 1 | doesn't create a public route; doesn't touch normal registration |
-| 6 | **CLOSED** — `install.sh`: consent, account, machine key and `service install` ([RN-547](../business-rules.md#rn-547)) | 4, 5 | doesn't write the password anywhere; without a TTY it reports and exits 0 |
-| 7 | **CLOSED** — web: the project screen recognizes an already paired machine agent ([RN-548](../business-rules.md#rn-548)) | 3 | doesn't remove the ADR 0118 flow |
-| 8 | **CLOSED** — E2E on a clean machine, docmap, `docs:check` ([RN-549](../business-rules.md#rn-549)) | 6, 7 | doesn't loosen a gate for the E2E to pass |
+| 2 | **CLOSED** — api: nullable `project_id`, machine key accepted in `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules/produto.md#rn-543)) | 1 | doesn't touch the engine; doesn't loosen any route's role |
+| 3 | **CLOSED** — runner: N connections, one per project, discovered through the route ([RN-544](../business-rules/runner.md#rn-544)) | 2 | doesn't touch `RunnerReadiness`, the mirror or `workspace_create` |
+| 4 | **CLOSED** — runner: per-machine unit in `service install`, coexisting with the per-project ones ([RN-545](../business-rules/runner.md#rn-545)) | 3 | doesn't remove the per-project unit; doesn't change `Restart=on-abnormal` |
+| 5 | **CLOSED** — api: `POST /internal/first-account`, verified account + personal workspace, `409` with any user ([RN-546](../business-rules/produto.md#rn-546)) | 1 | doesn't create a public route; doesn't touch normal registration |
+| 6 | **CLOSED** — `install.sh`: consent, account, machine key and `service install` ([RN-547](../business-rules/produto.md#rn-547)) | 4, 5 | doesn't write the password anywhere; without a TTY it reports and exits 0 |
+| 7 | **CLOSED** — web: the project screen recognizes an already paired machine agent ([RN-548](../business-rules/web.md#rn-548)) | 3 | doesn't remove the ADR 0118 flow |
+| 8 | **CLOSED** — E2E on a clean machine, docmap, `docs:check` ([RN-549](../business-rules/ci.md#rn-549)) | 6, 7 | doesn't loosen a gate for the E2E to pass |
 
 ### What session 2 closed, and what it left declared {#o-que-a-sessão-2-fechou-e-o-que-ela-deixou-declarado}
 
@@ -90,7 +90,7 @@ The api half is standing: `runner_device_keys.project_id` is nullable, the
 `PatAuthGuard` resolves the role against the **requested** project when the credential
 names none, and `GET runner/projects` exists. Two things the scope's measurement
 didn't anticipate and the implementation forced a decision on, both recorded
-in [RN-543](../business-rules.md#rn-543):
+in [RN-543](../business-rules/produto.md#rn-543):
 
 - **The RN-519 listing started returning both kinds, marked.** A
   machine key that appeared in no listing would be invisible and
@@ -114,7 +114,7 @@ became N states with `docker` and `base` shared by value. The old mode
 stayed byte for byte, and the new gate is narrow: machine credential **and** consented
 base.
 
-Three things the scope didn't anticipate, and [RN-544](../business-rules.md#rn-544)
+Three things the scope didn't anticipate, and [RN-544](../business-rules/runner.md#rn-544)
 records them:
 
 - **One refused project doesn't bring down the others.** The attempt ceiling and the
@@ -127,7 +127,7 @@ records them:
   ambiguity. The process says so when it starts, and the gesture is to reconnect.
 - **An empty list is a NORMAL state, with exit 0.** It is the state of every new
   installation, and `Restart=on-abnormal` doesn't bring it back up on purpose. *(Revised when
-  splitting session 6, [RN-550](../business-rules.md#rn-550): with ZERO connections the agent
+  splitting session 6, [RN-550](../business-rules/runner.md#rn-550): with ZERO connections the agent
   now STAYS UP and re-queries — the "only at start" half stays intact for
   whoever has a live connection.)*
 
@@ -155,7 +155,7 @@ point 5 promises. So the discriminator became the **`--machine`** flag, explicit
 opt-in, with both project sources intact.
 
 The three decisions the scope left open, recorded in
-[RN-545](../business-rules.md#rn-545):
+[RN-545](../business-rules/runner.md#rn-545):
 
 - **`status` answers about the kind asked, and the code doesn't add up.** The
   four states and the four codes (RN-088) don't become eight; the other kind
@@ -193,7 +193,7 @@ applies to whoever picks up session 6: `provisionarUsuario` **refuses to run wit
 `BRABO_FORCE_SEED`, the core became `ProvisionarUsuarioUseCase` and **the refusal
 stayed in the script** — what it protects is a KNOWN password created WITHOUT human
 interaction, and the route is another category. Session 5 also added what the ADR
-didn't say and [RN-410](../business-rules.md#rn-410) requires: the **personal
+didn't say and [RN-410](../business-rules/api.md#rn-410) requires: the **personal
 workspace** is born in the same transaction, otherwise the installation would close with a login
 that gets through and a dashboard where "New project" has nowhere to create.
 
@@ -206,13 +206,13 @@ it, stops telling you to pair: what is missing isn't pairing, it's the agent
 running. Nothing in the api, the engine or the runner was touched.
 
 The three decisions the scope left open, and what each became
-([RN-548](../business-rules.md#rn-548) has the whole why):
+([RN-548](../business-rules/web.md#rn-548) has the whole why):
 
 - **Where it appears: in the PANEL, and therefore in the three mounters at once — but
   not with the same result.** Recognition is per PROJECT, because the route is
   `GET /projects/:projectId/runner-device-keys`: `TerminalPanel` and
   `FolderBrowserModal` always have a project, and `NewProjectWizard` only after
-  early creation ([RN-437](../business-rules.md#rn-437)). Without `projectId`
+  early creation ([RN-437](../business-rules/web.md#rn-437)). Without `projectId`
   there is nobody to ask. `AmbienteDoProjeto` was CONSIDERED and refused: its
   docblock already declares that runner presence is first-hand
   knowledge of the channel, and a line about a registered key there would be a third proxy
@@ -250,7 +250,7 @@ neither is session 8, which is the E2E and remains open in the table above.
 The two pieces that were missing **on the agent side**, and both come from ADR 0155.
 
 The first is a REVISION of session 3, and the decision is ASYMMETRY
-([RN-550](../business-rules.md#rn-550)): with **zero** connections the agent stops
+([RN-550](../business-rules/runner.md#rn-550)): with **zero** connections the agent stops
 exiting and starts WAITING, re-querying `GET runner/projects` at 15s/30s/60s
 until the first project appears; with a **live** connection, the list keeps being
 read only at start, byte for byte. Session 3's argument stays whole where
@@ -265,7 +265,7 @@ failing does (ten queries in a row, exit 1 naming the number).
 
 The second closes the gap sessions 2, 3 and 4 declared — *"nobody CREATES a
 machine key yet"* — through the half that belongs to the agent
-([RN-551](../business-rules.md#rn-551)): `brabo-runner device-key
+([RN-551](../business-rules/runner.md#rn-551)): `brabo-runner device-key
 create|finish` generates the Ed25519 pair **on this machine**. The decision here is the CUT:
 the CLI does **not** talk to the api, because whoever registers is the installer with the
 `BRABO_SERVICE_TOKEN`, and giving that secret to the agent would widen what it can do
@@ -278,7 +278,7 @@ without a `kid`** — the defect of RN-475, impossible by construction.
 What remains **declared, not done**: the ROUTE that registers the machine public key
 and the `install.sh` that chains the three commands are still session 6.
 
-And the API half of the same split ([RN-552](../business-rules.md#rn-552)):
+And the API half of the same split ([RN-552](../business-rules/api.md#rn-552)):
 `POST /internal/machine-device-keys`, `engine-service`, body
 `{ name, publicKeyJwk }` and a response with the `id` that becomes the private key's `kid`
 (RN-475). **The credential was decided and the cost is declared**: the service
@@ -312,7 +312,7 @@ happening for real: the agent starts without a project, waits, and picks up the 
 the person creates on the web.
 
 The four decisions, recorded in full in
-[RN-547](../business-rules.md#rn-547):
+[RN-547](../business-rules/produto.md#rn-547):
 
 - **When a middle link fails, nothing is undone and everything is reported — and the script
   always exits 0.** The links already done are useful on their own (with the account the person
@@ -328,7 +328,7 @@ The four decisions, recorded in full in
   And the agent step only runs when THIS run created the account: with a
   pre-existing user, registering a machine key would mint a lasting credential for
   someone who asked for nothing in this round.
-- **The key's `name` is the `hostname`.** [RN-551](../business-rules.md#rn-551)
+- **The key's `name` is the `hostname`.** [RN-551](../business-rules/runner.md#rn-551)
   declared that the CLI doesn't name — it is a registration field, and whoever names is whoever
   registers. Whoever opens the key list needs to know WHICH machine to go to, and the
   hostname is the name the person already uses to talk about their machines.
@@ -353,7 +353,7 @@ unit written and agent waiting — is **session 8's E2E**, and only it
 can prove it. In this session's tests `brabo-runner` is a shell stand-in and the
 api is a test server: what is proven is the CHAINING, never the
 integration. And `install --machine` still doesn't know whether the key in that folder
-really is a machine one (the gap of [RN-545](../business-rules.md#rn-545)) — the
+really is a machine one (the gap of [RN-545](../business-rules/runner.md#rn-545)) — the
 difference is that now there is a path that CREATES a machine one there, so the
 refusal on first boot stopped being the probable outcome.
 
@@ -365,22 +365,22 @@ CHAINING and never the integration — `brabo-runner` a shell stand-in, a fake
 api —, and that is the gap that closes here.
 
 The harness **wasn't born in this session**: `.github/workflows/install-e2e.yml`
-has existed since FASE 29 ([RN-534](../business-rules.md#rn-534)) and already ran the
+has existed since FASE 29 ([RN-534](../business-rules/produto.md#rn-534)) and already ran the
 published installer on an ephemeral Actions runner, which is literally a
 clean machine. What it proved stopped at the `.env`. The session **extended** it, and
-what it proves now are the five links of [RN-547](../business-rules.md#rn-547)
+what it proves now are the five links of [RN-547](../business-rules/produto.md#rn-547)
 against a real api and binary, the agent **standing and waiting**, and the first
 project in Runner mode being picked up without anyone going back to the terminal.
 
 The three decisions, recorded in full in
-[RN-549](../business-rules.md#rn-549):
+[RN-549](../business-rules/ci.md#rn-549):
 
 - **The signal that "the agent is up" is the LINE it writes, never the manager's
   state.** `perguntarEstado` maps `activating` to `rodando` — with
-  reason ([RN-088](../business-rules.md#rn-088): "starting" is not "stopped") —,
+  reason ([RN-088](../business-rules/web.md#rn-088): "starting" is not "stopped") —,
   so `systemctl is-active` and `service status --machine` answer *up*
   for a process that is going to die two seconds later. The
-  [RN-550](../business-rules.md#rn-550) line only exists after the agent has read the
+  [RN-550](../business-rules/runner.md#rn-550) line only exists after the agent has read the
   key from disk, taken a ticket, talked to the api and received an EMPTY list: it
   proves pairing and waiting at once, and it is a RECORDED FACT, not a sampling
   of state — that is why waiting for it with a ceiling isn't a race. `status` comes in
@@ -419,7 +419,7 @@ delivery of its own.
 And what remains **declared, not done**: this E2E **doesn't run on the PR that
 wrote it** — the first real run is the next final tag, and no PR check
 proves a line of it. Left out, by decision: the second run through the
-MIGRATION path ([RN-530](../business-rules.md#rn-530)), macOS (the full step is
+MIGRATION path ([RN-530](../business-rules/infra.md#rn-530)), macOS (the full step is
 Linux — `launchd`, and the Docker the hosted runner doesn't have) and the browser.
 
 Reserved range: **RN-543..555**. ADRs **0154** and **0155**. RN-541 is already
@@ -435,30 +435,30 @@ line and **use it*** — started happening:
 - **The local agent's identity stopped being per PROJECT and became the
   MACHINE's.** The two couplings the scope's measurement said needed to
   change did change: `runner_device_keys.project_id` is nullable
-  ([RN-543](../business-rules.md#rn-543)) and the unit is one per machine
-  ([RN-545](../business-rules.md#rn-545)). The other three **didn't change**, and the
+  ([RN-543](../business-rules/produto.md#rn-543)) and the unit is one per machine
+  ([RN-545](../business-rules/runner.md#rn-545)). The other three **didn't change**, and the
   measurement that saved them is the phase's most useful finding: topic, socket id and ticket
   describe a CONNECTION, and N connections satisfy them byte for byte.
-- **Nothing in the engine changed.** `RunnerReadiness` ([RN-507](../business-rules.md#rn-507)),
-  the mirror ([RN-516](../business-rules.md#rn-516)) and `workspace_create`
-  ([RN-532](../business-rules.md#rn-532)) stayed byte for byte, and so did the
+- **Nothing in the engine changed.** `RunnerReadiness` ([RN-507](../business-rules/runner.md#rn-507)),
+  the mirror ([RN-516](../business-rules/runner.md#rn-516)) and `workspace_create`
+  ([RN-532](../business-rules/runner.md#rn-532)) stayed byte for byte, and so did the
   runner's handlers.
 - **A new installation stopped being born with nobody inside.** `MAIL_TRANSPORT`
   is still `log` and the installer still doesn't turn on SMTP — what changed is that the
   first account is born in the TERMINAL, already verified
-  ([RN-546](../business-rules.md#rn-546)/[RN-547](../business-rules.md#rn-547)),
+  ([RN-546](../business-rules/produto.md#rn-546)/[RN-547](../business-rules/produto.md#rn-547)),
   with the personal workspace in the same transaction. Fishing for a verification link in
   `docker compose logs api` stopped being the path.
 - **The agent comes up paired and WAITS.** The Ed25519 pair is born on the machine
-  ([RN-551](../business-rules.md#rn-551)), only the public key travels
-  ([RN-552](../business-rules.md#rn-552)), the registration `id` becomes the `kid`
-  (the invariant of [RN-475](../business-rules.md#rn-475), now impossible to
+  ([RN-551](../business-rules/runner.md#rn-551)), only the public key travels
+  ([RN-552](../business-rules/api.md#rn-552)), the registration `id` becomes the `kid`
+  (the invariant of [RN-475](../business-rules/web.md#rn-475), now impossible to
   violate by construction), and with zero projects the process stays up
-  re-querying ([RN-550](../business-rules.md#rn-550)) instead of exiting.
-- **The screen recognizes who is already paired** ([RN-548](../business-rules.md#rn-548)),
+  re-querying ([RN-550](../business-rules/runner.md#rn-550)) instead of exiting.
+- **The screen recognizes who is already paired** ([RN-548](../business-rules/web.md#rn-548)),
   without ever claiming the agent is running — a registered key proves
   pairing, not a live process.
-- **And the whole is measured end to end** ([RN-549](../business-rules.md#rn-549)),
+- **And the whole is measured end to end** ([RN-549](../business-rules/ci.md#rn-549)),
   against a real api and binary, on a clean machine.
 
 What the phase did **not** close is right below, in "Gaps the phase touches and
@@ -494,7 +494,7 @@ Declared in both ADRs, and repeated here because it is what gives meaning to the
 - **There is no screen where device keys are listed and revoked.** RN-519 opened the
   `GET` in the api; the web never got the screen. The phase adds a kind of
   key to list and doesn't build the screen — the gap gets larger, and declared.
-  [RN-548](../business-rules.md#rn-548) starts CONSUMING that listing in the
+  [RN-548](../business-rules/web.md#rn-548) starts CONSUMING that listing in the
   onboarding panel, which doesn't close it: reading to recognize is something else
   than listing to revoke.
 - **Single point of failure.** One process per machine instead of N: the service

@@ -1,12 +1,12 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0163 — 点击在**接受**命令时响应，轮次经由通道继续
 
 ## 状态 {#status}
 
-**Accepted.** 2026-09-18（AT-089）。把 [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) 只为挂起的 Dev Lead 所做的打破同步阻塞推广开来。ADR 0086 不被编辑：它所决定的（**挂起**的轮次当场响应 `from`，并发出 `agent.status: awaiting_approval` 而不是 `agent.done`）继续有效——本文档只是把响应的时刻对**每个**轮次提前，由此它的情况不再是唯一的。规则：[RN-578](../business-rules.md#rn-578)。
+**Accepted.** 2026-09-18（AT-089）。把 [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) 只为挂起的 Dev Lead 所做的打破同步阻塞推广开来。ADR 0086 不被编辑：它所决定的（**挂起**的轮次当场响应 `from`，并发出 `agent.status: awaiting_approval` 而不是 `agent.done`）继续有效——本文档只是把响应的时刻对**每个**轮次提前，由此它的情况不再是唯一的。规则：[RN-578](../business-rules/engine.md#rn-578)。
 
 ## Context {#context}
 

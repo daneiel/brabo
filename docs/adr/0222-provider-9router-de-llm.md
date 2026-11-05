@@ -52,4 +52,4 @@ Diferente dos nove providers de nuvem, o endereço não é fixo.
   providers.
 - [0166](0166-preferencia-de-roteamento-no-binding-de-modelo.md) — roteamento
   é do hub; combo não é `provider.sort`.
-- [RN-909](../business-rules.md#rn-909).
+- [RN-909](../business-rules/api.md#rn-909).

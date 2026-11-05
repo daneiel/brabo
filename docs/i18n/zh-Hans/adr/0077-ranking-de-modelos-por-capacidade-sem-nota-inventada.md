@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0077 — 按能力的模型排名，不编造评分
@@ -7,7 +7,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **状态：** 已接受
 - **日期：** 2026-08-15
 - **背景：** PROGRAMA 28，Onda 2，frente H2——设计 handoff，Configurações 第 5 项（“Melhores modelos por capacidade”）和第 6 项（“Modelos por agente”，带“ideal”徽章的下拉框）
-- **扩展：** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)（能力只在被证明时才声明）、[ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)（策展始终是手动的）、[ADR 0051](0051-facetas-de-capability-e-curadoria-por-uso.md)（`uses` 作为 workspace 的策展，而不是能力——[RN-057](../business-rules/custo.md#rn-057)）
+- **扩展：** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)（能力只在被证明时才声明）、[ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)（策展始终是手动的）、[ADR 0051](0051-facetas-de-capability-e-curadoria-por-uso.md)（`uses` 作为 workspace 的策展，而不是能力——[RN-057](../business-rules/api.md#rn-057)）
 
 ## 背景 {#contexto}
 

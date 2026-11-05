@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0024 — Фаза 5 (сессия 1): production-образы, compose.prod, CI и smoke-тест

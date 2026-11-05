@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0143 — dev agent 只在容器之后
@@ -89,7 +89,7 @@ resgata"*。`handle_info/2` 的所有守卫都与之匹配——
 **唤醒的投递仍然是至多一次**，与所有 `Engine.Dev.Wake` 一样（它的 moduledoc 自第 12b 阶段起就声明了这一点）。如果广播发生时 agent 暂时不在线，它会保持 `:idle` 直到下一个事件——包括手动重新启用执行，后者投递同一个 `{:wake, :became_claimable}`。
 
 **已登记的 `running` 仍然不是观测到的 `running`**
-（[RN-486](../business-rules.md#rn-486)）。一个在外部死掉的容器仍会通过这个守卫；agent 执行 claim，失败出现在对 broker 的第一次调用中，作为普通的命令失败。合并两者需要每次 claim 一次网络调用，而 RN-486 明确不合并它们。
+（[RN-486](../business-rules/api.md#rn-486)）。一个在外部死掉的容器仍会通过这个守卫；agent 执行 claim，失败出现在对 broker 的第一次调用中，作为普通的命令失败。合并两者需要每次 claim 一次网络调用，而 RN-486 明确不合并它们。
 
 ## 参考 {#referências}
 
@@ -99,4 +99,4 @@ resgata"*。`handle_info/2` 的所有守卫都与之匹配——
 - [ADR 0135](0135-portao-de-imagem-nos-tres-modos.md)——镜像关口开始在三种模式下有效
 - [ADR 0137](0137-o-runner-sobe-o-container-do-projeto.md)——`mounted`/`runner`
   在用户机器上启动容器
-- [RN-502](../business-rules.md#rn-502)
+- [RN-502](../business-rules/engine.md#rn-502)

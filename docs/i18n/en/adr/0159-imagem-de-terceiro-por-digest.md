@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0159 — A third-party image comes in by digest, and the lint fails whoever forgets
@@ -41,12 +41,12 @@ day".
 - Thirteen are Dockerfile `FROM`s — `node:24.11.1-alpine3.21`,
   `hexpm/elixir:1.17.3-…`, `nginx:1.27.5-alpine`, `alpine:3.20`/`3.20.3`,
   `node:24-alpine`. Those are the **base of the images we publish**: third-party
-  bytes we sign with `cosign` ([RN-524](../business-rules.md#rn-524)) and deliver
+  bytes we sign with `cosign` ([RN-524](../business-rules/ci.md#rn-524)) and deliver
   to other people. The `alpine:3.20` of `docker/backup/Dockerfile.prod` is, by
   the way, the only `FROM` that `BRB-004` itself already named.
 - Four are in `docker/docker-compose.install.yml`, which is what comes up **on
   the machine of whoever installed the product**, next to that person's Postgres
-  ([RN-527](../business-rules.md#rn-527)). In the **same file**, the four own
+  ([RN-527](../business-rules/infra.md#rn-527)). In the **same file**, the four own
   images arrive through a variable already resolved by digest, and the
   third-party ones arrived by tag.
 - Four are in `.github/workflows/ci.yml` and `golden-set-rag.yml`, as job
@@ -184,7 +184,7 @@ states.
 - **It does not extend to signatures.** A digest is the integrity of what was
   pulled; provenance is `BRB-005`, whose open half (the proxy verifying the
   manifest's signature) was measured and rejected with a number
-  ([RN-525](../business-rules.md#rn-525)).
+  ([RN-525](../business-rules/produto.md#rn-525)).
 - **It does not cover `deploy/k8s/helm/otel-collector-values.yaml`**, where
   `image:` opens a map with `repository:` and no tag: whoever chooses the tag
   there is the chart, and pinning would require deciding the chart's version too.

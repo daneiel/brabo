@@ -5,7 +5,7 @@ sidebar_label: FASE 30——机器的本地智能体
 sidebar_position: 17
 description: FASE 30 的范围——本地智能体的身份不再按项目，而改为属于机器，安装器通过创建第一个账户并启动已配对的智能体来完成安装。决定在 ADR 0154 和 0155 中。
 keywords: [fase 30, runner, 本地智能体, 设备密钥, 安装器, 服务]
-traducao_de: 11f3dbb485e7626c292e2f894b0d8ece64429d47
+traducao_de: 9ecc443e59
 ---
 
 # FASE 30——机器的本地智能体
@@ -60,19 +60,19 @@ independentes"*。用 `arquivo:linha` 重新测量，**五个中有三个不需�
 | # | 交付物 | 依赖于 | 自己的禁令 |
 |---|---|---|---|
 | 1 | 本文档、ADR 0154/0155 以及 RN 范围 | — | 不触碰 `apps/`、`docker/`、`scripts/`、`install.sh`；不编辑已接受的 ADR |
-| 2 | **已关闭**——api：`project_id` 可空，`runner-ticket` 接受机器密钥，`GET runner/projects`（[RN-543](../business-rules.md#rn-543)） | 1 | 不触碰 engine；不放宽任何路由的角色 |
-| 3 | **已关闭**——runner：N 个连接，每个项目一个，通过路由发现（[RN-544](../business-rules.md#rn-544)） | 2 | 不触碰 `RunnerReadiness`、镜像或 `workspace_create` |
-| 4 | **已关闭**——runner：`service install` 中按机器的 unit，与按项目的共存（[RN-545](../business-rules.md#rn-545)） | 3 | 不删除按项目的 unit；不改变 `Restart=on-abnormal` |
-| 5 | **已关闭**——api：`POST /internal/first-account`，已验证账户 + 个人 workspace，有任何用户时 `409`（[RN-546](../business-rules.md#rn-546)） | 1 | 不创建公开路由；不触碰正常注册 |
-| 6 | **已关闭**——`install.sh`：同意、账户、机器密钥和 `service install`（[RN-547](../business-rules.md#rn-547)） | 4, 5 | 不在任何地方写入密码；没有 TTY 时报告并以 0 退出 |
-| 7 | **已关闭**——web：项目界面识别已配对的机器智能体（[RN-548](../business-rules.md#rn-548)） | 3 | 不删除 ADR 0118 的流程 |
-| 8 | **已关闭**——干净机器上的 E2E、docmap、`docs:check`（[RN-549](../business-rules.md#rn-549)） | 6, 7 | 不为了让 E2E 通过而放宽 gate |
+| 2 | **已关闭**——api：`project_id` 可空，`runner-ticket` 接受机器密钥，`GET runner/projects`（[RN-543](../business-rules/produto.md#rn-543)） | 1 | 不触碰 engine；不放宽任何路由的角色 |
+| 3 | **已关闭**——runner：N 个连接，每个项目一个，通过路由发现（[RN-544](../business-rules/runner.md#rn-544)） | 2 | 不触碰 `RunnerReadiness`、镜像或 `workspace_create` |
+| 4 | **已关闭**——runner：`service install` 中按机器的 unit，与按项目的共存（[RN-545](../business-rules/runner.md#rn-545)） | 3 | 不删除按项目的 unit；不改变 `Restart=on-abnormal` |
+| 5 | **已关闭**——api：`POST /internal/first-account`，已验证账户 + 个人 workspace，有任何用户时 `409`（[RN-546](../business-rules/produto.md#rn-546)） | 1 | 不创建公开路由；不触碰正常注册 |
+| 6 | **已关闭**——`install.sh`：同意、账户、机器密钥和 `service install`（[RN-547](../business-rules/produto.md#rn-547)） | 4, 5 | 不在任何地方写入密码；没有 TTY 时报告并以 0 退出 |
+| 7 | **已关闭**——web：项目界面识别已配对的机器智能体（[RN-548](../business-rules/web.md#rn-548)） | 3 | 不删除 ADR 0118 的流程 |
+| 8 | **已关闭**——干净机器上的 E2E、docmap、`docs:check`（[RN-549](../business-rules/ci.md#rn-549)） | 6, 7 | 不为了让 E2E 通过而放宽 gate |
 
 ### 会话 2 关闭了什么，以及它声明留下了什么 {#o-que-a-sessão-2-fechou-e-o-que-ela-deixou-declarado}
 
 api 那一半已经就位：`runner_device_keys.project_id` 可空，当凭据没有指定任何项目时，`PatAuthGuard` 针对**请求的**
 项目解析角色，`GET runner/projects` 存在。有两件事是范围的测量没有预见、而实现迫使我们决定的，两者都记录在
-[RN-543](../business-rules.md#rn-543) 中：
+[RN-543](../business-rules/produto.md#rn-543) 中：
 
 - **RN-519 的列表开始返回两种类型，并加以标记。** 一把不出现在任何列表中的机器密钥将是不可见且永久的——RN-519
   关闭的缺陷，在新类型中重生。
@@ -89,7 +89,7 @@ PR 中诞生。
 `tratarMirrorSync`、`tratarWorkspaceCreate`）一行都没改——迫使设计的是 `EstadoDoRunner` 的四个**按项目**的字段，
 它们变成了 N 个状态，`docker` 和 `base` 按值共享。旧模式逐字节保留，新闸门很窄：机器凭据**和**已同意的基目录。
 
-有三件事是范围没有预见的，[RN-544](../business-rules.md#rn-544) 记录了它们：
+有三件事是范围没有预见的，[RN-544](../business-rules/runner.md#rn-544) 记录了它们：
 
 - **一个被拒绝的项目不会拖垮其他项目。** 尝试上限和 join 拒绝不再属于**进程**，而属于**项目**；只有当一个都不剩时
   进程才以 1 退出，并给出每个项目的结果。在单项目模式中，旧的处置保持不变，理由反过来：只有**一个**连接时，没有
@@ -97,7 +97,7 @@ PR 中诞生。
 - **列表只在启动时查询。** 重新查询会让一个变**小**的列表——删除了？转换了？暂时的 500？——因歧义而断开活着的连接。
   进程在启动时说明这一点，动作是重新连接。
 - **空列表是**正常**状态，以 0 退出。** 这是每个新安装的状态，而 `Restart=on-abnormal` 故意不重启它。*（在拆分会话 6
-  时修订，[RN-550](../business-rules.md#rn-550)：有**零**个连接时智能体改为**保持运行**并重新查询——"只在启动时"那一半
+  时修订，[RN-550](../business-rules/runner.md#rn-550)：有**零**个连接时智能体改为**保持运行**并重新查询——"只在启动时"那一半
   对有活连接的情况保持不变。）*
 
 以及仍然**已声明、未完成**的：机器模式下的 `apiUrl` 来自 `--api-url`/`BRABO_API_URL`/默认值，从不来自
@@ -116,7 +116,7 @@ de máquina"*；`resolverProjeto` 有**两个**来源，而今天的正常路径
 `install`——回答的是 `brabo-runner.config.json`。照字面执行，ADR 会悄悄转换已在使用产品的人的安装，这与同一个第 5 点
 所承诺的恰好相反。所以判别器变成了标志 **`--machine`**，显式的选择加入，两个项目来源保持不变。
 
-范围留待解决的三个决定，记录在 [RN-545](../business-rules.md#rn-545) 中：
+范围留待解决的三个决定，记录在 [RN-545](../business-rules/runner.md#rn-545) 中：
 
 - **`status` 回答被询问的那种类型，代码不相加。** 四种状态和四种代码（RN-088）不会变成八种；另一种类型以**文本**
   出现，作为从**磁盘**读取的存在，并说明它的状态没有询问管理器。没有 `--machine` 也没有可解析的项目时，回答是关于
@@ -140,7 +140,7 @@ de máquina"*；`resolverProjeto` 有**两个**来源，而今天的正常路径
 会话 5 以一个 ADR 0155 没有面对的决定关闭，它对接手会话 6 的人有效：`provisionarUsuario` **拒绝在
 `NODE_ENV=production` 下运行**，而安装器恰好在那里运行。没有用 `BRABO_FORCE_SEED`，核心变成了
 `ProvisionarUsuarioUseCase`，**拒绝留在了脚本中**——它保护的是在**没有**人类交互的情况下创建的**已知**密码，而这条
-路由是另一类。会话 5 还加上了 ADR 没有说、而 [RN-410](../business-rules.md#rn-410) 要求的东西：**个人 workspace** 在
+路由是另一类。会话 5 还加上了 ADR 没有说、而 [RN-410](../business-rules/api.md#rn-410) 要求的东西：**个人 workspace** 在
 同一个事务中诞生，否则安装会以一个能通过的登录和一个"Novo projeto"无处可建的仪表板结束。
 
 ### 会话 7 关闭了什么，以及它必须作出的三个决定 {#o-que-a-sessão-7-fechou-e-as-três-decisões-que-ela-teve-de-tomar}
@@ -149,11 +149,11 @@ de máquina"*；`resolverProjeto` 有**两个**来源，而今天的正常路径
 runner 的入门面板开始识别活跃的**机器**密钥，有了它，就不再要求配对：缺的不是配对，而是智能体在运行。api、engine 或
 runner 中什么都没有被触碰。
 
-范围留待解决的三个决定，以及每个变成了什么（[RN-548](../business-rules.md#rn-548) 有完整的原因）：
+范围留待解决的三个决定，以及每个变成了什么（[RN-548](../business-rules/web.md#rn-548) 有完整的原因）：
 
 - **在哪里出现：在**面板**中，因此一次出现在三个挂载者中——但结果不同。** 识别是按**项目**的，因为路由是
   `GET /projects/:projectId/runner-device-keys`：`TerminalPanel` 和 `FolderBrowserModal` 总是有项目，而
-  `NewProjectWizard` 只在提前创建之后才有（[RN-437](../business-rules.md#rn-437)）。没有 `projectId` 就没有可以询问的
+  `NewProjectWizard` 只在提前创建之后才有（[RN-437](../business-rules/web.md#rn-437)）。没有 `projectId` 就没有可以询问的
   对象。`AmbienteDoProjeto` 被**考虑过**并被拒绝：它的文档块已经声明 runner 的存在是通道的第一手知识，在那里加一行
   关于已注册密钥的内容会是与一个更强信号竞争的第三个代理——而且是关于**机器**的，不是关于项目的。
 - **有密钥而没有活连接——最常见的情况——界面说出它知道的两件事，并点名它不知道的两件事。** 它宣布配对（带密钥的
@@ -176,7 +176,7 @@ runner 中什么都没有被触碰。
 
 **智能体一侧**缺少的两个部件，两者都来自 ADR 0155。
 
-第一个是对会话 3 的**修订**，决定是**不对称**（[RN-550](../business-rules.md#rn-550)）：有**零**个连接时智能体不再
+第一个是对会话 3 的**修订**，决定是**不对称**（[RN-550](../business-rules/runner.md#rn-550)）：有**零**个连接时智能体不再
 退出，而改为**等待**，以 15s/30s/60s 重新查询 `GET runner/projects`，直到第一个项目出现；有**活**连接时，列表仍然
 只在启动时读取，逐字节不变。会话 3 的论证在它有效的地方仍然完整——变**小**的列表是有歧义的，因歧义断开活连接是用
 猜测换掉正确的状态——而有零个连接时没有什么可断开的。被推翻的是 `exit 0` 的论证（"一个什么都不做的活跃服务"），因为
@@ -185,7 +185,7 @@ runner 中什么都没有被触碰。
 并点名次数）。
 
 第二个关闭了会话 2、3 和 4 声明的缺口——*"ninguém CRIA chave de máquina ainda"*——属于智能体的那一半
-（[RN-551](../business-rules.md#rn-551)）：`brabo-runner device-key
+（[RN-551](../business-rules/runner.md#rn-551)）：`brabo-runner device-key
 create|finish` **在这台机器上**生成 Ed25519 密钥对。这里的决定是**切分**：CLI **不**与 api 对话，因为注册的是带着
 `BRABO_SERVICE_TOKEN` 的安装器，而把这个密钥交给智能体会把它能做的事扩大到远超它所需——每一方保管一个秘密，谁也看不到
 对方的。由此得出两步的设计：`kid` 是**注册记录**的 id，只在注册之后才存在，所以 `create` 写入一个读取者会忽略的
@@ -194,7 +194,7 @@ create|finish` **在这台机器上**生成 Ed25519 密钥对。这里的决定�
 
 仍然**已声明、未完成**的：注册机器公钥的**路由**和串联三个命令的 `install.sh` 仍然是会话 6。
 
-以及同一拆分的 API 那一半（[RN-552](../business-rules.md#rn-552)）：`POST /internal/machine-device-keys`、
+以及同一拆分的 API 那一半（[RN-552](../business-rules/api.md#rn-552)）：`POST /internal/machine-device-keys`、
 `engine-service`、正文 `{ name, publicKeyJwk }`，响应带有成为私钥 `kid` 的 `id`（RN-475）。**凭据已经决定，代价已经
 声明**：服务 token，因为要求刚创建用户的凭据会迫使安装器在机器上打开
 [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) 第 5 点恰恰拒绝打开的活会话——并给 RN-546 故意丢弃的
@@ -215,7 +215,7 @@ create|finish` **在这台机器上**生成 Ed25519 密钥对。这里的决定�
 [ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) 第 5 点的承诺真正开始发生：智能体在没有项目的情况下启动，
 等待，并领取用户在 web 上创建的第一个项目。
 
-四个决定，完整记录在 [RN-547](../business-rules.md#rn-547) 中：
+四个决定，完整记录在 [RN-547](../business-rules/produto.md#rn-547) 中：
 
 - **当中间某一环失败时，什么都不撤销，一切都报告——脚本总是以 0 退出。** 已完成的环节本身就有用（有了账户就能进入，
   有了密钥机器就已配对），撤销需要删除账户和撤销密钥，而没有这样的路由，也不应该有一个由安装器自行调用的。代价是安装
@@ -223,7 +223,7 @@ create|finish` **在这台机器上**生成 Ed25519 密钥对。这里的决定�
 - **幂等性就是 HTTP 代码，`409` 不是失败。** 第二次执行，或其恢复带回了用户的迁移：该步骤沉默并说明原因，不进入待办。
   `000`——没有与 api 对话的 curl——有自己的处理，否则"api 没有启动"会被读成"api 拒绝了"。而智能体的步骤只在**这次**
   执行创建了账户时才运行：对已存在的用户，注册机器密钥会为在这一轮中什么都没要求的人铸造持久的凭据。
-- **密钥的 `name` 是 `hostname`。** [RN-551](../business-rules.md#rn-551) 声明 CLI 不命名——它是注册记录的字段，命名的
+- **密钥的 `name` 是 `hostname`。** [RN-551](../business-rules/runner.md#rn-551) 声明 CLI 不命名——它是注册记录的字段，命名的
   是注册者。打开密钥列表的人需要知道去**哪台**机器，而 hostname 是用户已经在用来称呼自己机器的名字。
 - **注册没有闭合时剩下的 `.parcial` 会**保留**，并被点名。** 删除它会是安装器决定它知道一件它并不知道的事：api 写入
   之后的超时与之前的超时无法区分，而这个文件可能是一把已注册密钥私钥那一半的唯一副本。
@@ -237,7 +237,7 @@ create|finish` **在这台机器上**生成 Ed25519 密钥对。这里的决定�
 以及仍然**已声明、未完成**的：在干净机器上的端到端安装——真实的 compose、真实的 api、真实的 runner 二进制、写入的
 unit 和等待中的智能体——是**会话 8 的 E2E**，只有它能证明。在这个会话的测试中，`brabo-runner` 是一个 shell 替身，
 api 是一个测试服务器：证明的是**串联**，从来不是集成。而 `install --machine` 仍然不知道那个文件夹的密钥是否真的是
-机器密钥（[RN-545](../business-rules.md#rn-545) 的缺口）——不同的是现在存在一条在那里**创建**机器密钥的路径，所以第一次
+机器密钥（[RN-545](../business-rules/runner.md#rn-545) 的缺口）——不同的是现在存在一条在那里**创建**机器密钥的路径，所以第一次
 启动时的拒绝不再是可能的结果。
 
 ### 会话 8 关闭了什么——以及它必须作出的三个决定 {#o-que-a-sessão-8-fechou--e-as-três-decisões-que-ela-teve-de-tomar}
@@ -246,15 +246,15 @@ api 是一个测试服务器：证明的是**串联**，从来不是集成。而
 集成——`brabo-runner` 是 shell 替身，api 是假的——而正是这个缺口在这里关闭。
 
 harness **不是在这个会话中诞生的**：`.github/workflows/install-e2e.yml` 自 FASE 29 起就存在
-（[RN-534](../business-rules.md#rn-534)），并且已经在 Actions 的一个临时 runner 上运行已发布的安装器，那字面上就是一台
-干净的机器。它证明的东西止于 `.env`。这个会话**扩展**了它，它现在证明的是 [RN-547](../business-rules.md#rn-547) 的五个
+（[RN-534](../business-rules/produto.md#rn-534)），并且已经在 Actions 的一个临时 runner 上运行已发布的安装器，那字面上就是一台
+干净的机器。它证明的东西止于 `.env`。这个会话**扩展**了它，它现在证明的是 [RN-547](../business-rules/produto.md#rn-547) 的五个
 环节针对真实的 api 和二进制、**运行中并等待**的智能体，以及第一个 Runner 模式的项目在无人回到终端的情况下被领取。
 
-三个决定，完整记录在 [RN-549](../business-rules.md#rn-549) 中：
+三个决定，完整记录在 [RN-549](../business-rules/ci.md#rn-549) 中：
 
 - **"智能体在运行"的信号是它写下的**那一行**，从不是管理器的状态。** `perguntarEstado` 把 `activating` 映射为
-  `rodando`——有理由的（[RN-088](../business-rules.md#rn-088)："subindo" 不是 "parado"）——所以 `systemctl is-active`
-  和 `service status --machine` 对一个两秒后就会死掉的进程回答*运行中*。[RN-550](../business-rules.md#rn-550) 的那一行
+  `rodando`——有理由的（[RN-088](../business-rules/web.md#rn-088)："subindo" 不是 "parado"）——所以 `systemctl is-active`
+  和 `service status --machine` 对一个两秒后就会死掉的进程回答*运行中*。[RN-550](../business-rules/runner.md#rn-550) 的那一行
   只在智能体从磁盘读取密钥、取得 ticket、与 api 对话并收到**空**列表之后才存在：它一次证明了配对和等待，并且它是一个
   **记录下来的事实**，而不是状态的抽样——这就是为什么带上限地等待它不是竞争。`status` 在它之后进入，作为确认，从不
   代替它。
@@ -276,7 +276,7 @@ harness **不是在这个会话中诞生的**：`.github/workflows/install-e2e.y
 需要在已签名资产和克隆之间作出决定，是一个独立的交付。
 
 以及仍然**已声明、未完成**的：这个 E2E **不在编写它的 PR 中运行**——第一次真实执行是下一个最终 tag，PR 的任何检查都
-证明不了它的一行。按决定留在外面的：通过**迁移**路径的第二次执行（[RN-530](../business-rules.md#rn-530)）、macOS
+证明不了它的一行。按决定留在外面的：通过**迁移**路径的第二次执行（[RN-530](../business-rules/infra.md#rn-530)）、macOS
 （完整步骤是 Linux——`launchd`，以及托管 runner 没有的 Docker）以及浏览器。
 
 保留的范围：**RN-543..555**。ADR **0154** 和 **0155**。RN-541 已经分配在一个未合并的分支中——跳号是有意的，依据
@@ -288,21 +288,21 @@ FASE 29 在按日期解决三次冲突时记录的标准。
 ——开始发生了：
 
 - **本地智能体的身份不再按**项目**，而改为属于**机器**。** 范围的测量说需要改变的两个耦合改变了：
-  `runner_device_keys.project_id` 可空（[RN-543](../business-rules.md#rn-543)），unit 是每台机器一个
-  （[RN-545](../business-rules.md#rn-545)）。另外三个**没有改变**，而拯救了它们的测量是本阶段最有用的发现：主题、
+  `runner_device_keys.project_id` 可空（[RN-543](../business-rules/produto.md#rn-543)），unit 是每台机器一个
+  （[RN-545](../business-rules/runner.md#rn-545)）。另外三个**没有改变**，而拯救了它们的测量是本阶段最有用的发现：主题、
   socket id 和 ticket 描述的是一个**连接**，而 N 个连接逐字节地满足它们。
-- **engine 中什么都没变。** `RunnerReadiness`（[RN-507](../business-rules.md#rn-507)）、镜像
-  （[RN-516](../business-rules.md#rn-516)）和 `workspace_create`（[RN-532](../business-rules.md#rn-532)）逐字节保持不变，
+- **engine 中什么都没变。** `RunnerReadiness`（[RN-507](../business-rules/runner.md#rn-507)）、镜像
+  （[RN-516](../business-rules/runner.md#rn-516)）和 `workspace_create`（[RN-532](../business-rules/runner.md#rn-532)）逐字节保持不变，
   runner 的处理器也是。
 - **新安装不再生来无人在内。** `MAIL_TRANSPORT` 仍然是 `log`，安装器仍然不开启 SMTP——改变的是第一个账户在**终端**中
-  诞生，已经验证（[RN-546](../business-rules.md#rn-546)/[RN-547](../business-rules.md#rn-547)），个人 workspace 在同一个
+  诞生，已经验证（[RN-546](../business-rules/produto.md#rn-546)/[RN-547](../business-rules/produto.md#rn-547)），个人 workspace 在同一个
   事务中。在 `docker compose logs api` 中捞验证链接不再是路径。
-- **智能体以已配对状态启动并**等待**。** Ed25519 密钥对在机器上诞生（[RN-551](../business-rules.md#rn-551)），只有公钥
-  传输（[RN-552](../business-rules.md#rn-552)），注册的 `id` 成为 `kid`（[RN-475](../business-rules.md#rn-475) 的不变量，
-  现在在构造上不可能违反），有零个项目时进程保持运行并重新查询（[RN-550](../business-rules.md#rn-550)），而不是退出。
-- **界面识别已配对的人**（[RN-548](../business-rules.md#rn-548)），从不断言智能体在运行——已注册的密钥证明配对，不证明
+- **智能体以已配对状态启动并**等待**。** Ed25519 密钥对在机器上诞生（[RN-551](../business-rules/runner.md#rn-551)），只有公钥
+  传输（[RN-552](../business-rules/api.md#rn-552)），注册的 `id` 成为 `kid`（[RN-475](../business-rules/web.md#rn-475) 的不变量，
+  现在在构造上不可能违反），有零个项目时进程保持运行并重新查询（[RN-550](../business-rules/runner.md#rn-550)），而不是退出。
+- **界面识别已配对的人**（[RN-548](../business-rules/web.md#rn-548)），从不断言智能体在运行——已注册的密钥证明配对，不证明
   进程活着。
-- **整体经过端到端测量**（[RN-549](../business-rules.md#rn-549)），针对真实的 api 和二进制，在一台干净的机器上。
+- **整体经过端到端测量**（[RN-549](../business-rules/ci.md#rn-549)），针对真实的 api 和二进制，在一台干净的机器上。
 
 本阶段**没有**关闭的就在下面，"本阶段触及但未解决的缺口"中，在途中没有一个改变了大小——除了列出/撤销密钥的**界面**，
 它故意变得**更大**：本阶段增加了一种要列出的密钥类型，却没有构建界面。再加上会话 8 测得的 compose 发现，以及
@@ -327,7 +327,7 @@ FASE 29 在按日期解决三次冲突时记录的标准。
 - **撤销仍然针对 `{项目, 用户}`，从不针对 `{密钥}`**（RN-520）——而且代价更高：撤销会断开那台机器上**所有**项目的
   智能体。FASE 29 预先声明了这个代价；它在这里到来了。关闭它需要改变撤销的目标，这是独立的工作线。
 - **没有列出和撤销设备密钥的界面。** RN-519 在 api 中打开了 `GET`；web 从未获得这个界面。本阶段增加了一种要列出的
-  密钥类型，却没有构建界面——缺口变大了，并已声明。[RN-548](../business-rules.md#rn-548) 开始在入门面板中**消费**这个
+  密钥类型，却没有构建界面——缺口变大了，并已声明。[RN-548](../business-rules/web.md#rn-548) 开始在入门面板中**消费**这个
   列表，但这并不关闭它：为了识别而读取，与为了撤销而列出是两回事。
 - **单点故障。** 每台机器一个进程取代 N 个：服务宕掉会让所有项目失去智能体。这是设计的代价，不是疏忽。
 - **git 凭据在 `runner` 模式的 `docker exec` 中仍被丢弃**（[ADR 0145](../adr/0145-docker-pre-requisito-do-runner.md)）——

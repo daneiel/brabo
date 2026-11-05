@@ -112,7 +112,7 @@ describe('rótulos do Redoc e catálogos commitados', () => {
 
   it('nenhum catálogo commitado tem órfã nem entrada inválida', () => {
     const raiz = join(import.meta.dirname, '../..');
-    const real = JSON.parse(readFileSync(join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+    const real = JSON.parse(readFileSync(join(raiz, 'apps/api/docs/reference/openapi.json'), 'utf8'));
     for (const l of LOCALES_DA_API) {
       const r = aplicar(real, lerCatalogo(raiz, l));
       expect([l, r.orfas, r.invalidas]).toEqual([l, [], []]);

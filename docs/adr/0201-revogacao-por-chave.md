@@ -6,13 +6,13 @@
 decisão do dono em 01/10: *"sim, revogação por CHAVE, com ADR — coluna da chave
 no ticket do socket e contrato novo de auth; revogar derruba só as conexões
 abertas com aquela chave. Mexe no engine, de propósito."*). Revisa a
-[RN-520](../business-rules.md#rn-520) — que nasceu no
+[RN-520](../business-rules/api.md#rn-520) — que nasceu no
 [ADR 0147](0147-agente-local-com-capacidades.md) ponto 6 — e referencia, sem
 editá-los, o [ADR 0154](0154-chave-de-dispositivo-de-maquina.md) (a chave de
 MÁQUINA, que pôs *"Revogação por chave"* entre o que NÃO fazia) e o
 [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md) (a chave de máquina que
 nasce no terminal e que a instalação registra). Regra nova:
-[RN-685](../business-rules.md#rn-685).
+[RN-685](../business-rules/api.md#rn-685).
 
 ## Context
 

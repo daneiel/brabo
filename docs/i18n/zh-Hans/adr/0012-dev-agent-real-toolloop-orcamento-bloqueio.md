@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0012 — 真正的 DevAgent：ToolLoop、按 task 的预算与阻塞纪律

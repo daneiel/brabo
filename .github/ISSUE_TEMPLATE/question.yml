@@ -11,7 +11,7 @@ body:
         Antes de perguntar, dois lugares que respondem a maior parte:
         [Primeiros passos](https://github.com/daneiel/brabo/blob/dev/docs/getting-started.md)
         para setup, e o
-        [Runbook](https://github.com/daneiel/brabo/blob/dev/docs/runbook.md)
+        [Runbook](https://github.com/daneiel/brabo/blob/dev/deploy/docs/runbook.md)
         para operação — os dois têm tabela de sintoma → causa.
 
   - type: textarea

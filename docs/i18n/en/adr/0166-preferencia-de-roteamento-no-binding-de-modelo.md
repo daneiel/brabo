@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0166 — The routing preference lives in the model binding, travels with it, and freezes in metering
@@ -13,13 +13,13 @@ preference is CONFIGURABLE PER BINDING"*. It extends
 [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
 (what produced the number goes frozen in the `token_usage` row). It edits
 neither. The rule born from here is
-[RN-583](../business-rules/custo.md#rn-583).
+[RN-583](../business-rules/api.md#rn-583).
 
 ## Context
 
 Measured in the `token_usage` of the v6.1.0 installation (2026-09-14): 24 calls
 of `~deepseek/deepseek-v4-flash-latest` via `openrouter`. The
-`upstream_provider` ([RN-042](../business-rules/custo.md#rn-042)) already said
+`upstream_provider` ([RN-042](../business-rules/api.md#rn-042)) already said
 who served each one: **Relace in 23**, with an average latency of 69.5 s
 (between 32 and 47 tok/s), and **Baidu in 1**, with 37.8 s (~190 tok/s).
 OpenRouter chooses the upstream through a balancing that favors PRICE when the
@@ -54,7 +54,7 @@ preference" from another. Three reasons:
   capability and the project's `throughput`, or the workspace's `latency` applied
   to a model the workspace owner never saw.
 - **An independent cascade would require a second chain on the screen.**
-  [RN-470](../business-rules/custo.md#rn-470) made the MODEL's chain visible node
+  [RN-470](../business-rules/web.md#rn-470) made the MODEL's chain visible node
   by node; two chains landing at different levels on the same row would be
   exactly the state the screen does not know how to explain.
 - **The level the cascade SKIPS takes the preference with it.** A binding
@@ -127,7 +127,7 @@ same for everyone.
 
 The control lives where the binding is edited — the agents table and the areas
 section in Settings —, with the ENDPOINT's minimum role
-([RN-102](../business-rules/custo.md#rn-102)): `developer` on the agent,
+([RN-102](../business-rules/api.md#rn-102)): `developer` on the agent,
 `maintainer` on the area. It is only editable on the row that HAS its own
 binding; on the inheriting row, it says from which level the current criterion
 came. A model whose provider does not have the capability gains no option — it

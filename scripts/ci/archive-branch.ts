@@ -1,6 +1,6 @@
 /**
  * archive-branch — decide se uma branch mergeada deve ser arquivada, e o
- * ref de destino. Fonte da política: docs/explanation/branching-policy.md
+ * ref de destino. Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * "Arquivar" aqui é mecânico, não é o merge em si: mover a branch de
  * `refs/heads/<nome>` para `refs/archive/<nome>` — fora do namespace de

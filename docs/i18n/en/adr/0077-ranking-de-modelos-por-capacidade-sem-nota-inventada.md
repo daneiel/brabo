@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0077 — Model ranking by capability, with no invented score
@@ -12,7 +12,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **Extends:** [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
   (capability declared only when proven), [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)
   (curation is always manual), [ADR 0051](0051-facetas-de-capability-e-curadoria-por-uso.md)
-  (`uses` as workspace curation, not capability — [RN-057](../business-rules/custo.md#rn-057))
+  (`uses` as workspace curation, not capability — [RN-057](../business-rules/api.md#rn-057))
 
 ## Context
 

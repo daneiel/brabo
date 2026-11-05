@@ -22,10 +22,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { caminhoDaApi } from './openapi-por-locale.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'build/docs-site');
-const SPEC = JSON.parse(readFileSync(join(RAIZ, 'docs/reference/openapi.json'), 'utf8'));
+const SPEC = JSON.parse(readFileSync(caminhoDaApi(RAIZ, 'reference/openapi.json'), 'utf8'));
 
 const METODOS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
 const esperadas = Object.values(SPEC.paths).reduce(

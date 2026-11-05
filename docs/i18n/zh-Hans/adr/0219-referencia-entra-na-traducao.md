@@ -1,5 +1,5 @@
 ---
-traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0219 — 参考文档纳入翻译

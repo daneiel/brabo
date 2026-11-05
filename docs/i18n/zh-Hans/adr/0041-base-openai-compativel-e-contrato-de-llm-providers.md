@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities
@@ -56,7 +56,7 @@ Together AI、Bitdeer AI、Vultr 和 OpenRouter）。在编写第一个之前，
 
 使用离散列而非 `jsonb`：第 9c 阶段“适合 agent”的过滤器需要是一个 `WHERE`，而没有列的 capability 是没人能查询的 capability。
 
-在此之上是新规则（[RN-040](../business-rules/custo.md#rn-040)）：
+在此之上是新规则（[RN-040](../business-rules/api.md#rn-040)）：
 `assertModelFitsBindingScope` 拒绝把没有原生 tool calling 的模型绑定到 **agent**，消息会指向用户需要使用的过滤器。只有 `agent` 作用域会验证——`workspace` 和 `project` 是人类聊天的回退，锁住它们会在整个产品中禁止仅聊天的模型。
 
 engine 的 `ToolCallRecovery` 继续存在，并且继续是**救援，而不是许可**：它依赖模型碰巧写对格式，写不对时就静默失败。刻意选择这种碰巧，正是规则所拒绝的。

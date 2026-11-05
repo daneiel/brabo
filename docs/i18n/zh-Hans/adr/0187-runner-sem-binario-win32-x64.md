@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0187 — runner 的独立二进制不再承诺 Windows
@@ -13,7 +13,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 自 ADR 0174 起，矩阵承诺四个目标，而 Release 只收到两个 Linux 的。`win32-x64` 在 `dev` 中有从未演练过的构建修正，而以空 `tag` 运行的 `workflow_dispatch` 演练（不附加任何东西的模式）演练了它。层层问题一个个倒下，而最后一个不属于 runner：
 
 1. **Run `36775746724`**——二进制能**构建**，在不带参数使用时以代码 1 退出：`realpathSync` 中的 `ENOENT`。runner 只认识 Linux/macOS 编译二进制的虚拟路径（`/$bunfs/root/`）；Windows 的是 `B:/~BUN/root/`。已修正（AT-343，`apps/runner/src/binario-compilado.ts`）。
-2. **Run `36779817686`**——用法通过，`--self-test-pty` 以 `Cannot find package 'node-pty'` 失败：加载器收到的是**不带**冒号的形式（`B/~BUN/root/`），落入普通的 `import('node-pty')`。已修正。在同一次运行中，`darwin-arm64` 和两个 Linux 使用 AT-342 自己的 PTY 读取器**通过**了（[RN-688](../business-rules.md#rn-688)）。
+2. **Run `36779817686`**——用法通过，`--self-test-pty` 以 `Cannot find package 'node-pty'` 失败：加载器收到的是**不带**冒号的形式（`B/~BUN/root/`），落入普通的 `import('node-pty')`。已修正。在同一次运行中，`darwin-arm64` 和两个 Linux 使用 AT-342 自己的 PTY 读取器**通过**了（[RN-688](../business-rules/runner.md#rn-688)）。
 3. **Run `36780804339`**——`node-pty` 能加载，而从 `cmd.exe` 只到达 ConPTY 的初始序列（`ESC[?9001h ESC[?1004h`），连提示符都没有。自测增加了一个不依赖输入的**探针**，以区分输入和读取。
 4. **Run `36781729045`**——探针作出判定：在第二个 PTY 中的 `cmd.exe /c echo` 交付 **1 块**（同样的两个序列），读取流给出 `end,close`，子进程以 `-1073741510` 退出——**0xC000013A**（`STATUS_CONTROL_C_EXIT`）。在 Bun 下，ConPTY 输出命名管道之上的 `net.Socket` 在第一块之后就结束；`node-pty` 把管道的结束当作终端的结束，关闭伪控制台，而 Windows 杀死子进程。不涉及输入——即使一个只写输出的命令也会死。
 
@@ -26,7 +26,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 - `build-runner-binaries.yml` 把 `win32-x64` 从矩阵和 `ALVOS_ESPERADOS` 中去掉。`checksums.txt` 只声明真正失败的缺失。
 - 代理 `GET /runner-releases/binary` 接受这三个，并以**专门的 400** 拒绝 `win32-x64`——点名本 ADR 和 npm 命令，不调用 GitHub——放在与拒绝 `darwin-x64` **同一张**表中（`SEM_BINARIO_POR_DECISAO`，可读的名称以及按平台的 ADR）。
 - `install.sh` 本来就在任何下载之前整体拒绝 Windows（ADR 0150），并继续如此：拒绝开始也**说明**那里的本地 agent 是 npm 包，点名本 ADR。`instalar_o_runner` 的 `case` 从来没有 `win32-x64`，也不会增加。
-- 浏览器继续**检测** `win32-x64`，并不请求下载：它进入 `SEM_BINARIO_PUBLICADO`，预先失败并落入一贯的尽力而为（`falhaDoBinario` → npm 命令，[RN-473](../business-rules.md#rn-473)）。
+- 浏览器继续**检测** `win32-x64`，并不请求下载：它进入 `SEM_BINARIO_PUBLICADO`，预先失败并落入一贯的尽力而为（`falhaDoBinario` → npm 命令，[RN-473](../business-rules/web.md#rn-473)）。
 - `scripts/ci/alvos-do-runner.spec.ts` 把这四个地方绑在一起，并开始拒绝矩阵中的 `windows-latest`。
 
 演练产生的 Windows 修正（三种形式的虚拟路径、`node-pty` 的加载器、自测中的 `cmd.exe` 以及探针）**保留**：它们是回去之路的起点，对其他目标没有任何代价。

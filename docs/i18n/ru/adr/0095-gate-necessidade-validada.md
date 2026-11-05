@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0095 — Gate `necessidade-validada` закрывается отдельным подтверждением человека, а не самопроверкой Criativo
@@ -54,11 +54,11 @@ Gate никогда по-настоящему не существовал: не�
 
 **Gate закрывается явным и ОТДЕЛЬНЫМ кликом пользователя** — тот же
 интерактивный шаблон, что у «Подтвердить готовность архитектуры»
-([RN-160](../business-rules/autenticacao.md#rn-160)): выделенная кнопка в
+([RN-160](../business-rules/web.md#rn-160)): выделенная кнопка в
 `SessionPage.tsx`, выделенный HTTP-маршрут
 (`POST .../agents/criativo/validate-necessity`), выделенный сценарий использования
 (`ValidateNecessityUseCase`), который записывает доменное событие
-`necessity.validated` ([RN-406](../business-rules.md#rn-406)).
+`necessity.validated` ([RN-406](../business-rules/contracts.md#rn-406)).
 
 ### Цепочка: после `confirm_readiness`, а не параллельно с ним {#encadeamento-depois-de-confirm_readiness-não-em-paralelo-com-ele}
 
@@ -172,8 +172,8 @@ event log). Но `severidade: warn`: ни один механизм продук
   `necessidadeJaValidada`, `handleValidateNecessity`)
 - `docs/gates.yml` — gate `necessidade-validada`
 - `docs/fluxo.yml` — роль `criativo`, `gate_saida`
-- [RN-406](../business-rules.md#rn-406)
-- [RN-160](../business-rules/autenticacao.md#rn-160) — скопированный интерактивный шаблон
+- [RN-406](../business-rules/contracts.md#rn-406)
+- [RN-160](../business-rules/web.md#rn-160) — скопированный интерактивный шаблон
 - `docs/explanation/modelo-de-time.md` — антипаттерн, мотивировавший
   решение (удалён из списка ожидающих этим ADR)
 - `docs/explanation/auditoria-fluxo-vs-codigo.md` — находка B2, раздел D

@@ -8,7 +8,7 @@ body:
         Antes de continuar: se o sintoma é **agente respondendo vazio,
         truncado ou lentíssimo**, quase sempre é ambiente de inferência
         (contexto truncado, modelo sem GPU, memória). Confira
-        [essa seção do runbook](https://github.com/daneiel/brabo/blob/dev/docs/runbook.md#ambiente-de-inferencia)
+        [essa seção do runbook](https://github.com/daneiel/brabo/blob/dev/deploy/docs/runbook.md#ambiente-de-inferencia)
         antes de abrir.
 
   - type: checkboxes

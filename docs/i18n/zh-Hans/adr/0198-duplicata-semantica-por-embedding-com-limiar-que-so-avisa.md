@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0198 — 故事与规则的语义重复通过带阈值的 embedding 提醒，花费进入计量
@@ -9,8 +9,8 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 **Accepted.** 2026-10-01（AT-171，故事 HS-047，史诗 EP-026，第 36 轮；
 负责人 10月1日的决定：*"embedding com limiar, só avisa"*——在发出时与项目中已有的故事和规则比较，超过阈值时**提醒**，绝不阻止；这项检查的 embedding 花费作为专属行进入计量）。在不编辑
 [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) 的情况下，为其计量切分开**一个**例外：该切分对 RAG 的索引和搜索继续有效
-（[ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md)）；只有这项检查开始写入 `token_usage`。关闭了 [RN-080](../business-rules/custo.md#rn-080)
-和 [RN-081](../business-rules/custo.md#rn-081) 声明为力所不及的那一半，而不改变其中任何一条：**完全**相同的重复仍被拒绝。
+（[ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md)）；只有这项检查开始写入 `token_usage`。关闭了 [RN-080](../business-rules/engine.md#rn-080)
+和 [RN-081](../business-rules/api.md#rn-081) 声明为力所不及的那一半，而不改变其中任何一条：**完全**相同的重复仍被拒绝。
 
 ## Context {#context}
 
@@ -44,7 +44,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **提醒的语句只有一个来源**，即 api 中的 `fraseParaOAgente`；engine 只是转发。同一项检查服务两种类型。
 
-**仍然会漏过的。** 含义在**描述**而不在标题中的重复（"Saudação com nome" × "Quem chama pode se identificar"，RN-080 的例子）不会被比较。因超时而丢失的提醒会被说明，但检查不会重做。而 `policy = 'block'` 的预算（[RN-019](../business-rules/custo.md#rn-019)）在这次调用**之前**不会被查询：该行计入花费并可能越过阈值，但检查不会因预算超支而被拒绝——它不阻止任何东西，而使用本地 Ollama 时记录的成本为 0。如果有付费的 embedding provider 加入，这个选择会重新摆上桌面。
+**仍然会漏过的。** 含义在**描述**而不在标题中的重复（"Saudação com nome" × "Quem chama pode se identificar"，RN-080 的例子）不会被比较。因超时而丢失的提醒会被说明，但检查不会重做。而 `policy = 'block'` 的预算（[RN-019](../business-rules/api.md#rn-019)）在这次调用**之前**不会被查询：该行计入花费并可能越过阈值，但检查不会因预算超支而被拒绝——它不阻止任何东西，而使用本地 Ollama 时记录的成本为 0。如果有付费的 embedding provider 加入，这个选择会重新摆上桌面。
 
 **本 ADR 不改变的：** 对完全重复的拒绝（RN-080/081）、索引和搜索的计量切分（ADR 0075）、RAG 固定的模型和 provider（ADR 0080），以及任何对话型服务器。
 

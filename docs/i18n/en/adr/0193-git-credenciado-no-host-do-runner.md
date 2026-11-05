@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0193 — Credentialed git runs on the runner's HOST; the code runs in the container
@@ -8,7 +8,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 **Accepted.** 2026-10-01 (AT-116, story HS-037, epic EP-010, round 36; owner
 decision on 01/10: *"credentialed git operations on the HOST, code in the
-container"*). Closes the half that [RN-558](../business-rules.md#rn-558) left
+container"*). Closes the half that [RN-558](../business-rules/runner.md#rn-558) left
 declared as open and references, without editing them,
 [ADR 0130](0130-broker-de-container.md) (the Docker port without a free `-e`),
 [ADR 0145](0145-docker-pre-requisito-do-runner.md) (`RunnerReadiness` and the

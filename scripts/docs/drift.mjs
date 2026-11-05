@@ -3,7 +3,10 @@
  * Drift check: cruza os arquivos alterados com o docs/.docmap.yml e cobra a
  * documentação que aquela mudança deveria ter atualizado.
  *
- *   node scripts/docs/drift.mjs [<base>...<head>]
+ *   node scripts/docs/drift.mjs [<base>...<head>] [--raiz <nome>]
+ *
+ * Lê o `.docmap.yml` de TODAS as raízes de doc (AT-693); `--raiz` restringe às
+ * regras daquela raiz.
  *
  * Sem argumento, usa `origin/dev...HEAD`.
  *
@@ -30,6 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import picomatch from 'picomatch';
 import { lerDocmap, RAIZ, regrasAcionadas } from './docmap.mjs';
+import { lerRaizesDeDoc } from './raizes-de-doc.mjs';
 
 /** Arquivos alterados que dispararam uma regra — o "por que estou vendo isto". */
 function gatilhosDe(regra, alterados) {
@@ -38,7 +42,9 @@ function gatilhosDe(regra, alterados) {
   );
 }
 
-const RANGE = process.argv[2] ?? 'origin/dev...HEAD';
+const iRaiz = process.argv.indexOf('--raiz');
+const RAIZ_PEDIDA = iRaiz > 0 ? process.argv[iRaiz + 1] : undefined;
+const RANGE = process.argv.slice(2).find((a, i, v) => !a.startsWith('--') && v[i - 1] !== '--raiz') ?? 'origin/dev...HEAD';
 
 function git(...args) {
   return execFileSync('git', args, { cwd: RAIZ, encoding: 'utf8' }).trim();
@@ -71,7 +77,7 @@ const dispensado = labelsPr.includes('docs-not-needed') || Boolean(motivoNoCorpo
 
 // ----------------------------------------------------------------- avaliação
 
-const docmap = lerDocmap();
+const docmap = lerDocmap({ raiz: RAIZ_PEDIDA, raizes: RAIZ_PEDIDA ? lerRaizesDeDoc() : undefined });
 const acionadas = regrasAcionadas(docmap, alterados);
 // Nenhum filtro por prefixo aqui — `regra.docs` já enumera o caminho exato
 // que importa por regra; restringir a `docs/`/`README.md` só fazia arquivo

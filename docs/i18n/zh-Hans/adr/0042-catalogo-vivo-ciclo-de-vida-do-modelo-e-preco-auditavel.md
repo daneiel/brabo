@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0042 — 活目录、模型生命周期与可审计的价格
@@ -40,7 +40,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ### 被发现的模型以**未启用**状态加入，消失的模型被标记并保留 {#modelo-descoberto-entra-inativo-modelo-sumido-é-marcado-e-preservado}
 
-在 [RN-043](../business-rules/custo.md#rn-043) 中形式化。删除从来不是选项：
+在 [RN-043](../business-rules/api.md#rn-043) 中形式化。删除从来不是选项：
 `model_bindings` 和 `token_usage` 都指向这一行。
 
 第三条规则最不显眼却最重要：**失败的 provider 不会让任何东西变为不可用。** 401 的意思是“我不知道那边有什么”。把它当作空目录会把该 provider 的所有模型标记为消失，并一次性推翻所有 binding——只因一个被撤销的密钥。该 provider 被**跳过**，失败来源（`infra` | `modelo`）写入报告，使用 [ADR 0020](0020-destravar-gates-qa-secops.md) 的词汇。
@@ -52,7 +52,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 `resolveBinding` 开始随 id 一起接收 `{availability, supportsToolCalling}`，并返回 `skipped[]`——被丢弃的内容及原因。
 
 不显而易见的一点：当轮次带有工具时，`supports_tool_calling` 的过滤对**每一个**候选都有效，而不只是第一个。否则，一个指向不可用模型的 agent binding 会落到下一层，停在一个仅聊天的模型上，静默违反
-[RN-040](../business-rules/custo.md#rn-040)——失败只会稍后在 ToolLoop 中显现为“agent 自己停了”。这正是 ADR 0020 花了九次执行才诊断出的失败模式。
+[RN-040](../business-rules/api.md#rn-040)——失败只会稍后在 ToolLoop 中显现为“agent 自己停了”。这正是 ADR 0020 花了九次执行才诊断出的失败模式。
 
 触发条件是轮次**带有**工具，而不是参与者是 agent：context-manager 一个不带 `tools` 的摘要轮次在仅聊天模型上运行良好，锁住它会比规则要求的限制更多。
 
@@ -60,7 +60,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 `token_usage` 增加了 `input_price_per_million_micros` 和
 `output_price_per_million_micros`——产生该成本的价格。正是这让旧成本可复现，而不只是不可变
-（[RN-044](../business-rules/custo.md#rn-044)）。
+（[RN-044](../business-rules/api.md#rn-044)）。
 
 考虑过的备选是一张**有效期表**（带有效区间的价格，通过 join 重新计算成本）。被放弃：它会迫使每次成本读取都去解析正确的区间，而该 join 中的一个 bug 会给整个过去重新定价——正是本阶段所禁止的。快照把答案放在行里。
 

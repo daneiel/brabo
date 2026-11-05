@@ -44,8 +44,8 @@ function mdDaRaiz(arquivo: string): boolean {
 
 export const REGRAS_SEM_IMAGEM: readonly RegraSemImagem[] = [
   {
-    descricao: 'docs/ (documentação; o registro de gates mora em apps/api/config)',
-    casa: (a) => a.startsWith('docs/'),
+    descricao: 'docs/ e a raiz de doc de cada área (AT-693; o registro de gates mora em apps/api/config)',
+    casa: (a) => a.startsWith('docs/') || /^(apps\/[^/]+|packages|deploy|scripts\/ci)\/docs\//.test(a),
   },
   { descricao: 'website/ (o site de documentação)', casa: (a) => a.startsWith('website/') },
   { descricao: 'scripts/docs/ (geradores e checagens da documentação)', casa: (a) => a.startsWith('scripts/docs/') },

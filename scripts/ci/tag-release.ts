@@ -1,7 +1,7 @@
 /**
  * tag-release — decide qual tag carimbar no commit que acabou de entrar numa
  * permanente.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * Adaptador do `version.ts`. A regra por branch:
  *

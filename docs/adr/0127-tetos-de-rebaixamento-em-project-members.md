@@ -9,7 +9,7 @@ sentidos — sobe e desce.
 
 Isso foi descoberto pela revisão da #444, que fechou o gate de papel da seção de
 Membros, e está registrado na
-[RN-471](../business-rules.md#rn-471). O achado tem duas metades. A primeira é
+[RN-471](../business-rules/web.md#rn-471). O achado tem duas metades. A primeira é
 documental: QUATRO lugares prometiam o contrário — "the EFFECTIVE role is the
 higher of this one and what the person already has in the workspace",
 "associating someone as `viewer` here doesn't downgrade a workspace `owner`" —

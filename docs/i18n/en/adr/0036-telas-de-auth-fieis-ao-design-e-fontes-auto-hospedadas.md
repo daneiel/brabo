@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0036 — Auth screens faithful to the design, and the three fonts that weren't loading
@@ -166,7 +166,7 @@ known.
 
 The copy changes from `E-mail ou senha inválidos.` to `E-mail ou senha
 incorretos.`. The 403 case (`Confirme seu e-mail…`) stays distinct, as ADR
-0032 and [RN-032](../business-rules/autenticacao.md#rn-032) require: the uniformity is
+0032 and [RN-032](../business-rules/api.md#rn-032) require: the uniformity is
 between "doesn't exist," "wrong password" and "account locked" — not with
 "email not verified," which is only reachable **after** the password has
 been proven correct.

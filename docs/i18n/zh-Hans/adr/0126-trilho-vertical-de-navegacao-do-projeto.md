@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0126 — 项目页面通过垂直轨道导航，代码标签页不再自行折叠侧边栏
@@ -12,7 +12,7 @@ traducao_de: 2f301391630d5be632e27036026760d416d43da1
   [ADR 0074](0074-tema-alcancavel-e-o-boot-sob-csp.md)（让计数器徽章保持实色而不是着色的对比度债务）、
   [ADR 0125](0125-projectsettingstab-dividido-por-secao.md)（同一个已接受的 8 个 PR 工作中的 PR 0，本
   ADR 是其中的 PR 1）。
-- **修订：** [RN-201](../business-rules/autenticacao.md#rn-201)——自动折叠的那一半被移除；
+- **修订：** [RN-201](../business-rules/web.md#rn-201)——自动折叠的那一半被移除；
   `brabo.project`/`brabo.tab` 的持久化那一半保持不变。
 
 ## 背景 {#contexto}

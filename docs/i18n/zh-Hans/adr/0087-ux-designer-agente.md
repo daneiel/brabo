@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0087 — UX Designer 作为对话式 agent 加入
@@ -84,7 +84,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - [ADR 0085](0085-fluxo-como-registro-declarativo.md) — `docs/fluxo.yml` 作为角色的声明式登记
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md) — 创建 Dev Lead，本 ADR 复制的模子
 - [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) — 为什么 `propose_prototype` **不**挂起（没有外部效果）
-- [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)，[RN-149](../business-rules/autenticacao.md#rn-149) — `artifact.prototipo_navegavel` 遵循的无表工件模式，以及为什么它**不**需要另外两个所拥有的专门用例
+- [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)，[RN-149](../business-rules/api.md#rn-149) — `artifact.prototipo_navegavel` 遵循的无表工件模式，以及为什么它**不**需要另外两个所拥有的专门用例
 - `apps/engine/lib/engine/agents/ux_designer_server.ex`、`ux_designer_tools.ex`、`ux_designer_supervisor.ex`
 - `apps/engine/lib/engine/harness/agents.ex`、`artifact_schemas.ex`
 - `apps/web/src/lib/agents.ts`、`agent-status.ts`

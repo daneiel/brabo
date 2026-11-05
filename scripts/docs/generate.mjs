@@ -29,7 +29,8 @@ import {
   veredito as vereditoDasRefs,
 } from './refs-com-simbolo.mjs';
 import { deduplicarProximoAdr, PROXIMO_ADR, substituirGrupo } from './reescrita.mjs';
-import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
+import { aferirAncoras } from './ancoras-de-rn.mjs';
+import { arquivosDeRn, contarRegras, gerarIndiceDeRn, numerosDuplicados, rnsDoTexto } from './regras-de-negocio.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
 import { conferirTemas, corrigirRecuo, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
@@ -457,7 +458,7 @@ function gerarProvidersDeLlm() {
   const achados = descobrirProviders();
 
   const seedTs = ler('apps/api/src/db/seed.ts');
-  const quirksPorProvider = extrairQuirksResumidos(ler('docs/reference/llm-providers.md'));
+  const quirksPorProvider = extrairQuirksResumidos(ler('apps/api/docs/reference/llm-providers.md'));
 
 
   // Every LLM credential has the SAME shape today — an API key encrypted via
@@ -475,7 +476,7 @@ function gerarProvidersDeLlm() {
 
   const ordenados = [...achados.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-  escreverBlocoPorLocale('docs/reference/llm-providers.md', 'providers-capabilities', (T) => {
+  escreverBlocoPorLocale('apps/api/docs/reference/llm-providers.md', 'providers-capabilities', (T) => {
     const marca = (v) => (v === null ? '?' : v ? T.sim : T.nao);
     let corpo = `\n${T.avisoBloco}\n\n${T.llmLido(ordenados.length)}\n\n`;
     corpo += `${T.llmColunas}\n`;
@@ -520,7 +521,7 @@ function gerarOpenapi() {
  * A spec exportada. Desde o ADR 0206 o site a renderiza numa página Redoc
  * (redocusaurus) em tempo de build — nada mais é gerado a partir dela aqui.
  */
-const SPEC = 'docs/reference/openapi.json';
+const SPEC = 'apps/api/docs/reference/openapi.json';
 
 // ----------------------------------------------------------- 5. índice de ADR
 
@@ -638,11 +639,7 @@ function contarSchemasDeArtefato() {
  * exatamente o modo de falha que esta aferição existe para pegar.
  */
 function contarRegrasDeNegocio() {
-  const fontes = ['docs/business-rules.md', ...arquivos('docs/business-rules/*.md')];
-  return fontes.reduce(
-    (soma, f) => soma + (ler(f).match(/^### RN-\d+ /gm) ?? []).length,
-    0,
-  );
+  return contarRegras(arquivosDeRn(arquivos), ler);
 }
 
 /**
@@ -872,7 +869,7 @@ function verificarFrasesAncoradasNoCodigo() {
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {
-      arquivo: 'docs/runbook.md',
+      arquivo: 'deploy/docs/runbook.md',
       padrao: /as (\S+) imagens que o produto publica já estão resolvidas/,
       esperado: imagensPt,
       oque: 'quantas imagens o produto publica no GHCR',
@@ -884,7 +881,7 @@ function verificarFrasesAncoradasNoCodigo() {
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {
-      arquivo: 'docs/explanation/branching-policy.md',
+      arquivo: 'scripts/ci/docs/explanation/branching-policy.md',
       padrao: /^description: A escada (.+?), a taxonomia/m,
       esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
       oque: 'a escada da esteira no `description` do frontmatter',
@@ -938,6 +935,7 @@ function verificarContagensDerivadasDoCodigo() {
   const resultados = aferirContagens({
     ler,
     listar: arquivos,
+    arquivosDeRn: () => arquivosDeRn(arquivos),
     rodarNode: (rel) => {
       try {
         return execFileSync(process.execPath, [rel], { cwd: RAIZ, encoding: 'utf8' });
@@ -981,9 +979,14 @@ function verificarContagensDerivadasDoCodigo() {
  * pelo SÍMBOLO (a saída diz onde ele aparece mais perto, que é pista e não
  * conserto — pode ser uma chamada e não a definição).
  */
+const NOME_DA_RAIZ = (() => {
+  const i = process.argv.indexOf('--raiz');
+  return i >= 0 ? (process.argv[i + 1] ?? null) : null;
+})();
+
 function verificarRefsComSimbolo() {
   const versionados = versionadosDasFontes();
-  let resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
+  let resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal, NOME_DA_RAIZ);
   // Ref cujo símbolo tem uma ocorrência mais próxima ÚNICA é reancorada no
   // modo escrita (AT-399); a que sumiu ou empata continua pedindo humano.
   if (!CHECAR) {
@@ -992,7 +995,7 @@ function verificarRefsComSimbolo() {
       const refs = resultado.naoBatem.filter((r) => r.doc === doc);
       mudou = reescreverSeDerivavel(doc, (t) => reancorar(t, refs), 'refs `caminho:N` reancoradas pelo símbolo') || mudou;
     }
-    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal);
+    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados, undefined, caminhoReal, NOME_DA_RAIZ);
   }
   const { total, batem, naoBatem, naoResolvidas } = resultado;
   const estado = vereditoDasRefs(resultado);
@@ -1006,9 +1009,12 @@ function verificarRefsComSimbolo() {
     return;
   }
 
-  const resumo = `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})`;
+  const resumo =
+    `${total} casam o padrão, ${batem} batem, ${naoBatem.length} não batem (janela ±${JANELA})` +
+    (NOME_DA_RAIZ ? `; ${resultado.externas.length} externas à raiz ${NOME_DA_RAIZ}, não conferidas` : '');
   if (estado === 'ok') {
     console.log(`  ok        refs com símbolo (${resumo})`);
+    if (NOME_DA_RAIZ) for (const r of resultado.externas) console.log(`            externa ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}`);
     return;
   }
 
@@ -1026,6 +1032,7 @@ function verificarRefsComSimbolo() {
   for (const r of naoResolvidas) {
     console.log(`            ${r.doc}:${r.linhaNoDoc} → \`${r.caminho}\` não resolve a um arquivo só`);
   }
+  if (NOME_DA_RAIZ) for (const r of resultado.externas) console.log(`            externa ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}`);
 }
 
 /**
@@ -1038,6 +1045,10 @@ function verificarRefsComSimbolo() {
  * cabeçalhos também reprova — é o check cego.
  */
 function verificarAncorasDeRn() {
+  for (const d of numerosDuplicados(arquivosDeRn(arquivos), ler)) {
+    pendencias.push('RN duplicada');
+    console.log(`  DUPLICADA RN-${d.numero} em ${d.arquivos.join(' e ')}`);
+  }
   const { cabecalhos, problemas } = aferirAncoras(arquivosDeRn(arquivos), ler);
 
   if (cabecalhos === 0) {
@@ -1190,9 +1201,9 @@ function verificarCatalogosDaApi() {
     const { orfas, invalidas, faltando } = aplicarCatalogo(spec, lerCatalogo(RAIZ, loc));
     if (orfas.length + invalidas.length > 0) {
       pendencias.push(`catálogo da API (${loc})`);
-      console.log(`  DESATUAL. docs/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
+      console.log(`  DESATUAL. apps/api/docs/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
     } else {
-      console.log(`  ok        docs/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
+      console.log(`  ok        apps/api/docs/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
     }
   }
 }
@@ -1200,7 +1211,27 @@ function verificarCatalogosDaApi() {
 // ------------------------------------------------------------------- main
 
 console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando…');
+/**
+ * Índice de RN (AT-693): `docs/business-rules.md` tem uma linha por RN ligando
+ * à página hospedeira, no bloco `indice-de-rn`. Só existe depois da migração
+ * para as raízes: sem o marcador no arquivo, não há o que escrever.
+ */
+function gerarIndiceDeRnNoBloco() {
+  const todos = arquivosDeRn(arquivos);
+  for (const locale of [null, ...LOCALES_GERADOS]) {
+    const rel = locale ? copiaDoLocale(locale, 'docs/business-rules.md') : 'docs/business-rules.md';
+    if (!existsSync(join(RAIZ, rel)) || !ler(rel).includes('<!-- BEGIN:GENERATED:indice-de-rn -->')) continue;
+    const meus = todos.filter((a) => (locale ? a.includes(`/i18n/${locale}/`) : !a.includes('/i18n/')));
+    const rns = meus.flatMap((a) =>
+      rnsDoTexto(ler(a)).map((r) => ({ ...r, pagina: a.slice(a.indexOf('business-rules/')) })),
+    );
+    const bloco = gerarIndiceDeRn(rns).split('\n').slice(1, -1).join('\n');
+    escreverBloco(rel, 'indice-de-rn', bloco);
+  }
+}
+
 gerarScripts();
+gerarIndiceDeRnNoBloco();
 gerarEnv();
 gerarEventos();
 gerarOpenapi();

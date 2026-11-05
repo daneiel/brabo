@@ -1,6 +1,6 @@
 /**
  * destravar-gate — no merge de uma retropropagação: tira a branch da trava.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * Roda no push da branch que RECEBEU o backmerge (`dev`), mas escreve
  * o gate na `main`, que é onde ele mora. A última destrava limpa o `awaiting`.

@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # 流水线真实执行中的发现
@@ -27,7 +27,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 ### A. 配置阶段的会话诞生时在 engine 中没有进程（严重） {#a-sessão-do-provisionamento-nasce-sem-processo-no-engine-grave}
 
-> **已关闭**——成为了 [RN-067](../business-rules/custo.md#rn-067)。下面引用的四个调用点改为通过
+> **已关闭**——成为了 [RN-067](../business-rules/api.md#rn-067)。下面引用的四个调用点改为通过
 > `CreateSessionUseCase` 创建会话（`provision-repository:119` 和 `:125`、`adopt-repository`、
 > `activate-execution`），而规则声明它是创建会话的**唯一**地方。之所以保留记录，是因为下面的对比证明是让缺陷
 > 变得可见的东西。
@@ -81,7 +81,7 @@ bootstrap 的 10 个事件全部显示为 "atividade em system"，而不说明�
 
 ### J. Psicólogo 在空会话中运行 {#j-psicólogo-roda-em-sessão-vazia}
 
-> **已关闭**——成为了 [RN-079](../business-rules/custo.md#rn-079)。分析只在有**可分析**的事件时才运行，而
+> **已关闭**——成为了 [RN-079](../business-rules/engine.md#rn-079)。分析只在有**可分析**的事件时才运行，而
 > "可分析"排除了 bootstrap 的机器步骤和分析者自己的痕迹——没有第二个排除，第一次分析就会让会话永远显得有内容。
 > 没有材料时，发出 `psychologist.analysis_skipped`，不花任何钱。发现中的会话被复现为测试（14 个事件，没有一个
 > 可分析）。
@@ -91,7 +91,7 @@ bootstrap 的 10 个事件全部显示为 "atividade em system"，而不说明�
 
 ### K. 重复的业务规则没有去重 {#k-regra-de-negócio-duplicada-não-é-deduplicada}
 
-> **部分关闭**——成为了 [RN-080](../business-rules/custo.md#rn-080)。**完全**重复（标题相同，忽略大小写、
+> **部分关闭**——成为了 [RN-080](../business-rules/engine.md#rn-080)。**完全**重复（标题相同，忽略大小写、
 > 重音和空格）在发出时被拒绝，范围是项目——它正是在会话之间产生的。**语义**重复仍未关闭并如此声明：把
 > "Saudação com nome" 与 "Quem chama pode se identificar" 区分开是判断，不是 `if`。
 在同一个项目中运行两次 Criativo 留下了 10 条规则，5 条孤立（"descoberta — sem história"）。这是我的剧本造成的
@@ -112,7 +112,7 @@ bootstrap 的 10 个事件全部显示为 "atividade em system"，而不说明�
 
 ### M. ARQUITETO 看不见自己的 module_map（P1——这一轮的失败） {#m-o-arquiteto-é-cego-ao-próprio-module_map-p1--a-falha-da-rodada}
 
-> **已关闭**——成为了 [RN-066](../business-rules/custo.md#rn-066)，并在本页最后一节中在生产中得到确认：
+> **已关闭**——成为了 [RN-066](../business-rules/api.md#rn-066)，并在本页最后一节中在生产中得到确认：
 > `assign_story_modules` 调用 4 次而不是 18 次，零个编造的名字，1 个 module_map 而不是 4 个。
 
 会话 `36abf7e7`，seq 80-131。Arquiteto 发出了映射（模块 `saudacao` 和 `api_http`），然后**无法重新读取它**。
@@ -185,7 +185,7 @@ política）。这里是 `código`（产品的已知限制），而它是 `null`
 
 ### R. PO 生成了重叠的用户故事 {#r-po-gerou-histórias-sobrepostas}
 
-> **部分关闭**——成为了 [RN-081](../business-rules/custo.md#rn-081)。标题相同的被拒绝；对其引用的规则不增加
+> **部分关闭**——成为了 [RN-081](../business-rules/api.md#rn-081)。标题相同的被拒绝；对其引用的规则不增加
 > 覆盖的用户故事变成 `backlog.story_overlap_warned`，是提醒而不是阻止。**这个发现中确切的那一对仍然通过**——
 > 同一端点的不同标题和理由，没有任何机械的东西把它们联系起来。有一个测试断言这个限制，使它可见而不是隐含。
 "Endpoint público de saudação determinística" 和 "Endpoint público GET /hello que responde saudação
@@ -353,7 +353,7 @@ atingido`，来源 `modelo`，诊断 `(nenhum terminal rodado)`。
 > X 不再是"探索时烧掉上限"，而变成**"上限对这个智能体来说是错的"**。产品修复**不是**提高全局默认值——
 > Criativo 对话不需要 25 次迭代。它是按智能体类型的上限，这是产品决定：留在分类中。
 >
-> **在 FASE 14d 关闭**（[RN-085](../business-rules/custo.md#rn-085)）。上限在 `Engine.Harness.Iteracoes` 中
+> **在 FASE 14d 关闭**（[RN-085](../business-rules/engine.md#rn-085)）。上限在 `Engine.Harness.Iteracoes` 中
 > 改为按类型：对话者 `8`，dev agent 和 QA 子智能体 `60`。谁能提高的标准不是"工作量大"——而是下面有
 > `token_budget_micros` 控制花费，这就是为什么 `infra-workflows` 使用重型工具却**保持 8**：它在没有预算的
 > 情况下运行，对它来说上限是唯一存在的锁。
@@ -374,7 +374,7 @@ projeto"*；ADR 0055 交付了一个**上限**（文件夹之外永远不自动�
 
 ### AA. 自动批准的 `pr_open` 没有凭据，在远程上总是失败（P1） {#aa-pr_open-auto-aprovado-não-tem-credencial-e-sempre-falha-em-remoto-p1}
 
-> **已关闭**——成为了 [RN-082](../business-rules/custo.md#rn-082)。api 改为按 workspace 的 OWNER 解析 git
+> **已关闭**——成为了 [RN-082](../business-rules/api.md#rn-082)。api 改为按 workspace 的 OWNER 解析 git
 > 凭据，复用与 RN-058 相同的解析器，而不是重新实现这条规则。经变异验证。
 
 在 13b 的第 5 次执行中发现，这是链条第一次到达 PR。
@@ -392,7 +392,7 @@ projeto"*；ADR 0055 交付了一个**上限**（文件夹之外永远不自动�
 
 推送到达了 GitHub——分支 `feature/task-d4b36a5b` 存在于远程。失败的只是打开 PR 的 REST 调用。
 
-这与 [RN-058](../business-rules/custo.md#rn-058) 为 LLM 修正的是同一类（"智能体花的密钥是 OWNER 的"）：api 的
+这与 [RN-058](../business-rules/api.md#rn-058) 为 LLM 修正的是同一类（"智能体花的密钥是 OWNER 的"）：api 的
 git 路径仍按"谁决定的"而不是"workspace 是谁的"来解析。
 
 **实际后果：** 在配置了自治的情况下——这正是阶段 F 要使之可行的模式——没有任何 dev agent 能在远程 provider
@@ -438,7 +438,7 @@ no escopo? false
 
 1. 片段 `/dev/null` 的"动词"就是 `/dev/null` 本身，它永远不会在 `allow` 中——而复合命令要求**每个**片段都被
    放行；
-2. `/dev/null` 是项目文件夹之外的**绝对**路径词元，因此 [RN-075](../business-rules/custo.md#rn-075) 的上限
+2. `/dev/null` 是项目文件夹之外的**绝对**路径词元，因此 [RN-075](../business-rules/api.md#rn-075) 的上限
    把 `auto_approve` 降级。
 
 **影响很大，因为 `2>/dev/null` 是惯用法。** 模型一直用它来静默预期的错误。实际上，任何带输出重定向的命令
@@ -497,7 +497,7 @@ bash -lc npm test --silent
 （`apps/engine/lib/engine/gates/qa_tools.ex:10`）：**不存在 `write_file`**。要写入，它必须经过 `terminal`——
 在那里它遇到两道出于其他原因早已存在的屏障：
 
-1. **动词允许列表**，管辖什么可以运行（[RN-075](../business-rules/custo.md#rn-075) 以及发现 Z/AD）；
+1. **动词允许列表**，管辖什么可以运行（[RN-075](../business-rules/api.md#rn-075) 以及发现 Z/AD）；
 2. **路径范围上限**，把项目文件夹之外的任何命令降级为 `require_approval`。
 
 它们是**独立**的屏障：没有一个是为这种情况设计的，这就是为什么约束是可靠的——它不依赖于提示词说服模型。
@@ -516,7 +516,7 @@ bash -lc npm test --silent
 ## **两个**模块的执行——2026-08-08 和 2026-08-09 {#execuções-com-dois-módulos--2026-08-08-e-2026-08-09}
 
 两个用户故事，一个在 `api`，一个在 `web`，两个 dev agent **同时**启动。这样运行很重要，因为
-[RN-083](../business-rules/custo.md#rn-083) 的并行上限只有在有真正独立的工作时才有意义——只有一个模块时，
+[RN-083](../business-rules/api.md#rn-083) 的并行上限只有在有真正独立的工作时才有意义——只有一个模块时，
 Dev Lead 拒绝并行化，而且理由充分。
 
 共三轮，它们的顺序就是论证：

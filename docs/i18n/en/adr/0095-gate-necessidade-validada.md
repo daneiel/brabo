@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0095 — The `necessidade-validada` gate closes with a separate human confirmation, not with the Creative self-validating
@@ -54,11 +54,11 @@ mechanism.
 
 **The gate closes with an explicit click, SEPARATE from the user** — the
 same interaction pattern as "Confirm architecture ready"
-([RN-160](../business-rules/autenticacao.md#rn-160)): a dedicated button in
+([RN-160](../business-rules/web.md#rn-160)): a dedicated button in
 `SessionPage.tsx`, a dedicated HTTP route
 (`POST .../agents/criativo/validate-necessity`), a dedicated use case
 (`ValidateNecessityUseCase`) that writes the domain event
-`necessity.validated` ([RN-406](../business-rules.md#rn-406)).
+`necessity.validated` ([RN-406](../business-rules/contracts.md#rn-406)).
 
 ### Sequencing: after `confirm_readiness`, not in parallel with it
 
@@ -174,8 +174,8 @@ as a future possibility, not part of this delivery.
   `necessidadeJaValidada`, `handleValidateNecessity`)
 - `docs/gates.yml` — gate `necessidade-validada`
 - `docs/fluxo.yml` — `criativo` role, `gate_saida`
-- [RN-406](../business-rules.md#rn-406)
-- [RN-160](../business-rules/autenticacao.md#rn-160) — the interaction pattern copied
+- [RN-406](../business-rules/contracts.md#rn-406)
+- [RN-160](../business-rules/web.md#rn-160) — the interaction pattern copied
 - `docs/explanation/modelo-de-time.md` — the anti-pattern that motivated
   the decision (removed from the pending list by this ADR)
 - `docs/explanation/auditoria-fluxo-vs-codigo.md` — finding B2, section D

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0173 — Workspace member removal is born, protected by the same clause
@@ -86,14 +86,14 @@ would also be refused, and `owner` would become absorbing again.
 
 **5. The cascade, in one transaction.** Removing the `workspace_members` row
 alone would be cosmetic: the `projectRole ?? workspaceRole` overlay
-([RN-471](../business-rules.md#rn-471)) would keep the removed person inside
+([RN-471](../business-rules/web.md#rn-471)) would keep the removed person inside
 every project where they had their own row. So, together:
 
 - the `workspace_members` row;
 - the removed person's `project_members` rows **in this workspace's projects**
   (those of other workspaces are not touched);
 - their credentials tied to those projects: the **PROJECT** device keys (by the
-  same column that [RN-519](../business-rules.md#rn-519) lists) and the
+  same column that [RN-519](../business-rules/api.md#rn-519) lists) and the
   **PATs** — every PAT belongs to a project (`project_id NOT NULL`) —, revoked
   with the reason `workspace_member_removed`. Without this, being re-added one
   day would silently reactivate a pairing the removal should have ended.
@@ -101,19 +101,19 @@ every project where they had their own row. So, together:
 **6. After the commit, the live connection drops via the RN-520 path.** One
 `disconnectRunnerOfUser(projectId, userId)` per project of the workspace — ALL,
 not only those in `runner` mode, because the runner also connects in
-`container`/`mounted` (the mirror, [RN-516](../business-rules.md#rn-516)); one
+`container`/`mounted` (the mirror, [RN-516](../business-rules/runner.md#rn-516)); one
 extra project costs a `sem_runner`, one missing leaves standing what the
 removal exists to bring down. In a `try/catch` that only logs: a side effect
 never brings down the main effect, the rule of
-[RN-520](../business-rules.md#rn-520).
+[RN-520](../business-rules/api.md#rn-520).
 
 **7. The HOLDER does not leave; holdership is transferred** (maintainer
-decision, 2026-09-27, [RN-616](../business-rules.md#rn-616)).
+decision, 2026-09-27, [RN-616](../business-rules/api.md#rn-616)).
 `workspaces.created_by` does not decide authorization (the role does, ADR 0127),
 but it is what resolves the LLM credential the agents spend and the git
-credential of agent actions ([RN-058](../business-rules/custo.md#rn-058),
+credential of agent actions ([RN-058](../business-rules/api.md#rn-058),
 `ResolveCredentialOwnerUseCase`) and the owner of the spending report
-([RN-060](../business-rules/custo.md#rn-060)). Removing the creator through
+([RN-060](../business-rules/api.md#rn-060)). Removing the creator through
 point 4 would leave the agents spending the credential of someone no longer in
 the workspace. So, under the name **holder**:
 

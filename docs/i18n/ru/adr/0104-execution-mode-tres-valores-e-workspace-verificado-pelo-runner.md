@@ -1,5 +1,5 @@
 ---
-traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0104 — `execution_mode` с тремя значениями, и workspace рождается `unverified`, когда проверяет его runner
@@ -16,7 +16,7 @@ traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
 
 [ADR 0072](0072-projeto-local-ou-container.md) создал
 `projects.workspace_mode` (`'container'|'local'`) + `workspace_path`. В
-режиме `local` [RN-170](../business-rules/autenticacao.md#rn-170) при СОЗДАНИИ проверяет, что
+режиме `local` [RN-170](../business-rules/api.md#rn-170) при СОЗДАНИИ проверяет, что
 папка **смонтирована через bind-mount** внутри контейнеров api И
 engine — `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
 (`validarCaminhoDeWorkspaceLocal`) выполняет `access(W_OK|X_OK)` **внутри
@@ -32,7 +32,7 @@ bind-mount**, подключаясь к engine по каналу Phoenix (`/runn
 самим engine. Он выполняет команду агента, уже одобренную обычным
 pipeline, и открывает настоящий интерактивный PTY-терминал — вкладка Терминал
 (`apps/web/src/routes/code/TerminalPanel.tsx`) уже по-настоящему использует для этого
-`@xterm/xterm`. [RN-420](../business-rules.md#rn-420), которая решает,
+`@xterm/xterm`. [RN-420](../business-rules/engine.md#rn-420), которая решает,
 когда направить команду в runner вместо привычного `System.cmd`, повторно использует
 ТО ЖЕ условие `workspace_mode == "local"` (плюс подключённый runner) —
 ADR 0103 так и не создал третье значение поля.

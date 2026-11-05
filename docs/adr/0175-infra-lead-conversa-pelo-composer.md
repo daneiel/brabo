@@ -10,12 +10,12 @@ seis conversacionais passa a valer para o sétimo, pelo MESMO mecanismo.
 Referencia também o [ADR 0038](0038-hierarquia-de-agentes.md) (a hierarquia de agentes, lead e
 subagente) e o [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) (a
 suspensão do Dev Lead, que o Infra Lead não tem). Regra:
-[RN-617](../business-rules.md#rn-617). Fecha a decisão aberta que a
-[RN-584](../business-rules.md#rn-584) deixou por escrito.
+[RN-617](../business-rules/engine.md#rn-617). Fecha a decisão aberta que a
+[RN-584](../business-rules/engine.md#rn-584) deixou por escrito.
 
 ## Context
 
-A [RN-584](../business-rules.md#rn-584) (AT-098) tirou o destinatário padrão da
+A [RN-584](../business-rules/engine.md#rn-584) (AT-098) tirou o destinatário padrão da
 mensagem de chat e deu ao `infra` uma recusa NOMEADA (`422
 agente_sem_conversa`), deixando declarada a pergunta de produto: o Infra Lead
 conversa pelo composer? E declarou o preço de responder "sim" sem preparo: o
@@ -28,12 +28,12 @@ deram aos outros seis:
 
 | Peça | Os seis | O Infra Lead |
 |---|---|---|
-| Aceite imediato, `working` gravado antes ([RN-578](../business-rules.md#rn-578)) | `TurnoAssincrono.iniciar/3` | o turno inteiro no `handle_call`/`handle_cast` |
+| Aceite imediato, `working` gravado antes ([RN-578](../business-rules/engine.md#rn-578)) | `TurnoAssincrono.iniciar/3` | o turno inteiro no `handle_call`/`handle_cast` |
 | Recusa nomeada `409 turno_em_andamento` | sim | a segunda mensagem esperava na fila do processo |
-| "Parar" ([RN-122](../business-rules.md#rn-122)) | `via_for/2` do `cancel/2` | nem `via_for/2` o conhecia, nem havia Task para matar |
-| Turno órfão no reinício ([RN-586](../business-rules.md#rn-586)) | `TurnoOrfao` | "fica de fora — declarado na RN-586" |
-| Parar ao fechar a sessão ([RN-581](../business-rules.md#rn-581)) | `terminate/2` abandona a Task | morto depois de 5 s de espera |
-| Teto de iterações narrado ([RN-166](../business-rules/autenticacao.md#rn-166)) | `toolloop.limit_reached` | o laço terminava calado no 14º passo |
+| "Parar" ([RN-122](../business-rules/engine.md#rn-122)) | `via_for/2` do `cancel/2` | nem `via_for/2` o conhecia, nem havia Task para matar |
+| Turno órfão no reinício ([RN-586](../business-rules/engine.md#rn-586)) | `TurnoOrfao` | "fica de fora — declarado na RN-586" |
+| Parar ao fechar a sessão ([RN-581](../business-rules/api.md#rn-581)) | `terminate/2` abandona a Task | morto depois de 5 s de espera |
+| Teto de iterações narrado ([RN-166](../business-rules/engine.md#rn-166)) | `toolloop.limit_reached` | o laço terminava calado no 14º passo |
 
 Também o kickoff: sendo `cast`, ele não segurava clique nenhum, mas ocupava o
 processo pelo turno inteiro — medido na instalação da AT-089, 8,4 min. Uma
@@ -41,7 +41,7 @@ mensagem que chegasse nesse meio tempo esperaria os 8,4 min na fila e sairia
 por `:timeout` no controller (500), e "Parar" só seria atendido depois.
 
 E o teto: o `propose_action` das ações de container que a api executa
-auto-aprovadas espera até 225 s ([RN-605](../business-rules.md#rn-605)), mais
+auto-aprovadas espera até 225 s ([RN-605](../business-rules/contracts.md#rn-605)), mais
 que os 180 s do `user_message/2`. Uma mensagem que levasse o modelo a propor
 `container_start` podia estourar o `GenServer.call` com a proposta ainda de pé.
 
@@ -57,7 +57,7 @@ que os 180 s do `user_message/2`. Uma mensagem que levasse o modelo a propor
    (`concluir/1`: HALT de `propose_infra_pr` → `WorkflowsAgent` → PR única)
    é parte da função de turno e devolve o `state`; os sinais de fim
    (`agent.done`, `agent.status: idle`) saem só de `TurnoAssincrono`, no
-   processo do servidor ([RN-585](../business-rules.md#rn-585)). "Parar" mata
+   processo do servidor ([RN-585](../business-rules/engine.md#rn-585)). "Parar" mata
    também o Workflows em curso.
 3. **A correção de gate não é descartada.** `TurnoAssincrono.iniciar/3` sem
    `from` ignora o pedido quando há turno em curso (o caso defensivo do
@@ -74,8 +74,8 @@ que os 180 s do `user_message/2`. Uma mensagem que levasse o modelo a propor
 6. **A tela o oferece pela regra de sempre.** `infra` entra em
    `AGENTES_DE_CHAT` (`apps/web/src/lib/session-readiness.ts`): ele é o
    destinatário quando é o `agent.activated` mais recente, sem destinatário
-   padrão ([RN-584](../business-rules.md#rn-584)). O aceite do handoff DELE
-   continua no card próprio da [RN-499](../business-rules.md#rn-499), e o card
+   padrão ([RN-584](../business-rules/engine.md#rn-584)). O aceite do handoff DELE
+   continua no card próprio da [RN-499](../business-rules/web.md#rn-499), e o card
    do fio o exclui por NOME — senão o convite aparecia duas vezes e, por ser o
    mais antigo, voltaria a esconder o do Dev Lead (RN-136).
 7. **Conversar não abre efeito externo.** As ferramentas são as mesmas quatro;

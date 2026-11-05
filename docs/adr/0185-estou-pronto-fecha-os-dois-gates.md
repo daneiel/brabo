@@ -13,7 +13,7 @@ respondidas SIM:
 
 Revê o desenho do [ADR 0095](0095-gate-necessidade-validada.md) (o gate
 `necessidade-validada` fecha com um clique SEPARADO) e a
-[RN-406](../business-rules.md#rn-406). Não edita o 0095: registra o que muda e
+[RN-406](../business-rules/contracts.md#rn-406). Não edita o 0095: registra o que muda e
 o que dele continua valendo.
 
 ## Context
@@ -152,9 +152,9 @@ PESSOA gravou.
 - [ADR 0095](0095-gate-necessidade-validada.md) — o desenho que este revê
 - [ADR 0163](0163-o-clique-responde-ao-aceitar.md) — o clique responde ao aceite
 - [ADR 0182](0182-ciclo-de-vida-do-handoff.md) — `superseded`, preservado
-- [RN-406](../business-rules.md#rn-406), [RN-657](../business-rules.md#rn-657),
-  [RN-658](../business-rules.md#rn-658), [RN-633](../business-rules.md#rn-633),
-  [RN-635](../business-rules.md#rn-635)
+- [RN-406](../business-rules/contracts.md#rn-406), [RN-657](../business-rules/api.md#rn-657),
+  [RN-658](../business-rules/api.md#rn-658), [RN-633](../business-rules/web.md#rn-633),
+  [RN-635](../business-rules/api.md#rn-635)
 - `apps/api/src/domain/sessions/estou-pronto.ts`
 - `apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts`
 - `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts`

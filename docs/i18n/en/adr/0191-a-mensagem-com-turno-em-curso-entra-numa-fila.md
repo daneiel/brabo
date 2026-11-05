@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0191 — A message arriving during a turn enters a persisted queue and is read at the end of the turn
@@ -12,7 +12,7 @@ the user's MESSAGE, the synchronous `turno_em_andamento` refusal of
 immediate acceptance it decided still holds, and the named refusal still holds
 for commands that are not speech (the PO's story review, the Criativo's
 readiness, the Arquiteto's handoff offer). Rule:
-[RN-673](../business-rules.md#rn-673).
+[RN-673](../business-rules/engine.md#rn-673).
 
 ## Context
 

@@ -75,13 +75,13 @@ Uma entregável cada. A coluna "depende de" é que ordena.
 | # | entregável | depende de | proibições próprias |
 |---|---|---|---|
 | 1 | este documento, os ADRs 0154/0155 e a faixa de RN | — | não toca `apps/`, `docker/`, `scripts/`, `install.sh`; não edita ADR aceito |
-| 2 | **FECHADA** — api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules.md#rn-543)) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
-| 3 | **FECHADA** — runner: N conexões, uma por projeto, descobertas pela rota ([RN-544](../business-rules.md#rn-544)) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
-| 4 | **FECHADA** — runner: unit por máquina no `service install`, convivendo com as por projeto ([RN-545](../business-rules.md#rn-545)) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
-| 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
-| 6 | **FECHADA** — `install.sh`: consentimento, conta, chave de máquina e `service install` ([RN-547](../business-rules.md#rn-547)) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
-| 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
-| 8 | **FECHADA** — E2E em máquina limpa, docmap, `docs:check` ([RN-549](../business-rules.md#rn-549)) | 6, 7 | não afrouxa gate para o E2E passar |
+| 2 | **FECHADA** — api: `project_id` nullable, chave de máquina aceita em `runner-ticket`, `GET runner/projects` ([RN-543](../business-rules/produto.md#rn-543)) | 1 | não toca o engine; não afrouxa papel de rota nenhuma |
+| 3 | **FECHADA** — runner: N conexões, uma por projeto, descobertas pela rota ([RN-544](../business-rules/runner.md#rn-544)) | 2 | não toca `RunnerReadiness`, o espelho nem `workspace_create` |
+| 4 | **FECHADA** — runner: unit por máquina no `service install`, convivendo com as por projeto ([RN-545](../business-rules/runner.md#rn-545)) | 3 | não remove a unit por projeto; não muda `Restart=on-abnormal` |
+| 5 | **FECHADA** — api: `POST /internal/first-account`, conta verificada + workspace pessoal, `409` com qualquer usuário ([RN-546](../business-rules/produto.md#rn-546)) | 1 | não cria rota pública; não toca o registro normal |
+| 6 | **FECHADA** — `install.sh`: consentimento, conta, chave de máquina e `service install` ([RN-547](../business-rules/produto.md#rn-547)) | 4, 5 | não grava senha em lugar nenhum; sem TTY relata e sai 0 |
+| 7 | **FECHADA** — web: a tela do projeto reconhece agente de máquina já pareado ([RN-548](../business-rules/web.md#rn-548)) | 3 | não remove o fluxo do ADR 0118 |
+| 8 | **FECHADA** — E2E em máquina limpa, docmap, `docs:check` ([RN-549](../business-rules/ci.md#rn-549)) | 6, 7 | não afrouxa gate para o E2E passar |
 
 ### O que a sessão 2 fechou, e o que ela deixou declarado
 
@@ -89,7 +89,7 @@ A metade da api está de pé: `runner_device_keys.project_id` é nullable, o
 `PatAuthGuard` resolve o papel contra o projeto **pedido** quando a credencial
 não nomeia nenhum, e `GET runner/projects` existe. Duas coisas que a medição do
 recorte não antecipava e a implementação obrigou a decidir, as duas registradas
-na [RN-543](../business-rules.md#rn-543):
+na [RN-543](../business-rules/produto.md#rn-543):
 
 - **A listagem da RN-519 passou a devolver as duas espécies, marcadas.** Uma
   chave de máquina que não entrasse em listagem nenhuma seria invisível e
@@ -113,7 +113,7 @@ viraram N estados com `docker` e `base` compartilhados por valor. O modo antigo
 ficou byte a byte, e o portão novo é estreito: credencial de máquina **e** base
 consentida.
 
-Três coisas o recorte não antecipava, e a [RN-544](../business-rules.md#rn-544)
+Três coisas o recorte não antecipava, e a [RN-544](../business-rules/runner.md#rn-544)
 as registra:
 
 - **Um projeto recusado não derruba os outros.** O teto de tentativas e a
@@ -126,7 +126,7 @@ as registra:
   ambiguidade. O processo diz isso ao subir, e o gesto é reconectar.
 - **Lista vazia é estado NORMAL, com saída 0.** É o estado de toda instalação
   nova, e `Restart=on-abnormal` não a reergue de propósito. *(Revisado ao
-  dividir a sessão 6, [RN-550](../business-rules.md#rn-550): com ZERO conexões o agente
+  dividir a sessão 6, [RN-550](../business-rules/runner.md#rn-550): com ZERO conexões o agente
   passa a FICAR DE PÉ e reconsultar — a metade "só no start" fica intacta para
   quem tem conexão viva.)*
 
@@ -154,7 +154,7 @@ ponto 5 promete. Então o discriminador virou a flag **`--machine`**, opt-in
 explícito, com as duas fontes de projeto intactas.
 
 As três decisões que o recorte deixava em aberto, registradas na
-[RN-545](../business-rules.md#rn-545):
+[RN-545](../business-rules/runner.md#rn-545):
 
 - **`status` responde sobre a espécie perguntada, e o código não soma.** Os
   quatro estados e os quatro códigos (RN-088) não viram oito; a outra espécie
@@ -192,7 +192,7 @@ vale para quem pegar a sessão 6: `provisionarUsuario` **recusa rodar com
 `BRABO_FORCE_SEED`, o núcleo virou `ProvisionarUsuarioUseCase` e **a recusa
 ficou no script** — o que ela protege é senha CONHECIDA criada SEM interação
 humana, e a rota é outra categoria. A sessão 5 também acrescentou o que o ADR
-não dizia e a [RN-410](../business-rules.md#rn-410) exige: o **workspace
+não dizia e a [RN-410](../business-rules/api.md#rn-410) exige: o **workspace
 pessoal** nasce na mesma transação, senão a instalação fecharia com um login
 que atravessa e um dashboard onde "Novo projeto" não tem onde criar.
 
@@ -205,13 +205,13 @@ ela, para de mandar parear: o que falta não é pareamento, é o agente estar
 rodando. Nada da api, do engine ou do runner foi tocado.
 
 As três decisões que o recorte deixava em aberto, e o que cada uma virou
-(a [RN-548](../business-rules.md#rn-548) tem o porquê inteiro):
+(a [RN-548](../business-rules/web.md#rn-548) tem o porquê inteiro):
 
 - **Onde aparece: no PAINEL, e por isso nos três montadores de uma vez — mas
   não com o mesmo resultado.** O reconhecimento é por PROJETO, porque a rota é
   `GET /projects/:projectId/runner-device-keys`: `TerminalPanel` e
   `FolderBrowserModal` sempre têm projeto, e o `NewProjectWizard` só depois da
-  criação antecipada ([RN-437](../business-rules.md#rn-437)). Sem `projectId`
+  criação antecipada ([RN-437](../business-rules/web.md#rn-437)). Sem `projectId`
   não há a quem perguntar. `AmbienteDoProjeto` foi CONSIDERADO e recusado: o
   docblock dele já declara que presença de runner é conhecimento de primeira
   mão do canal, e uma linha sobre chave registrada ali seria um terceiro proxy
@@ -249,7 +249,7 @@ nenhuma é a sessão 8, que é o E2E e continua aberta na tabela acima.
 As duas peças que faltavam **do lado do agente**, e as duas vêm do ADR 0155.
 
 A primeira é uma REVISÃO da sessão 3, e a decisão é a ASSIMETRIA
-([RN-550](../business-rules.md#rn-550)): com **zero** conexões o agente deixa
+([RN-550](../business-rules/runner.md#rn-550)): com **zero** conexões o agente deixa
 de sair e passa a ESPERAR, reconsultando `GET runner/projects` a 15s/30s/60s
 até o primeiro projeto aparecer; com conexão **viva**, a lista continua sendo
 lida só no start, byte a byte. O argumento da sessão 3 continua inteiro onde
@@ -264,7 +264,7 @@ falhar tem (dez consultas seguidas, saída 1 nomeando o número).
 
 A segunda fecha a lacuna que as sessões 2, 3 e 4 declararam — *"ninguém CRIA
 chave de máquina ainda"* — pela metade que é do agente
-([RN-551](../business-rules.md#rn-551)): `brabo-runner device-key
+([RN-551](../business-rules/runner.md#rn-551)): `brabo-runner device-key
 create|finish` gera o par Ed25519 **nesta máquina**. A decisão aqui é o CORTE:
 o CLI **não** fala com a api, porque quem registra é o instalador com o
 `BRABO_SERVICE_TOKEN`, e dar esse segredo ao agente ampliaria o que ele pode
@@ -277,7 +277,7 @@ sem `kid`** — o defeito da RN-475, impossível por construção.
 O que segue **declarado, não feito**: a ROTA que registra a pública de máquina
 e o `install.sh` que encadeia os três comandos continuam sendo a sessão 6.
 
-E a metade de API da mesma divisão ([RN-552](../business-rules.md#rn-552)):
+E a metade de API da mesma divisão ([RN-552](../business-rules/api.md#rn-552)):
 `POST /internal/machine-device-keys`, `engine-service`, corpo
 `{ name, publicKeyJwk }` e resposta com o `id` que vira o `kid` da privada
 (RN-475). **A credencial foi decidida e o custo está declarado**: o service
@@ -311,7 +311,7 @@ acontecer de verdade: o agente sobe sem projeto, espera, e pega o primeiro que
 a pessoa criar na web.
 
 As quatro decisões, registradas inteiras na
-[RN-547](../business-rules.md#rn-547):
+[RN-547](../business-rules/produto.md#rn-547):
 
 - **Quando um elo do meio falha, nada é desfeito e tudo é relatado — e o script
   sempre sai 0.** Os elos já cumpridos são úteis por si (com a conta a pessoa
@@ -327,7 +327,7 @@ As quatro decisões, registradas inteiras na
   E o passo do agente só roda quando ESTA execução criou a conta: com usuário
   preexistente, registrar chave de máquina cunharia credencial duradoura para
   quem não pediu nada nesta rodada.
-- **O `name` da chave é o `hostname`.** A [RN-551](../business-rules.md#rn-551)
+- **O `name` da chave é o `hostname`.** A [RN-551](../business-rules/runner.md#rn-551)
   declarou que o CLI não nomeia — é campo do registro, e quem nomeia é quem
   registra. Quem abre a lista de chaves precisa saber a QUAL máquina ir, e o
   hostname é o nome que a pessoa já usa para falar das máquinas dela.
@@ -352,7 +352,7 @@ verdade, unit escrita e agente esperando — é o **E2E da sessão 8**, e só el
 pode provar. Nos testes desta sessão o `brabo-runner` é um dublê de shell e a
 api é um servidor de teste: o que se prova é o ENCADEAMENTO, nunca a
 integração. E o `install --machine` continua sem saber se a chave daquela pasta
-é mesmo de máquina (a lacuna da [RN-545](../business-rules.md#rn-545)) — a
+é mesmo de máquina (a lacuna da [RN-545](../business-rules/runner.md#rn-545)) — a
 diferença é que agora existe um caminho que CRIA uma de máquina ali, então a
 recusa no primeiro boot deixou de ser o desfecho provável.
 
@@ -364,22 +364,22 @@ ENCADEAMENTO e nunca a integração — `brabo-runner` dublê de shell, api de
 mentira —, e é essa lacuna que fecha aqui.
 
 O harness **não nasceu nesta sessão**: `.github/workflows/install-e2e.yml`
-existe desde a FASE 29 ([RN-534](../business-rules.md#rn-534)) e já rodava o
+existe desde a FASE 29 ([RN-534](../business-rules/produto.md#rn-534)) e já rodava o
 instalador publicado num runner efêmero do Actions, que é literalmente uma
 máquina limpa. O que ele provava parava no `.env`. A sessão o **estendeu**, e
-o que ele prova agora são os cinco elos da [RN-547](../business-rules.md#rn-547)
+o que ele prova agora são os cinco elos da [RN-547](../business-rules/produto.md#rn-547)
 contra api e binário de verdade, o agente **de pé esperando**, e o primeiro
 projeto em modo Runner sendo pego sem ninguém voltar ao terminal.
 
 As três decisões, registradas inteiras na
-[RN-549](../business-rules.md#rn-549):
+[RN-549](../business-rules/ci.md#rn-549):
 
 - **O sinal de "o agente está de pé" é a LINHA que ele escreve, nunca o estado
   do gerenciador.** `perguntarEstado` mapeia `activating` para `rodando` — com
-  razão ([RN-088](../business-rules.md#rn-088): "subindo" não é "parado") —,
+  razão ([RN-088](../business-rules/web.md#rn-088): "subindo" não é "parado") —,
   então `systemctl is-active` e `service status --machine` respondem *de pé*
   para um processo que vai morrer dois segundos depois. A linha da
-  [RN-550](../business-rules.md#rn-550) só existe depois de o agente ter lido a
+  [RN-550](../business-rules/runner.md#rn-550) só existe depois de o agente ter lido a
   chave do disco, tirado ticket, falado com a api e recebido lista VAZIA: ela
   prova pareamento e espera de uma vez, e é um FATO GRAVADO, não uma amostragem
   de estado — por isso esperar por ela com teto não é corrida. O `status` entra
@@ -418,7 +418,7 @@ própria.
 E o que segue **declarado, não feito**: este E2E **não roda no PR que o
 escreveu** — a primeira execução real é a próxima tag final, e nenhum check do PR
 prova uma linha dele. Ficam fora, por decisão: a segunda execução pelo caminho de
-MIGRAÇÃO ([RN-530](../business-rules.md#rn-530)), o macOS (o passo completo é
+MIGRAÇÃO ([RN-530](../business-rules/infra.md#rn-530)), o macOS (o passo completo é
 Linux — `launchd`, e o Docker que o runner hospedado não tem) e o navegador.
 
 Faixa reservada: **RN-543..555**. ADRs **0154** e **0155**. A RN-541 já está
@@ -434,30 +434,30 @@ linha e **usar*** — passou a acontecer:
 - **A identidade do agente local deixou de ser por PROJETO e passou a ser da
   MÁQUINA.** Os dois acoplamentos que a medição do recorte disse que precisavam
   mudar mudaram: `runner_device_keys.project_id` é nullable
-  ([RN-543](../business-rules.md#rn-543)) e a unit é uma por máquina
-  ([RN-545](../business-rules.md#rn-545)). Os outros três **não mudaram**, e a
+  ([RN-543](../business-rules/produto.md#rn-543)) e a unit é uma por máquina
+  ([RN-545](../business-rules/runner.md#rn-545)). Os outros três **não mudaram**, e a
   medição que os salvou é o achado mais útil da fase: tópico, socket id e ticket
   descrevem uma CONEXÃO, e N conexões os satisfazem byte a byte.
-- **Nada no engine mudou.** `RunnerReadiness` ([RN-507](../business-rules.md#rn-507)),
-  o espelho ([RN-516](../business-rules.md#rn-516)) e `workspace_create`
-  ([RN-532](../business-rules.md#rn-532)) ficaram byte a byte, e os handlers do
+- **Nada no engine mudou.** `RunnerReadiness` ([RN-507](../business-rules/runner.md#rn-507)),
+  o espelho ([RN-516](../business-rules/runner.md#rn-516)) e `workspace_create`
+  ([RN-532](../business-rules/runner.md#rn-532)) ficaram byte a byte, e os handlers do
   runner também.
 - **Uma instalação nova deixou de nascer sem ninguém dentro.** `MAIL_TRANSPORT`
   continua `log` e o instalador continua não ligando SMTP — o que mudou é que a
   primeira conta nasce no TERMINAL, já verificada
-  ([RN-546](../business-rules.md#rn-546)/[RN-547](../business-rules.md#rn-547)),
+  ([RN-546](../business-rules/produto.md#rn-546)/[RN-547](../business-rules/produto.md#rn-547)),
   com o workspace pessoal na mesma transação. Pescar link de verificação em
   `docker compose logs api` deixou de ser o caminho.
 - **O agente sobe pareado e ESPERA.** O par Ed25519 nasce na máquina
-  ([RN-551](../business-rules.md#rn-551)), só a pública viaja
-  ([RN-552](../business-rules.md#rn-552)), o `id` do registro vira o `kid`
-  (o invariante da [RN-475](../business-rules.md#rn-475), agora impossível de
+  ([RN-551](../business-rules/runner.md#rn-551)), só a pública viaja
+  ([RN-552](../business-rules/api.md#rn-552)), o `id` do registro vira o `kid`
+  (o invariante da [RN-475](../business-rules/web.md#rn-475), agora impossível de
   violar por construção), e com zero projetos o processo fica de pé
-  reconsultando ([RN-550](../business-rules.md#rn-550)) em vez de sair.
-- **A tela reconhece quem já está pareado** ([RN-548](../business-rules.md#rn-548)),
+  reconsultando ([RN-550](../business-rules/runner.md#rn-550)) em vez de sair.
+- **A tela reconhece quem já está pareado** ([RN-548](../business-rules/web.md#rn-548)),
   sem nunca afirmar que o agente está rodando — chave registrada prova
   pareamento, não processo vivo.
-- **E o conjunto está medido de ponta a ponta** ([RN-549](../business-rules.md#rn-549)),
+- **E o conjunto está medido de ponta a ponta** ([RN-549](../business-rules/ci.md#rn-549)),
   contra api e binário de verdade, numa máquina limpa.
 
 O que a fase **não** fechou está logo abaixo, em "Lacunas que a fase encosta e
@@ -493,7 +493,7 @@ Declarado nos dois ADRs, e repetido aqui porque é o que dá sentido ao resto:
 - **Não há tela onde listar e revogar chave de dispositivo.** A RN-519 abriu o
   `GET` na api; o web nunca ganhou a tela. A fase acrescenta uma espécie de
   chave a listar e não constrói a tela — a lacuna fica maior, e declarada. A
-  [RN-548](../business-rules.md#rn-548) passa a CONSUMIR essa listagem no
+  [RN-548](../business-rules/web.md#rn-548) passa a CONSUMIR essa listagem no
   painel de onboarding, o que não a fecha: ler para reconhecer é outra coisa
   que listar para revogar.
 - **Ponto único de falha.** Um processo por máquina no lugar de N: o serviço

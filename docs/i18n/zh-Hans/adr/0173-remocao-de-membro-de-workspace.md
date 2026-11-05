@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0173 — workspace 成员的移除诞生，由同一条款保护
@@ -32,15 +32,15 @@ HS-006 的前提（"路由会重新打开这条路"）没有得到证实：路�
 
 **4. 移除**另一个** `owner` 仍然可行。** 这是完全吊销所有权的方式，也是 0157 第 3 点的自然延伸，后者保留了降级另一位所有者。**上限 1 在这个作用域中仍然没有对应物**（问题 2）：HS-006 认为会倒下的前提——"不存在通过 HTTP 离开 `owner` 的出口"——是 0157 关于**代价**的论据，而关于**原则**的论据依然成立：上限 1 是关于层级倒置的规则，而 `@RequireRole('owner')` 让倒置不可能发生。新路由只是加强了代价论据：有了它再镜像一个上限 1，移除另一位所有者也会被拒绝，`owner` 又会成为吸收态。
 
-**5. 级联，在一个事务中。** 只移除 `workspace_members` 的那一行是表面功夫：覆盖关系 `projectRole ?? workspaceRole`（[RN-471](../business-rules.md#rn-471)）会让被移除者留在他有自己行的每个项目中。因此一并移除：
+**5. 级联，在一个事务中。** 只移除 `workspace_members` 的那一行是表面功夫：覆盖关系 `projectRole ?? workspaceRole`（[RN-471](../business-rules/web.md#rn-471)）会让被移除者留在他有自己行的每个项目中。因此一并移除：
 
 - `workspace_members` 的那一行；
 - 被移除者**在本 workspace 的项目中**的 `project_members` 行（其他 workspace 的不受影响）；
-- 绑定到这些项目的他的凭据：**项目**设备密钥（按 [RN-519](../business-rules.md#rn-519) 列出的同一列）和 **PAT**——每个 PAT 都属于一个项目（`project_id NOT NULL`）——以 `workspace_member_removed` 为理由吊销。没有这一步，有一天重新关联时会悄悄重新激活一个本应由移除结束的配对。
+- 绑定到这些项目的他的凭据：**项目**设备密钥（按 [RN-519](../business-rules/api.md#rn-519) 列出的同一列）和 **PAT**——每个 PAT 都属于一个项目（`project_id NOT NULL`）——以 `workspace_member_removed` 为理由吊销。没有这一步，有一天重新关联时会悄悄重新激活一个本应由移除结束的配对。
 
-**6. 提交之后，活动连接按 RN-520 的路径断开。** 对 workspace 的每个项目执行一次 `disconnectRunnerOfUser(projectId, userId)`——**全部**，而不只是 `runner` 模式的，因为 runner 也会在 `container`/`mounted` 中连接（镜像，[RN-516](../business-rules.md#rn-516)）；多一个项目只是一次 `sem_runner` 的代价，少一个则会留下移除本要拆除的东西。放在只记录日志的 `try/catch` 中：副作用绝不拖垮主效果，这是 [RN-520](../business-rules.md#rn-520) 的尺子。
+**6. 提交之后，活动连接按 RN-520 的路径断开。** 对 workspace 的每个项目执行一次 `disconnectRunnerOfUser(projectId, userId)`——**全部**，而不只是 `runner` 模式的，因为 runner 也会在 `container`/`mounted` 中连接（镜像，[RN-516](../business-rules/runner.md#rn-516)）；多一个项目只是一次 `sem_runner` 的代价，少一个则会留下移除本要拆除的东西。放在只记录日志的 `try/catch` 中：副作用绝不拖垮主效果，这是 [RN-520](../business-rules/api.md#rn-520) 的尺子。
 
-**7. **持有人**不移除；持有权可以转让**（维护者的决定，2026-09-27，[RN-616](../business-rules.md#rn-616)）。`workspaces.created_by` 不决定授权（决定的是角色，ADR 0127），但 agent 所消耗的 LLM 凭据、agent 操作所用的 git 凭据（[RN-058](../business-rules/custo.md#rn-058)，`ResolveCredentialOwnerUseCase`）以及花费报告的所有者（[RN-060](../business-rules/custo.md#rn-060)）都由它解析。按第 4 点移除创建者，会让 agent 继续消耗一个已不在 workspace 中的人的凭据。因此，以**持有人**之名：
+**7. **持有人**不移除；持有权可以转让**（维护者的决定，2026-09-27，[RN-616](../business-rules/api.md#rn-616)）。`workspaces.created_by` 不决定授权（决定的是角色，ADR 0127），但 agent 所消耗的 LLM 凭据、agent 操作所用的 git 凭据（[RN-058](../business-rules/api.md#rn-058)，`ResolveCredentialOwnerUseCase`）以及花费报告的所有者（[RN-060](../business-rules/api.md#rn-060)）都由它解析。按第 4 点移除创建者，会让 agent 继续消耗一个已不在 workspace 中的人的凭据。因此，以**持有人**之名：
 
 - 目标 = 持有人的 `DELETE .../members/:userId` 是**具名的 409**，`criador_do_workspace`，说明需要先转让以及原因。第 2 点的上限先生效：持有人试图移除自己会得到一贯的 403。第 3 点继续有效——持有人是 `owner`，而调用者仍是留下来的那位 owner。
 - 诞生 `PUT /workspaces/:workspaceId/owner-of-record`，`owner`，请求体 `{ userId }`。目标必须**已经**是该 workspace 的 `owner`——成为持有人就是付钱的人——否则返回 **409** `titular_precisa_ser_owner`。在一个事务中与角色读取一起写入 `created_by`；转让给当前持有人是幂等的。任何 `owner` 都可以调用，包括转让给一位没有提出请求的**其他** owner：这与早已能移除和降级所有者的权限相同，而目标的同意需要一个产品所没有的邀请流程。

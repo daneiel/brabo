@@ -106,7 +106,7 @@ assinatura:
 
 Então o proxy confere o hash e **diz que é só o hash** — no docblock, na
 descrição de OpenAPI, na mensagem de recusa e na
-[RN-525](../business-rules.md#rn-525). Quem verifica a assinatura é o
+[RN-525](../business-rules/produto.md#rn-525). Quem verifica a assinatura é o
 `install.sh`, que tem `cosign` de verdade pelo caminho da decisão 4. A
 consequência é registrada e não escondida: **BRB-005 fecha para a produção da
 assinatura e segue aberto para a metade de procedência desta rota** — reabri-la

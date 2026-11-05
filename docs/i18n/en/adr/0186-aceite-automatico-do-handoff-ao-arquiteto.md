@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0186 — The PO's handoff to the Arquiteto is accepted without a click when the backlog is covered and the repository is local

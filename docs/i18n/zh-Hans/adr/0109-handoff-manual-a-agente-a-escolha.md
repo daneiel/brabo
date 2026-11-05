@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0109 — 向任选 agent 的手动 handoff 复用"提供 + 接受"，绝不引入第三种 handoff 状态

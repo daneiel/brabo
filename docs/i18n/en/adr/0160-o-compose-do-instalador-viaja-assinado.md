@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0160 — The installer's compose travels with it, as a signed asset
@@ -16,7 +16,7 @@ installer's machine. Neither is edited; this document references them.
 ## Context
 
 The installer's E2E on a clean machine ran for the first time in session 8 of
-PHASE 30 ([RN-549](../business-rules.md#rn-549)) and answered **no** to the
+PHASE 30 ([RN-549](../business-rules/ci.md#rn-549)) and answered **no** to the
 question it existed to answer. `install.sh` brought up the stack with
 `docker compose -f docker/docker-compose.install.yml` — a path **relative to the
 directory it ran from** — used in seven places, including the `up -d --wait`.
@@ -40,7 +40,7 @@ machine, asked for the base and **written the `.env` with the five secrets**.
 Half an installation, and a message that did not say what to do.
 
 **Measured while implementing: there are four, not three.** The MIGRATION path
-(`migrar_instalacao_anterior`, [RN-530](../business-rules.md#rn-530)) runs
+(`migrar_instalacao_anterior`, [RN-530](../business-rules/infra.md#rn-530)) runs
 `bash docker/backup/test-restore-compose.sh` — another relative path, and a
 script **executed** on the host. The E2E never reached it because on a clean
 machine there is nothing to migrate, and so the workaround did not bring it. In
@@ -84,7 +84,7 @@ the same one that already publishes `install.sh`: the files come from the
 **tag's checkout** (the same commit that produced everything else signed there),
 are copied under the asset's name by the script, enter the `sha256sum` that
 generates the manifest and are attached together. Nothing changes in the wait
-for assets of [RN-565](../business-rules.md#rn-565): these do not come from the
+for assets of [RN-565](../business-rules/ci.md#rn-565): these do not come from the
 matrix, so there is nothing to wait for. The job now also checks **each line of
 the manifest against the file** (`sha256sum -c --strict`) after verifying the
 signature and before attaching — the signature proves who wrote the manifest;
@@ -157,7 +157,7 @@ halves" of the workaround and starts demanding that it **not** come back.
   and then the installer refuses early, with *"a Release não publica …"*, instead
   of dying after the `.env`. Running the new `install.sh` from a checkout against
   an old Release was already refused before, by the origin verification
-  ([RN-526](../business-rules.md#rn-526)): its hash is not in the old manifest.
+  ([RN-526](../business-rules/produto.md#rn-526)): its hash is not in the old manifest.
   Already published Releases keep the old installer and the workaround of
   running it from inside a checkout at the tag.
 - **The Release grows** by four assets (~29 KB) and the manifest by four lines,
@@ -170,7 +170,7 @@ halves" of the workaround and starts demanding that it **not** come back.
   it replaced. It is the price of the layout not changing, and it only exists for
   whoever installs from inside a checkout.
 - **The `GET /runner-releases/binary` proxy does not change**: it reads the
-  manifest as a name → hash map ([RN-525](../business-rules.md#rn-525)), and
+  manifest as a name → hash map ([RN-525](../business-rules/produto.md#rn-525)), and
   extra lines do not affect it.
 - **Adjacency measured and NOT fixed.** The migration's restore proof
   (`test-restore-compose.sh`) calls `docker compose -f <compose>` without

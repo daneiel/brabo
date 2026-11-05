@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0189 — The autopilot: automatic mode approves everything except the ceilings, the scope compares against the real execution folder, and "Always allow" records verb + subcommand
@@ -24,10 +24,10 @@ The real use of 2026-09-29 measured three defects of one policy
 1. **"Always allow" turned automatic mode off.** The seven dev agents received
    the `*: auto_approve` wildcard at 06:48:28–34 and, seconds later, got the
    `terminal: auto_approve` row recorded by the dev agent's "Always allow"
-   ([RN-509](../business-rules.md#rn-509)). The repository returned the
+   ([RN-509](../business-rules/api.md#rn-509)). The repository returned the
    SPECIFIC rule before the wildcard, with origin `especifica`, and `decide()`
    only recognizes automatic mode with origin `curinga`
-   ([RN-603](../business-rules/autenticacao.md#rn-603)). Result: 97 requests
+   ([RN-603](../business-rules/api.md#rn-603)). Result: 97 requests
    "compound command with at least one segment not covered by allow" and 37
    "scope" with automatic mode lit on screen.
 2. **The scope compared against the folder where the command does NOT run.**
@@ -37,7 +37,7 @@ The real use of 2026-09-29 measured three defects of one policy
    `/work`, and translates the host `cwd` to `/work` only afterwards, in
    `terminal_executor.ex`.
 3. **Automatic mode did not say, on screen, what it releases.** The batch card
-   of [RN-661](../business-rules.md#rn-661) said what it does NOT release; the
+   of [RN-661](../business-rules/web.md#rn-661) said what it does NOT release; the
    agent card toggle and the `ApprovalCard` had different sentences, and none
    said that `git commit` and a local branch pass.
 
@@ -65,7 +65,7 @@ The `*: auto_approve` wildcard approves EVERYTHING, including the compound
 synthesized from `permissions.json` and a path outside the folder (RN-603,
 kept), and `git commit` and LOCAL branch creation. Still out, never
 auto-approvable: git push/PR/merge/deploy through the terminal
-([RN-418](../business-rules.md#rn-418)), `sudo`/`doas`, merge into a protected
+([RN-418](../business-rules/api.md#rn-418)), `sudo`/`doas`, merge into a protected
 branch, `container_remove`, `instruction_patch` and
 `parallelize`/`raise_max_parallel`. An explicit `deny` still wins, and an `ask`
 WRITTEN in the file still asks — it is the user's rule, as it already was in
@@ -150,7 +150,7 @@ exact one is. AT-170's four sub-questions are answered: the unit is this one; it
 does NOT inherit the verb allowlist (no verb list is born, and doubt between
 argument and subcommand falls on the narrow side); whoever records is the same
 role as today; and precedence with the wildcard is point 2's. Detail in
-[RN-675](../business-rules.md#rn-675).
+[RN-675](../business-rules/api.md#rn-675).
 
 ## Consequences
 

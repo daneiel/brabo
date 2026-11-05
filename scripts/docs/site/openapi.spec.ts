@@ -1,8 +1,9 @@
 import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { construirReferenciaDaApi, operacoesDoSpec, relativizar } from './openapi.mjs';
+import { OPCOES, construirReferenciaDaApi, operacoesDoSpec, relativizar } from './openapi.mjs';
 
 const LOCALES = ['pt-BR', 'en', 'ru', 'zh-Hans'];
 
@@ -30,6 +31,20 @@ describe('referência da API (Redoc 3, uma página por tag)', () => {
     }
     expect(operacoesDoSpec(JSON.parse(readFileSync(path.join(saida, 'reference/openapi.json'), 'utf8')))).toBe(r['pt-BR'].esperadas);
   }, 300_000);
+
+  it('esconde o que depende de JS (barra lateral, busca, "Show N more") e mantém as âncoras', async () => {
+    const saida = mkdtempSync(path.join(tmpdir(), 'api-'));
+    await construirReferenciaDaApi({ saida, locales: ['pt-BR'] });
+    const html = readFileSync(path.join(saida, 'reference/api', readdirSync(path.join(saida, 'reference/api')).find((f) => f.endsWith('.html') && f !== 'redoc.html')!), 'utf8');
+    expect(html).toMatch(/\sid="[\w.-]+" /); // âncora #<opId> do índice
+    const css = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'assets/site.css'), 'utf8');
+    for (const alvo of ['.menu-content', "[data-testid='show-more-operations']", "[data-testid='items-navigation-list']", "[data-testid='search-trigger']"]) {
+      if (alvo.includes('search')) continue; // a busca mora dentro de .menu-content
+      expect(css, alvo).toContain(alvo);
+    }
+    expect(html).not.toContain('redoc.colorMode'); // o tema é o do site
+    expect(OPCOES({})).toMatchObject({ layout: 'stacked', hideLoading: true, disableTelemetry: true });
+  }, 120_000);
 
   it('relativiza links de tag e de operação e põe id na seção', () => {
     const html = '<a href="/reference/api/auth">t</a><a href="/reference/api/auth/op_x">o</a><div data-section-id="/reference/api/auth/op_x">';

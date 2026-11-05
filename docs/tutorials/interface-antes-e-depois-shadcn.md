@@ -8,7 +8,7 @@ description: Gravação das telas e de uma sessão do Criativo antes e depois da
 Registro visual da rodada que trocou a base do front para shadcn/ui com Base UI
 ([ADR 0232](../adr/0232-shadcn-com-base-ui-no-apps-web.md)) e que, no mesmo dia,
 fez o 9Router receber as ferramentas dos agentes
-([RN-950](../business-rules.md#rn-950)). O **antes** é a instalação com a `dev`
+([RN-950](../business-rules/api.md#rn-950)). O **antes** é a instalação com a `dev`
 de 31/10 de manhã; o **depois** é a `dev` `5851354c7c`, com as primitivas da casa
 (`Button`, `Badge`, `Card`, `Alert`, `Table`, `Input`, `Select`, `Modal`,
 `Disclosure`, abas) já servidas pelos componentes do shadcn.
@@ -52,7 +52,7 @@ requisitos.
 
 ## Página nova de Gastos
 
-A página global `/spend` ([RN-952](../business-rules/custo.md#rn-952)) não existia
+A página global `/spend` ([RN-952](../business-rules/api.md#rn-952)) não existia
 no antes. Na gravação do depois ela aparece sem a margem da página — o conteúdo
 encosta na barra lateral; o defeito foi registrado para correção.
 

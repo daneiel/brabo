@@ -198,7 +198,7 @@ Quatro coisas que o menu faz e vale saber:
   pede confirmação (digitando `RESET`), e não remove volumes — e diz isso ao
   rodar, porque o outro lado é que um reset nunca reproduz um primeiro clone
   (defeito que só aparece com volume novo passa despercebido). Detalhes em
-  [`docs/runbook.md`](docs/runbook.md#reset-total).
+  [`deploy/docs/runbook.md`](deploy/docs/runbook.md#reset-total).
 
 **Opções de linha de comando:**
 
@@ -254,15 +254,15 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
 | [Regras de negócio](docs/business-rules.md) | as 821 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
-| [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
+| [Runbook](deploy/docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
-| [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
+| [Observabilidade](deploy/docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
 | [Configuração](docs/reference/configuration.md) | todas as variáveis de ambiente |
 | [Scripts](docs/reference/scripts.md) | todo comando `pnpm` e alvo do `Makefile`, extraídos da fonte |
 | [Eventos](docs/reference/events.md) | os tipos do event log, broadcasts e spans |
-| [Permissões](docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
-| [Artefatos](docs/reference/artifacts.md) | os doze schemas e quem pode emitir cada um |
-| [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
+| [Permissões](apps/api/docs/reference/permissions.md) | o formato do `permissions.json` e a ordem da decisão |
+| [Artefatos](apps/api/docs/reference/artifacts.md) | os doze schemas e quem pode emitir cada um |
+| [Providers de git](apps/api/docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |

@@ -24,7 +24,7 @@ sessão são mecanismos de navegador:
 - o web é servido em `:8088` e a api responde em `:3000`, então toda chamada
   autenticada é **de origem cruzada** — preflight, `SameSite`,
   `credentials: 'include'`;
-- o canal da sessão precisa de um ticket de uso único ([RN-108](../business-rules/autenticacao.md#rn-108))
+- o canal da sessão precisa de um ticket de uso único ([RN-108](../business-rules/web.md#rn-108))
   e de um handshake de WebSocket de verdade contra o engine, numa **terceira**
   origem.
 

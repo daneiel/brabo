@@ -141,7 +141,7 @@ pnpm --filter api seed
 
 **如果密码正确登录却返回 401：** 请确认 seed 运行的数据库与 api 使用的是**同一个**——`.env`
 中的 `DATABASE_URL`。对于密码错误、邮箱不存在和账户被锁定，响应是相同的，这是有意为之
-（[RN-032](business-rules/autenticacao.md#rn-032)），因此它不会为你区分这些情况。
+（[RN-032](business-rules/api.md#rn-032)），因此它不会为你区分这些情况。
 
 ## 3. 配置一个模型 {#3-configurar-um-modelo}
 
@@ -160,7 +160,7 @@ docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
 envelope encryption 加密。
 
 模型按级联解析——**会话 > 智能体 > 项目 > 工作区**，取第一个存在的
-（[RN-020](business-rules/custo.md#rn-020)）。可以整体使用本地模型，只给 QA 配一个 API 模型——
+（[RN-020](business-rules/api.md#rn-020)）。可以整体使用本地模型，只给 QA 配一个 API 模型——
 QA 是最不适合小模型的角色。
 
 > 有 NVIDIA GPU 时，请使用 `pnpm dev:gpu`。没有设备预留时，Ollama 100% 在 CPU 上运行，
@@ -184,7 +184,7 @@ QA 是最不适合小模型的角色。
 任何东西：阻止不当合并的是[领域中的上限](reference/permissions.md#caps)，而不是平台。
 
 如果某一步失败，修正原因后要求继续：bootstrap 会从中断处继续，而不是重新开始
-（[RN-029](business-rules.md#rn-029)）。
+（[RN-029](business-rules/api.md#rn-029)）。
 
 ## 5. 第一个回合 {#5-o-primeiro-turno}
 

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0083 — Вкладка Terminal получает реального потребителя жизненного цикла, а не терминал
@@ -93,8 +93,8 @@ ADR 0081 уже назвал это направление недостающи�
   таблица и два use case, которые этот документ наконец раскрывает по HTTP.
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) —
   FASE 25b, которая остаётся отрезанной; этот документ её не открывает заново.
-- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-107](../business-rules/autenticacao.md#rn-107),
-  [RN-243](../business-rules.md#rn-243), [RN-267](../business-rules.md#rn-267),
-  [RN-268](../business-rules.md#rn-268).
+- [RN-105](../business-rules/api.md#rn-105), [RN-107](../business-rules/web.md#rn-107),
+  [RN-243](../business-rules/api.md#rn-243), [RN-267](../business-rules/api.md#rn-267),
+  [RN-268](../business-rules/web.md#rn-268).
 - `apps/api/src/interfaces/http/containers/containers.controller.ts`,
   `apps/web/src/routes/code/CodeBottomPanel.tsx`.

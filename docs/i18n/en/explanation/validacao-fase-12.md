@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 id: validacao-fase-12
 title: The validation that the three findings died
 sidebar_label: Phase 12 validation
@@ -44,7 +44,7 @@ tests, which [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) explicitly
 declares **non-deterministic** with a local model.
 
 **It doesn't merge.** Merging into a protected branch is the user's
-decision, by design ([RN-014](../business-rules.md#rn-014)). Step 6 of the
+decision, by design ([RN-014](../business-rules/api.md#rn-014)). Step 6 of the
 script shows the lock refusing exactly that, with `auto_approve` autonomy
 and `permissions.json` allowing it.
 
@@ -62,7 +62,7 @@ product.
 |---|---|---|
 | 0 | create project | born with `story_promotion = manual` **without anyone configuring anything** |
 | 1 | adopt a pre-existing bare repo, with `main` and `develop`, without `qa` or `rc` | `origin = 'adopted'`; the plan diagnoses a missing branch **and** a branch outside the template; `plan_decision` stays **null**; no row inserted by hand |
-| 1b | decide "adopt as is" | the template is **not** forced onto the user's repository ([RN-045](../business-rules/custo.md#rn-045)) |
+| 1b | decide "adopt as is" | the template is **not** forced onto the user's repository ([RN-045](../business-rules/api.md#rn-045)) |
 | 2 | the PO creates a complete story, with 3 tasks | the story becomes `draft` + `proposed_ready`; **`claimNext` returns `null`** |
 | 3 | the user promotes | the story becomes `ready`; the proposal leaves the queue; the event records `user`, not `agent/po` |
 | 4 | activate execution and resolve 3 gates in sequence | 3 tasks, 1 agent, **0 engine restarts** |
@@ -174,8 +174,8 @@ down. Everything that would depend on a live count appears as
 | engine restarts per delivered task | **1, by construction** — a property of finding #10 (`:666`), not an observed estimate. Real total: **not measured** | **0** |
 | batches | the entire phase ran in batches (`:393-416`) | don't exist: the agent works through the module's queue on its own |
 | agent with no task | dead process (`restart: :temporary`) | explicit `idle`, supervised, event-wakeable |
-| sequence of failures | burned budget in a row | circuit breaker stops at `idle_tripped` ([RN-047](../business-rules/custo.md#rn-047)) |
-| story → `ready` | automatic on creation, no human step (finding #13, `:669`) | user decision, actor recorded in the event log ([RN-048](../business-rules/custo.md#rn-048)) |
+| sequence of failures | burned budget in a row | circuit breaker stops at `idle_tripped` ([RN-047](../business-rules/engine.md#rn-047)) |
+| story → `ready` | automatic on creation, no human step (finding #13, `:669`) | user decision, actor recorded in the event log ([RN-048](../business-rules/api.md#rn-048)) |
 | declining a story | no state, event, or button existed (finding #14) | returned to the PO with the reason pinned to their session |
 | total manual interventions | **not measured** — the observation table stayed blank (`:488-490`) | those from the approval pipeline, which the phase did **not** change |
 | merge into a protected branch | manual, by design | manual, by design — unchanged, and step 6 proves it |

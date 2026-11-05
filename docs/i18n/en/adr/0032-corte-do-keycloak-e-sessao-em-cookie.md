@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0032 — Cutting Keycloak: our own issuer, service token and cookie-based session
@@ -156,7 +156,7 @@ a non-existent email, and silently fires off the "set your password" link.
 Responding with an explicit `password_pending` would be the obvious UX
 choice, and it's rejected: it would confirm both that the address exists
 **and** that it's a legacy account — the most valuable enumeration signal
-in the system, and exactly what [RN-032](../business-rules/autenticacao.md#rn-032)
+in the system, and exactly what [RN-032](../business-rules/api.md#rn-032)
 closes.
 
 For the cost to be the same across all three outcomes, `findByEmail` became

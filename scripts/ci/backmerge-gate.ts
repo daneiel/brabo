@@ -1,6 +1,6 @@
 /**
  * backmerge-gate — check required em TODO PR: o destino está travado?
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * Adaptador. A lógica é pura e vive em `gate.ts`; aqui só se lê o
  * `.release/gate.json` da `main` e se renderiza o veredito.

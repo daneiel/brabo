@@ -6,13 +6,13 @@
 navegável à esquerda que pode ser expandida passa a ser a ÚNICA; retire a outra
 barra de navegação, mas contemple nesta todos os itens da barra excluída").
 Revisa o [ADR 0126](0126-trilho-vertical-de-navegacao-do-projeto.md) — que
-continua aceito e não é editado — e a [RN-201](../business-rules/autenticacao.md#rn-201).
+continua aceito e não é editado — e a [RN-201](../business-rules/web.md#rn-201).
 
 ## Context
 
 Desde o ADR 0126 as abas do projeto existiam em DOIS lugares: o trilho vertical
 de 180px (`ProjectRail.tsx`, montado em `ProjectPage.tsx`) e a lista por projeto
-da sidebar (`LinhaDeAba`, [RN-196](../business-rules/autenticacao.md#rn-196)).
+da sidebar (`LinhaDeAba`, [RN-196](../business-rules/web.md#rn-196)).
 O CLAUDE.md declarava isso como lacuna ("reconciliar é decisão de produto à
 parte"), junto com o preço da moldura: 492px na aba Código (264 da sidebar +
 180 do trilho + 48 do `CodeShell`).
@@ -23,7 +23,7 @@ Aprovações, Backlog, Arquitetura), cada um na sua aba e nunca somados — a
 sidebar mostrava só Aprovações, do resumo do dashboard; o teclado
 (`ArrowDown`/`ArrowUp`/`Home`/`End` com volta, atravessando grupos); a ativa
 rolada para a área visível; o `role="tablist"` vertical; e, no telefone
-([RN-643](../business-rules.md#rn-643)), a barra horizontal rolável acima do
+([RN-643](../business-rules/web.md#rn-643)), a barra horizontal rolável acima do
 painel. A sidebar tinha, e o trilho não: o projeto recolhido na trilha de
 62px, a gaveta do telefone e o link para outra janela do navegador.
 
@@ -38,7 +38,7 @@ painel. A sidebar tinha, e o trilho não: o projeto recolhido na trilha de
 2. **Os cinco contadores têm a MESMA fonte, sem requisição nova.** As cinco
    filas passam a ser lidas por um hook só, `useContagensDoProjeto`
    (`apps/web/src/lib/contagens-do-projeto.ts`), que a moldura usa para o
-   painel "precisa de você" ([RN-467](../business-rules.md#rn-467)) e a
+   painel "precisa de você" ([RN-467](../business-rules/web.md#rn-467)) e a
    sidebar usa para os números. Mesmas `queryKey`s, deduplicadas. A sidebar só
    o liga enquanto a moldura do projeto está MONTADA — era só nela que o trilho
    existia; noutra tela do projeto (a Sessão, por exemplo) e nos projetos

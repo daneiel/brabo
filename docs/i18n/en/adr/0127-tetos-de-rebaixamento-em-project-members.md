@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0127 — Two downgrade ceilings on `project_members`, and the override stays
@@ -13,7 +13,7 @@ BOTH directions — up and down.
 
 This was discovered by the review of #444, which closed the role gate of the
 Members section, and is recorded in
-[RN-471](../business-rules.md#rn-471). The finding has two halves. The first is
+[RN-471](../business-rules/web.md#rn-471). The finding has two halves. The first is
 documentary: FOUR places promised the opposite — "the EFFECTIVE role is the
 higher of this one and what the person already has in the workspace",
 "associating someone as `viewer` here doesn't downgrade a workspace `owner`" —

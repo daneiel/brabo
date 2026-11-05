@@ -51,7 +51,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 У четырёх gates, которые конституция объявляет ручными, это поле
 инвариантно и зафиксировано тестом
-([RN-071](../business-rules/custo.md#rn-071)).
+([RN-071](../business-rules/api.md#rn-071)).
 
 ## Три формы доказательства, потому что не всякое доказательство живёт в логе {#three-forms-of-evidence-because-not-every-proof-lives-in-the-log}
 
@@ -213,7 +213,7 @@ QA-стратегия — до того роль `proposto` в `docs/fluxo.yml`,
 
 Этот вход не пережил реального использования.
 [ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
-([RN-674](../business-rules.md#rn-674)) перенёс план тестирования на время
+([RN-674](../business-rules/engine.md#rn-674)) перенёс план тестирования на время
 ПОСЛЕ сдачи dev — написанный ДО dev, он не имел кода для чтения и исчерпывал
 итерации, — и `entrada` gate сменилась с `plano-de-teste` на
 `module_map`: Dev Lead оценивает историю и карту модулей, которые у него
@@ -227,7 +227,7 @@ QA-стратегия — до того роль `proposto` в `docs/fluxo.yml`,
 `implementavel` — пример gate, которому понадобился новый код, чтобы выйти
 из `planned`. `paralelismo-autorizado` — противоположность: механизм
 (`RequestParallelizationUseCase`,
-[RN-083](../business-rules/custo.md#rn-083)) работает в production со
+[RN-083](../business-rules/api.md#rn-083)) работает в production со
 времён FASE 14d — отстал именно реестр, объявляя `planned` о том, что уже
 было `active` в родственном `docs/fluxo.yml` и в коде. Аудит fluxo.yml ×
 код (находка A1/B5,
@@ -248,7 +248,7 @@ parallelize`.
 `implementavel` и `paralelismo-autorizado` — два примера gate, который уже
 существовал (объявленный `planned` или устаревший) и получил запись в
 реестре ПОЗЖЕ. `necessidade-validada`
-([RN-406](../business-rules.md#rn-406),
+([RN-406](../business-rules/contracts.md#rn-406),
 [ADR 0095](../adr/0095-gate-necessidade-validada.md)) — третий шаблон:
 механизм и реестр родились в ОДНОМ И ТОМ ЖЕ изменении, потому что самого
 gate не было нигде — ни `planned` в файле, ни кода за ним.
@@ -263,7 +263,7 @@ gate не было нигде — ни `planned` в файле, ни кода з
 описывает ровно то, чем gate является: измерением того, что человек
 подтвердил ценность потребности, а не gate, блокирующим следующий шаг.
 
-`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+`workspace-verificado` ([RN-423](../business-rules/runner.md#rn-423),
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
 — четвёртый пример и самый наглядный из четырёх в том, почему `warn` — не
 «слабая блокировка»: то, что действительно блокирует ЗДЕСЬ, — не gate, а
@@ -276,7 +276,7 @@ workspace или подключённого runner команда отверга
 описывало бы блокировку, которая уже существует в другом месте, так же
 как `necessidade-validada` солгал бы о блокировке, которой нет нигде.
 
-`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+`rag-acertivo` ([RN-490](../business-rules/api.md#rn-490)/[RN-498](../business-rules/ci.md#rn-498),
 [ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
 — пятый пример, и причина, по которой он остаётся `warn`, однажды сменила
 форму, что стоит рассказать целиком. Он родился `warn` по самой простой
@@ -333,7 +333,7 @@ QA.
 запуска показывает почему: каждый `npm test`, предложенный QA, был
 автоматически одобрен (`permissions.json allow: npm test`), а затем
 **отвергнут engine**, потому что начиная с
-[RN-502](../business-rules.md#rn-502)
+[RN-502](../business-rules/engine.md#rn-502)
 ([ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md),
 2026-09-04) проект `container` без контейнера в `running` нигде не
 выполняет терминальные команды. Скрипт seed датирован 2026-08-30 и
@@ -380,7 +380,7 @@ production.** RN-502 остаётся нетронутым; изменилось
 машину состояний. Seed предлагает и одобряет, а не вызывает сценарий
 выполнения напрямую, потому что два правила живут на стороне предложения
 — именованный 409 `sem_broker_na_instalacao`
-([RN-591](../business-rules.md#rn-591)) и политика `decide()` для
+([RN-591](../business-rules/api.md#rn-591)) и политика `decide()` для
 `container_start`, — и harness, который их пропускал бы, перестал бы
 следовать production в тот день, когда любое из них изменится.
 
@@ -482,7 +482,7 @@ AT-067), — а при сбое печатает логи, как делает j
 предварительной загрузки читается из самой константы seed
 (`IMAGEM_DO_GOLDEN_SET_QA`), а не из второго литерала: `docker run` broker
 выполняется под контрольным потолком 30 с порта Docker
-([RN-604](../business-rules.md#rn-604)), и job, скачивающий один образ, в
+([RN-604](../business-rules/api.md#rn-604)), и job, скачивающий один образ, в
 то время как seed просит другой, поместил бы загрузку внутрь этого
 потолка.
 
@@ -515,8 +515,8 @@ PR:
 противоположную сторону.
 
 Он входит как `planned`/`warn`, без блока `evidencia` и без скрипта
-проверки, потому что [RN-070](../business-rules/custo.md#rn-070)/
-[RN-071](../business-rules/custo.md#rn-071) запрещают `block` без него, — и
+проверки, потому что [RN-070](../business-rules/api.md#rn-070)/
+[RN-071](../business-rules/api.md#rn-071) запрещают `block` без него, — и
 потому что блокирует его не код. Инфраструктура существует (overlays,
 образы в GHCR по digest, скрипты smoke/rollout/restore); не хватает
 production-окружения с реальным трафиком и того, кто будет его
@@ -568,4 +568,4 @@ Gate PR, который реестр приносит, а экран ещё не
   решение
 - [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) —
   решение в event log, без которого нечего было бы измерять
-- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)
+- [RN-070](../business-rules/api.md#rn-070), [RN-071](../business-rules/api.md#rn-071)

@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0100 — 面向 agent 的 `rag_search`，以及启动时确保存在的 Ollama 模型

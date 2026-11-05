@@ -147,4 +147,4 @@ bastante para merecer ser escrita.
   predicado puro
 - `apps/api/src/domain/agents/agent-areas.ts` — `areaDo`, o resolvedor puro
   de pertinência reusado aqui
-- [RN-443](../business-rules.md#rn-443)
+- [RN-443](../business-rules/api.md#rn-443)

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`
@@ -14,12 +14,12 @@ Lead начинает разговаривать через composer и стан
 Ссылается также на [ADR 0038](0038-hierarquia-de-agentes.md) (иерархия агентов, lead и
 субагент) и [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md)
 (приостановка Dev Lead, которой у Infra Lead нет). Правило:
-[RN-617](../business-rules.md#rn-617). Закрывает открытое решение, которое
-[RN-584](../business-rules.md#rn-584) оставила письменно.
+[RN-617](../business-rules/engine.md#rn-617). Закрывает открытое решение, которое
+[RN-584](../business-rules/engine.md#rn-584) оставила письменно.
 
 ## Контекст {#context}
 
-[RN-584](../business-rules.md#rn-584) (AT-098) убрала адресата по умолчанию у
+[RN-584](../business-rules/engine.md#rn-584) (AT-098) убрала адресата по умолчанию у
 сообщения чата и дала `infra` НАЗВАННЫЙ отказ (`422
 agente_sem_conversa`), оставив объявленным продуктовый вопрос: разговаривает ли Infra Lead
 через composer? И объявила цену ответа "да" без подготовки:
@@ -32,12 +32,12 @@ agente_sem_conversa`), оставив объявленным продуктов�
 
 | Часть | Шесть | Infra Lead |
 |---|---|---|
-| Немедленное принятие, `working` записан заранее ([RN-578](../business-rules.md#rn-578)) | `TurnoAssincrono.iniciar/3` | весь ход в `handle_call`/`handle_cast` |
+| Немедленное принятие, `working` записан заранее ([RN-578](../business-rules/engine.md#rn-578)) | `TurnoAssincrono.iniciar/3` | весь ход в `handle_call`/`handle_cast` |
 | Названный отказ `409 turno_em_andamento` | да | второе сообщение ждало в очереди процесса |
-| "Parar" ([RN-122](../business-rules.md#rn-122)) | `via_for/2` из `cancel/2` | ни `via_for/2` его не знал, ни Task не было, чтобы убить |
-| Осиротевший ход при перезапуске ([RN-586](../business-rules.md#rn-586)) | `TurnoOrfao` | "fica de fora — declarado na RN-586" |
-| Остановка при закрытии сессии ([RN-581](../business-rules.md#rn-581)) | `terminate/2` бросает Task | убит после 5 с ожидания |
-| Озвученный предел итераций ([RN-166](../business-rules/autenticacao.md#rn-166)) | `toolloop.limit_reached` | цикл молча заканчивался на 14-м шаге |
+| "Parar" ([RN-122](../business-rules/engine.md#rn-122)) | `via_for/2` из `cancel/2` | ни `via_for/2` его не знал, ни Task не было, чтобы убить |
+| Осиротевший ход при перезапуске ([RN-586](../business-rules/engine.md#rn-586)) | `TurnoOrfao` | "fica de fora — declarado na RN-586" |
+| Остановка при закрытии сессии ([RN-581](../business-rules/api.md#rn-581)) | `terminate/2` бросает Task | убит после 5 с ожидания |
+| Озвученный предел итераций ([RN-166](../business-rules/engine.md#rn-166)) | `toolloop.limit_reached` | цикл молча заканчивался на 14-м шаге |
 
 Также kickoff: будучи `cast`, он не удерживал никакого клика, но занимал
 процесс на весь ход — измерено в установке AT-089, 8,4 мин. Сообщение,
@@ -45,7 +45,7 @@ agente_sem_conversa`), оставив объявленным продуктов�
 по `:timeout` в controller (500), а "Parar" было бы обслужено только потом.
 
 И предел: `propose_action` для действий с контейнером, которые api выполняет
-автоодобренными, ждёт до 225 с ([RN-605](../business-rules.md#rn-605)), больше,
+автоодобренными, ждёт до 225 с ([RN-605](../business-rules/contracts.md#rn-605)), больше,
 чем 180 с `user_message/2`. Сообщение, побудившее модель предложить
 `container_start`, могло переполнить `GenServer.call` при ещё стоящем предложении.
 
@@ -61,7 +61,7 @@ agente_sem_conversa`), оставив объявленным продуктов�
    (`concluir/1`: HALT `propose_infra_pr` → `WorkflowsAgent` → единая PR)
    является частью функции хода и возвращает `state`; сигналы конца
    (`agent.done`, `agent.status: idle`) исходят только из `TurnoAssincrono`, в
-   процессе сервера ([RN-585](../business-rules.md#rn-585)). "Parar" убивает
+   процессе сервера ([RN-585](../business-rules/engine.md#rn-585)). "Parar" убивает
    и идущий Workflows.
 3. **Исправление gate не отбрасывается.** `TurnoAssincrono.iniciar/3` без
    `from` игнорирует запрос, когда идёт ход (защитный случай
@@ -78,8 +78,8 @@ agente_sem_conversa`), оставив объявленным продуктов�
 6. **Экран предлагает его по обычному правилу.** `infra` входит в
    `AGENTES_DE_CHAT` (`apps/web/src/lib/session-readiness.ts`): он является
    адресатом, когда он — самый свежий `agent.activated`, без адресата
-   по умолчанию ([RN-584](../business-rules.md#rn-584)). Принятие ЕГО handoff
-   остаётся в собственной карточке [RN-499](../business-rules.md#rn-499), а карточка
+   по умолчанию ([RN-584](../business-rules/engine.md#rn-584)). Принятие ЕГО handoff
+   остаётся в собственной карточке [RN-499](../business-rules/web.md#rn-499), а карточка
    ленты исключает его по ИМЕНИ — иначе приглашение появлялось бы дважды и, будучи
    самым старым, снова скрывало бы приглашение Dev Lead (RN-136).
 7. **Разговор не открывает внешнего эффекта.** Инструменты те же четыре;

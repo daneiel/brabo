@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0060 — 代码的读取面，受约束且有预算
@@ -16,7 +16,7 @@ FASE 26a 为 `GitProviderContract` 增加了 `listTree` 和 `getPullRequestDiff`
 
 **第一是搜索放在哪里。** 标签页需要四种读取：树、内容、搜索和 PR 的 diff。其中三种是契约的操作。搜索不属于三个 provider 中的任何一个：GitHub 和 GitLab 有平台的代码搜索，各有自己的语义和限制；`LocalGitProvider` 是一个 bare repo，什么都没有。在契约中声明 `search` 意味着要么在 local 上有一个能力为 `false` 的第 13 个操作——一个在两个 provider 上工作、在第三个上消失的标签页——要么把某个平台的代码搜索词汇引入规范化契约，而它的存在恰恰是为了不让 Octokit 的形态泄漏。
 
-**第二是成本。** 读取每次调用便宜，重复起来昂贵。树和 diff 在契约中已经有上限（26a），但它们限制的是**一个**响应；组合搜索要做 N 次调用，而 N 随仓库的大小而不是请求的大小增长。付费的是 workspace owner 的凭据（[RN-058](../business-rules/custo.md#rn-058)/[RN-082](../business-rules/custo.md#rn-082)），rate limit 属于 provider。产品已经近距离见过这类缺陷：仪表盘每分钟发出 3.824 个请求，因为每个项目都在请求自己的（RN-090），由此产生的 `429` 变成了白屏。
+**第二是成本。** 读取每次调用便宜，重复起来昂贵。树和 diff 在契约中已经有上限（26a），但它们限制的是**一个**响应；组合搜索要做 N 次调用，而 N 随仓库的大小而不是请求的大小增长。付费的是 workspace owner 的凭据（[RN-058](../business-rules/api.md#rn-058)/[RN-082](../business-rules/api.md#rn-082)），rate limit 属于 provider。产品已经近距离见过这类缺陷：仪表盘每分钟发出 3.824 个请求，因为每个项目都在请求自己的（RN-090），由此产生的 `429` 变成了白屏。
 
 **第三是路径。** 查询字符串中的 `../../etc/passwd` 到达 handler 时已经被 Express 解码。在 `github`/`gitlab` 中，这个路径变成 provider API 的 URL 片段，所以 `..` 不会读错文件：它会**更换端点**，手里握着 owner 的 token。在 `local` 中，它变成 `git show <ref>:<path>` 的右侧。这与 ADR 0058 为 `projectId` 关闭的是同一类问题，现在应用到文件路径上——而 FASE 14d 已经教会了值得避免的故障模式：测试零件不等于测试通往它的路径。
 

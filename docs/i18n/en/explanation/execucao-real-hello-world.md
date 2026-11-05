@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 id: execucao-real-hello-world
 title: The real execution — the hello world
 sidebar_label: Real execution (hello world)
@@ -56,7 +56,7 @@ wizard now warns at the time of the choice.
 
 The Anamnese spent **8× the Creative and PO combined** without
 producing anything — it had no way to say "there's nothing to emit"
-([RN-063](../business-rules/custo.md#rn-063)). It's the most important
+([RN-063](../business-rules/engine.md#rn-063)). It's the most important
 number in this table: the actual work cost pennies, the waste cost the
 rest.
 

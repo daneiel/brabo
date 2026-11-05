@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0120 — Browser E2E against the production compose, in a package outside the workspace
@@ -28,7 +28,7 @@ session are browser mechanisms:
 - the web is served from `:8088` and the api answers on `:3000`, so every
   authenticated call is **cross-origin** — preflight, `SameSite`,
   `credentials: 'include'`;
-- the session channel needs a single-use ticket ([RN-108](../business-rules/autenticacao.md#rn-108))
+- the session channel needs a single-use ticket ([RN-108](../business-rules/web.md#rn-108))
   and a real WebSocket handshake against the engine, on a **third** origin.
 
 jsdom has none of that. It has no real origin, does no preflight, and

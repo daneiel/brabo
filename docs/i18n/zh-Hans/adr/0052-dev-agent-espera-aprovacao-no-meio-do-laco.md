@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0052 — dev agent 在循环中途等待审批
@@ -89,5 +89,5 @@ agent 等待期间，循环的 `ctx`（带历史）留在 GenServer 的状态中
 ## 参考 {#referências}
 
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md)——本 ADR 所扩展的状态机和按事件的重新调度
-- [RN-047](../business-rules/custo.md#rn-047)——dev agent 的熔断器
+- [RN-047](../business-rules/engine.md#rn-047)——dev agent 的熔断器
 - 真实执行：项目 `saudacao-local`，任务 `cd652d85`，2026-08-05

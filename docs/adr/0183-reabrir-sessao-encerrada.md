@@ -3,7 +3,7 @@
 ## Status
 
 **Accepted.** 2026-09-30 (AT-071, história HS-048, épico EP-027, rodada 30).
-Revê parte da [RN-001](../business-rules.md#rn-001) — *"terminal states have
+Revê parte da [RN-001](../business-rules/api.md#rn-001) — *"terminal states have
 no exit"* — e convive com o [ADR 0061](0061-tipo-da-sessao-na-criacao.md) (a sessão
 tem `kind`, imutável, e o estado de execução é o evento `execution.activated`).
 Não edita nenhum dos dois: **acrescenta uma transição** à máquina de estados e
@@ -27,7 +27,7 @@ Medido em `origin/dev` (`79e6b1209f`), a partir do levantamento da AT-071
   `heartbeat_timeout`, 92 eventos, onze `artifact.business_rule`, cinco pares de
   pergunta estruturada. A conversa inteira sobrevive no event log (RN-002) e os
   artefatos são eventos, mas a sessão não tinha como voltar a aceitar conversa
-  — desde a [RN-581](../business-rules.md#rn-581) a api recusa, com 409
+  — desde a [RN-581](../business-rules/api.md#rn-581) a api recusa, com 409
   `sessao_encerrada`, todo evento de conversa numa sessão terminal.
 - "Abrir uma sessão nova" não substitui: a ativação de um agente exige handoff
   `accepted` **na própria sessão** (`agent-activation.ts`) e o kickoff do PO lê

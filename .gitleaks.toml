@@ -74,7 +74,7 @@ disparam `generic-api-key`, e nenhuma das duas é segredo:
      que os arquivos gerados não foram editados à mão.
 
 Escopado por REGRA e por este ÚNICO diretório, que é 100% gerado por
-`pnpm docs:generate` a partir de `docs/reference/openapi.json`. Um segredo só
+`pnpm docs:generate` a partir de `apps/api/docs/reference/openapi.json`. Um segredo só
 chegaria aqui se já estivesse num `@ApiProperty` do código-fonte — e o
 código-fonte continua sendo varrido normalmente. A allowlist não abre buraco:
 ela dispensa a saída de um gerador cuja ENTRADA segue coberta.

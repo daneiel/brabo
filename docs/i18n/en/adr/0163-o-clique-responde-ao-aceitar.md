@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0163 — The click answers on ACCEPTING the command, and the turn continues through the channel
@@ -12,7 +12,7 @@ for the suspended Dev Lead. ADR 0086 is not edited: what it decided (the turn
 that SUSPENDS answers the `from` right away and emits
 `agent.status: awaiting_approval` instead of `agent.done`) remains valid — this
 document only moves the answer's moment earlier for EVERY turn, and with that its
-case stops being the only one. Rule: [RN-578](../business-rules.md#rn-578).
+case stops being the only one. Rule: [RN-578](../business-rules/engine.md#rn-578).
 
 ## Context
 

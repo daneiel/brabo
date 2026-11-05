@@ -1,5 +1,5 @@
 ---
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 id: auditoria-visual-rodada-29
 title: 视觉审计：Rodada 29 之前与之后
 description: AT-290 的界面审计——主要路由在两种主题下以 1440 px 和 390 px 截图，在每个界面上运行布局检查器，以及 Rodada 29 修复了什么、什么仍然存在、什么是新的，于 2026-09-30 针对 dev 的 79e6b1209f 测量。

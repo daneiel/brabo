@@ -1,12 +1,12 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对
 
 ## 状态 {#status}
 
-**已接受。** 2026-10-01（AT-013，故事 HS-008，史诗 EP-003，第 36 轮；所有者于 10月1日的决定：*"是，按密钥吊销，配 ADR——在 socket 的 ticket 中加密钥列，并采用新的认证契约；吊销只断开用该密钥打开的连接。有意改动 engine。"*）。修订 [RN-520](../business-rules.md#rn-520)——它诞生于 [ADR 0147](0147-agente-local-com-capacidades.md) 第 6 点——并引用（不编辑）[ADR 0154](0154-chave-de-dispositivo-de-maquina.md)（**机器**密钥，它把*"按密钥吊销"*列为不做的事项之一）和 [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)（在终端中生成、由安装程序注册的机器密钥）。新规则：[RN-685](../business-rules.md#rn-685)。
+**已接受。** 2026-10-01（AT-013，故事 HS-008，史诗 EP-003，第 36 轮；所有者于 10月1日的决定：*"是，按密钥吊销，配 ADR——在 socket 的 ticket 中加密钥列，并采用新的认证契约；吊销只断开用该密钥打开的连接。有意改动 engine。"*）。修订 [RN-520](../business-rules/api.md#rn-520)——它诞生于 [ADR 0147](0147-agente-local-com-capacidades.md) 第 6 点——并引用（不编辑）[ADR 0154](0154-chave-de-dispositivo-de-maquina.md)（**机器**密钥，它把*"按密钥吊销"*列为不做的事项之一）和 [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)（在终端中生成、由安装程序注册的机器密钥）。新规则：[RN-685](../business-rules/api.md#rn-685)。
 
 ## 背景 {#context}
 

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话
@@ -68,7 +68,7 @@ ADR 0031 已经记录过这一点，这里将其实现：所有调用方共享�
 
 从 Keycloak 导入的账户（存在于 `users`，在 `auth_credentials` 中没有行）登录时返回**统一的 401**，与不存在的邮箱完全相同，并静默发送"设置密码"链接。
 
-返回一个明确的 `password_pending` 是显而易见的 UX，但已被排除：它会确认该地址存在**并且**是遗留账户——这是系统中最有价值的枚举信号，也正是 [RN-032](../business-rules/autenticacao.md#rn-032) 要封住的。
+返回一个明确的 `password_pending` 是显而易见的 UX，但已被排除：它会确认该地址存在**并且**是遗留账户——这是系统中最有价值的枚举信号，也正是 [RN-032](../business-rules/api.md#rn-032) 要封住的。
 
 为了让三种结局的开销相同，`findByEmail` 改成了从 `users` 到 `auth_credentials` 的 LEFT JOIN：只有一次查询。两次串联查询会让待定分支多一次数据库往返，计时就能区分已迁移账户和不存在的邮箱。
 

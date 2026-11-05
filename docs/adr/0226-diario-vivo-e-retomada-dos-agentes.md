@@ -67,7 +67,7 @@ dinheiro (≈ US$ 0,04 por dev interrompido na 18ª execução).
 
 - [0163](0163-o-clique-responde-ao-aceitar.md), [0191](0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md),
   [0207](0207-ciclo-de-gate-velho-estaciona.md), [0221](0221-upstream-preso-por-sessao.md).
-- [RN-918](../business-rules.md#rn-918) a [RN-924](../business-rules.md#rn-924);
-  revisadas: [RN-586](../business-rules.md#rn-586), [RN-742](../business-rules.md#rn-742),
-  [RN-722](../business-rules.md#rn-722), [RN-823](../business-rules.md#rn-823),
-  [RN-617](../business-rules.md#rn-617).
+- [RN-918](../business-rules/engine.md#rn-918) a [RN-924](../business-rules/engine.md#rn-924);
+  revisadas: [RN-586](../business-rules/engine.md#rn-586), [RN-742](../business-rules/engine.md#rn-742),
+  [RN-722](../business-rules/engine.md#rn-722), [RN-823](../business-rules/engine.md#rn-823),
+  [RN-617](../business-rules/engine.md#rn-617).

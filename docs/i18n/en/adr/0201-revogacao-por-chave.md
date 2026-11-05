@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0201 — Revocation targets the KEY, not the `{project, user}` pair
@@ -10,13 +10,13 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 decision on 01/10: *"yes, revocation by KEY, with an ADR — key column in the
 socket ticket and a new auth contract; revoking drops only the connections opened
 with that key. It touches the engine, on purpose."*). Revises
-[RN-520](../business-rules.md#rn-520) — born in
+[RN-520](../business-rules/api.md#rn-520) — born in
 [ADR 0147](0147-agente-local-com-capacidades.md) point 6 — and references,
 without editing them, [ADR 0154](0154-chave-de-dispositivo-de-maquina.md) (the
 MACHINE key, which put *"Revocation by key"* among what it did NOT do) and
 [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md) (the machine key born in
 the terminal and registered by the installation). New rule:
-[RN-685](../business-rules.md#rn-685).
+[RN-685](../business-rules/api.md#rn-685).
 
 ## Context
 

@@ -5,7 +5,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { caminhoDoCatalogo, lerCatalogo, LOCALES_DA_API, precisaDeTraducao, textosDaFonte } from './openapi-por-locale.mjs';
+import { caminhoDaApi, caminhoDoCatalogo, lerCatalogo, LOCALES_DA_API, precisaDeTraducao, textosDaFonte } from './openapi-por-locale.mjs';
 
 const locale = process.argv[2];
 if (!LOCALES_DA_API.includes(locale)) {
@@ -13,7 +13,7 @@ if (!LOCALES_DA_API.includes(locale)) {
   process.exit(2);
 }
 const raiz = join(import.meta.dirname, '../..');
-const spec = JSON.parse(readFileSync(join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+const spec = JSON.parse(readFileSync(caminhoDaApi(raiz, 'reference/openapi.json'), 'utf8'));
 const cat = lerCatalogo(raiz, locale);
 let n = 0;
 for (const [h, t] of textosDaFonte(spec)) {

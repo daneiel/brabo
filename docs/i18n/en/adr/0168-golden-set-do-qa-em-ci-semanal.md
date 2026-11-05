@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0168 — The QA golden-set now runs in CI, scheduled and weekly
@@ -23,7 +23,7 @@ measurements changed the picture, and both are in
 - **AT-067 (2026-09-13):** on an `ubuntu-latest` without a GPU, with
   `qwen2.5-coder` pulled into the job's own Ollama, the clock fits (19–23 min of
   `mix golden_set.qa`). The "new infra" half fell. But the score was 0/6 by
-  construction: since [RN-502](../business-rules.md#rn-502) the `npm test` of a
+  construction: since [RN-502](../business-rules/engine.md#rn-502) the `npm test` of a
   `container` project without a `running` container is refused, and the seed
   never brought one up.
 - **AT-076 (2026-09-27):** the seed started bringing up the container through
@@ -78,7 +78,7 @@ three sides, because api and engine run on the host (`PROJECT_WORKSPACES_ROOT` =
 the reference comes from the seed itself (`IMAGEM_DO_GOLDEN_SET_QA`, pinned by
 the index digest), not from a second literal in the workflow: the broker's
 `docker run` runs under the 30 s control ceiling of the Docker port
-([RN-604](../business-rules.md#rn-604)), and a divergence between what the job
+([RN-604](../business-rules/api.md#rn-604)), and a divergence between what the job
 pulls and what the seed asks for would put the pull inside that ceiling.
 
 ## Consequences

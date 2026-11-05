@@ -47,4 +47,4 @@ resposta abortada NÃO traz `usage` nem `finish_reason`, e o custo real só apar
 ## Referências
 
 - [0223](0223-orcamento-de-raciocinio-por-modelo.md), [0188](0188-o-custo-real-do-provider-vira-o-numero-do-metering.md).
-- [RN-915](../business-rules/custo.md#rn-915), [RN-914](../business-rules.md#rn-914).
+- [RN-915](../business-rules/api.md#rn-915), [RN-914](../business-rules/api.md#rn-914).

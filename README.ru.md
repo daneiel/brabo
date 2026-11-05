@@ -211,7 +211,7 @@ pnpm bootstrap
   запуске, потому что обратная сторона в том, что reset никогда не
   воспроизводит первый клон (дефект, проявляющийся только с новым томом,
   остаётся незамеченным). Подробнее в
-  [`docs/runbook.md`](docs/runbook.md#reset-total).
+  [`deploy/docs/runbook.md`](deploy/docs/runbook.md#reset-total).
 
 **Параметры командной строки:**
 
@@ -266,15 +266,15 @@ ANSI с деградацией до 256 цветов там, где термин
 | [Первые шаги](docs/getting-started.md) | от клона до первого хода агента |
 | [Архитектура](docs/architecture.md) | карта кода, границы, инварианты, технический долг |
 | [Бизнес-правила](docs/business-rules.md) | RN, каждое с `файл:строка` и покрывающим его тестом (количество — в [README на португальском](README.md)) |
-| [Runbook](docs/runbook.md) | деплой, rollout, восстановление, ротация ключа, инцидент по стоимости |
+| [Runbook](deploy/docs/runbook.md) | деплой, rollout, восстановление, ротация ключа, инцидент по стоимости |
 | [Глоссарий](docs/glossary.md) | harness, gate, handoff, DEK, outbox, цикл K |
-| [Наблюдаемость](docs/explanation/observability.md) | как проследить действие через три процесса: trace, лог и путь между слоями |
+| [Наблюдаемость](deploy/docs/explanation/observability.md) | как проследить действие через три процесса: trace, лог и путь между слоями |
 | [Конфигурация](docs/reference/configuration.md) | все переменные окружения |
 | [Скрипты](docs/reference/scripts.md) | каждая команда `pnpm` и цель `Makefile`, извлечённые из исходников |
 | [События](docs/reference/events.md) | типы журнала событий, broadcast и span |
-| [Разрешения](docs/reference/permissions.md) | формат `permissions.json` и порядок решения |
-| [Артефакты](docs/reference/artifacts.md) | схемы и кто может выпускать каждую |
-| [Git-провайдеры](docs/reference/git-providers.md) | контракт операций и capabilities |
+| [Разрешения](apps/api/docs/reference/permissions.md) | формат `permissions.json` и порядок решения |
+| [Артефакты](apps/api/docs/reference/artifacts.md) | схемы и кто может выпускать каждую |
+| [Git-провайдеры](apps/api/docs/reference/git-providers.md) | контракт операций и capabilities |
 | [Внутренний API](docs/reference/internal-api.md) | контракт api ↔ engine |
 | [Безопасность](SECURITY.md) | как сообщить об уязвимости |
 | [Участие](CONTRIBUTING.md) | процесс, Definition of Done, что принимается |

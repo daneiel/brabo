@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0116 — `ActionType` (и будущие типы) генерируются из контракта OpenAPI, а не копируются вручную
@@ -206,5 +206,5 @@ enum в документе OpenAPI — будущая работа, не нуж�
   после шага свежести `openapi.json`
 - `docs/architecture.md` — "The `ActionType` union is a copy, and a copy
   ages"
-- [RN-096](../business-rules.md#rn-096) — каждому `ActionType` нужна фраза на
+- [RN-096](../business-rules/produto.md#rn-096) — каждому `ActionType` нужна фраза на
   португальском

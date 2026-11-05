@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0052 — The dev agent waits for approval mid-loop
@@ -147,5 +147,5 @@ beats `allow` and `BUILTIN_DENY_PATTERNS` stay active.
 
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md) — the state
   machine and event-driven rescheduling this ADR extends
-- [RN-047](../business-rules/custo.md#rn-047) — the dev agent's circuit breaker
+- [RN-047](../business-rules/engine.md#rn-047) — the dev agent's circuit breaker
 - Real execution: project `saudacao-local`, task `cd652d85`, 2026-08-05

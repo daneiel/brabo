@@ -5,7 +5,7 @@ sidebar_label: Fase 12 的验证
 sidebar_position: 5
 description: 一份可审计的脚本流程，在一次执行中演练采用、手动晋升和重新调度——事件 id 从数据库提取，并说明该验证有意不证明的内容。
 keywords: [验证, Fase 12, dogfooding, 采用, 重新调度, 晋升]
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # 三项发现已经消亡的验证
@@ -22,7 +22,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 **不证明 gate 的判断。** QA 和 SecOps 是 LLM agent。这里裁决通过 `RecordGateVerdictUseCase` 进入——它是它们的意见所经过的**真实**漏斗，也是 outbox 行 `task.gate_resolved` 诞生的地方。Fase 12b 需要证明的是裁决 → outbox → wake → claim 这条链，而不是模型是否会读测试套件。判断仍由 Fase 4a 的验收覆盖，[ADR 0020](../adr/0020-destravar-gates-qa-secops.md) 明确声明它们在本地模型下**不是确定性的**。
 
-**不做合并。** 受保护分支上的合并按设计是用户的决定（[RN-014](../business-rules.md#rn-014)）。脚本流程的第 6 步展示了在自主度为 `auto_approve`、`permissions.json` 全部放行的情况下，锁恰恰拒绝了这一点。
+**不做合并。** 受保护分支上的合并按设计是用户的决定（[RN-014](../business-rules/api.md#rn-014)）。脚本流程的第 6 步展示了在自主度为 `auto_approve`、`permissions.json` 全部放行的情况下，锁恰恰拒绝了这一点。
 
 **任何地方都不使用 LLM。** dev 是 `NoopDevAgentServer`。它不编写真正的代码——但自 Fase 12d 起它演练的是与真实 agent **相同的状态机**（`Engine.Dev.AgentIo`），而这正是这里被测试的东西。在那之前，Noop 处理一个 task 就停下：发现 #10 在测量工具自身内部存活，这会因为工具而不是产品的缺陷而让"零重启"标准失败。
 
@@ -32,7 +32,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 |---|---|---|
 | 0 | 创建项目 | 诞生时就是 `story_promotion = manual`，**无需任何人配置任何东西** |
 | 1 | 采用一个预先存在的 bare repo，带 `main` 和 `develop`，没有 `qa` 也没有 `rc` | `origin = 'adopted'`；计划诊断出缺失的分支**和**模板之外的分支；`plan_decision` 保持**为空**；没有手工插入任何行 |
-| 1b | 决定"按原样采用" | 模板**不**被强加于用户的仓库（[RN-045](../business-rules/custo.md#rn-045)） |
+| 1b | 决定"按原样采用" | 模板**不**被强加于用户的仓库（[RN-045](../business-rules/api.md#rn-045)） |
 | 2 | PO 创建一个完整的故事，带 3 个任务 | 故事处于 `draft` + `proposed_ready`；**`claimNext` 返回 `null`** |
 | 3 | 用户晋升 | 故事变为 `ready`；提议离开队列；事件记录 `user`，而不是 `agent/po` |
 | 4 | 激活执行并依次解决 3 个 gate | 3 个任务、1 个 agent、**engine 0 次重启** |
@@ -98,8 +98,8 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 | 每交付一个 task 的 engine 重启次数 | **1，由构造决定**——发现 #10 的性质（`:666`），不是估计。实际总数：**未测量** | **0** |
 | 批次 | 整个阶段都按批次运行（`:393-416`） | 不存在：agent 独自走完模块队列 |
 | 没有 task 的 agent | 进程死亡（`restart: :temporary`） | 显式的 `idle`，被监督，可由事件唤醒 |
-| 连续失败 | 连续烧掉预算 | 熔断器停在 `idle_tripped`（[RN-047](../business-rules/custo.md#rn-047)） |
-| 故事 → `ready` | 创建时自动完成，没有人工步骤（发现 #13，`:669`） | 用户的决定，操作者记录在 event log 中（[RN-048](../business-rules/custo.md#rn-048)） |
+| 连续失败 | 连续烧掉预算 | 熔断器停在 `idle_tripped`（[RN-047](../business-rules/engine.md#rn-047)） |
+| 故事 → `ready` | 创建时自动完成，没有人工步骤（发现 #13，`:669`） | 用户的决定，操作者记录在 event log 中（[RN-048](../business-rules/api.md#rn-048)） |
 | 拒绝一个故事 | 没有状态、事件或按钮（发现 #14） | 退回给 PO，理由固定在其会话中 |
 | 人工干预总数 | **未测量**——观察表留空（`:488-490`） | 审批流水线中的那些，本阶段**没有**改变它 |
 | 合并到受保护分支 | 手动，按设计 | 手动，按设计——不变，第 6 步证明了这一点 |

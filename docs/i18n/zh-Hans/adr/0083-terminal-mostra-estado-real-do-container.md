@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0083 — 终端标签页获得生命周期的真实使用者，而不是终端
@@ -41,5 +41,5 @@ FASE 25b 的说明文字**没有被移除或削弱**：生命周期状态是额�
 
 - [ADR 0081](0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md)——本文档最终通过 HTTP 暴露的那张表和两个用例。
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)——FASE 25b，仍被砍掉；本文档不重新打开它。
-- [RN-105](../business-rules/autenticacao.md#rn-105)、[RN-107](../business-rules/autenticacao.md#rn-107)、[RN-243](../business-rules.md#rn-243)、[RN-267](../business-rules.md#rn-267)、[RN-268](../business-rules.md#rn-268)。
+- [RN-105](../business-rules/api.md#rn-105)、[RN-107](../business-rules/web.md#rn-107)、[RN-243](../business-rules/api.md#rn-243)、[RN-267](../business-rules/api.md#rn-267)、[RN-268](../business-rules/web.md#rn-268)。
 - `apps/api/src/interfaces/http/containers/containers.controller.ts`、`apps/web/src/routes/code/CodeBottomPanel.tsx`。

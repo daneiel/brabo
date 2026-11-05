@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- **docs**: a documentação de cada área mora na raiz dela (`apps/api/docs/`, `apps/web/docs/`, `apps/engine/docs/`, `apps/runner/docs/`, `apps/broker/docs/`, `packages/docs/`, `deploy/docs/`, `scripts/ci/docs/`), com as traduções em `<raiz>/docs/i18n/<locale>/`; o site junta tudo nas mesmas URLs, as 821 RNs ficam em `<raiz>/docs/business-rules/<area>.md` e `docs/business-rules.md` vira o índice gerado que mantém as âncoras `#rn-NNN` (AT-693, ADR 0254).
 - **docs**: o site de documentação sai do Docusaurus: `pnpm docs:build`, `docs:start` e `docs:serve` usam o gerador próprio (com checador de links), o CI publica `build/docs-site/` e as traduções passam de `website/i18n/` para `docs/i18n/<locale>/`; `website/` guarda só a árvore do Redoc (AT-662, ADR 0253).
 - **docs**: `pnpm docs:site:check` confere links, âncoras e recursos de fora no site novo (`build/docs-site/`), com as pendências declaradas; o site passou a mostrar a faixa de tradução só onde cabe e a achar as imagens e o pager das páginas aninhadas (AT-662, lane A5).
 - **docs**: o ADR 0253 decide tirar o site do Docusaurus por um gerador próprio; o núcleo (`pnpm docs:site`, `scripts/docs/site/`) roda ao lado, com as mesmas URLs e âncoras (AT-662, lane A1).
@@ -61,6 +62,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- **docs**: a página da API no site novo fica legível sem JavaScript: sem a barra lateral e a busca do Redoc (a navegação é a do site), operações na largura da coluna com os exemplos abaixo, sem "Show N more", e o tema do Redoc segue o do site
 - **web**: as opções em cartão do assistente de novo projeto (modo, provider, visibilidade, credencial) voltam a quebrar linha e crescer: o item do `ToggleGroup` do kit tem `h-8` e `nowrap`, e cortava título e descrição com rolagem horizontal.
 - **web**: o campo de mensagem da Sessão volta a ocupar a largura do composer: a âncora do menu de `@`/`/` ficava sem classe e o campo saía com ~179px dentro de uma barra de 1224px (teste estrutural do CSS e da classe aplicada).
 - **web**: os utilitários do Tailwind usados fora do kit (47 em 25 arquivos; 11 classes nem existiam no CSS) viram CSS Module e passam a valer: grade 2/3 + 1/3 e altura dos gráficos em Gastos, alinhamento do ícone dos títulos, posição do ⌘K e largura do menu do usuário; um teste reprova a volta (ADR 0232, AT-655 V0).

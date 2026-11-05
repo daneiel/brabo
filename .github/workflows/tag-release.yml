@@ -2,7 +2,7 @@ name: tag-release
 
 # Carimba a tag do estágio a cada merge numa permanente, e — quando o merge é
 # um hotfix — trava o gate de retropropagação e abre os PRs que o resolvem.
-# Fonte da política: docs/explanation/branching-policy.md
+# Fonte da política: scripts/ci/docs/explanation/branching-policy.md
 #
 # NENHUM JOB DE DEPLOY. A tag é o produto final deste workflow e o registro do
 # que ESTARIA em cada estágio — vale mesmo sem ambiente. Quando houver deploy,

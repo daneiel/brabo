@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0076 — `provider` 重新成为花费维度，约束改由类型承担
@@ -7,8 +7,8 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **状态：** 已接受
 - **日期：** 2026-08-14
 - **修订：** [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md)（同一笔花费的两种受众），它刻意把 `provider` 排除在维度之外
-- **先前背景：** [RN-058](../business-rules/custo.md#rn-058)（agent 花费的密钥是 owner 的）、[RN-060](../business-rules/custo.md#rn-060)（密钥的花费属于 owner，只有他能看）以及
-  [RN-101](../business-rules/custo.md#rn-101)（两种受众）
+- **先前背景：** [RN-058](../business-rules/api.md#rn-058)（agent 花费的密钥是 owner 的）、[RN-060](../business-rules/api.md#rn-060)（密钥的花费属于 owner，只有他能看）以及
+  [RN-101](../business-rules/api.md#rn-101)（两种受众）
 
 ## 背景 {#contexto}
 
@@ -29,9 +29,9 @@ provider."*
 ## 决策 {#decisão}
 
 **`provider` 重新成为 `SpendDimension`，owner 的报表获得
-`porProvider`**（[RN-186](../business-rules/custo.md#rn-186)）。这个维度住在一条本就要求 `owner` 的路由上——与 RN-060 同一把尺子——成员没有获得任何字段。`credential-spend` 保持**不动**：它按月回答账单，并与今天存在的密钥关联（`temCredencial`），而新维度回答的是窗口**内**按 provider 的花费，与模型、项目和参与者并列。两者互不是对方的切片，依据的正是 0063 用来区分两种受众的同一标准。
+`porProvider`**（[RN-186](../business-rules/api.md#rn-186)）。这个维度住在一条本就要求 `owner` 的路由上——与 RN-060 同一把尺子——成员没有获得任何字段。`credential-spend` 保持**不动**：它按月回答账单，并与今天存在的密钥关联（`temCredencial`），而新维度回答的是窗口**内**按 provider 的花费，与模型、项目和参与者并列。两者互不是对方的切片，依据的正是 0063 用来区分两种受众的同一标准。
 
-**隐私约束改变的是形式而不是强度：现在承担约束的是**类型**（[RN-187](../business-rules/custo.md#rn-187)）。`sumGroupedBy` 有两个重载，区分它们的是作用域：
+**隐私约束改变的是形式而不是强度：现在承担约束的是**类型**（[RN-187](../business-rules/api.md#rn-187)）。`sumGroupedBy` 有两个重载，区分它们的是作用域：
 
 ```ts
 abstract sumGroupedBy(d: SpendDimensionDoAtor, e: SpendScopeDeAtor): Promise<SpendBucket[]>;
@@ -48,7 +48,7 @@ export type SpendDimensionDoAtor = Exclude<SpendDimension, 'provider'>;
 **用 `Exclude` 而不是第二份手写列表。** 新维度诞生时对两种受众都可达，把它从成员的范围中移除成为**在那个位置上**的显式行为——绝不是另一个文件中的遗忘。备选方案（两份独立列表）有一个已知的失败模式：受限列表会默默过时。
 
 **人和 agent 变成两个区块，是推导出来的而不是查询出来的**
-（[RN-188](../business-rules/custo.md#rn-188)）。`porOwner` 和 `porAgente` 是 `porAtor` 按 `actor_kind` 的划分，在用例中完成；`porAtor` 对已经使用它的人保持完整。0063 测得这些查询的成本随 `token_usage` 的大小而不是随请求的大小增长——为了把内存中已经分开的东西分开而再扫描窗口两次，代价高昂且理由错误。
+（[RN-188](../business-rules/api.md#rn-188)）。`porOwner` 和 `porAgente` 是 `porAtor` 按 `actor_kind` 的划分，在用例中完成；`porAtor` 对已经使用它的人保持完整。0063 测得这些查询的成本随 `token_usage` 的大小而不是随请求的大小增长——为了把内存中已经分开的东西分开而再扫描窗口两次，代价高昂且理由错误。
 
 **`token_usage(created_at)` 上的索引现在加入**（迁移 `0044`）。0063 已经测量并记录：52.5 万行时，*seq scan* 为 55 ms 和 38 ms，带索引为 32 ms 和 19 ms。只差一个迁移名额。
 

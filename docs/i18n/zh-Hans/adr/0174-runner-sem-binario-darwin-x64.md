@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0174 — runner 的独立二进制不再承诺 Mac Intel
@@ -17,7 +17,7 @@ ADR 0112 承诺了五个目标——`linux-x64`、`linux-arm64`、`darwin-x64`�
 
 第二次测量改变了这一待办的性质：阻塞不再是 runner（付费买一个 Intel runner 解决不了），而是 Bun。剩下两条出路——等 Bun 修复后再换标签，或者去掉该平台——而 `CLAUDE.md` 把它记录为所有者的决定。
 
-与此同时，五个目标的承诺在四个地方产生代价：矩阵排队一个从不运行的作业；`ALVOS_ESPERADOS` 让每个 `checksums.txt` 永远宣告缺少一个已知不会到来的目标（[RN-565](../business-rules.md#rn-565)）；代理 `GET /runner-releases/binary` 接受 `darwin-x64` 只是为了响应 502 `plataforma_nao_publicada`；而 `install.sh` 向 GitHub 请求一个返回 404 的资产——输出与“Release 没有发布”相同，与不完整的 Release 无法区分。
+与此同时，五个目标的承诺在四个地方产生代价：矩阵排队一个从不运行的作业；`ALVOS_ESPERADOS` 让每个 `checksums.txt` 永远宣告缺少一个已知不会到来的目标（[RN-565](../business-rules/ci.md#rn-565)）；代理 `GET /runner-releases/binary` 接受 `darwin-x64` 只是为了响应 502 `plataforma_nao_publicada`；而 `install.sh` 向 GitHub 请求一个返回 404 的资产——输出与“Release 没有发布”相同，与不完整的 Release 无法区分。
 
 ## 决策 {#decision}
 
@@ -25,8 +25,8 @@ ADR 0112 承诺了五个目标——`linux-x64`、`linux-arm64`、`darwin-x64`�
 
 - `build-runner-binaries.yml` 把 `darwin-x64` 从矩阵和 `ALVOS_ESPERADOS` 中去掉。`checksums.txt` 开始只声明真正失败的缺失。
 - 代理 `GET /runner-releases/binary` 接受这四个，并以**专门的 400**——而不是通用的“plataforma inválida”——拒绝 `darwin-x64`，点名本 ADR 和 npm 命令，不调用 GitHub。
-- `install.sh` 在 `darwin-amd64` 上**不尝试下载**：它用文字说明 Mac Intel 没有二进制、安装的其余部分已经就绪以及 npm 命令是什么，并把 `RUNNER_BIN` 留空——收尾（[RN-547](../business-rules.md#rn-547)）本来就用这个信号报告密钥和服务的待办。安装本身在 Mac Intel 上仍受支持（为 `darwin-amd64` 固定的 `cosign` 保留），只是本地 agent 的二进制退出。
-- 浏览器继续**检测** `darwin-x64`——检测 Mac Intel 是真实的，正是它让我们能说出正确的路径——但二进制步骤不请求下载：它预先失败，落入 [RN-473](../business-rules.md#rn-473) 的同一个尽力而为（`falhaDoBinario` → npm 命令）。
+- `install.sh` 在 `darwin-amd64` 上**不尝试下载**：它用文字说明 Mac Intel 没有二进制、安装的其余部分已经就绪以及 npm 命令是什么，并把 `RUNNER_BIN` 留空——收尾（[RN-547](../business-rules/produto.md#rn-547)）本来就用这个信号报告密钥和服务的待办。安装本身在 Mac Intel 上仍受支持（为 `darwin-amd64` 固定的 `cosign` 保留），只是本地 agent 的二进制退出。
+- 浏览器继续**检测** `darwin-x64`——检测 Mac Intel 是真实的，正是它让我们能说出正确的路径——但二进制步骤不请求下载：它预先失败，落入 [RN-473](../business-rules/web.md#rn-473) 的同一个尽力而为（`falhaDoBinario` → npm 命令）。
 - `scripts/ci/alvos-do-runner.spec.ts` 用三种语言把枚举目标的四个地方绑在一起：矩阵、api 的列表、安装程序的 `case` 和浏览器的列表。在一个地方去掉（或加回）一个目标而忘了另一个，就会失败。
 
 ## 考虑过的替代方案 {#alternatives-considered}

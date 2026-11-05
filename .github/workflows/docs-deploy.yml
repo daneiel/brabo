@@ -21,7 +21,7 @@ name: Documentação
 on:
   push:
     branches: [dev, main]
-    paths: ['docs/**', 'scripts/docs/**', 'design/**', 'website/**', '.github/workflows/docs-deploy.yml']
+    paths: ['docs/**', 'apps/*/docs/**', 'packages/docs/**', 'deploy/docs/**', 'scripts/ci/docs/**', 'scripts/docs/**', 'design/**', 'website/**', '.github/workflows/docs-deploy.yml']
 
 # `contents: write` porque a publicação agora é um COMMIT na `gh-pages`, não um
 # artefato. Ver o comentário do passo de publicação para o porquê da troca.
@@ -228,7 +228,7 @@ jobs:
       # O preço está declarado: a publicação passa a ser push direto na
       # `gh-pages`, que é a TERCEIRA exceção à porta única de PR. Ela está
       # documentada na política, ao lado das outras duas
-      # (docs/explanation/branching-policy.md, "Push direto é bloqueado") — e vale
+      # (scripts/ci/docs/explanation/branching-policy.md, "Push direto é bloqueado") — e vale
       # dizer que `gh-pages` não é branch de código: nada nela é fonte, tudo é
       # gerado, e o `git log` dela é o registro de cada publicação.
       #

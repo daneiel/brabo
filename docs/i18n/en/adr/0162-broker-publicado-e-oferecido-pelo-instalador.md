@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0162 — The broker becomes the fifth published image, and the installer ASKS whether to turn it on
@@ -66,7 +66,7 @@ with the same rules (`HIGH,CRITICAL`, `--ignore-unfixed`) and proves it COMES UP
 healthy with a read-only rootfs. `release.yml` publishes it by DIGEST,
 `images-manifest.ts` requires it (a missing target still fails — five of five or
 none), and keyless `cosign` signing and the verification in the same run
-([RN-524](../business-rules.md#rn-524)) cover it without a new line, because both
+([RN-524](../business-rules/ci.md#rn-524)) cover it without a new line, because both
 loops read the manifest.
 
 **Kubernetes does not know it**, and that is a decision, not forgetfulness: there

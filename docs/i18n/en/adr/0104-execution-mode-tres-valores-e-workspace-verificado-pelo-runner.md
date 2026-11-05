@@ -1,5 +1,5 @@
 ---
-traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0104 — `execution_mode` in three values, and the workspace is born `unverified` when the runner is the one who verifies it
@@ -16,7 +16,7 @@ the SAME field name, and nobody had reconciled the two until now.
 
 [ADR 0072](0072-projeto-local-ou-container.md) created
 `projects.workspace_mode` (`'container'|'local'`) + `workspace_path`. In
-`local` mode, [RN-170](../business-rules/autenticacao.md#rn-170) validates at CREATION
+`local` mode, [RN-170](../business-rules/api.md#rn-170) validates at CREATION
 time that the folder is **mounted via bind-mount** inside both the api's AND
 the engine's containers — `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
 (`validarCaminhoDeWorkspaceLocal`) runs `access(W_OK|X_OK)` **inside the
@@ -32,7 +32,7 @@ at all**, connecting to the engine via a Phoenix channel (`/runner`, topic
 engine itself. It executes agent commands already approved by the normal
 pipeline and opens a real interactive PTY terminal — the Terminal tab
 (`apps/web/src/routes/code/TerminalPanel.tsx`) already uses real
-`@xterm/xterm` for this. [RN-420](../business-rules.md#rn-420), which
+`@xterm/xterm` for this. [RN-420](../business-rules/engine.md#rn-420), which
 decides when to route a command to the runner instead of the usual
 `System.cmd`, reuses the SAME `workspace_mode == "local"` condition (plus a
 connected runner) — ADR 0103 never created a third value for the field.

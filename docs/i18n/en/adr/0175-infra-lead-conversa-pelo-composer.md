@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0175 — The Infra Lead converses through the composer, and first its turn goes through `TurnoAssincrono`
@@ -15,12 +15,12 @@ SAME mechanism. Also references [ADR 0038](0038-hierarquia-de-agentes.md) (the
 agent hierarchy, lead and subagent) and
 [ADR 0086](0086-dev-lead-plano-suspende-para-aprovacao.md) (the Dev Lead
 suspension, which the Infra Lead does not have). Rule:
-[RN-617](../business-rules.md#rn-617). Closes the open decision that
-[RN-584](../business-rules.md#rn-584) left in writing.
+[RN-617](../business-rules/engine.md#rn-617). Closes the open decision that
+[RN-584](../business-rules/engine.md#rn-584) left in writing.
 
 ## Context
 
-[RN-584](../business-rules.md#rn-584) (AT-098) removed the default recipient of
+[RN-584](../business-rules/engine.md#rn-584) (AT-098) removed the default recipient of
 the chat message and gave `infra` a NAMED refusal (`422 agente_sem_conversa`),
 leaving the product question declared: does the Infra Lead converse through the
 composer? And it declared the price of answering "yes" without preparation: the
@@ -33,12 +33,12 @@ RNs gave the other six:
 
 | Piece | The six | The Infra Lead |
 |---|---|---|
-| Immediate accept, `working` recorded first ([RN-578](../business-rules.md#rn-578)) | `TurnoAssincrono.iniciar/3` | the whole turn in `handle_call`/`handle_cast` |
+| Immediate accept, `working` recorded first ([RN-578](../business-rules/engine.md#rn-578)) | `TurnoAssincrono.iniciar/3` | the whole turn in `handle_call`/`handle_cast` |
 | Named refusal `409 turno_em_andamento` | yes | the second message waited in the process queue |
-| "Stop" ([RN-122](../business-rules.md#rn-122)) | `via_for/2` of `cancel/2` | `via_for/2` did not know it, nor was there a Task to kill |
-| Orphan turn on restart ([RN-586](../business-rules.md#rn-586)) | `TurnoOrfao` | "left out — declared in RN-586" |
-| Stop on session close ([RN-581](../business-rules.md#rn-581)) | `terminate/2` abandons the Task | killed after 5 s of waiting |
-| Narrated iteration ceiling ([RN-166](../business-rules/autenticacao.md#rn-166)) | `toolloop.limit_reached` | the loop ended silently at step 14 |
+| "Stop" ([RN-122](../business-rules/engine.md#rn-122)) | `via_for/2` of `cancel/2` | `via_for/2` did not know it, nor was there a Task to kill |
+| Orphan turn on restart ([RN-586](../business-rules/engine.md#rn-586)) | `TurnoOrfao` | "left out — declared in RN-586" |
+| Stop on session close ([RN-581](../business-rules/api.md#rn-581)) | `terminate/2` abandons the Task | killed after 5 s of waiting |
+| Narrated iteration ceiling ([RN-166](../business-rules/engine.md#rn-166)) | `toolloop.limit_reached` | the loop ended silently at step 14 |
 
 Also the kickoff: being a `cast`, it held no click, but it occupied the process
 for the entire turn — measured on the AT-089 installation, 8.4 min. A message
@@ -46,7 +46,7 @@ arriving in the meantime would wait the 8.4 min in the queue and exit with
 `:timeout` in the controller (500), and "Stop" would only be served afterwards.
 
 And the ceiling: the `propose_action` of container actions that the api runs
-auto-approved waits up to 225 s ([RN-605](../business-rules.md#rn-605)), more
+auto-approved waits up to 225 s ([RN-605](../business-rules/contracts.md#rn-605)), more
 than the 180 s of `user_message/2`. A message leading the model to propose
 `container_start` could blow the `GenServer.call` with the proposal still
 standing.
@@ -64,7 +64,7 @@ standing.
    (`concluir/1`: HALT of `propose_infra_pr` → `WorkflowsAgent` → single PR) is
    part of the turn function and returns the `state`; the end signals
    (`agent.done`, `agent.status: idle`) come only from `TurnoAssincrono`, in
-   the server process ([RN-585](../business-rules.md#rn-585)). "Stop" also kills
+   the server process ([RN-585](../business-rules/engine.md#rn-585)). "Stop" also kills
    the Workflows in progress.
 3. **The gate correction is not discarded.** `TurnoAssincrono.iniciar/3`
    without `from` ignores the request when a turn is in progress (the defensive
@@ -81,8 +81,8 @@ standing.
 6. **The screen offers it by the usual rule.** `infra` enters
    `AGENTES_DE_CHAT` (`apps/web/src/lib/session-readiness.ts`): it is the
    recipient when it is the most recent `agent.activated`, with no default
-   recipient ([RN-584](../business-rules.md#rn-584)). The acceptance of ITS
-   handoff stays in the own card of [RN-499](../business-rules.md#rn-499), and
+   recipient ([RN-584](../business-rules/engine.md#rn-584)). The acceptance of ITS
+   handoff stays in the own card of [RN-499](../business-rules/web.md#rn-499), and
    the thread card excludes it by NAME — otherwise the invitation would appear
    twice and, being the oldest, would again hide the Dev Lead's (RN-136).
 7. **Conversing does not open external effects.** The tools are the same four;

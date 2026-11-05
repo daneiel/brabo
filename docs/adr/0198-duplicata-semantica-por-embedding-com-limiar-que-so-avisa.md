@@ -10,8 +10,8 @@ como linha própria). Abre UMA exceção ao corte de metering do
 [ADR 0075](0075-embeddings-no-contrato-de-llm-provider.md) sem editá-lo: o
 corte continua valendo para a indexação e a busca do RAG
 ([ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md)); só esta checagem passa
-a gravar `token_usage`. Fecha a metade que a [RN-080](../business-rules/custo.md#rn-080)
-e a [RN-081](../business-rules/custo.md#rn-081) declaravam fora de alcance,
+a gravar `token_usage`. Fecha a metade que a [RN-080](../business-rules/engine.md#rn-080)
+e a [RN-081](../business-rules/api.md#rn-081) declaravam fora de alcance,
 sem mudar nenhuma das duas: a duplicata EXATA continua recusada.
 
 ## Context
@@ -104,7 +104,7 @@ repassa. A mesma checagem serve os dois tipos.
 **O que continua passando.** Duplicata cujo sentido está na DESCRIÇÃO e não no
 título ("Saudação com nome" × "Quem chama pode se identificar", o exemplo da
 RN-080) não é comparada. Um aviso perdido por timeout é dito, mas a checagem
-não é refeita. E o budget com `policy = 'block'` ([RN-019](../business-rules/custo.md#rn-019))
+não é refeita. E o budget com `policy = 'block'` ([RN-019](../business-rules/api.md#rn-019))
 não é consultado ANTES desta chamada: a linha soma ao gasto e pode cruzar os
 limiares, mas a checagem não é recusada por orçamento estourado — ela não
 bloqueia nada, e com o Ollama local o custo gravado é 0. Se um provider pago de

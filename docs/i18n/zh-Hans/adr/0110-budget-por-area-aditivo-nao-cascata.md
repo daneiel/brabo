@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0110 — 按区域的预算是叠加的，与项目/会话并列——不是级联，也不是新表
@@ -76,4 +76,4 @@ traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 - [ADR 0064](0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)——模型 binding 级联，一个与本机制**不同**的机制
 - `apps/api/src/domain/llm/area-budget.ts`——`isAreaBudgetExceeded`，纯谓词
 - `apps/api/src/domain/agents/agent-areas.ts`——`areaDo`，此处复用的纯成员关系解析器
-- [RN-443](../business-rules.md#rn-443)
+- [RN-443](../business-rules/api.md#rn-443)

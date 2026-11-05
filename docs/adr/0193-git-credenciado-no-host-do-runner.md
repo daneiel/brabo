@@ -4,7 +4,7 @@
 
 **Accepted.** 2026-10-01 (AT-116, história HS-037, épico EP-010, rodada 36;
 decisão do dono em 01/10: *"operações de git credenciadas no HOST, código no
-container"*). Fecha a metade que a [RN-558](../business-rules.md#rn-558) deixou
+container"*). Fecha a metade que a [RN-558](../business-rules/runner.md#rn-558) deixou
 declarada como aberta e referencia, sem editá-los, o
 [ADR 0130](0130-broker-de-container.md) (a porta de Docker sem `-e` livre), o
 [ADR 0145](0145-docker-pre-requisito-do-runner.md) (`RunnerReadiness` e as três

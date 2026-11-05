@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0211 — A single navigation: the sidebar absorbs the project rail
@@ -11,13 +11,13 @@ navigation bar on the left becomes the ONLY one; remove the other navigation bar
 but include in this one all items of the removed bar"). Revises
 [ADR 0126](0126-trilho-vertical-de-navegacao-do-projeto.md) — which stays
 accepted and is not edited — and
-[RN-201](../business-rules/autenticacao.md#rn-201).
+[RN-201](../business-rules/web.md#rn-201).
 
 ## Context
 
 Since ADR 0126 the project tabs existed in TWO places: the 180px vertical rail
 (`ProjectRail.tsx`, mounted in `ProjectPage.tsx`) and the sidebar's per-project
-list (`LinhaDeAba`, [RN-196](../business-rules/autenticacao.md#rn-196)).
+list (`LinhaDeAba`, [RN-196](../business-rules/web.md#rn-196)).
 CLAUDE.md declared this as a gap ("reconciling is a separate product decision"),
 along with the frame's price: 492px on the Code tab (264 of the sidebar + 180 of
 the rail + 48 of the `CodeShell`).
@@ -28,7 +28,7 @@ PRs, Approvals, Backlog, Architecture), each on its tab and never summed — the
 sidebar showed only Approvals, from the dashboard summary; the keyboard
 (`ArrowDown`/`ArrowUp`/`Home`/`End` with wrap-around, crossing groups); the
 active one scrolled into view; the vertical `role="tablist"`; and, on the phone
-([RN-643](../business-rules.md#rn-643)), the scrollable horizontal bar above the
+([RN-643](../business-rules/web.md#rn-643)), the scrollable horizontal bar above the
 panel. The sidebar had, and the rail did not: the project collapsed in the 62px
 rail, the phone drawer and the link to another browser window.
 
@@ -44,7 +44,7 @@ rail, the phone drawer and the link to another browser window.
 2. **The five counters have the SAME source, with no new request.** The five
    queues are now read by a single hook, `useContagensDoProjeto`
    (`apps/web/src/lib/contagens-do-projeto.ts`), which the frame uses for the
-   "needs you" panel ([RN-467](../business-rules.md#rn-467)) and the sidebar uses
+   "needs you" panel ([RN-467](../business-rules/web.md#rn-467)) and the sidebar uses
    for the numbers. Same `queryKey`s, deduplicated. The sidebar only turns it on
    while the project frame is MOUNTED — that was the only place the rail
    existed; on another project screen (the Session, for example) and on closed

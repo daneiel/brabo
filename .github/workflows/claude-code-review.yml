@@ -49,7 +49,7 @@ jobs:
     # ausente é pior que um pulado, porque parece defeito de código.
     #
     # Pular é seguro porque `claude-review` NÃO é check required
-    # (docs/reference/rulesets.md, "Checks obrigatórios") — job pulado aqui não
+    # (scripts/ci/docs/reference/rulesets.md, "Checks obrigatórios") — job pulado aqui não
     # deixa PR nenhum pendente para sempre.
     # As DUAS checagens, espelhando `ehAutorBot` (`scripts/ci/pr-police.ts:147`)
     # em vez de inventar um teste mais fraco aqui: o `type` é o sinal da API, e

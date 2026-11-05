@@ -12,7 +12,7 @@ MESMO nome de campo, e ninguém tinha reconciliado os dois até agora.
 
 O [ADR 0072](0072-projeto-local-ou-container.md) criou
 `projects.workspace_mode` (`'container'|'local'`) + `workspace_path`. No
-modo `local`, a [RN-170](../business-rules/autenticacao.md#rn-170) valida na CRIAÇÃO que
+modo `local`, a [RN-170](../business-rules/api.md#rn-170) valida na CRIAÇÃO que
 a pasta está **montada por bind-mount** dentro dos containers da api E do
 engine — `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
 (`validarCaminhoDeWorkspaceLocal`) roda `access(W_OK|X_OK)` **dentro do
@@ -28,7 +28,7 @@ nenhum**, conectando ao engine por canal Phoenix (`/runner`, tópico
 próprio engine. Ele executa comando de agente já aprovado pelo pipeline
 normal e abre terminal PTY interativo de verdade — a aba Terminal
 (`apps/web/src/routes/code/TerminalPanel.tsx`) já usa `@xterm/xterm` de
-verdade para isso. A [RN-420](../business-rules.md#rn-420), que decide
+verdade para isso. A [RN-420](../business-rules/engine.md#rn-420), que decide
 quando rotear um comando pro runner em vez do `System.cmd` de sempre, reusa
 a MESMA condição `workspace_mode == "local"` (mais runner conectado) — o
 ADR 0103 nunca criou um terceiro valor para o campo.

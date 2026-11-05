@@ -181,7 +181,7 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
   });
 
   it('o runbook e o bootstrap ensinam a forma certa, e nenhum dos dois a antiga', () => {
-    const runbook = fs.readFileSync(path.join(RAIZ, 'docs/runbook.md'), 'utf8');
+    const runbook = fs.readFileSync(path.join(RAIZ, 'deploy/docs/runbook.md'), 'utf8');
     expect(runbook).toContain(FORMA_CERTA);
     const bootstrap = fs.readFileSync(path.join(RAIZ, 'scripts/dev/bootstrap.sh'), 'utf8');
     expect(bootstrap.replace('${BRABO_REPO:-daneiel/brabo}', 'daneiel/brabo')).toContain(FORMA_CERTA);
@@ -191,7 +191,7 @@ describe('a forma certa é UMA só, nos lugares que a ensinam', () => {
     // linha a manda rodar.
     const antiga = /sh -c "\$\(curl -fsSL [^"]*install\.sh\)"/;
     for (const [nome, texto] of [
-      ['docs/runbook.md', runbook],
+      ['deploy/docs/runbook.md', runbook],
       ['scripts/dev/bootstrap.sh', bootstrap],
       ['README.md', fs.readFileSync(path.join(RAIZ, 'README.md'), 'utf8')],
     ] as const) {

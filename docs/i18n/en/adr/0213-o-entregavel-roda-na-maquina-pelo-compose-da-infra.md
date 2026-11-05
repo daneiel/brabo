@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0213 — The deliverable runs on the user's machine through Infra's compose
@@ -26,8 +26,8 @@ it running. What was measured:
 - The project container has no Docker (ADR 0130 containment), so nothing inside
   Brabo can run `docker compose up` to prove the compose.
 - The deliverable's routes are already documented in the README by the dev
-  ([RN-850](../business-rules.md#rn-850)), and QA already brings up processes in
-  the background and ends the group ([RN-817](../business-rules.md#rn-817)), but
+  ([RN-850](../business-rules/engine.md#rn-850)), and QA already brings up processes in
+  the background and ends the group ([RN-817](../business-rules/engine.md#rn-817)), but
   nothing tied a URL to what the user opens.
 
 ## Decision
@@ -70,7 +70,7 @@ it running. What was measured:
    user's machine"), never a plan item.
 8. **The Overview gains the "Run on your machine" card** (RN-855): the command
    with a copy button and the clickable URLs, with the text "declared by Infra,
-   not verified on your machine" ([RN-468](../business-rules.md#rn-468)) — never
+   not verified on your machine" ([RN-468](../business-rules/web.md#rn-468)) — never
    green.
 
 ## Consequences
@@ -86,8 +86,8 @@ it running. What was measured:
   of [ADR 0190](0190-a-infra-sobe-o-container-no-aceite.md) and the resources
   derived from the `module_map` of
   [ADR 0199](0199-recurso-minimo-derivado-do-module-map.md). The evidence that
-  the entrypoint comes up ([RN-813](../business-rules.md#rn-813)) and the HTTP
-  route in the README ([RN-846](../business-rules.md#rn-846)) still hold; this
+  the entrypoint comes up ([RN-813](../business-rules/engine.md#rn-813)) and the HTTP
+  route in the README ([RN-846](../business-rules/engine.md#rn-846)) still hold; this
   ADR adds the URL that is opened, it does not replace the proof.
 
 ## Alternatives considered

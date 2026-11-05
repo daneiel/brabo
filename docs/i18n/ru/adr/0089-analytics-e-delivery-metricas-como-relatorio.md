@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0089 — `analytics` и `delivery-metricas` становятся скриптом отчёта
@@ -73,7 +73,7 @@ HTTP-маршрута.
 — это не пробел, который нужно закрыть в следующем раунде:
 
 1. **Полная продуктовая воронка (идея → commit).** У `sessions` нет
-   `storyId` — [RN-230](../business-rules/autenticacao.md#rn-230) уже объявляет этот
+   `storyId` — [RN-230](../business-rules/web.md#rn-230) уже объявляет этот
    пробел во вкладке Criativo (`apps/web/src/routes/ProjectSessionsTab.tsx`).
    Его закрытие потребовало бы новой схемы (новый столбец, возможно migration в
    `sessions` или связующая таблица), вне охвата этого направления по
@@ -132,7 +132,7 @@ HTTP-маршрута.
   (прецедент формы, Фаза 13b)
 - `apps/api/src/domain/git/git-action-execution-result.ts`
 - `docs/gates.yml` (gate `backmerge`)
-- [RN-230](../business-rules/autenticacao.md#rn-230) — пробел идея → commit, уже
+- [RN-230](../business-rules/web.md#rn-230) — пробел идея → commit, уже
   объявленный во вкладке Criativo
 - [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) —
   принцип никогда не притворяться, что существуют несуществующие данные

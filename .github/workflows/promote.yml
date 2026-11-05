@@ -1,7 +1,7 @@
 name: promote
 
 # Dispara a promoção de um degrau para o próximo.
-# Fonte da política: docs/explanation/branching-policy.md
+# Fonte da política: scripts/ci/docs/explanation/branching-policy.md
 #
 # O workflow NÃO mergeia nada: ele calcula a versão do ciclo e abre o PR de
 # promoção. O merge continua sendo ato manual do humano, como toda entrada em
@@ -63,7 +63,7 @@ jobs:
               echo "\`$ATOR\` disparou, mas em \`APPROVAL_MODE=solo\` o responsável de"
               echo "release é **\`$OWNER\`** — o único autorizado a promover."
               echo
-              echo "A política está em \`docs/explanation/branching-policy.md\`, seção"
+              echo "A política está em \`scripts/ci/docs/explanation/branching-policy.md\`, seção"
               echo "\"Papéis\". Para mudar quem promove, mude a variável"
               echo "\`OWNER_HANDLE\`, não este workflow."
             } >> "$GITHUB_STEP_SUMMARY"

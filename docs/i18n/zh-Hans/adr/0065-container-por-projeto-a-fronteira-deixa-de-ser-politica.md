@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0065 — 每个项目一个容器：边界不再是策略
@@ -83,7 +83,7 @@ event log 中的 `artifact.project_image`，带 `image`、`rationale`、`network
 消息说明缺什么。
 
 是 409 而不是 403：请求者及其权限都没有任何问题——这个资源在这个状态下还不存在。而这项检查与路径约束放在
-**同一个漏斗**（`alvo`）中，而不是在四个路由中，理由同 [RN-092](../business-rules/custo.md#rn-092)：在四个
+**同一个漏斗**（`alvo`）中，而不是在四个路由中，理由同 [RN-092](../business-rules/api.md#rn-092)：在四个
 调用者中重复的检查，总有一天会在其中一个出现分歧。
 
 ### 3. 边界：内部是自由的，外部属于人 {#3-a-fronteira-dentro-é-livre-fora-é-humano}
@@ -103,7 +103,7 @@ event log 中留下**推送了什么、推到哪里**。终端会是通往同一
 
 拒绝并没有剥夺 agent 的能力——而是**重定向**。dev agent 一直都是这样做的（`agent_io.ex` 提议
 `git_push`）；改变的是现在它被保证了，而不只是约定。受保护分支上的合并仍按
-[RN-014](../business-rules.md#rn-014) 手动进行，不受影响。
+[RN-014](../business-rules/api.md#rn-014) 手动进行，不受影响。
 
 ### 4. 网络是**容器**的姿态，只决定一次——而不是逐条命令 {#4-rede-é-postura-do-container-decidida-uma-vez--não-comando-a-comando}
 
@@ -179,8 +179,8 @@ dev agent 推送的方式。失去的是为 push/PR/部署配置一个终端捷�
 - [ADR 0053](0053-dev-lead-e-paralelismo-autorizado.md)——授权花费的是为项目负责的人；网络遵循同样的标准。
 - [ADR 0045](0045-reagendamento-por-evento-do-dev-agent.md)——worktree 是按 **agent** 的，而不是按 task；
   改为住在容器内部的是它。
-- [RN-014](../business-rules.md#rn-014)、[RN-092](../business-rules/custo.md#rn-092)、
-  [RN-105](../business-rules/autenticacao.md#rn-105)、[RN-106](../business-rules/autenticacao.md#rn-106)。
+- [RN-014](../business-rules/api.md#rn-014)、[RN-092](../business-rules/api.md#rn-092)、
+  [RN-105](../business-rules/api.md#rn-105)、[RN-106](../business-rules/api.md#rn-106)。
 - `docs/explanation/achados-execucao-real.md`——发现 Z、AD 和 AE。
 - `apps/api/src/domain/containers/project-container.ts`、
   `apps/api/src/domain/actions/external-effect.ts`、

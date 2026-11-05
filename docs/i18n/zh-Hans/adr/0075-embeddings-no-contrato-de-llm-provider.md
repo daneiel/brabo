@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0075 — LLMProvider 合约中的 embedding
@@ -17,7 +17,7 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 
 **1. capability 是一个新维度，而不是现有维度的变体。** 今天的 capabilities——`streaming`、`toolCalling`、`listModels` 以及 `models` 的 `supports_*` 列——讲的是模型如何**对话**。embedding 不是一种更贫乏的对话：它是另一个操作，有另一个端点、另一种正文和另一种响应类型。
 
-**2. 这里的模型层是**排斥**，而不是梯度。** tool calling 允许降级：一个不请求工具的模型仍然能回复文本，这就是为什么 [RN-040](../business-rules/custo.md#rn-040) 只拒绝 agent 的 binding，而不是禁止该模型。embedding 不允许：`nomic-embed-text` 不回答问题，`llama3.2` 不返回向量。它们是两个不相交的模型集合，而“这个模型是 embedding 模型吗？”这个问题不适合任何现有列。
+**2. 这里的模型层是**排斥**，而不是梯度。** tool calling 允许降级：一个不请求工具的模型仍然能回复文本，这就是为什么 [RN-040](../business-rules/api.md#rn-040) 只拒绝 agent 的 binding，而不是禁止该模型。embedding 不允许：`nomic-embed-text` 不回答问题，`llama3.2` 不返回向量。它们是两个不相交的模型集合，而“这个模型是 embedding 模型吗？”这个问题不适合任何现有列。
 
 **3. 凭阅读文档来声明已经付出过高昂代价。**
 [ADR 0043](0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md) 记录了两次**现场**回退——DeepInfra 和 Vultr——文档承诺而执行否认的 capability。每个云 provider 都有一页说它提供 `/embeddings`；没有一页是证明。
@@ -43,8 +43,8 @@ embed?(
 | --- | --- |
 | `vectors` | 结果，按输入的顺序 |
 | `dimensions` | 对照**实际到来**的东西核对，而不是从目录复制——向量索引的维度是固定的，写入不同的大小会在远离原因的地方失败 |
-| `model` | provider **声称**使用的，并不总是所请求的（别名解析为带日期的版本）——进入计量的是它，理由与冻结价格相同（[RN-044](../business-rules/custo.md#rn-044)） |
-| `inputTokens` + `estimated` | embedding 会产生花费，“说了零” × “什么也没说”的区分与 [RN-041](../business-rules/custo.md#rn-041) 相同 |
+| `model` | provider **声称**使用的，并不总是所请求的（别名解析为带日期的版本）——进入计量的是它，理由与冻结价格相同（[RN-044](../business-rules/api.md#rn-044)） |
+| `inputTokens` + `estimated` | embedding 会产生花费，“说了零” × “什么也没说”的区分与 [RN-041](../business-rules/api.md#rn-041) 相同 |
 
 **错误会**抛出**，按 `code` 规范化**，而不是像 `chat` 中那样变成 chunk。
 chunk 的理由是保留一个已经发生的轮次的花费；这里没有什么要保留的——要么 provider 返回了向量并收费，要么没有返回也没有收费。这与 `listModels` 做的选择相同，论据也相同，分类也**相同**（`auth`、`rate_limit`、`model_not_found`、

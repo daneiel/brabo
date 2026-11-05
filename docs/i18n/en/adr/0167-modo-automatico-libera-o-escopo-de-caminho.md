@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0167 — Automatic mode releases the path scope, and only it
@@ -14,17 +14,17 @@ agent in automatic mode, the path scope ceiling of
 0055 nor [ADR 0102](0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md)
 (the external effect/privileged command ceiling, RN-418), which remain valid in
 full. The rule born from here is
-[RN-603](../business-rules/autenticacao.md#rn-603); it revises
-[RN-153](../business-rules/autenticacao.md#rn-153) and
-[RN-154](../business-rules/autenticacao.md#rn-154).
+[RN-603](../business-rules/api.md#rn-603); it revises
+[RN-153](../business-rules/api.md#rn-153) and
+[RN-154](../business-rules/api.md#rn-154).
 
 ## Context
 
-"Automatic mode" ([RN-153](../business-rules/autenticacao.md#rn-153)) is the
+"Automatic mode" ([RN-153](../business-rules/api.md#rn-153)) is the
 `"*"` wildcard in `agent_autonomy`: autonomy for any action type of an agent. It
 was designed NOT to break any ceiling of `decide()` — the ceilings acted on
 `current.policy === 'auto_approve'`, without knowing where the permissiveness came
-from ([RN-154](../business-rules/autenticacao.md#rn-154)).
+from ([RN-154](../business-rules/api.md#rn-154)).
 
 One of those ceilings is the PATH SCOPE one (ADR 0055): a terminal command that
 touches a path outside the project folder is never auto-approvable. Measured in

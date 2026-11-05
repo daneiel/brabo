@@ -1,7 +1,7 @@
 /**
  * version — calcula a versão do ciclo, o N de cada estágio e verifica a âncora
  * da tag final.
- * Fonte da política: docs/explanation/branching-policy.md
+ * Fonte da política: scripts/ci/docs/explanation/branching-policy.md
  *
  * A VERSÃO VIVE NA TAG, não nos arquivos. Ninguém pode commitar direto numa
  * branch permanente para bumpar `package.json`, então tentar manter os quatro

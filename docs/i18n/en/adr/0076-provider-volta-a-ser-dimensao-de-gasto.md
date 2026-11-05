@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0076 — `provider` becomes a spend dimension again, and containment moves to the type
@@ -9,10 +9,10 @@ traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 - **Revises:** [ADR 0063](0063-duas-audiencias-para-o-mesmo-gasto.md) (the two
   audiences for the same spend), which excluded `provider` from the
   dimensions on principle
-- **Prior context:** [RN-058](../business-rules/custo.md#rn-058) (the key an agent
-  spends is the workspace owner's), [RN-060](../business-rules/custo.md#rn-060)
+- **Prior context:** [RN-058](../business-rules/api.md#rn-058) (the key an agent
+  spends is the workspace owner's), [RN-060](../business-rules/api.md#rn-060)
   (the key spend report belongs to the owner, and only them) and
-  [RN-101](../business-rules/custo.md#rn-101) (the two audiences)
+  [RN-101](../business-rules/api.md#rn-101) (the two audiences)
 
 ## Context
 
@@ -43,7 +43,7 @@ What the 2026-08-09 decision didn't separate, and usage asked for:
 ## Decision
 
 **`provider` becomes a `SpendDimension` again, and the owner's report gains
-`porProvider`** ([RN-186](../business-rules/custo.md#rn-186)). The axis lives on a
+`porProvider`** ([RN-186](../business-rules/api.md#rn-186)). The axis lives on a
 route that already required `owner` — the same rule as RN-060 — and the
 member gains no field at all. `credential-spend` stays **untouched**: it
 answers the invoice by month, tied to the key that exists today
@@ -52,7 +52,7 @@ window, alongside model, project and actor. It isn't a slice of the other,
 by the same criterion the 0063 used to separate the two audiences.
 
 **The privacy containment changes shape, not strength: the TYPE now does the
-containing** ([RN-187](../business-rules/custo.md#rn-187)). `sumGroupedBy` has two
+containing** ([RN-187](../business-rules/api.md#rn-187)). `sumGroupedBy` has two
 overloads, and what separates them is the scope:
 
 ```ts
@@ -84,7 +84,7 @@ The alternative (two independent lists) has a known failure mode: the
 restricted list ages quietly.
 
 **Person and agent become two blocks, derived and not separately queried**
-([RN-188](../business-rules/custo.md#rn-188)). `porOwner` and `porAgente` are a
+([RN-188](../business-rules/api.md#rn-188)). `porOwner` and `porAgente` are a
 partition of `porAtor` by `actor_kind`, done in the use case; `porAtor`
 remains whole for whoever already consumed it. The 0063 measured that the
 cost of these queries scales with the size of `token_usage`, not with the

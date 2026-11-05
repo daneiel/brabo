@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0066 — 可读的 workspace 文件夹名称
@@ -77,7 +77,7 @@ traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 
 ## 参考 {#referências}
 
-- [RN-109](../business-rules/autenticacao.md#rn-109)——文件夹名称在创建时冻结，旧项目保留 UUID。
-- [RN-075](../business-rules/custo.md#rn-075)——终端策略中的路径范围（本 ADR 所保留的）。
-- [RN-092](../business-rules/custo.md#rn-092)——代码读取中的路径约束（同上）。
+- [RN-109](../business-rules/api.md#rn-109)——文件夹名称在创建时冻结，旧项目保留 UUID。
+- [RN-075](../business-rules/api.md#rn-075)——终端策略中的路径范围（本 ADR 所保留的）。
+- [RN-092](../business-rules/api.md#rn-092)——代码读取中的路径约束（同上）。
 - [ADR 0055](0055-escopo-de-caminho-na-politica-de-terminal.md)——被修订的文档。

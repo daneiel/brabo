@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding
@@ -88,7 +88,7 @@ provider, которому он нужен, а Фаза 9b подтвержда�
 должен быть `WHERE`, а capability без столбца — это capability, которую
 никто не может запросить.
 
-Поверх этого идёт новое правило ([RN-040](../business-rules/custo.md#rn-040)):
+Поверх этого идёт новое правило ([RN-040](../business-rules/api.md#rn-040)):
 `assertModelFitsBindingScope` отказывается привязывать к **агенту** модель без
 нативного tool calling, с сообщением, указывающим фильтр, которым пользователю нужно
 воспользоваться. Проверяет только область `agent` — `workspace` и `project` являются fallback

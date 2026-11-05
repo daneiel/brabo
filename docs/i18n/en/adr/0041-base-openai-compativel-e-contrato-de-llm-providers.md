@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0041 — An OpenAI-compatible base, an LLM provider contract, and capabilities that refuse a binding
@@ -92,7 +92,7 @@ to be a `WHERE`, and a capability without a column is a capability nobody
 can query.
 
 On top of this comes a new rule
-([RN-040](../business-rules/custo.md#rn-040)): `assertModelFitsBindingScope`
+([RN-040](../business-rules/api.md#rn-040)): `assertModelFitsBindingScope`
 refuses to bind a model without native tool calling to an **agent**, with a
 message pointing to the filter the user needs to use. Only the `agent`
 scope validates — `workspace` and `project` are the fallback for human

@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0083 — The Terminal tab gets the real consumer of the lifecycle, not the terminal
@@ -94,8 +94,8 @@ never what we'd wish it said.
   the table and the two use cases this document finally exposes over HTTP.
 - [ADR 0065](0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md) —
   PHASE 25b, which remains cut; this document does not reopen it.
-- [RN-105](../business-rules/autenticacao.md#rn-105), [RN-107](../business-rules/autenticacao.md#rn-107),
-  [RN-243](../business-rules.md#rn-243), [RN-267](../business-rules.md#rn-267),
-  [RN-268](../business-rules.md#rn-268).
+- [RN-105](../business-rules/api.md#rn-105), [RN-107](../business-rules/web.md#rn-107),
+  [RN-243](../business-rules/api.md#rn-243), [RN-267](../business-rules/api.md#rn-267),
+  [RN-268](../business-rules/web.md#rn-268).
 - `apps/api/src/interfaces/http/containers/containers.controller.ts`,
   `apps/web/src/routes/code/CodeBottomPanel.tsx`.
