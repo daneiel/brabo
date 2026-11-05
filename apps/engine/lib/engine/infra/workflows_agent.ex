@@ -22,7 +22,7 @@ defmodule Engine.Infra.WorkflowsAgent do
   ## Conhecimento base
 
   O prompt cita a escada de branches permanentes e a taxonomia de nome de
-  `docs/explanation/branching-policy.md`, e o ADR 0030 como a fonte de que
+  `scripts/ci/docs/explanation/branching-policy.md`, e o ADR 0030 como a fonte de que
   ISSO É MECANIZADO no repo da própria Brabo — não pra copiar os scripts de
   `scripts/ci/*.ts` (outro produto rodando a própria política da Brabo), mas
   porque todo projeto que a Brabo provisiona já nasce com essas três
