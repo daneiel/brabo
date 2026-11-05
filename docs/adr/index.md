@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 248 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 249 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -383,13 +383,14 @@ Como a documentação é gerada, verificada e publicada.
 | [0219](0219-referencia-entra-na-traducao.md) | A referência entra na tradução: `docs/reference/**` passa a ser fonte pt-BR traduzida e medida na paridade, inclusive o bloco gerado, menos o próprio relatório de paridade e o `openapi.json`; a página Redoc fica para a AT-565 (AT-564, decisões do dono de 15/10) |
 | [0220](0220-api-traduzida-por-catalogo.md) | A página da API sai traduzida por catálogo: a fonte segue sendo o texto dos decorators da api (exceção à fonte pt-BR), um catálogo por locale chaveado pelo hash do texto, spec derivada no build e fora do git, órfã reprova e faltando avisa, rótulos fixos do Redoc em inglês (AT-565, decisões do dono de 16/10) |
 | [0253](0253-o-site-de-docs-deixa-o-docusaurus.md) | O site de docs deixa o Docusaurus por um gerador próprio com as mesmas URLs e âncoras; a API fica no Redoc 3 (rótulos da interface em inglês, telemetria desligada), as traduções vão para `docs/i18n/` e a busca é por substring. Referencia o [0117](0117-lockfile-proprio-para-o-website.md), o [0206](0206-referencia-da-api-numa-pagina-redoc.md), o [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) e o [0220](0220-api-traduzida-por-catalogo.md) |
+| [0254](0254-a-doc-de-cada-area-mora-na-raiz-dela.md) | A doc de cada área mora em `<raiz>/docs/`: o site é a árvore de união com as mesmas URLs, RN no `business-rules/<raiz>.md` do hospedeiro da 1ª ref `caminho:N` (numeração global, âncora inalterada), `docs/business-rules.md` vira índice gerado, checks com `--raiz` e traduções em `<raiz>/docs/i18n/` |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0254**.
+  é substituído — o próximo é **0255**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

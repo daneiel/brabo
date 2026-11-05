@@ -118,7 +118,10 @@
   FONTE em pt-BR e o locale padrão (ADR 0216); `en`, `ru` e `zh-Hans` moram em
   `docs/i18n/<locale>/` (nunca página da fonte) e página sem tradução cai na
   fonte; Mermaid; busca por substring, índice por idioma; a API é Redoc 3,
-  uma página por tag
+  uma página por tag. A doc de cada área mora em `<raiz>/docs/` (ADR 0254,
+  lista em `scripts/docs/raizes-de-doc.mjs`), o site é a união delas com as
+  mesmas URLs, e RN nova vai no `business-rules/<raiz>.md` da área dona do
+  código (`docs/business-rules.md` é índice gerado)
 - CI/CD de release e cadeia de suprimentos (pin por SHA/digest, assinatura,
   Trivy, `install-e2e.yml`): as regras moram em
   `.claude/rules/ci-e-cadeia-de-suprimentos.md`, carregadas quando a sessão lê

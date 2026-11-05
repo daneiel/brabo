@@ -52,18 +52,15 @@ coisas saíram do import sem perder uma palavra:
 - Mudança estrutural (fronteira de camada, banco, modelo de
   consistência, dependência pesada) → ADR novo com o próximo número.
   ADR aceito NUNCA é editado: o novo referencia o antigo.
-- Regra de negócio nova → RN-XXX com arquivo:linha e o teste que a cobre,
-  em docs/business-rules.md — EXCETO as duas famílias que saíram dele por
-  TAMANHO (não por assunto): custo/orçamento/metering vai em
-  docs/business-rules/custo.md e auth first-party em
-  docs/business-rules/autenticacao.md. As três contam para a mesma numeração
-  (nunca reinicie por arquivo) e para a mesma contagem, que o docs:check afere
-  somando os três por glob. Âncora `{#rn-NNN}` é o contrato: ela não muda
-  quando uma RN muda de arquivo, e link de fora aponta para o arquivo que a
-  hospeda hoje. Cabeçalho de RN sem ela, ou com outro número, REPROVA o
-  `docs:check` — nos três arquivos e nas traduções deles (`en`, `ru`, `zh-Hans`, ADR 0216)
-  (`scripts/docs/ancoras-de-rn.mjs`, AT-230): o `docs:build` não pega, porque
-  sem âncora o gerador cria um id pelo título e compila.
+- Regra de negócio nova → RN-XXX com arquivo:linha e o teste que a cobre, no
+  `<raiz>/docs/business-rules/<raiz>.md` da ÁREA DONA DO CÓDIGO (a raiz que
+  hospeda a 1ª ref `caminho:N`; ADR 0254). `docs/business-rules.md` é ÍNDICE
+  GERADO e `custo.md`/`autenticacao.md` são stubs congelados: não escreva RN
+  neles. A numeração é GLOBAL (nunca reinicie por raiz) e o `docs:check` soma
+  todas as raízes e reprova número duplicado. Âncora `{#rn-NNN}` é o contrato:
+  não muda quando a RN muda de arquivo; cabeçalho sem ela, ou com outro
+  número, REPROVA o `docs:check` — também nas traduções (`en`, `ru`,
+  `zh-Hans`, ADR 0216) (`scripts/docs/ancoras-de-rn.mjs`, AT-230).
 - TODA mudança verifica se ESTE arquivo — com as partes que ele importa de
   `.claude/contexto/` — precisa mudar: Stack, Convenções, "O que NÃO fazer"
   e o estado das fases. Não pergunte se deve: verifique.
