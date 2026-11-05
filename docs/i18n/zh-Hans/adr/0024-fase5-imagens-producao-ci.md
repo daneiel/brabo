@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0024 — 阶段 5（第 1 次会话）：生产镜像、compose.prod、CI 与冒烟测试

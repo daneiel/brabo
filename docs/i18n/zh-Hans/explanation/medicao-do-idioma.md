@@ -2,7 +2,7 @@
 id: medicao-do-idioma
 title: 语言启发式的测量
 description: 针对一个带标签的语料库测量 AT-080 语言检测启发式的工具、它在合成语料库上产生的数字，以及语言引导及其成本的付费验证（AT-167，2026-09-29）。
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 ---
 
 # 语言启发式的测量 {#measuring-the-language-heuristic}

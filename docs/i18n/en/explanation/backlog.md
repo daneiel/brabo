@@ -1,6 +1,6 @@
 ---
 sidebar_position: 8
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 9ecc443e59
 ---
 
 # Triaged backlog

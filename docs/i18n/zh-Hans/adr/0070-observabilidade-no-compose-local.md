@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0070 — 本地 Compose 中的可观测性：指标和日志，没有 trace

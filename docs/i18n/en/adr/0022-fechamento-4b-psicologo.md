@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0022 — Closing Phase 4b (session 1): evidence that arrives, cost that shows up, analysis that survives a kill

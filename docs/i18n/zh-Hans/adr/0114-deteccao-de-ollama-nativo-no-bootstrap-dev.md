@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0114 — 在开发引导中检测原生 Ollama：只问一次，持久化到 `.env`，把 compose 的服务放到 profile 之后

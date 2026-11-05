@@ -2,7 +2,7 @@
 id: tanstack-ai
 title: TanStack AI — не принят
 description: Почему web не принимает TanStack AI в чате сессии (решение от 03.10.2026), что было измерено, два запрета для будущего принятия и триггер пересмотра.
-traducao_de: 17fe83498b0a1eea177367926431ffddda3ce9ff
+traducao_de: 9ecc443e59
 ---
 
 # TanStack AI — не принят

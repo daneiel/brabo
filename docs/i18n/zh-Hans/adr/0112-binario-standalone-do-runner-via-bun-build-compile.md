@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0112 — 通过 `bun build --compile` 构建 `@brabo/runner` 的独立二进制，原生插件 `.node` 通过真实解压到临时目录的方式嵌入

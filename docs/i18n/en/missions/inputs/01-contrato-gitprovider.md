@@ -1,5 +1,5 @@
 ---
-traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+traducao_de: 9ecc443e59
 ---
 
 # Input 1 — the GitProvider contract that already exists

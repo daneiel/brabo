@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0182 — handoff 提议获得生命周期：每个目标一个待处理，以及 `superseded`

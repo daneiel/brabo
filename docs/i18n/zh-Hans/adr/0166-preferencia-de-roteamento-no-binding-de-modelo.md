@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0166 — 路由偏好住在模型 binding 中，随它一起传递，并在计量中冻结

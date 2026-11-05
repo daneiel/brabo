@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0160 — 安装程序的 compose 随它一起传送，作为已签名的 asset

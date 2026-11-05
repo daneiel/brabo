@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0015 — Настоящий Psicólogo: ToolLoop, гипотезы с доказательствами и сортировка по стоимости

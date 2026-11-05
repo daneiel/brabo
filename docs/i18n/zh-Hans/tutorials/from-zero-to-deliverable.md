@@ -1,7 +1,7 @@
 ---
 title: 从零到交付物
 description: 在 Brabo 上端到端走完的一个真实项目——创建、选择模型、在聊天中回答智能体的开放问题、确认架构、批准计划，并且不离开 Criativo 的聊天就合并每一个 pull request。
-traducao_de: 2b694a01e7d46ec116a8a07e97e7ccbbafca28db
+traducao_de: 9ecc443e59
 ---
 
 # 从零到交付物 {#from-zero-to-a-deliverable}

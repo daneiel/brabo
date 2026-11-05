@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0063 — 同一笔花费的两种受众：owner 的账单与成员的消耗

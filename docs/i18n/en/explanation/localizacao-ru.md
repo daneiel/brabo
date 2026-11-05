@@ -2,7 +2,7 @@
 id: localizacao-ru
 title: Localization — Russian (ru)
 description: Terminology, plural forms and what is not translated in Brabo's Russian translation.
-traducao_de: 28623069eba685a830004c4b447b705ae2e81989
+traducao_de: 9ecc443e59
 ---
 
 # Localization — Russian (`ru`)

@@ -5,7 +5,7 @@ sidebar_label: Phase history
 sidebar_position: 14
 description: Immutable record of Brabo's completed phases — what each one delivered, cut and found, and why.
 keywords: [history, phases, ADR, RN, changelog]
-traducao_de: a65c25acf8e673b8ee0d104512a284ee5f8606c5
+traducao_de: 9ecc443e59
 ---
 
 # Phase history

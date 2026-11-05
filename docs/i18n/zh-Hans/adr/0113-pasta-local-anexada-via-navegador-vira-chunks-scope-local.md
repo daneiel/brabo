@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0113 — 附加的本地目录成为 `chunks.scope = 'local'`，由**浏览器**读取，绝不是主机路径

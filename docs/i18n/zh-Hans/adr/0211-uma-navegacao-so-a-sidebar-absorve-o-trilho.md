@@ -1,5 +1,5 @@
 ---
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0211 — 只有一种导航：侧边栏吸收项目轨道

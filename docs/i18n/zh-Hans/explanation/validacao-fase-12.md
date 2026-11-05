@@ -5,7 +5,7 @@ sidebar_label: Fase 12 的验证
 sidebar_position: 5
 description: 一份可审计的脚本流程，在一次执行中演练采用、手动晋升和重新调度——事件 id 从数据库提取，并说明该验证有意不证明的内容。
 keywords: [验证, Fase 12, dogfooding, 采用, 重新调度, 晋升]
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # 三项发现已经消亡的验证

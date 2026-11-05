@@ -1,5 +1,5 @@
 ---
-traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0104 — `execution_mode` 取三个值，由 runner 负责验证时 workspace 以 `unverified` 诞生

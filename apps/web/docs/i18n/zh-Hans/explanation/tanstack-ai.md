@@ -2,7 +2,7 @@
 id: tanstack-ai
 title: TanStack AI——未采用
 description: 为什么 web 不在会话聊天中采用 TanStack AI（2026年10月3日的决定）、测量了什么、未来采用时的两项禁令以及重新评估的触发条件。
-traducao_de: 17fe83498b0a1eea177367926431ffddda3ce9ff
+traducao_de: 9ecc443e59
 ---
 
 # TanStack AI——未采用

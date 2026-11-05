@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0020 — 解锁 QA 与 SecOps 的 gate：在工作树上运行 gitleaks、经过校验的意见书，以及文本形式的 tool call

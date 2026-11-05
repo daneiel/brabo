@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0023 — Closing Phase 4b (session 2): a catalog that works, a dedup that distinguishes who denied, and a queue that survives the run

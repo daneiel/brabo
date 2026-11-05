@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0095 — gate `necessidade-validada` 由单独的人工确认关闭，而不是由 Criativo 自我验证

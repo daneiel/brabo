@@ -4,7 +4,7 @@ title: Реальное выполнение — hello world
 sidebar_label: Реальное выполнение (hello world)
 description: Первое сквозное выполнение Brabo с моделью через API, шестнадцать находок, которые оно дало, и то, что ещё не доказано.
 keywords: [dogfooding, реальное выполнение, находки, фаза 13]
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # Реальное выполнение — hello world

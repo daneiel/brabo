@@ -1,5 +1,5 @@
 ---
-traducao_de: 2f301391630d5be632e27036026760d416d43da1
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0118 — 通过浏览器配置 runner：Ed25519 设备密钥作为 `runner-ticket` 的第二种凭据、GitHub Releases 的二进制代理，以及用 File System Access API 一键配置文件夹

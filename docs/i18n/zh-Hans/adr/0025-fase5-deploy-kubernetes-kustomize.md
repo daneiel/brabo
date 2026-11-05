@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0025 — 阶段 5（第 2 次会话）：使用 Kustomize 部署 Kubernetes、队列指标与本地 overlay

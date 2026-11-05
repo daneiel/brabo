@@ -5,7 +5,7 @@ sidebar_label: FASE 30 — machine's local agent
 sidebar_position: 17
 description: The scope of FASE 30 — the local agent's identity stops being per project and becomes the machine's, and the installer closes the installation by creating the first account and bringing up the paired agent. The decisions are in ADRs 0154 and 0155.
 keywords: [fase 30, runner, local agent, device key, installer, service]
-traducao_de: 11f3dbb485e7626c292e2f894b0d8ece64429d47
+traducao_de: 9ecc443e59
 ---
 
 # FASE 30 — the machine's local agent

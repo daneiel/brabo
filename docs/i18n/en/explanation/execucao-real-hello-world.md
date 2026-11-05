@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 id: execucao-real-hello-world
 title: The real execution — the hello world
 sidebar_label: Real execution (hello world)

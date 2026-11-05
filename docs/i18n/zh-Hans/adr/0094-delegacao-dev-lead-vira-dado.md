@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: 9ecc443e59
 ---
 
 # ADR 0094 — Dev Lead → dev 的委派成为数据，`parecerArtifactId` 被重新定义
