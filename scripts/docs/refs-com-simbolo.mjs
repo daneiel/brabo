@@ -161,8 +161,8 @@ export function conferir(linhasDoArquivo, linha, simbolo, janela = JANELA) {
  * Resolve o caminho citado: da raiz, ou o ÚNICO arquivo versionado que
  * termine nele. `null` quando não resolve ou é ambíguo.
  */
-export function resolverCaminho(caminho, raiz, versionados) {
-  if (existsSync(join(raiz, caminho))) return caminho;
+export function resolverCaminho(caminho, raiz, versionados, real = (c) => join(raiz, c)) {
+  if (existsSync(real(caminho))) return caminho;
   const sufixo = `/${caminho.replace(/^\.?\//, '')}`;
   const achados = versionados.filter((v) => v.endsWith(sufixo));
   return achados.length === 1 ? achados[0] : null;
@@ -193,10 +193,10 @@ export function veredito({ total, naoBatem, naoResolvidas }) {
  * Afere todas as refs com símbolo dos arquivos de RN.
  * @returns {{total: number, batem: number, naoBatem: object[], naoResolvidas: object[]}}
  */
-export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN) {
+export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN, real = (c) => join(raiz, c)) {
   const cache = new Map();
   const linhasDe = (caminho) => {
-    if (!cache.has(caminho)) cache.set(caminho, readFileSync(join(raiz, caminho), 'utf8').split('\n'));
+    if (!cache.has(caminho)) cache.set(caminho, readFileSync(real(caminho), 'utf8').split('\n'));
     return cache.get(caminho);
   };
 
@@ -204,7 +204,7 @@ export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN) {
   for (const doc of arquivos) {
     for (const ref of extrairRefs(readFileSync(join(raiz, doc), 'utf8'))) {
       const onde = { doc, ...ref };
-      const resolvido = resolverCaminho(ref.caminho, raiz, versionados);
+      const resolvido = resolverCaminho(ref.caminho, raiz, versionados, real);
       if (resolvido === null) {
         resultado.naoResolvidas.push(onde);
         continue;

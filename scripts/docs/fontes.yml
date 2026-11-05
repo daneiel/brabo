@@ -1,0 +1,15 @@
+# Mapa nome-lógico -> raiz do código que o gerador de docs lê (separação em
+# repositórios, EP-033). No monorepo é IDENTIDADE: cada raiz é o próprio caminho
+# canônico, e nenhum caminho resolvido muda. Depois da separação,
+# `BRABO_FONTES=/caminho/outro-fontes.yml` aponta o MESMO conjunto de nomes para
+# clones irmãos (raiz relativa à raiz do monorepo, ou absoluta).
+# `infra` é o resto da árvore (docker/, deploy/, install.sh, Makefile, e2e/,
+# scripts/). O resolvedor escolhe sempre o prefixo mais longo.
+api: apps/api
+engine: apps/engine
+web: apps/web
+runner: apps/runner
+broker: apps/broker
+contracts: packages
+docs: docs
+infra: .
