@@ -27,6 +27,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lerRaizesDeDoc } from './raizes-de-doc.mjs';
 
 /**
  * Locales que ganham PREFIXO de caminho no site (todos menos o default). É a
@@ -35,8 +36,8 @@ import { fileURLToPath } from 'node:url';
  */
 export const LOCALES_COM_PREFIXO = ['en', 'ru', 'zh-Hans'];
 
-/** Pasta dos ADRs na árvore DEFAULT (`pt-BR`), a fonte de verdade dos slugs. */
-const DIR_DE_ADRS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/adr');
+/** As pastas `docs/` de todas as raízes (AT-693): a "união" onde a fonte pt-BR mora. */
+const dirsDeDoc = () => lerRaizesDeDoc().map((r) => r.dir);
 
 /**
  * A página existe na fonte pt-BR (`docs/`)?
@@ -44,8 +45,8 @@ const DIR_DE_ADRS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
  * @param {string} caminho relativo a `docs/`, ex.: `explanation/aceite-providers.md`
  * @returns {boolean}
  */
-export function paginaExisteNaFonte(caminho) {
-  return existsSync(path.join(DIR_DE_ADRS, '..', caminho));
+export function paginaExisteNaFonte(caminho, dirs = dirsDeDoc()) {
+  return dirs.some((d) => existsSync(path.join(d, caminho)));
 }
 
 /** Nome de arquivo com cara de ADR (`0118-algum-slug.md`). */
@@ -57,8 +58,8 @@ const PADRAO_DE_ADR = /^\d{4}-[^/]+\.md$/;
  * @param {string} nomeDoArquivo ex.: `0118-configuracao-automatica-do-runner-pelo-navegador.md`
  * @returns {boolean}
  */
-export function adrExisteNoRepositorio(nomeDoArquivo) {
-  return existsSync(path.join(DIR_DE_ADRS, nomeDoArquivo));
+export function adrExisteNoRepositorio(nomeDoArquivo, dirs = dirsDeDoc()) {
+  return dirs.some((d) => existsSync(path.join(d, 'adr', nomeDoArquivo)));
 }
 
 /**

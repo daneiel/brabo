@@ -20,12 +20,12 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { idiomaOriginal } from './faixa-de-traducao.mjs';
+import { lerRaizesDeDoc } from './raizes-de-doc.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'build/docs-site');
 const MARCA = 'data-faixa-de-traducao';
 const DADOS = JSON.parse(readFileSync(join(RAIZ, 'docs/i18n/traducao.json'), 'utf8'));
-const TRADUZIDAS_EN = join(RAIZ, 'docs/i18n/en');
 
 /** Rota simples: sem `id`/`slug` no frontmatter, a rota é o caminho sem extensão. */
 function rotaSimples(arquivo) {
@@ -49,20 +49,24 @@ const docs = (dir, base = '') =>
     e.isDirectory() ? docs(dir, join(base, e.name)) : e.name.endsWith('.md') ? [join(base, e.name)] : [],
   );
 
-const fonte = join(RAIZ, 'docs');
+// A fonte é a UNIÃO das raízes de doc (AT-693): o `rel` é o mesmo em todas.
+const bases = lerRaizesDeDoc().map((r) => r.dir);
+const arquivoDaFonte = (rel) => join(bases.find((b) => existsSync(join(b, rel))) ?? bases[0], rel);
+const listaDaFonte = () => [...new Set(bases.flatMap((b) => docs(b)))];
 const LOCALES = ['en', 'ru', 'zh-Hans'];
-const traduzidasEm = (loc) => join(RAIZ, 'docs/i18n', loc);
-const emIngles = (rel) => idiomaOriginal(readFileSync(join(fonte, rel), 'utf8')) === 'en';
+const temTraducao = (loc, rel) => bases.some((b) => existsSync(join(b, 'i18n', loc, rel)));
+const arquivoTraduzido = (loc, rel) => join(bases.find((b) => existsSync(join(b, 'i18n', loc, rel))) ?? bases[0], 'i18n', loc, rel);
+const emIngles = (rel) => idiomaOriginal(readFileSync(arquivoDaFonte(rel), 'utf8')) === 'en';
 // `reference/` entra desde a AT-564 (ADR 0219); a página ainda em inglês tem caso próprio.
-const daFonte = (rel) => rotaSimples(join(fonte, rel)) && !emIngles(rel);
+const daFonte = (rel) => rotaSimples(arquivoDaFonte(rel)) && !emIngles(rel);
 // A amostra sem tradução vem do primeiro locale que ainda tem uma: com o en completo, ru e zh-Hans seguem servindo.
 let naoTraduzida, localeDoFallback;
 for (const loc of LOCALES) {
-  naoTraduzida = docs(fonte).find((rel) => daFonte(rel) && !existsSync(join(traduzidasEm(loc), rel)));
+  naoTraduzida = listaDaFonte().find((rel) => daFonte(rel) && !temTraducao(loc, rel));
   if (naoTraduzida) { localeDoFallback = loc; break; }
 }
 const traduzida = Object.entries(DADOS.en ?? {}).find(
-  ([rel, e]) => !e.defasada && daFonte(rel) && rotaSimples(join(TRADUZIDAS_EN, rel)),
+  ([rel, e]) => !e.defasada && daFonte(rel) && rotaSimples(arquivoTraduzido('en', rel)),
 )?.[0];
 
 let falhas = 0;
@@ -91,13 +95,13 @@ if (naoTraduzida) {
   conferir('pt-BR na raiz', sem(naoTraduzida), false);
 } else console.log('  ok        nenhum locale tem página sem tradução: não há fallback a conferir');
 const loc = LOCALES.find((l) => l !== 'en');
-const ingles = docs(fonte).find(
-  (rel) => rotaSimples(join(fonte, rel)) && emIngles(rel) && !existsSync(join(traduzidasEm(loc), rel)),
+const ingles = listaDaFonte().find(
+  (rel) => rotaSimples(arquivoDaFonte(rel)) && emIngles(rel) && !temTraducao(loc, rel),
 );
 if (ingles) {
   conferir('fonte em inglês na raiz pt-BR', sem(ingles), true);
   conferir(`fonte em inglês em /${loc}/`, `${loc}/${sem(ingles)}`, true);
-  if (!existsSync(join(TRADUZIDAS_EN, ingles))) conferir('fonte em inglês em /en/', `en/${sem(ingles)}`, false);
+  if (!temTraducao('en', ingles)) conferir('fonte em inglês em /en/', `en/${sem(ingles)}`, false);
 } else console.log('  ok        nenhuma página com idioma_original: en sem tradução');
 conferir('tradução en não defasada', traduzida && `en/${sem(traduzida)}`, false);
 process.exit(falhas ? 1 : 0);

@@ -1,6 +1,9 @@
-// Leitura e validação do docs/.docmap.yml — o mapa "mudança de código →
+// Leitura e validação dos `.docmap.yml` — o mapa "mudança de código →
 // documentação que precisa ser revisada". Compartilhado pelo validador de
-// globs e pelo drift check.
+// globs e pelo drift check. Desde a AT-693 há UM por raiz de doc
+// (`docs/.docmap.yml` do agregador e `<raiz>/docs/.docmap.yml`), lidos juntos;
+// o id de regra é único na UNIÃO. Este módulo NÃO importa `raizes-de-doc` (que
+// importa `fontes`, que importa este: ciclo) — as raízes chegam por parâmetro.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -11,17 +14,33 @@ import { parse } from 'yaml';
 export const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const CAMINHO_DOCMAP = join(RAIZ, 'docs/.docmap.yml');
 
-export function lerDocmap() {
-  const bruto = parse(readFileSync(CAMINHO_DOCMAP, 'utf8'));
-  if (!Array.isArray(bruto?.rules)) {
-    throw new Error('docs/.docmap.yml: campo `rules` ausente ou não é lista');
+const ARQUIVO_DE_DOCMAP = /(^|\/)docs\/\.docmap\.yml$/;
+
+/**
+ * Lê e UNE os docmaps. `arquivos`: o universo versionado (padrão `git ls-files`
+ * em `base`); `raizes`: `[{ nome, raiz }]`, só necessário com `raiz` (a regra
+ * daquela raiz apenas, `--raiz <nome>`).
+ */
+export function lerDocmap({ base = RAIZ, arquivos = arquivosVersionados(base), raiz, raizes } = {}) {
+  let mapas = arquivos.filter((a) => ARQUIVO_DE_DOCMAP.test(a)).sort((x, y) => (x === 'docs/.docmap.yml' ? -1 : y === 'docs/.docmap.yml' ? 1 : x.localeCompare(y)));
+  if (raiz !== undefined) {
+    const alvo = raizes?.find((r) => r.nome === raiz);
+    if (!alvo) throw new Error(`raiz de doc desconhecida: "${raiz}"`);
+    mapas = mapas.filter((m) => m === `${alvo.raiz}/.docmap.yml`);
   }
-  return bruto;
+  if (!mapas.length) throw new Error('nenhum .docmap.yml encontrado');
+  const rules = [];
+  for (const m of mapas) {
+    const bruto = parse(readFileSync(join(base, m), 'utf8'));
+    if (!Array.isArray(bruto?.rules)) throw new Error(`${m}: campo \`rules\` ausente ou não é lista`);
+    rules.push(...bruto.rules);
+  }
+  return { rules };
 }
 
 /** Todos os arquivos versionados, que é o universo que os globs descrevem. */
-export function arquivosVersionados() {
-  return execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
+export function arquivosVersionados(base = RAIZ) {
+  return execFileSync('git', ['ls-files'], { cwd: base, encoding: 'utf8' })
     .split('\n')
     .filter(Boolean);
 }
@@ -31,7 +50,7 @@ export function arquivosVersionados() {
  * impressão de cobertura que não existe. Este é o erro mais silencioso que um
  * docmap pode ter, então ele é verificado no CI.
  */
-export function validar(docmap, arquivos) {
+export function validar(docmap, arquivos, base = RAIZ) {
   const problemas = [];
   const ids = new Set();
 
@@ -60,7 +79,7 @@ export function validar(docmap, arquivos) {
     // silencioso do glob morto, e uma alternativa com typo nunca poderia
     // satisfazer a regra — ela ficaria impossível de cumprir sem ninguém ver.
     for (const doc of documentos) {
-      if (!existsSync(join(RAIZ, doc))) {
+      if (!existsSync(join(base, doc))) {
         problemas.push({ tipo: 'doc-inexistente', regra: regra.id, doc });
       }
     }
@@ -83,8 +102,11 @@ export function regrasAcionadas(docmap, alterados) {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const docmap = lerDocmap();
+async function principal() {
+  const i = process.argv.indexOf('--raiz');
+  const raiz = i > 0 ? process.argv[i + 1] : undefined;
+  const raizes = raiz ? (await import('./raizes-de-doc.mjs')).lerRaizesDeDoc() : undefined;
+  const docmap = lerDocmap({ raiz, raizes });
   const problemas = validar(docmap, arquivosVersionados());
 
   if (problemas.length === 0) {
@@ -105,3 +127,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.error('\nGlob que não casa com nada nunca dispara — a regra existe no papel e não no CI.');
   process.exit(1);
 }
+
+if (import.meta.url === `file://${process.argv[1]}`) principal();
