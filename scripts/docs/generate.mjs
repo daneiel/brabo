@@ -458,7 +458,7 @@ function gerarProvidersDeLlm() {
   const achados = descobrirProviders();
 
   const seedTs = ler('apps/api/src/db/seed.ts');
-  const quirksPorProvider = extrairQuirksResumidos(ler('docs/reference/llm-providers.md'));
+  const quirksPorProvider = extrairQuirksResumidos(ler('apps/api/docs/reference/llm-providers.md'));
 
 
   // Every LLM credential has the SAME shape today — an API key encrypted via
@@ -476,7 +476,7 @@ function gerarProvidersDeLlm() {
 
   const ordenados = [...achados.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-  escreverBlocoPorLocale('docs/reference/llm-providers.md', 'providers-capabilities', (T) => {
+  escreverBlocoPorLocale('apps/api/docs/reference/llm-providers.md', 'providers-capabilities', (T) => {
     const marca = (v) => (v === null ? '?' : v ? T.sim : T.nao);
     let corpo = `\n${T.avisoBloco}\n\n${T.llmLido(ordenados.length)}\n\n`;
     corpo += `${T.llmColunas}\n`;
@@ -521,7 +521,7 @@ function gerarOpenapi() {
  * A spec exportada. Desde o ADR 0206 o site a renderiza numa página Redoc
  * (redocusaurus) em tempo de build — nada mais é gerado a partir dela aqui.
  */
-const SPEC = 'docs/reference/openapi.json';
+const SPEC = 'apps/api/docs/reference/openapi.json';
 
 // ----------------------------------------------------------- 5. índice de ADR
 
@@ -869,7 +869,7 @@ function verificarFrasesAncoradasNoCodigo() {
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {
-      arquivo: 'docs/runbook.md',
+      arquivo: 'deploy/docs/runbook.md',
       padrao: /as (\S+) imagens que o produto publica já estão resolvidas/,
       esperado: imagensPt,
       oque: 'quantas imagens o produto publica no GHCR',
@@ -881,7 +881,7 @@ function verificarFrasesAncoradasNoCodigo() {
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {
-      arquivo: 'docs/explanation/branching-policy.md',
+      arquivo: 'scripts/ci/docs/explanation/branching-policy.md',
       padrao: /^description: A escada (.+?), a taxonomia/m,
       esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
       oque: 'a escada da esteira no `description` do frontmatter',
@@ -1201,9 +1201,9 @@ function verificarCatalogosDaApi() {
     const { orfas, invalidas, faltando } = aplicarCatalogo(spec, lerCatalogo(RAIZ, loc));
     if (orfas.length + invalidas.length > 0) {
       pendencias.push(`catálogo da API (${loc})`);
-      console.log(`  DESATUAL. docs/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
+      console.log(`  DESATUAL. apps/api/docs/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
     } else {
-      console.log(`  ok        docs/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
+      console.log(`  ok        apps/api/docs/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
     }
   }
 }

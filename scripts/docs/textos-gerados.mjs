@@ -6,9 +6,11 @@
  */
 export const LOCALES_GERADOS = ['en', 'ru', 'zh-Hans'];
 
-/** Onde mora a cópia traduzida de `docs/<rel>`. */
-export const copiaDoLocale = (locale, rel) =>
-  `docs/i18n/${locale}/${rel.replace(/^docs\//, '')}`;
+/** Onde mora a cópia traduzida de `<raiz>/docs/<rel>` (AT-693: `<raiz>/docs/i18n/<locale>/<rel>`). */
+export const copiaDoLocale = (locale, rel) => {
+  const [, raiz, resto] = /^((?:.+\/)?docs)\/(.*)$/.exec(rel) ?? [, 'docs', rel];
+  return `${raiz}/i18n/${locale}/${resto}`;
+};
 
 /** Chaves que um locale não tem (ou tem a mais), comparado à fonte pt-BR. Vazio = em dia. */
 export function chavesFaltando(textos) {

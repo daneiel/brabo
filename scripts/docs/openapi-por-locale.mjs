@@ -193,11 +193,8 @@ export const rotulosFaltando = (rotulos) => {
   ]);
 };
 
-/** Spec e catálogos moram em `apps/api/docs/` (AT-693); enquanto o arquivo não mudou de lugar, cai em `docs/`. */
-export const caminhoDaApi = (raiz, rel) => {
-  const nova = join(raiz, 'apps/api/docs', rel);
-  return existsSync(nova) ? nova : join(raiz, 'docs', rel);
-};
+/** Spec e catálogos moram na raiz de doc da api (AT-693). */
+export const caminhoDaApi = (raiz, rel) => join(raiz, 'apps/api/docs', rel);
 
 export const caminhoDoCatalogo = (raiz, locale) => caminhoDaApi(raiz, join('i18n', locale, 'openapi-textos.json'));
 

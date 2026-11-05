@@ -22,7 +22,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { LOCALES_DA_API, lerCatalogo, medirApi } from './openapi-por-locale.mjs';
+import { caminhoDaApi, LOCALES_DA_API, lerCatalogo, medirApi } from './openapi-por-locale.mjs';
 import { lerRaizesDeDoc } from './raizes-de-doc.mjs';
 
 export const LOCALES = ['en', 'ru', 'zh-Hans'];
@@ -297,7 +297,7 @@ export function medirDoRepositorio(raiz, raizesDeDoc = lerRaizesDeDoc().map((r) 
         .map((n) => [n.slice(0, -5), JSON.parse(readFileSync(join(dir, n), 'utf8'))]),
     );
   }
-  const spec = JSON.parse(readFileSync(join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+  const spec = JSON.parse(readFileSync(caminhoDaApi(raiz, 'reference/openapi.json'), 'utf8'));
   const api = medirApi(spec, Object.fromEntries(LOCALES_DA_API.map((l) => [l, lerCatalogo(raiz, l)])));
   return { docs: medirDocs(fontes, traducoes, commitDe), ui: medirInterface(namespaces), api };
 }

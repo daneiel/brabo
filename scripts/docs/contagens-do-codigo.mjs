@@ -241,7 +241,7 @@ export const AFERICOES = [
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
 
   // imagens de terceiro presas por digest
-  { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /todas as (\S+) referências de terceiros/, fonte: 'imagensDeTerceiro', forma: 'digito' },
+  { arquivo: 'scripts/ci/docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /todas as (\S+) referências de terceiros/, fonte: 'imagensDeTerceiro', forma: 'digito' },
 
   // imagens que o produto publica / que o smoke confere
   { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
@@ -252,8 +252,8 @@ export const AFERICOES = [
   // contrato de git
   { arquivo: 'README.md', padrao: /o contrato de (\S+) operações e as capabilities/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'CONTRIBUTING.md', padrao: /implementar as (\S+) operações, declarar/, fonte: 'operacoesDoGit', forma: 'pt_f' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /O contrato tem \*\*(\S+) operações\*\* —/, fonte: 'operacoesDoGit', forma: 'pt_f' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /implementar todas as\s+(\S+) operações, declarando/, fonte: 'operacoesDoGit', forma: 'pt_f' },
+  { arquivo: 'apps/api/docs/reference/git-providers.md', padrao: /O contrato tem \*\*(\S+) operações\*\* —/, fonte: 'operacoesDoGit', forma: 'pt_f' },
+  { arquivo: 'apps/api/docs/reference/git-providers.md', padrao: /implementar todas as\s+(\S+) operações, declarando/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operações, \*\*tipos/, fonte: 'operacoesDoGit', forma: 'pt_f' },
 
   // porta de Docker
@@ -269,7 +269,7 @@ export const AFERICOES = [
 
   // artefatos e providers
   { arquivo: 'README.md', padrao: /os (\S+) schemas e quem pode emitir/, fonte: 'schemasDeArtefato', forma: 'pt_m' },
-  { arquivo: 'docs/reference/artifacts.md', padrao: /^description: Os (\S+) schemas de artefato/m, fonte: 'schemasDeArtefato', forma: 'pt_m' },
+  { arquivo: 'apps/api/docs/reference/artifacts.md', padrao: /^description: Os (\S+) schemas de artefato/m, fonte: 'schemasDeArtefato', forma: 'pt_m' },
   { arquivo: '.claude/contexto/stack.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
 ];
 

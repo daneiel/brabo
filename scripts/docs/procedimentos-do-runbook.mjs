@@ -46,8 +46,6 @@
  */
 
 import { parse } from 'yaml';
-import { existsSync } from 'node:fs';
-import { caminhoReal } from './fontes.mjs';
 
 // Pela âncora, não pelo título: o título muda com o idioma da fonte (ADR 0216).
 export const SECAO = /^##\s.*\{#procedimentos-e-verificacao\}\s*$/;
@@ -236,8 +234,8 @@ export function conferirTabela(texto, repo) {
   return resultado;
 }
 
-/** O runbook mora na raiz da infra (AT-693) quando ela existe; senão, no agregador. */
-export const RUNBOOK = existsSync(caminhoReal('deploy/docs/runbook.md')) ? 'deploy/docs/runbook.md' : 'docs/runbook.md';
+/** O runbook mora na raiz de doc da infra (AT-693). */
+export const RUNBOOK = 'deploy/docs/runbook.md';
 
 /**
  * O `repo` de `conferirTabela` sobre a árvore VERSIONADA — o mesmo que o
