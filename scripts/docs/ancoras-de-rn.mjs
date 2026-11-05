@@ -25,6 +25,8 @@
  * rastreador de cerca ingênuo desligou 55 cabeçalhos ali na primeira medição.
  */
 
+import { LOCALES_TRADUZIDOS, arquivosDeRn } from './regras-de-negocio.mjs';
+
 const CABECALHO = /^#{1,6}[ \t]+RN-(\d+)\b(.*)$/;
 const ANCORA_NO_FIM = /\{#([^}\s]+)\}\s*$/;
 
@@ -54,34 +56,7 @@ export function conferirAncoras(texto) {
   return { cabecalhos, problemas };
 }
 
-/** Os locales traduzidos (ADR 0216): pt-BR é a fonte, em `docs/`. */
-export const LOCALES_TRADUZIDOS = ['en', 'ru', 'zh-Hans'];
-
-const traducao = (locale) => `docs/i18n/${locale}`;
-
-/**
- * Os arquivos de RN, pelo GLOB (um quarto arquivo entra sozinho, como na
- * contagem de `generate.mjs`) — os de `docs/` (a fonte pt-BR) E os de cada
- * locale traduzido.
- *
- * A tradução entra porque ela é PÁGINA PUBLICADA com os mesmos links: o site
- * do locale serve `business-rules#rn-305` pelo arquivo traduzido, e ali a
- * âncora faltava do mesmo jeito (uma tradução copiou o cabeçalho sem ela). A
- * regra é por CABEÇALHO, então vale igual numa tradução parcial: o que não foi
- * traduzido cai por fallback na fonte, que já é conferida.
- *
- * @param {(glob: string) => string[]} arquivos `git ls-files <glob>`
- */
-export function arquivosDeRn(arquivos) {
-  return [
-    ...arquivos('docs/business-rules.md'),
-    ...arquivos('docs/business-rules/*.md'),
-    ...LOCALES_TRADUZIDOS.flatMap((l) => [
-      ...arquivos(`${traducao(l)}/business-rules.md`),
-      ...arquivos(`${traducao(l)}/business-rules/*.md`),
-    ]),
-  ];
-}
+export { LOCALES_TRADUZIDOS, arquivosDeRn };
 
 /**
  * Confere uma lista de arquivos.

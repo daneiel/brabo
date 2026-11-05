@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { LOCALES_DA_API, lerCatalogo, medirApi } from './openapi-por-locale.mjs';
+import { lerRaizesDeDoc } from './raizes-de-doc.mjs';
 
 export const LOCALES = ['en', 'ru', 'zh-Hans'];
 export const LOCALE_FONTE = 'pt-BR';
@@ -245,24 +246,35 @@ function listar(dir, base = dir) {
 /** ADR 0219: `reference/` entra; o relatório (D4) e o spec OpenAPI não. */
 export const ehFonteTraduzivel = (rel) => !/^reference\/(paridade-de-traducao\.mdx?|openapi\.json)$/.test(rel);
 
-export function medirDoRepositorio(raiz) {
+/**
+ * `raizesDeDoc`: as pastas `docs/` a unir (AT-693), relativas a `raiz`. Padrão:
+ * as que existem (`lerRaizesDeDoc`). A chave segue sendo o `rel` da UNIÃO; o
+ * mesmo `rel` em duas raízes é erro.
+ */
+export function medirDoRepositorio(raiz, raizesDeDoc = lerRaizesDeDoc().map((r) => r.raiz)) {
   const git = (...a) => execFileSync('git', a, { cwd: raiz, encoding: 'utf8' }).trim();
-  const sujas = new Set(
-    git('status', '--porcelain', '--', 'docs')
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => relative('docs', l.slice(3))),
-  );
   const fontes = new Map();
-  for (const rel of listar(join(raiz, 'docs'))) {
-    if (!ehFonteTraduzivel(rel)) continue;
-    const data = git('log', '-1', '--format=%cI', '--', `docs/${rel}`) || null;
-    fontes.set(rel, { chars: readFileSync(join(raiz, 'docs', rel), 'utf8').length, data, suja: sujas.has(rel) });
-  }
-  const traducoes = {};
-  for (const loc of LOCALES) {
-    const dir = join(raiz, 'docs/i18n', loc);
-    traducoes[loc] = new Map(listar(dir).map((rel) => [rel, readFileSync(join(dir, rel), 'utf8')]));
+  const traducoes = Object.fromEntries(LOCALES.map((l) => [l, new Map()]));
+  const unir = (mapa, rel, valor) => {
+    if (mapa.has(rel)) throw new Error(`"${rel}" existe em duas raízes de doc`);
+    mapa.set(rel, valor);
+  };
+  for (const base of raizesDeDoc) {
+    const sujas = new Set(
+      git('status', '--porcelain', '--', base)
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => relative(base, l.slice(3))),
+    );
+    for (const rel of listar(join(raiz, base))) {
+      if (!ehFonteTraduzivel(rel)) continue;
+      const data = git('log', '-1', '--format=%cI', '--', `${base}/${rel}`) || null;
+      unir(fontes, rel, { chars: readFileSync(join(raiz, base, rel), 'utf8').length, data, suja: sujas.has(rel) });
+    }
+    for (const loc of LOCALES) {
+      const dir = join(raiz, base, 'i18n', loc);
+      for (const rel of listar(dir)) unir(traducoes[loc], rel, readFileSync(join(dir, rel), 'utf8'));
+    }
   }
   const cache = new Map();
   const commitDe = (sha) => {
