@@ -9,7 +9,8 @@
  *     slug,        // 'adr/0004-x', 'adr' (de adr/index.md), '' (a intro)
  *     url,         // relativa à RAIZ do site: 'adr/0004-x.html', 'en/adr.html', 'index.html'
  *     arquivo,     // caminho absoluto do .md servido (tradução ou fonte)
- *     relativo,    // caminho relativo a docs/ da FONTE ('adr/index.md'), p/ "editar esta página"
+ *     raiz,        // raiz de doc que hospeda o arquivo ('docs', 'apps/api/docs'...), AT-693
+ *     relativo,    // caminho relativo à raiz de doc da FONTE ('adr/index.md'), p/ "editar esta página"
  *     locale,
  *     traduzida,   // true = veio da tradução; false = fallback na fonte pt-BR (ou o próprio pt-BR)
  *     titulo, descricao, rotulo (sidebar_label ?? título), dados (frontmatter inteiro), corpo
@@ -79,24 +80,37 @@ export function urlRelativa(deUrl, paraUrl) {
   return rel === '' ? path.posix.basename(paraUrl) : rel;
 }
 
-export function descobrirPaginas({ raiz, locale = LOCALE_FONTE }) {
-  const docs = path.join(raiz, 'docs');
-  const traducoes = path.join(raiz, CAMINHO_DAS_TRADUCOES(locale));
-  const fonte = listarMd(docs).filter((r) => !excluida(r));
-  const traduzidas = new Set(locale === LOCALE_FONTE ? [] : listarMd(traducoes).filter((r) => !excluida(r)));
-  const todos = new Set([...fonte, ...traduzidas]);
+/** As raízes de doc (AT-693), canônicas e relativas ao repositório, na ordem de `raizes-de-doc.mjs`. */
+export const RAIZES_DE_DOC = ['docs', 'apps/api/docs', 'apps/engine/docs', 'apps/web/docs', 'apps/runner/docs', 'apps/broker/docs', 'packages/docs', 'deploy/docs', 'scripts/ci/docs'];
+
+/** As que existem sob `raiz`; `docs/` é a do agregador e sempre conta. */
+export function raizesExistentes(raiz, candidatas = RAIZES_DE_DOC) {
+  return candidatas.filter((r) => r === 'docs' || existsSync(path.join(raiz, r)));
+}
+
+export function descobrirPaginas({ raiz, locale = LOCALE_FONTE, raizesDeDoc = RAIZES_DE_DOC }) {
+  // árvore de UNIÃO: cada raiz guarda o caminho relativo que o arquivo tinha em docs/
+  const entradas = raizesExistentes(raiz, raizesDeDoc).flatMap((rd) => {
+    const docs = path.join(raiz, rd);
+    const traducoes = path.join(docs, 'i18n', locale);
+    const fonte = listarMd(docs).filter((r) => !excluida(r));
+    const traduzidas = new Set(locale === LOCALE_FONTE ? [] : listarMd(traducoes).filter((r) => !excluida(r)));
+    return [...new Set([...fonte, ...traduzidas])].map((relativo) => ({
+      relativo, raiz: rd, veioDaTraducao: traduzidas.has(relativo),
+      arquivo: traduzidas.has(relativo) ? path.join(traducoes, relativo) : path.join(docs, relativo),
+    }));
+  });
+  entradas.sort((a, b) => (a.relativo < b.relativo ? -1 : a.relativo > b.relativo ? 1 : 0));
   const vistos = new Map();
-  const paginas = [...todos].sort().map((relativo) => {
-    const veioDaTraducao = traduzidas.has(relativo);
-    const arquivo = veioDaTraducao ? path.join(traducoes, relativo) : path.join(docs, relativo);
+  const paginas = entradas.map(({ relativo, raiz: rd, veioDaTraducao, arquivo }) => {
     const { dados, corpo } = lerFrontmatter(readFileSync(arquivo, 'utf8'));
     const slug = slugDe(relativo, dados);
-    if (vistos.has(slug)) throw new Error(`URL duplicada "${slug}": ${vistos.get(slug)} e ${relativo}`);
-    vistos.set(slug, relativo);
+    if (vistos.has(slug)) throw new Error(`URL duplicada "${slug}": ${vistos.get(slug)} e ${rd}/${relativo}`);
+    vistos.set(slug, `${rd}/${relativo}`);
     const h1 = /^#\s+(.+?)(?:\s+\{#[^}]+\})?\s*$/m.exec(corpo)?.[1];
     const titulo = dados.title ?? h1 ?? slug;
     return {
-      slug, url: urlDe(slug, locale), arquivo, relativo, locale,
+      slug, url: urlDe(slug, locale), arquivo, relativo, raiz: rd, locale,
       traduzida: locale === LOCALE_FONTE || veioDaTraducao, titulo, descricao: dados.description ?? '',
       rotulo: dados.sidebar_label ?? titulo, dados, corpo,
     };
@@ -108,11 +122,11 @@ export function descobrirPaginas({ raiz, locale = LOCALE_FONTE }) {
  * "Última atualização": data e autor do último commit de cada arquivo de docs/,
  * numa passada só (`git log --name-only`). Fora de um checkout devolve mapa vazio.
  */
-export function historicoDoGit(raiz) {
+export function historicoDoGit(raiz, raizesDeDoc = RAIZES_DE_DOC) {
   const mapa = new Map();
   let saida;
   try {
-    saida = execFileSync('git', ['log', '--name-only', '--format=%x00%aI%x01%an', '--', 'docs'], {
+    saida = execFileSync('git', ['log', '--name-only', '--format=%x00%aI%x01%an', '--', ...raizesExistentes(raiz, raizesDeDoc)], {
       cwd: raiz, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
     });
   } catch {

@@ -104,3 +104,44 @@ describe('build', () => {
     expect(readFileSync(path.join(saida, 'index.html'), 'utf8')).not.toContain('noindex');
   }, 120_000);
 });
+
+describe('árvore de união das raízes (AT-693)', () => {
+  const duas = () => {
+    const raiz = repo();
+    const w = (rel: string, txt: string) => {
+      mkdirSync(path.dirname(path.join(raiz, rel)), { recursive: true });
+      writeFileSync(path.join(raiz, rel), txt);
+    };
+    w('apps/api/docs/reference/permissions.md', '# Permissões\n');
+    w('apps/api/docs/business-rules/api.md', '# RN api\n');
+    w('apps/api/docs/i18n/en/reference/permissions.md', '# Permissions\n');
+    return { raiz, w };
+  };
+  const raizesDeDoc = ['docs', 'apps/api/docs'];
+
+  it('une as raízes, guarda a raiz de cada página e traduz por raiz', () => {
+    const { raiz } = duas();
+    const pt = descobrirPaginas({ raiz, locale: 'pt-BR', raizesDeDoc });
+    expect(pt.find((p) => p.slug === 'reference/permissions')?.raiz).toBe('apps/api/docs');
+    expect(pt.find((p) => p.slug === 'adr')?.raiz).toBe('docs');
+    const en = descobrirPaginas({ raiz, locale: 'en', raizesDeDoc });
+    expect(en.find((p) => p.slug === 'reference/permissions')).toMatchObject({ traduzida: true, titulo: 'Permissions' });
+  });
+
+  it('slug duplicado entre raízes lança nomeando as duas', () => {
+    const { raiz, w } = duas();
+    w('docs/reference/permissions.md', '# Outra\n');
+    expect(() => descobrirPaginas({ raiz, raizesDeDoc })).toThrow(/docs\/reference\/permissions\.md e apps\/api\/docs\/reference\/permissions\.md|apps\/api\/docs\/reference\/permissions\.md e docs\/reference\/permissions\.md/);
+  });
+
+  it('as Regras listam uma página por raiz e a edição aponta para a raiz da página', async () => {
+    const { raiz } = duas();
+    const nav = construirNavegacao({ raiz, repo: 'x/y', raizesDeDoc });
+    const regras = nav.find((i: any) => i.rotulo.includes('Regras'));
+    expect(regras.itens.map((i: any) => i.slug)).toEqual(['business-rules', 'business-rules/api']);
+    const saida = path.join(raiz, 'out');
+    await construir({ raiz, saida, git: false, repo: 'x/y', raizesDeDoc });
+    expect(readFileSync(path.join(saida, 'reference/permissions.html'), 'utf8')).toContain('blob/dev/apps/api/docs/reference/permissions.md');
+    expect(readFileSync(path.join(saida, 'index.html'), 'utf8')).toContain('blob/dev/docs/intro.md');
+  }, 120_000);
+});

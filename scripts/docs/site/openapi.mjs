@@ -31,7 +31,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ROTULOS_DO_REDOC, aplicar, lerCatalogo } from '../openapi-por-locale.mjs';
+import { ROTULOS_DO_REDOC, aplicar, caminhoDaApi, lerCatalogo } from '../openapi-por-locale.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const METODOS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
@@ -81,7 +81,7 @@ const pagina = (lang, titulo, estilos, corpo) =>
 
 export async function construirReferenciaDaApi({ saida, locales = ['pt-BR', 'en', 'ru', 'zh-Hans'], raiz = RAIZ, moldura = null }) {
   const R = await carregarRedoc();
-  const fonte = JSON.parse(readFileSync(path.join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+  const fonte = JSON.parse(readFileSync(caminhoDaApi(raiz, 'reference/openapi.json'), 'utf8'));
   const resultado = {};
   for (const locale of locales) {
     const { spec } = aplicar(fonte, lerCatalogo(raiz, locale));
